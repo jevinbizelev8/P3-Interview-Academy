@@ -132,23 +132,39 @@ class BedrockService {
   }
 
   async generateInterviewerPersona(context: InterviewContext): Promise<InterviewerPersona> {
-    const systemPrompt = `You are an AI that generates realistic interviewer personas for job interview practice. 
-    Create a detailed interviewer persona that matches the interview stage and company context.`;
+    const systemPrompt = `You are an AI that dynamically generates realistic interviewer personas for job interview practice based on the specific role and company provided. 
+    Create a completely unique interviewer persona that matches the actual job position and company culture.`;
+
+    const actualJobRole = context.userJobPosition || context.jobRole;
+    const actualCompany = context.userCompanyName || context.company;
 
     const messages = [{
       role: "user",
-      content: `Generate an interviewer persona for:
+      content: `Generate a completely dynamic interviewer persona for:
         - Interview Stage: ${context.stage}
-        - Job Role: ${context.jobRole}
-        - Company: ${context.company}
+        - Target Role: ${actualJobRole}
+        - Target Company: ${actualCompany}
         
-        Return a JSON object with these exact fields:
+        ${context.userJobPosition && context.userCompanyName ? 
+          `CRITICAL: This is for a real ${context.userJobPosition} position at ${context.userCompanyName}. 
+           Generate a persona that would realistically conduct this interview:
+           - Name should fit the company culture
+           - Title should be someone who would interview for this role (e.g., Engineering Manager, Director of AI, etc.)
+           - Style should match the company's interview culture
+           - Personality should reflect the company values and role requirements
+           
+           For ${context.userCompanyName}, consider their known culture, values, and interview practices.
+           For ${context.userJobPosition}, consider the technical depth and soft skills needed.` :
+          'Create a generic but professional interviewer persona.'
+        }
+        
+        Return ONLY a JSON object with these exact fields:
         - name: A realistic first and last name
-        - title: Their job title/position
-        - style: Their interviewing style (e.g., "conversational and friendly", "formal and structured")
-        - personality: Key personality traits (e.g., "detail-oriented, patient, encouraging")
+        - title: Their job title/position 
+        - style: Their interviewing style
+        - personality: Key personality traits
         
-        Make the persona realistic and appropriate for the interview stage.`
+        Make this persona completely unique and specific to the role and company.`
     }];
 
     try {
@@ -162,22 +178,71 @@ class BedrockService {
         return persona;
       }
       
-      // Fallback parsing
-      return {
-        name: "Sarah Johnson",
-        title: "Senior Hiring Manager",
-        style: "conversational and thorough",
-        personality: "analytical, patient, encouraging"
-      };
+      // Dynamic fallback based on context
+      const actualJobRole = context.userJobPosition || context.jobRole;
+      const actualCompany = context.userCompanyName || context.company;
+      
+      if (actualJobRole.toLowerCase().includes('ai') || actualJobRole.toLowerCase().includes('ml')) {
+        if (actualCompany.toLowerCase() === 'meta') {
+          return {
+            name: "Sarah Chen",
+            title: "AI Engineering Director",
+            style: "technical and innovation-focused",
+            personality: "cutting-edge, collaborative, Meta culture-driven"
+          };
+        } else {
+          return {
+            name: "Michael Rodriguez",
+            title: "ML Engineering Manager",
+            style: "technical and research-oriented",
+            personality: "analytical, innovative, mentoring"
+          };
+        }
+      } else if (actualJobRole.toLowerCase().includes('engineer')) {
+        return {
+          name: "David Kim",
+          title: "Senior Engineering Manager",
+          style: "technical and methodical",
+          personality: "problem-solving focused, detail-oriented, supportive"
+        };
+      } else {
+        return {
+          name: "Sarah Johnson",
+          title: "Senior Hiring Manager",
+          style: "conversational and thorough",
+          personality: "analytical, patient, encouraging"
+        };
+      }
     } catch (error) {
       console.error("Error generating interviewer persona:", error);
-      // Fallback persona
-      return {
-        name: "Alex Thompson",
-        title: "Senior Manager",
-        style: "professional and structured",
-        personality: "experienced, analytical, supportive"
-      };
+      // Dynamic fallback based on context
+      const actualJobRole = context.userJobPosition || context.jobRole;
+      const actualCompany = context.userCompanyName || context.company;
+      
+      if (actualJobRole.toLowerCase().includes('ai') || actualJobRole.toLowerCase().includes('ml')) {
+        if (actualCompany.toLowerCase() === 'meta') {
+          return {
+            name: "Elena Patel",
+            title: "AI Research Director",
+            style: "technical and visionary",
+            personality: "innovative, Meta-focused, research-oriented"
+          };
+        } else {
+          return {
+            name: "James Liu",
+            title: "AI Engineering Lead",
+            style: "technical and collaborative",
+            personality: "cutting-edge, analytical, mentoring"
+          };
+        }
+      } else {
+        return {
+          name: "Alex Thompson",
+          title: "Senior Manager",
+          style: "professional and structured",
+          personality: "experienced, analytical, supportive"
+        };
+      }
     }
   }
 
@@ -203,7 +268,11 @@ class BedrockService {
     }
     
     ${context.userJobPosition || context.userCompanyName ? 
-      'Generate questions that are highly specific to this role and company. Make it feel like a real interview for this exact position.' :
+      `DYNAMIC QUESTION GENERATION: 
+       - Generate a completely fresh, unique opening question tailored specifically for ${context.userJobPosition || 'this role'} ${context.userCompanyName ? `at ${context.userCompanyName}` : ''}.
+       - Consider the specific technical skills, experience, and challenges relevant to this exact position.
+       - Make it feel like a real interview that this candidate would actually experience.
+       - Avoid generic questions - be specific to the role and company context.` :
       `Candidate background: ${context.candidateBackground}
        Key objectives for this interview: ${context.keyObjectives}`
     }
@@ -224,10 +293,28 @@ class BedrockService {
       };
     } catch (error) {
       console.error("Error generating first question:", error);
-      return {
-        content: "Thank you for joining me today. Let's start with a simple question: Can you tell me a bit about yourself and what interests you about this role?",
-        questionNumber: 1
-      };
+      // Dynamic fallback based on context
+      const actualJobRole = context.userJobPosition || context.jobRole;
+      const actualCompany = context.userCompanyName || context.company;
+      
+      if (actualJobRole.toLowerCase().includes('ai') || actualJobRole.toLowerCase().includes('ml')) {
+        if (actualCompany.toLowerCase() === 'meta') {
+          return {
+            content: "Thanks for joining me today. I'm excited to learn about your AI engineering background. Let's start with this: What specific areas of machine learning or AI have you been working on recently, and how do you see them applying to Meta's mission of building the next generation of social technology?",
+            questionNumber: 1
+          };
+        } else {
+          return {
+            content: "Thank you for your time today. Given your interest in an AI engineering role, I'd love to start by understanding your approach to machine learning problems. Can you walk me through a recent AI/ML project you worked on and the technical challenges you encountered?",
+            questionNumber: 1
+          };
+        }
+      } else {
+        return {
+          content: "Thank you for joining me today. Let's start with a simple question: Can you tell me a bit about yourself and what interests you about this role?",
+          questionNumber: 1
+        };
+      }
     }
   }
 
@@ -256,7 +343,13 @@ class BedrockService {
     
     This is question #${currentQuestionNumber + 1} of 15. Based on the conversation so far, ask a relevant follow-up question.
     ${context.userJobPosition || context.userCompanyName ? 
-      'Generate questions that are highly specific to this role and company. Make it feel like a real interview for this exact position.' :
+      `DYNAMIC FOLLOW-UP GENERATION:
+       - Analyze the candidate's previous responses to understand their experience level and areas of strength/weakness
+       - Generate a completely unique follow-up question that builds on their previous answers
+       - Focus on ${context.userJobPosition || 'this role'} specific challenges ${context.userCompanyName ? `at ${context.userCompanyName}` : ''}
+       - Progress naturally from basic to more complex topics
+       - Consider real-world scenarios this person would face in the actual job
+       - Make each question feel authentic and purposeful, not generic` :
       'Keep the interview flowing naturally while covering important topics for this role and interview stage.'
     }
     

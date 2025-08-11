@@ -242,12 +242,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .map(msg => `${msg.messageType === 'ai' ? 'Interviewer' : 'Candidate'}: ${msg.content}`)
         .join('\n');
 
-      const persona = {
-        name: session.scenario.interviewerName,
-        title: session.scenario.interviewerTitle,
-        style: session.scenario.interviewerStyle,
-        personality: session.scenario.personalityTraits,
-      };
+      // Generate dynamic persona based on user's job context or scenario
+      const persona = await bedrockService.generateInterviewerPersona({
+        stage: session.scenario.interviewStage,
+        jobRole: session.scenario.jobRole,
+        company: session.scenario.companyBackground,
+        candidateBackground: session.scenario.candidateBackground,
+        keyObjectives: session.scenario.keyObjectives,
+        userJobPosition: session.userJobPosition || undefined,
+        userCompanyName: session.userCompanyName || undefined,
+      });
 
       const context = {
         stage: session.scenario.interviewStage,
