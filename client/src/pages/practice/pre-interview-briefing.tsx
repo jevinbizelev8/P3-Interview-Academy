@@ -12,6 +12,8 @@ export default function PreInterviewBriefing() {
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  console.log('PreInterviewBriefing rendering with scenarioId:', scenarioId);
 
   const { data: scenario, isLoading, error } = useQuery<InterviewScenario>({
     queryKey: [`/api/practice/scenarios/${scenarioId}`],

@@ -44,10 +44,11 @@ export default function Practice() {
 
       {/* Routes */}
       <Switch>
+        <Route path="/practice" exact component={ScenarioSelection} />
+        <Route path="/practice/briefing/:scenarioId" component={PreInterviewBriefing} />
+        <Route path="/practice/interview/:sessionId" component={InterviewPractice} />
+        <Route path="/practice/assessment/:sessionId" component={PostInterviewAssessment} />
         <Route path="/" component={ScenarioSelection} />
-        <Route path="/briefing/:scenarioId" component={PreInterviewBriefing} />
-        <Route path="/interview/:sessionId" component={InterviewPractice} />
-        <Route path="/assessment/:sessionId" component={PostInterviewAssessment} />
       </Switch>
     </div>
   );

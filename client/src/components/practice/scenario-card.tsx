@@ -44,6 +44,7 @@ export default function ScenarioCard({ stage, scenarios }: ScenarioCardProps) {
     // If there are specific scenarios, navigate to the first one
     // Otherwise, create a default scenario for this stage
     if (scenarios.length > 0) {
+      console.log('Navigating to briefing for scenario:', scenarios[0].id);
       setLocation(`/practice/briefing/${scenarios[0].id}`);
     } else {
       // For now, we'll need a default scenario for each stage
