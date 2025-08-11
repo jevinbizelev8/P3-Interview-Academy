@@ -55,7 +55,7 @@ const INTERVIEW_STAGES = [
     ]
   },
   {
-    id: 'executive-final',
+    id: 'executive',
     title: 'Executive/Final Round',
     description: 'Senior leadership interview',
     icon: 'crown',
