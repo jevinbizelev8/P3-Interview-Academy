@@ -63,8 +63,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/practice/scenarios", async (req, res) => {
     try {
       const stage = req.query.stage as string | undefined;
-      const scenarios = await storage.getInterviewScenarios(stage);
-      res.json(scenarios);
+      const userJobPosition = req.query.jobPosition as string | undefined;
+      const userCompanyName = req.query.companyName as string | undefined;
+      
+      // If user provides job context, generate dynamic scenarios
+      if (userJobPosition || userCompanyName) {
+        const stages = ['phone-screening', 'functional-team', 'hiring-manager', 'subject-matter', 'executive'];
+        const dynamicScenarios = [];
+        
+        for (const scenarioStage of (stage ? [stage] : stages)) {
+          try {
+            const dynamicScenario = await bedrockService.generateDynamicScenario(
+              scenarioStage,
+              userJobPosition,
+              userCompanyName
+            );
+            
+            // Add required fields for consistency
+            dynamicScenarios.push({
+              id: `dynamic-${scenarioStage}-${Date.now()}`,
+              ...dynamicScenario,
+              createdBy: 'system',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              sessionCount: 0,
+              averageScore: null
+            });
+          } catch (error) {
+            console.error(`Error generating dynamic scenario for stage ${scenarioStage}:`, error);
+            // Continue with other stages even if one fails
+          }
+        }
+        
+        res.json(dynamicScenarios);
+      } else {
+        // Fallback to static scenarios when no job context provided
+        const scenarios = await storage.getInterviewScenarios(stage);
+        res.json(scenarios);
+      }
     } catch (error) {
       console.error("Error fetching scenarios:", error);
       res.status(500).json({ message: "Failed to fetch interview scenarios" });
@@ -73,11 +109,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/practice/scenarios/:id", async (req, res) => {
     try {
-      const scenario = await storage.getInterviewScenario(req.params.id);
-      if (!scenario) {
-        return res.status(404).json({ message: "Scenario not found" });
+      // Check if it's a dynamic scenario ID
+      if (req.params.id.startsWith('dynamic-')) {
+        const [, stage] = req.params.id.split('-');
+        const userJobPosition = req.query.jobPosition as string | undefined;
+        const userCompanyName = req.query.companyName as string | undefined;
+        
+        // Generate dynamic scenario on-demand
+        const dynamicScenario = await bedrockService.generateDynamicScenario(
+          stage,
+          userJobPosition,
+          userCompanyName
+        );
+        
+        res.json({
+          id: req.params.id,
+          ...dynamicScenario,
+          createdBy: 'system',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        });
+      } else {
+        // Fetch static scenario from database
+        const scenario = await storage.getInterviewScenario(req.params.id);
+        if (!scenario) {
+          return res.status(404).json({ message: "Scenario not found" });
+        }
+        res.json(scenario);
       }
-      res.json(scenario);
     } catch (error) {
       console.error("Error fetching scenario:", error);
       res.status(500).json({ message: "Failed to fetch scenario" });
