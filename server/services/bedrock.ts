@@ -187,16 +187,26 @@ class BedrockService {
   ): Promise<AIResponse> {
     const systemPrompt = `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
 
-    You are conducting a ${context.stage} interview for a ${context.jobRole} position at ${context.company}.
-    ${context.userJobPosition ? `The candidate is applying for the role of: ${context.userJobPosition}` : ''}
-    ${context.userCompanyName ? `at ${context.userCompanyName}.` : ''}
-    
-    Candidate background: ${context.candidateBackground}
-    Key objectives for this interview: ${context.keyObjectives}
+    ${context.userJobPosition && context.userCompanyName ? 
+      `You are conducting a ${context.stage} interview for a ${context.userJobPosition} position at ${context.userCompanyName}. 
+       
+       IMPORTANT: Focus entirely on ${context.userJobPosition} role requirements and ${context.userCompanyName} company culture. 
+       Ask questions specific to AI engineering, machine learning, technical architecture, and Meta's engineering practices.
+       Ignore any generic scenario details and tailor everything for this specific role and company.` :
+      context.userJobPosition ? 
+        `You are conducting a ${context.stage} interview for a ${context.userJobPosition} position. 
+         IMPORTANT: Focus on questions specific to the ${context.userJobPosition} role, ignoring generic scenario details.` :
+        context.userCompanyName ?
+          `You are conducting a ${context.stage} interview at ${context.userCompanyName}. 
+           IMPORTANT: Focus on ${context.userCompanyName} company culture and values, ignoring generic scenario details.` :
+          `You are conducting a ${context.stage} interview for a ${context.jobRole} position at ${context.company}.`
+    }
     
     ${context.userJobPosition || context.userCompanyName ? 
-      `Please tailor your questions to be specifically relevant to ${context.userJobPosition || 'their role'} ${context.userCompanyName ? `at ${context.userCompanyName}` : ''}.` : 
-      ''}
+      'Generate questions that are highly specific to this role and company. Make it feel like a real interview for this exact position.' :
+      `Candidate background: ${context.candidateBackground}
+       Key objectives for this interview: ${context.keyObjectives}`
+    }
     
     Start the interview with an appropriate opening question. Be natural and conversational, matching your persona.
     Keep responses focused and professional. This is question #1 of 15.`;
@@ -229,16 +239,26 @@ class BedrockService {
   ): Promise<AIResponse> {
     const systemPrompt = `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
 
-    You are conducting a ${context.stage} interview for a ${context.jobRole} position at ${context.company}.
-    ${context.userJobPosition ? `The candidate is applying for the role of: ${context.userJobPosition}` : ''}
-    ${context.userCompanyName ? `at ${context.userCompanyName}.` : ''}
-    
-    ${context.userJobPosition || context.userCompanyName ? 
-      `Please tailor your questions to be specifically relevant to ${context.userJobPosition || 'their role'} ${context.userCompanyName ? `at ${context.userCompanyName}` : ''}.` : 
-      ''}
+    ${context.userJobPosition && context.userCompanyName ? 
+      `You are conducting a ${context.stage} interview for a ${context.userJobPosition} position at ${context.userCompanyName}. 
+       
+       IMPORTANT: Focus entirely on ${context.userJobPosition} role requirements and ${context.userCompanyName} company culture. 
+       Ask technical questions about AI/ML, system design, coding challenges, and Meta's engineering practices.
+       Ignore any generic scenario details - this is specifically for ${context.userJobPosition} at ${context.userCompanyName}.` :
+      context.userJobPosition ? 
+        `You are conducting a ${context.stage} interview for a ${context.userJobPosition} position. 
+         IMPORTANT: Focus on questions specific to the ${context.userJobPosition} role requirements and responsibilities.` :
+        context.userCompanyName ?
+          `You are conducting a ${context.stage} interview at ${context.userCompanyName}. 
+           IMPORTANT: Focus on ${context.userCompanyName} company-specific questions and culture.` :
+          `You are conducting a ${context.stage} interview for a ${context.jobRole} position at ${context.company}.`
+    }
     
     This is question #${currentQuestionNumber + 1} of 15. Based on the conversation so far, ask a relevant follow-up question.
-    Keep the interview flowing naturally while covering important topics for this role and interview stage.
+    ${context.userJobPosition || context.userCompanyName ? 
+      'Generate questions that are highly specific to this role and company. Make it feel like a real interview for this exact position.' :
+      'Keep the interview flowing naturally while covering important topics for this role and interview stage.'
+    }
     
     Be conversational and match your persona. Don't repeat previous questions.`;
 
