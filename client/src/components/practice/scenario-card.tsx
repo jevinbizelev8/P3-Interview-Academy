@@ -7,7 +7,7 @@ const STAGE_ICONS = {
   'functional-team': Users,
   'hiring-manager': Bus,
   'subject-matter': ServerCog,
-  'executive-final': Crown,
+  'executive': Crown,
 };
 
 const STAGE_COLORS = {
@@ -15,7 +15,7 @@ const STAGE_COLORS = {
   'functional-team': 'bg-green-500 text-green-500',
   'hiring-manager': 'bg-yellow-500 text-yellow-500',
   'subject-matter': 'bg-purple-500 text-purple-500',
-  'executive-final': 'bg-red-500 text-red-500',
+  'executive': 'bg-red-500 text-red-500',
 };
 
 interface ScenarioCardProps {
