@@ -6,14 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Briefcase, Lightbulb, ArrowLeft, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
+import type { InterviewScenario } from "@shared/schema";
 
 export default function PreInterviewBriefing() {
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: scenario, isLoading, error } = useQuery({
-    queryKey: ["/api/practice/scenarios", scenarioId],
+  const { data: scenario, isLoading, error } = useQuery<InterviewScenario>({
+    queryKey: [`/api/practice/scenarios/${scenarioId}`],
   });
 
   // Handle unauthorized errors
@@ -142,11 +143,11 @@ export default function PreInterviewBriefing() {
                 <p>{scenario.candidateBackground}</p>
                 
                 <h4 className="text-lg font-medium text-gray-900 mt-4 mb-2">Key Objectives</h4>
-                <div dangerouslySetInnerHTML={{ 
+                <div dangerouslySetInnerHTML={{
                   __html: scenario.keyObjectives
                     .split('\n')
-                    .filter(line => line.trim())
-                    .map(line => `<p>• ${line.replace(/^[•-]\s*/, '')}</p>`)
+                    .filter((line: string) => line.trim())
+                    .map((line: string) => `<p>• ${line.replace(/^[•-]\s*/, '')}</p>`)
                     .join('')
                 }} />
               </div>
