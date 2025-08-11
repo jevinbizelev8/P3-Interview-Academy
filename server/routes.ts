@@ -127,14 +127,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Interview Sessions API
   app.post("/api/practice/sessions", addMockUser, async (req, res) => {
     try {
-      const validatedData = insertInterviewSessionSchema.parse(req.body);
-      validatedData.userId = req.user.id;
+      console.log("Creating session with body:", req.body);
+      console.log("User:", req.user);
+      
+      const sessionData = {
+        ...req.body,
+        userId: req.user.id
+      };
+      
+      console.log("Session data to validate:", sessionData);
+      const validatedData = insertInterviewSessionSchema.parse(sessionData);
       
       const session = await storage.createInterviewSession(validatedData);
       res.status(201).json(session);
     } catch (error: any) {
       console.error("Error creating session:", error);
       if (error.name === 'ZodError') {
+        console.error("Validation errors:", error.errors);
         return res.status(400).json({ message: "Invalid session data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to create session" });
