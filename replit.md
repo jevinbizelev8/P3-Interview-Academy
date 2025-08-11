@@ -2,7 +2,7 @@
 
 ## Overview
 
-P³ Interview Academy is a comprehensive interview preparation platform designed to help users excel in job interviews through structured practice sessions. The platform follows a three-stage learning framework: Prepare, Practice, and Perform. It offers AI-powered coaching with real-time feedback, voice and text input capabilities, and comprehensive evaluation using the STAR method (Situation, Task, Action, Result). The system supports multiple interview stages from phone screening to executive interviews, with industry-specific questions and personalized feedback based on uploaded job descriptions.
+P³ Interview Academy is a comprehensive interview preparation platform designed to help users excel in job interviews through structured practice sessions. The platform follows a three-stage learning framework: Prepare, Practice, and Perform. It offers AI-powered coaching with real-time feedback, voice and text input capabilities, and comprehensive evaluation using the STAR method (Situation, Task, Action, Result). The system supports multiple interview stages from phone screening to executive interviews, with **fully dynamic question generation** that creates personalized interviews based on the user's specific job position and company name, completely overriding generic scenarios.
 
 ## User Preferences
 
@@ -22,7 +22,7 @@ The server runs on **Node.js** with **Express.js** using **TypeScript** and ES m
 
 **Session Management**: Multi-stage interview sessions are supported with progress tracking (setup → preparation → review → complete) and auto-save functionality. The system handles both text and voice responses with automatic data persistence.
 
-**AI Integration**: The platform integrates with **Anthropic's Claude** (using claude-sonnet-4-20250514) for intelligent interview coaching, question generation, and STAR-based evaluation. The AI provides contextual feedback based on uploaded job descriptions and industry-specific requirements.
+**AI Integration**: The platform integrates with **Anthropic's Claude** (using claude-sonnet-4-20250514) for intelligent interview coaching, dynamic question generation, and STAR-based evaluation. The AI system features **completely dynamic question generation** that creates fresh, unique interview questions in real-time based on the user's specific job position and company name. When users provide their job details (e.g., "AI Engineer" at "Meta"), the AI completely overrides generic scenarios and generates questions tailored to that exact role and company culture, making each interview unique and highly relevant.
 
 ### Database Design
 The application uses **PostgreSQL** as the primary database with **Drizzle ORM** for type-safe database operations. The database is configured for **Neon serverless** deployment with connection pooling.

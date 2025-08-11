@@ -167,7 +167,7 @@ export default function PreInterviewBriefing() {
                       <p><strong>Interview Stage:</strong> {scenario.interviewStage.replace('-', ' ')}</p>
                       <p><strong>Duration:</strong> 15-20 minutes</p>
                       <p className="text-sm text-green-700 mt-2">
-                        Questions will be tailored specifically for this role and company.
+                        <strong>✨ Dynamic Generation:</strong> Questions will be generated in real-time specifically for this {jobContext.jobPosition} role at {jobContext.companyName}. Each question adapts to your responses and focuses on actual job requirements and company culture.
                       </p>
                     </div>
                   </>
@@ -219,6 +219,12 @@ export default function PreInterviewBriefing() {
                   <span className="w-2 h-2 bg-blue-600 rounded-full mt-2 mr-2 flex-shrink-0"></span>
                   <span>Show enthusiasm and genuine interest</span>
                 </li>
+                {jobContext.jobPosition && jobContext.companyName && (
+                  <li className="flex items-start">
+                    <span className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-2 flex-shrink-0"></span>
+                    <span>Questions are dynamically generated - each interview will be unique and tailored to your specific role</span>
+                  </li>
+                )}
               </ul>
             </CardContent>
           </Card>
