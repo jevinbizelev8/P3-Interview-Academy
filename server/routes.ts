@@ -238,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/practice/sessions/:id", async (req, res) => {
+  app.put("/api/practice/sessions/:id", addMockUser, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -261,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/practice/sessions/:id/auto-save", async (req, res) => {
+  app.post("/api/practice/sessions/:id/auto-save", addMockUser, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {

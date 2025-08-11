@@ -16,14 +16,15 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
+import type { InterviewSessionWithScenario } from "@shared/schema";
 
 export default function PostInterviewAssessment() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  const { data: session, isLoading, error } = useQuery({
-    queryKey: ["/api/practice/sessions", sessionId],
+  const { data: session, isLoading, error } = useQuery<InterviewSessionWithScenario>({
+    queryKey: [`/api/practice/sessions/${sessionId}`],
   });
 
   // Handle unauthorized errors
@@ -254,24 +255,24 @@ export default function PostInterviewAssessment() {
               <h3 className="text-xl font-semibold text-gray-900 mb-4">Detailed Feedback</h3>
               
               {/* Qualitative Summary */}
-              {session.qualitativeFeedback && (
+              {session?.qualitativeFeedback && (
                 <div className="mb-6">
-                  <p className="text-gray-700">{session.qualitativeFeedback}</p>
+                  <p className="text-gray-700">{String(session.qualitativeFeedback)}</p>
                 </div>
               )}
 
               {/* Strengths */}
-              {session.strengths && Array.isArray(session.strengths) && session.strengths.length > 0 && (
+              {session?.strengths && Array.isArray(session.strengths) && session.strengths.length > 0 && (
                 <div className="mb-6">
                   <h4 className="font-semibold text-green-600 mb-3 flex items-center">
                     <CheckCircle className="w-5 h-5 mr-2" />
                     Strengths
                   </h4>
                   <ul className="space-y-2 text-gray-700">
-                    {session.strengths.map((strength, index) => (
+                    {session.strengths.map((strength: string, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0"></div>
-                        <span>{strength}</span>
+                        <span>{String(strength)}</span>
                       </li>
                     ))}
                   </ul>
@@ -279,17 +280,17 @@ export default function PostInterviewAssessment() {
               )}
 
               {/* Areas for Improvement */}
-              {session.improvements && Array.isArray(session.improvements) && session.improvements.length > 0 && (
+              {session?.improvements && Array.isArray(session.improvements) && session.improvements.length > 0 && (
                 <div className="mb-6">
                   <h4 className="font-semibold text-yellow-600 mb-3 flex items-center">
                     <AlertTriangle className="w-5 h-5 mr-2" />
                     Areas for Improvement
                   </h4>
                   <ul className="space-y-2 text-gray-700">
-                    {session.improvements.map((improvement, index) => (
+                    {session.improvements.map((improvement: string, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 mr-2 flex-shrink-0"></div>
-                        <span>{improvement}</span>
+                        <span>{String(improvement)}</span>
                       </li>
                     ))}
                   </ul>
@@ -297,17 +298,17 @@ export default function PostInterviewAssessment() {
               )}
 
               {/* Recommendations */}
-              {session.recommendations && Array.isArray(session.recommendations) && session.recommendations.length > 0 && (
+              {session?.recommendations && Array.isArray(session.recommendations) && session.recommendations.length > 0 && (
                 <div>
                   <h4 className="font-semibold text-primary mb-3 flex items-center">
                     <Lightbulb className="w-5 h-5 mr-2" />
                     Recommendations for Next Time
                   </h4>
                   <ul className="space-y-2 text-gray-700">
-                    {session.recommendations.map((recommendation, index) => (
+                    {session.recommendations.map((recommendation: string, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-primary rounded-full mt-2 mr-2 flex-shrink-0"></div>
-                        <span>{recommendation}</span>
+                        <span>{String(recommendation)}</span>
                       </li>
                     ))}
                   </ul>
