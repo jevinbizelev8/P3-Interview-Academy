@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import ScenarioCard from "@/components/practice/scenario-card";
 import ProgressTracker from "@/components/practice/progress-tracker";
 import { Clock, Eye } from "lucide-react";
+import type { InterviewScenario, InterviewSession } from "@shared/schema";
 
 const INTERVIEW_STAGES = [
   {
@@ -68,15 +69,15 @@ const INTERVIEW_STAGES = [
 ];
 
 export default function ScenarioSelection() {
-  const { data: scenarios, isLoading } = useQuery({
+  const { data: scenarios = [], isLoading } = useQuery<InterviewScenario[]>({
     queryKey: ["/api/practice/scenarios"],
   });
 
-  const { data: sessions } = useQuery({
+  const { data: sessions = [] } = useQuery<InterviewSession[]>({
     queryKey: ["/api/practice/sessions"],
   });
 
-  const recentSessions = sessions?.slice(0, 2) || [];
+  const recentSessions = sessions.slice(0, 2);
 
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -117,7 +118,15 @@ export default function ScenarioSelection() {
                   <ScenarioCard
                     key={stage.id}
                     stage={stage}
-                    scenarios={scenarios?.filter(s => s.interviewStage === stage.id) || []}
+                    scenarios={scenarios
+                      .filter((s: InterviewScenario) => s.interviewStage === stage.id)
+                      .map((s: InterviewScenario) => ({
+                        id: s.id,
+                        title: s.title,
+                        sessionCount: 0, // TODO: Get from API
+                        averageRating: 0, // TODO: Get from API
+                      }))
+                    }
                   />
                 ))}
               </div>
@@ -130,7 +139,7 @@ export default function ScenarioSelection() {
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Practice Sessions</h3>
               <div className="space-y-3">
-                {recentSessions.map((session) => (
+                {recentSessions.map((session: InterviewSession) => (
                   <div
                     key={session.id}
                     className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
@@ -141,10 +150,11 @@ export default function ScenarioSelection() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">
-                          {session.scenario.interviewStage.replace('-', ' ')} - {session.scenario.title}
+                          {session.status === 'completed' ? 'Completed Session' : 'In Progress'} - {session.id.slice(0, 8)}
                         </p>
                         <p className="text-sm text-gray-600">
-                          Completed {new Date(session.completedAt || session.createdAt).toLocaleDateString('en-GB')} • {session.overallScore}/5 stars
+                          Started {session.createdAt ? new Date(session.createdAt).toLocaleDateString('en-GB') : 'Unknown'}
+                          {session.overallScore && <span> • {session.overallScore}/5 stars</span>}
                         </p>
                       </div>
                     </div>
