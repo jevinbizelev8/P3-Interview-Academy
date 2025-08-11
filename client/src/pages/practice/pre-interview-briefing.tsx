@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,12 @@ export default function PreInterviewBriefing() {
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Get job context from session storage
+  const [jobContext, setJobContext] = useState(() => {
+    const jobContextStr = sessionStorage.getItem('jobContext');
+    return jobContextStr ? JSON.parse(jobContextStr) : { jobPosition: '', companyName: '' };
+  });
   
   console.log('PreInterviewBriefing rendering with scenarioId:', scenarioId);
 
@@ -151,10 +157,28 @@ export default function PreInterviewBriefing() {
                 Scenario Brief
               </h3>
               <div className="prose prose-sm text-gray-700 max-w-none">
-                <p><strong>Position:</strong> {scenario.jobRole}</p>
-                <p><strong>Company:</strong> {scenario.companyBackground}</p>
-                <p><strong>Interview Stage:</strong> {scenario.interviewStage.replace('-', ' ')}</p>
-                <p><strong>Duration:</strong> 15-20 minutes</p>
+                {/* Show personalized job context if available, otherwise show scenario defaults */}
+                {jobContext.jobPosition || jobContext.companyName ? (
+                  <>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                      <h4 className="text-green-800 font-medium mb-2">✓ Personalized Interview</h4>
+                      <p><strong>Position:</strong> {jobContext.jobPosition || scenario.jobRole}</p>
+                      <p><strong>Company:</strong> {jobContext.companyName || 'Not specified'}</p>
+                      <p><strong>Interview Stage:</strong> {scenario.interviewStage.replace('-', ' ')}</p>
+                      <p><strong>Duration:</strong> 15-20 minutes</p>
+                      <p className="text-sm text-green-700 mt-2">
+                        Questions will be tailored specifically for this role and company.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p><strong>Position:</strong> {scenario.jobRole}</p>
+                    <p><strong>Company:</strong> {scenario.companyBackground}</p>
+                    <p><strong>Interview Stage:</strong> {scenario.interviewStage.replace('-', ' ')}</p>
+                    <p><strong>Duration:</strong> 15-20 minutes</p>
+                  </>
+                )}
                 
                 <h4 className="text-lg font-medium text-gray-900 mt-4 mb-2">Your Background</h4>
                 <p>{scenario.candidateBackground}</p>
