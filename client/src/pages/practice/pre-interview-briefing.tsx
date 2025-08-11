@@ -44,6 +44,10 @@ export default function PreInterviewBriefing() {
         return;
       }
 
+      // Get job context from session storage
+      const jobContextStr = sessionStorage.getItem('jobContext');
+      const jobContext = jobContextStr ? JSON.parse(jobContextStr) : { jobPosition: '', companyName: '' };
+      
       // Create new interview session
       const response = await fetch("/api/practice/sessions", {
         method: "POST",
@@ -54,6 +58,8 @@ export default function PreInterviewBriefing() {
           status: "in_progress",
           currentQuestion: 1,
           totalQuestions: 15,
+          userJobPosition: jobContext.jobPosition,
+          userCompanyName: jobContext.companyName,
         }),
       });
 

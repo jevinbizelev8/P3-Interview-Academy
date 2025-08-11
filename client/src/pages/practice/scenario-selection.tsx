@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import ScenarioCard from "@/components/practice/scenario-card";
@@ -69,6 +70,9 @@ const INTERVIEW_STAGES = [
 ];
 
 export default function ScenarioSelection() {
+  const [jobPosition, setJobPosition] = useState("");
+  const [companyName, setCompanyName] = useState("");
+
   const { data: scenarios = [], isLoading } = useQuery<InterviewScenario[]>({
     queryKey: ["/api/practice/scenarios"],
   });
@@ -90,6 +94,42 @@ export default function ScenarioSelection() {
             <p className="text-gray-600 mb-6">
               Select the interview stage you'd like to practise. Each scenario includes 15 tailored questions.
             </p>
+            
+            {/* Job Context Form */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h3 className="text-md font-medium text-blue-900 mb-3">Personalise Your Interview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="jobPosition" className="block text-sm font-medium text-gray-700 mb-1">
+                    Job Position
+                  </label>
+                  <input
+                    type="text"
+                    id="jobPosition"
+                    value={jobPosition}
+                    onChange={(e) => setJobPosition(e.target.value)}
+                    placeholder="e.g. Senior Software Engineer"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    id="companyName"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="e.g. Google, Meta, Microsoft"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              <p className="text-sm text-blue-600 mt-2">
+                These details help our AI interviewer generate more relevant questions for your specific role and company.
+              </p>
+            </div>
             
             {isLoading ? (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -118,6 +158,7 @@ export default function ScenarioSelection() {
                   <ScenarioCard
                     key={stage.id}
                     stage={stage}
+                    jobContext={{ jobPosition, companyName }}
                     scenarios={scenarios
                       .filter((s: InterviewScenario) => s.interviewStage === stage.id)
                       .map((s: InterviewScenario) => ({

@@ -255,6 +255,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         company: session.scenario.companyBackground,
         candidateBackground: session.scenario.candidateBackground,
         keyObjectives: session.scenario.keyObjectives,
+        userJobPosition: session.userJobPosition || undefined,
+        userCompanyName: session.userCompanyName || undefined,
       };
 
       // Convert conversation history to the format expected by Bedrock service
@@ -357,6 +359,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         company: session.scenario.companyBackground,
         candidateBackground: session.scenario.candidateBackground,
         keyObjectives: session.scenario.keyObjectives,
+        userJobPosition: session.userJobPosition || undefined,
+        userCompanyName: session.userCompanyName || undefined,
       };
 
       // Generate assessment

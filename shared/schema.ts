@@ -67,6 +67,9 @@ export const interviewSessions = pgTable("interview_sessions", {
   status: varchar("status", { length: 20 }).default("in_progress"), // in_progress, completed, abandoned
   currentQuestion: integer("current_question").default(1),
   totalQuestions: integer("total_questions").default(15),
+  // User-provided job context for personalized AI questions
+  userJobPosition: varchar("user_job_position", { length: 200 }),
+  userCompanyName: varchar("user_company_name", { length: 200 }),
   startedAt: timestamp("started_at").defaultNow(),
   completedAt: timestamp("completed_at"),
   duration: integer("duration"), // in seconds

@@ -25,6 +25,10 @@ interface ScenarioCardProps {
     description: string;
     points: string[];
   };
+  jobContext: {
+    jobPosition: string;
+    companyName: string;
+  };
   scenarios: Array<{
     id: string;
     title: string;
@@ -33,7 +37,7 @@ interface ScenarioCardProps {
   }>;
 }
 
-export default function ScenarioCard({ stage, scenarios }: ScenarioCardProps) {
+export default function ScenarioCard({ stage, jobContext, scenarios }: ScenarioCardProps) {
   const [, setLocation] = useLocation();
 
   const Icon = STAGE_ICONS[stage.id as keyof typeof STAGE_ICONS];
@@ -45,6 +49,11 @@ export default function ScenarioCard({ stage, scenarios }: ScenarioCardProps) {
     // Otherwise, create a default scenario for this stage
     if (scenarios.length > 0) {
       console.log('Navigating to briefing for scenario:', scenarios[0].id);
+      console.log('Job context:', jobContext);
+      
+      // Store job context in session storage for the briefing page
+      sessionStorage.setItem('jobContext', JSON.stringify(jobContext));
+      
       setLocation(`/practice/briefing/${scenarios[0].id}`);
     } else {
       // For now, we'll need a default scenario for each stage
