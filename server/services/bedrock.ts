@@ -13,6 +13,8 @@ interface InterviewContext {
   company: string;
   candidateBackground: string;
   keyObjectives: string;
+  userJobPosition?: string;
+  userCompanyName?: string;
 }
 
 interface AIResponse {
@@ -186,9 +188,15 @@ class BedrockService {
     const systemPrompt = `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
 
     You are conducting a ${context.stage} interview for a ${context.jobRole} position at ${context.company}.
+    ${context.userJobPosition ? `The candidate is applying for the role of: ${context.userJobPosition}` : ''}
+    ${context.userCompanyName ? `at ${context.userCompanyName}.` : ''}
     
     Candidate background: ${context.candidateBackground}
     Key objectives for this interview: ${context.keyObjectives}
+    
+    ${context.userJobPosition || context.userCompanyName ? 
+      `Please tailor your questions to be specifically relevant to ${context.userJobPosition || 'their role'} ${context.userCompanyName ? `at ${context.userCompanyName}` : ''}.` : 
+      ''}
     
     Start the interview with an appropriate opening question. Be natural and conversational, matching your persona.
     Keep responses focused and professional. This is question #1 of 15.`;
@@ -222,6 +230,12 @@ class BedrockService {
     const systemPrompt = `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
 
     You are conducting a ${context.stage} interview for a ${context.jobRole} position at ${context.company}.
+    ${context.userJobPosition ? `The candidate is applying for the role of: ${context.userJobPosition}` : ''}
+    ${context.userCompanyName ? `at ${context.userCompanyName}.` : ''}
+    
+    ${context.userJobPosition || context.userCompanyName ? 
+      `Please tailor your questions to be specifically relevant to ${context.userJobPosition || 'their role'} ${context.userCompanyName ? `at ${context.userCompanyName}` : ''}.` : 
+      ''}
     
     This is question #${currentQuestionNumber + 1} of 15. Based on the conversation so far, ask a relevant follow-up question.
     Keep the interview flowing naturally while covering important topics for this role and interview stage.
