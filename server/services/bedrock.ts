@@ -477,6 +477,127 @@ Provide brief encouraging feedback:`
       return "Good response! Consider adding more specific details and examples to strengthen your answer.";
     }
   }
+
+  async generateDynamicScenario(
+    stage: string,
+    userJobPosition?: string,
+    userCompanyName?: string
+  ): Promise<any> {
+    const systemPrompt = `You are an AI that generates completely dynamic, realistic interview scenarios for job interview practice. 
+    Create unique, fresh scenarios that feel like real job interviews.`;
+
+    const messages = [{
+      role: "user",
+      content: `Generate a completely unique interview scenario for:
+        - Interview Stage: ${stage}
+        ${userJobPosition ? `- Target Job Position: ${userJobPosition}` : ''}
+        ${userCompanyName ? `- Target Company: ${userCompanyName}` : ''}
+        
+        ${userJobPosition && userCompanyName ? 
+          `CRITICAL: This is for a real ${userJobPosition} position at ${userCompanyName}. 
+           Create a scenario specifically tailored to this role and company:
+           - Use ${userCompanyName}'s actual industry, culture, and values
+           - Focus on ${userJobPosition} specific requirements and challenges
+           - Make interviewer details realistic for this company and role
+           - Ensure scenario feels authentic to someone actually interviewing for this position` :
+          'Create a diverse, realistic scenario for a common job role.'
+        }
+        
+        Return ONLY a JSON object with these exact fields:
+        - title: A descriptive scenario title
+        - interviewStage: "${stage}"
+        - industry: The relevant industry
+        - jobRole: The job role being interviewed for
+        - companyBackground: Company description and context
+        - roleDescription: Detailed role requirements and responsibilities
+        - candidateBackground: Expected candidate experience level
+        - keyObjectives: What this interview stage aims to assess
+        - interviewerName: Realistic first and last name
+        - interviewerTitle: Their job title/position
+        - interviewerStyle: Their interviewing approach
+        - personalityTraits: Key personality characteristics
+        - status: "active"
+        
+        Make this scenario completely unique and realistic. Avoid generic templates.`
+    }];
+
+    try {
+      const response = await this.makeRequest(messages, systemPrompt, 800);
+      const content = response.content[0].text;
+      
+      // Try to parse JSON from the response
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const scenario = JSON.parse(jsonMatch[0]);
+        return scenario;
+      }
+      
+      // Dynamic fallback based on context
+      return this.generateFallbackScenario(stage, userJobPosition, userCompanyName);
+    } catch (error) {
+      console.error("Error generating dynamic scenario:", error);
+      return this.generateFallbackScenario(stage, userJobPosition, userCompanyName);
+    }
+  }
+
+  private generateFallbackScenario(
+    stage: string,
+    userJobPosition?: string,
+    userCompanyName?: string
+  ): any {
+    const actualJobRole = userJobPosition || "Software Engineer";
+    const actualCompany = userCompanyName || "TechCorp";
+    
+    if (userJobPosition?.toLowerCase().includes('ai') && userCompanyName?.toLowerCase() === 'meta') {
+      return {
+        title: `AI Engineer - ${stage.replace('-', ' ')} Interview - Meta`,
+        interviewStage: stage,
+        industry: "Technology",
+        jobRole: "AI Engineer",
+        companyBackground: "Meta is a leading technology company focused on building the next generation of social technology and the metaverse, with cutting-edge AI research and applications.",
+        roleDescription: "Design and implement AI/ML systems at scale, work on recommendation algorithms, computer vision, NLP, and other AI technologies that impact billions of users.",
+        candidateBackground: "You have experience in machine learning, deep learning, and AI systems development with knowledge of Python, PyTorch, and large-scale systems.",
+        keyObjectives: "Assess technical AI/ML knowledge, system design skills, problem-solving approach, and cultural fit with Meta's innovation-driven environment.",
+        interviewerName: "Dr. Sarah Chen",
+        interviewerTitle: "AI Research Director",
+        interviewerStyle: "technical and innovation-focused",
+        personalityTraits: "cutting-edge, collaborative, Meta culture-driven",
+        status: "active"
+      };
+    } else if (userJobPosition?.toLowerCase().includes('engineer')) {
+      return {
+        title: `${userJobPosition} - ${stage.replace('-', ' ')} Interview - ${userCompanyName || 'TechCorp'}`,
+        interviewStage: stage,
+        industry: "Technology",
+        jobRole: userJobPosition,
+        companyBackground: `${userCompanyName || 'TechCorp'} is a technology company building innovative software solutions.`,
+        roleDescription: `${userJobPosition} role focusing on software development, system design, and technical excellence.`,
+        candidateBackground: "You have relevant engineering experience and technical skills.",
+        keyObjectives: "Assess technical knowledge, problem-solving abilities, and team collaboration skills.",
+        interviewerName: "Alex Rodriguez",
+        interviewerTitle: "Engineering Manager",
+        interviewerStyle: "technical and collaborative",
+        personalityTraits: "analytical, supportive, technically-focused",
+        status: "active"
+      };
+    } else {
+      return {
+        title: `${actualJobRole} - ${stage.replace('-', ' ')} Interview`,
+        interviewStage: stage,
+        industry: "General",
+        jobRole: actualJobRole,
+        companyBackground: `${actualCompany} is a growing company focused on excellence and innovation.`,
+        roleDescription: `${actualJobRole} position with growth opportunities and meaningful work.`,
+        candidateBackground: "You have relevant experience and skills for this role.",
+        keyObjectives: "Assess skills, experience, and cultural fit.",
+        interviewerName: "Jordan Smith",
+        interviewerTitle: "Hiring Manager",
+        interviewerStyle: "professional and thorough",
+        personalityTraits: "experienced, fair, goal-oriented",
+        status: "active"
+      };
+    }
+  }
 }
 
 // Export singleton instance

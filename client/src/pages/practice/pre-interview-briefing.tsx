@@ -22,7 +22,22 @@ export default function PreInterviewBriefing() {
   console.log('PreInterviewBriefing rendering with scenarioId:', scenarioId);
 
   const { data: scenario, isLoading, error } = useQuery<InterviewScenario>({
-    queryKey: [`/api/practice/scenarios/${scenarioId}`],
+    queryKey: [`/api/practice/scenarios/${scenarioId}`, jobContext.jobPosition, jobContext.companyName],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (jobContext.jobPosition?.trim()) params.append('jobPosition', jobContext.jobPosition.trim());
+      if (jobContext.companyName?.trim()) params.append('companyName', jobContext.companyName.trim());
+      
+      const response = await fetch(`/api/practice/scenarios/${scenarioId}?${params.toString()}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
+    },
   });
 
   // Handle unauthorized errors

@@ -74,7 +74,22 @@ export default function ScenarioSelection() {
   const [companyName, setCompanyName] = useState("");
 
   const { data: scenarios = [], isLoading } = useQuery<InterviewScenario[]>({
-    queryKey: ["/api/practice/scenarios"],
+    queryKey: ["/api/practice/scenarios", jobPosition, companyName],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (jobPosition.trim()) params.append('jobPosition', jobPosition.trim());
+      if (companyName.trim()) params.append('companyName', companyName.trim());
+      
+      const response = await fetch(`/api/practice/scenarios?${params.toString()}`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return response.json();
+    },
   });
 
   const { data: sessions = [] } = useQuery<InterviewSession[]>({
@@ -127,7 +142,7 @@ export default function ScenarioSelection() {
                 </div>
               </div>
               <p className="text-sm text-blue-600 mt-2">
-                These details help our AI interviewer generate more relevant questions for your specific role and company.
+                <strong>✨ Dynamic Generation:</strong> These details help our AI create completely unique interview scenarios and questions tailored specifically for your role and company. Each interview will be different!
               </p>
             </div>
             
