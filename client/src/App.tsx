@@ -41,8 +41,9 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={Practice} />
+      <Route path="/practice" component={Practice} />
       <Route path="/practice/*" component={Practice} />
+      <Route path="/" component={Practice} />
       {user?.role === 'admin' && (
         <Route path="/admin/*" component={AdminDashboard} />
       )}
