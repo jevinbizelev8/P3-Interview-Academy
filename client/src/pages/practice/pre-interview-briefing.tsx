@@ -35,13 +35,22 @@ export default function PreInterviewBriefing() {
 
   const handleStartInterview = async () => {
     try {
+      if (!scenarioId) {
+        toast({
+          title: "Error",
+          description: "Scenario ID is missing",
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Create new interview session
       const response = await fetch("/api/practice/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          scenarioId,
+          scenarioId: scenarioId,
           status: "in_progress",
           currentQuestion: 1,
           totalQuestions: 15,
