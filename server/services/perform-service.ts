@@ -274,21 +274,11 @@ export class PerformService {
   }
 
   // Get user's assessment history with full details
-  async getUserAssessmentHistory(userId: string, limit: number = 10): Promise<AssessmentWithDetails[]> {
-    return await db.query.assessments.findMany({
-      where: eq(assessments.userId, userId),
-      with: {
-        indicators: true,
-        drills: true,
-        session: {
-          with: {
-            scenario: true
-          }
-        }
-      },
-      orderBy: [desc(assessments.assessmentDate)],
-      limit
-    });
+  async getUserAssessmentHistory(userId: string, limit: number = 10): Promise<Assessment[]> {
+    return await db.select().from(assessments)
+      .where(eq(assessments.userId, userId))
+      .orderBy(desc(assessments.createdAt))
+      .limit(limit);
   }
 
   // Get comprehensive performance overview

@@ -1,9 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { 
   Award, 
   BarChart3, 
@@ -46,6 +50,17 @@ interface InterviewSession {
 
 export default function PerformanceDashboard() {
   const queryClient = useQueryClient();
+  const [assessmentDialog, setAssessmentDialog] = useState<{
+    open: boolean;
+    sessionId: string;
+    jobRole: string;
+    companyName: string;
+  }>({
+    open: false,
+    sessionId: '',
+    jobRole: '',
+    companyName: ''
+  });
 
   // Get user performance overview
   const { data: performance, isLoading: performanceLoading } = useQuery<PerformanceOverview>({
@@ -70,10 +85,21 @@ export default function PerformanceDashboard() {
       });
     },
     onSuccess: () => {
+      setAssessmentDialog({ open: false, sessionId: '', jobRole: '', companyName: '' });
       queryClient.invalidateQueries({ queryKey: ['/api/perform/overview/user/dev-user-123'] });
       queryClient.invalidateQueries({ queryKey: ['/api/perform/assessments/user/dev-user-123'] });
     }
   });
+
+  const handleCreateAssessment = () => {
+    if (assessmentDialog.sessionId && assessmentDialog.jobRole && assessmentDialog.companyName) {
+      createAssessmentMutation.mutate({
+        sessionId: assessmentDialog.sessionId,
+        jobRole: assessmentDialog.jobRole,
+        companyName: assessmentDialog.companyName
+      });
+    }
+  };
 
   const completedSessions = sessions.filter(s => s.status === 'completed');
   const hasPerformanceData = performance && performance.totalAssessments > 0;
@@ -162,18 +188,69 @@ export default function PerformanceDashboard() {
                           {session.scenario.interviewStage} • {session.scenario.jobRole}
                         </p>
                       </div>
-                      <Button
-                        onClick={() => createAssessmentMutation.mutate({ 
-                          sessionId: session.id,
-                          jobRole: session.scenario.jobRole,
-                          companyName: session.scenario.companyBackground 
-                        })}
-                        disabled={createAssessmentMutation.isPending}
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        {createAssessmentMutation.isPending ? 'Assessing...' : 'Create Assessment'}
-                      </Button>
+                      <Dialog open={assessmentDialog.open && assessmentDialog.sessionId === session.id} onOpenChange={(open) => {
+                        if (!open) {
+                          setAssessmentDialog({ open: false, sessionId: '', jobRole: '', companyName: '' });
+                        }
+                      }}>
+                        <DialogTrigger asChild>
+                          <Button
+                            onClick={() => setAssessmentDialog({
+                              open: true,
+                              sessionId: session.id,
+                              jobRole: session.scenario.jobRole,
+                              companyName: session.scenario.companyBackground || ''
+                            })}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            Create Assessment
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Assessment Details</DialogTitle>
+                            <DialogDescription>
+                              Enter your specific job position and company for AI-tailored evaluation questions.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="jobRole">Job Position *</Label>
+                              <Input
+                                id="jobRole"
+                                value={assessmentDialog.jobRole}
+                                onChange={(e) => setAssessmentDialog(prev => ({ ...prev, jobRole: e.target.value }))}
+                                placeholder="e.g., Senior Software Engineer, Product Manager"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="companyName">Company Name *</Label>
+                              <Input
+                                id="companyName"
+                                value={assessmentDialog.companyName}
+                                onChange={(e) => setAssessmentDialog(prev => ({ ...prev, companyName: e.target.value }))}
+                                placeholder="e.g., Meta, Google, Microsoft"
+                              />
+                            </div>
+                            <div className="flex justify-end gap-3">
+                              <Button 
+                                variant="outline"
+                                onClick={() => setAssessmentDialog({ open: false, sessionId: '', jobRole: '', companyName: '' })}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={handleCreateAssessment}
+                                disabled={createAssessmentMutation.isPending || !assessmentDialog.jobRole || !assessmentDialog.companyName}
+                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                              >
+                                {createAssessmentMutation.isPending ? 'Creating...' : 'Create Assessment'}
+                              </Button>
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </Card>
                 ))}
