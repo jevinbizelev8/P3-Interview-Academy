@@ -44,47 +44,65 @@ export class PerformService {
       // Generate contextual questions using AI
       const generatedQuestions = await this.generateAIQuestions(jobRole, companyName, questionCount, difficultyLevel, questionTypes);
       
-      // Save to database
-      const savedQuestions = await db.insert(simulationQuestions).values(generatedQuestions).returning();
-      
-      return savedQuestions;
+      // Return generated questions directly (skip database save for now)
+      return generatedQuestions.map(q => ({
+        id: `sim-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        ...q,
+        generatedAt: new Date(),
+        createdAt: new Date()
+      }));
       
     } catch (error) {
       console.error("Error generating simulation questions:", error);
       
-      // Fallback to predefined questions if AI fails
-      return await this.getFallbackQuestions(jobRole, companyName, questionTypes, questionCount);
+      // Return fallback questions directly
+      return this.getMockFallbackQuestions(jobRole, companyName, questionTypes, questionCount);
     }
   }
 
   // Generate AI questions (mock implementation - will integrate with Anthropic)
   private async generateAIQuestions(jobRole: string, companyName: string, questionCount: number, difficultyLevel: number, questionTypes: string[]): Promise<any[]> {
-    // Mock AI-generated questions based on role and company
+    // Enhanced AI-generated questions based on role and company
     const questionTemplates = {
       behavioral: [
         {
-          question: `Tell me about a time when you had to solve a complex problem in your role as a ${jobRole}. How did you approach it?`,
-          context: `This question assesses problem-solving skills specific to ${jobRole} at ${companyName}`,
-          expectedOutcomes: ['STAR method usage', 'Technical competency', 'Problem-solving process']
+          question: `Tell me about a time when you had to solve a complex problem in your role as a ${jobRole} at ${companyName}. How did you approach it?`,
+          context: `This question assesses problem-solving skills specific to ${jobRole} responsibilities at ${companyName}`,
+          expectedOutcomes: ['STAR method usage', 'Technical competency', 'Problem-solving process', 'Company-specific knowledge']
         },
         {
-          question: `Describe a situation where you had to work with a difficult team member. How did you handle it?`,
+          question: `Describe a situation where you had to work with a difficult team member. How did you handle it, and what would you do differently at ${companyName}?`,
           context: `Evaluates interpersonal skills and conflict resolution in ${companyName} context`,
-          expectedOutcomes: ['Empathy demonstration', 'Communication skills', 'Team collaboration']
+          expectedOutcomes: ['Empathy demonstration', 'Communication skills', 'Team collaboration', 'Cultural fit']
+        },
+        {
+          question: `Can you share an example of when you had to adapt to a significant change in your work environment? How would this experience help you at ${companyName}?`,
+          context: `Assesses adaptability and resilience for ${jobRole} position`,
+          expectedOutcomes: ['Adaptability', 'Change management', 'Learning agility', 'Growth mindset']
         }
       ],
       technical: [
         {
-          question: `How would you approach designing a system for ${companyName}'s specific needs as a ${jobRole}?`,
-          context: `Technical design question tailored to ${jobRole} responsibilities`,
-          expectedOutcomes: ['Technical architecture', 'Company-specific considerations', 'Scalability thinking']
+          question: `How would you approach designing a scalable system for ${companyName}'s specific needs as a ${jobRole}?`,
+          context: `Technical design question tailored to ${jobRole} responsibilities at ${companyName}`,
+          expectedOutcomes: ['Technical architecture', 'Company-specific considerations', 'Scalability thinking', 'Best practices']
+        },
+        {
+          question: `Walk me through how you would troubleshoot a critical production issue at ${companyName}. What's your systematic approach?`,
+          context: `Problem-solving under pressure for ${jobRole} role`,
+          expectedOutcomes: ['Systematic thinking', 'Incident management', 'Technical debugging', 'Communication skills']
         }
       ],
       situational: [
         {
-          question: `If ${companyName} needed to implement a major change in your department, how would you ensure smooth adoption?`,
-          context: `Change management scenario relevant to ${jobRole} and ${companyName}`,
-          expectedOutcomes: ['Change management skills', 'Stakeholder communication', 'Strategic thinking']
+          question: `If ${companyName} needed to implement a major change in your department, how would you ensure smooth adoption as a ${jobRole}?`,
+          context: `Change management scenario relevant to ${jobRole} and ${companyName} culture`,
+          expectedOutcomes: ['Change management skills', 'Stakeholder communication', 'Strategic thinking', 'Leadership']
+        },
+        {
+          question: `Imagine you're starting your first day at ${companyName} as a ${jobRole}. How would you approach building relationships with your new team?`,
+          context: `Relationship building and cultural integration at ${companyName}`,
+          expectedOutcomes: ['Relationship building', 'Cultural awareness', 'Communication strategy', 'Team integration']
         }
       ]
     };
@@ -110,20 +128,48 @@ export class PerformService {
     return questions.slice(0, questionCount);
   }
 
-  // Fallback questions if AI generation fails
-  private async getFallbackQuestions(jobRole: string, companyName: string, questionTypes: string[], count: number): Promise<SimulationQuestion[]> {
-    // Check if we have existing questions for this role/company combo
-    const existing = await db.select()
-      .from(simulationQuestions)
-      .where(
-        and(
-          eq(simulationQuestions.jobRole, jobRole),
-          eq(simulationQuestions.companyName, companyName)
-        )
-      )
-      .limit(count);
+  // Mock fallback questions if AI generation fails
+  private getMockFallbackQuestions(jobRole: string, companyName: string, questionTypes: string[], count: number): SimulationQuestion[] {
+    const fallbackQuestions = [
+      {
+        id: `fallback-1`,
+        jobRole,
+        companyName,
+        questionType: 'behavioral',
+        question: `Tell me about your experience working as a ${jobRole}. What motivates you in this role?`,
+        context: `General behavioral question for ${jobRole} position`,
+        expectedOutcomes: ['Experience demonstration', 'Motivation clarity', 'Role understanding'],
+        difficultyLevel: 3,
+        generatedAt: new Date(),
+        createdAt: new Date()
+      },
+      {
+        id: `fallback-2`,
+        jobRole,
+        companyName,
+        questionType: 'situational',
+        question: `How would you approach your first 90 days at ${companyName} as a ${jobRole}?`,
+        context: `Strategic planning question for ${companyName}`,
+        expectedOutcomes: ['Strategic thinking', 'Planning skills', 'Company research'],
+        difficultyLevel: 3,
+        generatedAt: new Date(),
+        createdAt: new Date()
+      },
+      {
+        id: `fallback-3`,
+        jobRole,
+        companyName,
+        questionType: 'behavioral',
+        question: `Describe a challenging project you completed. How did you overcome obstacles?`,
+        context: `Problem-solving assessment for ${jobRole}`,
+        expectedOutcomes: ['Problem-solving skills', 'Resilience', 'Achievement focus'],
+        difficultyLevel: 4,
+        generatedAt: new Date(),
+        createdAt: new Date()
+      }
+    ];
 
-    return existing;
+    return fallbackQuestions.slice(0, count);
   }
 
   // Create comprehensive performance assessment

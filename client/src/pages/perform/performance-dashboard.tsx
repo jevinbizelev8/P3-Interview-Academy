@@ -18,7 +18,8 @@ import {
   ArrowRight,
   BookOpen,
   Plus,
-  ChevronRight
+  ChevronRight,
+  Bot
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -261,21 +262,39 @@ export default function PerformanceDashboard() {
             </div>
           ) : (
             <div className="space-y-6">
-              <Card className="max-w-md mx-auto p-6">
-                <div className="text-center">
-                  <BookOpen className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-                  <h3 className="font-semibold text-lg mb-2">Start Your Journey</h3>
-                  <p className="text-gray-600 mb-4">
-                    Complete your first practice session to begin receiving detailed performance feedback.
-                  </p>
-                  <Link href="/practice">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                      Start Practice Session
-                      <ArrowRight className="ml-2 w-4 h-4" />
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                <Card className="p-6">
+                  <div className="text-center">
+                    <BookOpen className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                    <h3 className="font-semibold text-lg mb-2">Practice Session</h3>
+                    <p className="text-gray-600 mb-4">
+                      Complete your first practice session to begin receiving detailed performance feedback.
+                    </p>
+                    <Link href="/practice">
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                        Start Practice Session
+                        <ArrowRight className="ml-2 w-4 h-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+                
+                <Card className="p-6">
+                  <div className="text-center">
+                    <Bot className="w-12 h-12 text-purple-600 mx-auto mb-4" />
+                    <h3 className="font-semibold text-lg mb-2">AI Interview Simulation</h3>
+                    <p className="text-gray-600 mb-4">
+                      Generate personalized interview questions for your target role and company.
+                    </p>
+                    <Link href="/perform/ai-simulation">
+                      <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white">
+                        Start AI Simulation
+                        <ArrowRight className="ml-2 w-4 h-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              </div>
             </div>
           )}
         </div>
@@ -358,6 +377,28 @@ export default function PerformanceDashboard() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
                       {performance.totalAssessments} assessments completed
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </div>
+                </CardContent>
+              </Link>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Link href="/perform/ai-simulation">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg">
+                    <Bot className="w-5 h-5 mr-2 text-purple-600" />
+                    AI Interview Simulation
+                  </CardTitle>
+                  <CardDescription>
+                    Generate personalized interview questions based on your target role and company
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      Advanced evaluation simulation
                     </span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </div>
