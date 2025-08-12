@@ -45,11 +45,12 @@ export default function PerformInterview() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async (content: string) => {
-      return await apiRequest(`/api/perform/sessions/${sessionId}/messages`, "POST", { 
+      const response = await apiRequest("POST", `/api/perform/sessions/${sessionId}/messages`, { 
         content,
         messageType: "user",
         questionNumber: currentQuestionNumber 
       });
+      return await response.json();
     },
     onSuccess: () => {
       setMessage("");
@@ -69,7 +70,8 @@ export default function PerformInterview() {
   // Generate AI response mutation
   const generateAiResponseMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/perform/sessions/${sessionId}/ai-response`, "POST");
+      const response = await apiRequest("POST", `/api/perform/sessions/${sessionId}/ai-response`);
+      return await response.json();
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/perform/sessions/${sessionId}/messages`] });
@@ -92,7 +94,8 @@ export default function PerformInterview() {
   // Complete interview mutation
   const completeInterviewMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest(`/api/perform/sessions/${sessionId}/complete`, "POST");
+      const response = await apiRequest("POST", `/api/perform/sessions/${sessionId}/complete`);
+      return await response.json();
     },
     onSuccess: () => {
       setIsCompleted(true);
