@@ -2,6 +2,7 @@ import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { bedrockService } from "./services/bedrock";
+import { AIService } from "./services/ai-service";
 import { setupAuth, isAuthenticated } from "./replit-auth";
 import { insertInterviewScenarioSchema, insertInterviewSessionSchema, insertInterviewMessageSchema } from "@shared/schema";
 import { z } from "zod";
