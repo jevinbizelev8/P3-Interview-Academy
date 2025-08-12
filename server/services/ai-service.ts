@@ -104,9 +104,11 @@ export class AIService {
 
     try {
       const persona = await bedrockService.generateInterviewerPersona(context);
+      console.log(`Successfully generated persona for ${language}`);
       
       if (questionNumber === 1 && conversationHistory.length === 0) {
         const response = await bedrockService.generateFirstQuestion(context, persona, language);
+        console.log(`Successfully generated first question in ${language}`);
         return response.content || response;
       } else {
         const response = await bedrockService.generateFollowUpQuestion(
@@ -116,22 +118,49 @@ export class AIService {
           questionNumber,
           language
         );
+        console.log(`Successfully generated follow-up question in ${language}`);
         return response.content || response;
       }
-    } catch (error) {
-      console.error(`Error generating ${questionNumber === 1 ? 'first' : 'follow-up'} question:`, error);
-      console.log(`Using ${language} language fallback`);
+    } catch (personaError) {
+      console.error(`Error generating persona: ${personaError.message}`);
       
-      // Use language-specific fallback
-      const languageFallback = LANGUAGE_FALLBACKS[language as keyof typeof LANGUAGE_FALLBACKS] || LANGUAGE_FALLBACKS.en;
-      
-      if (questionNumber === 1 && conversationHistory.length === 0) {
-        return languageFallback.firstQuestion(
-          session.userJobPosition || "Software Engineer",
-          session.userCompanyName || "Technology Company"
-        );
-      } else {
-        return languageFallback.followUpGeneric;
+      // If persona fails, try direct question generation
+      try {
+        if (questionNumber === 1 && conversationHistory.length === 0) {
+          const response = await bedrockService.generateFirstQuestion(context, null, language);
+          console.log(`Successfully generated first question without persona in ${language}`);
+          return response.content || response;
+        } else {
+          const response = await bedrockService.generateFollowUpQuestion(
+            context,
+            null,
+            conversationHistory,
+            questionNumber,
+            language
+          );
+          console.log(`Successfully generated follow-up question without persona in ${language}`);
+          return response.content || response;
+        }
+      } catch (error) {
+        console.error(`Error generating ${questionNumber === 1 ? 'first' : 'follow-up'} question:`, error);
+        console.log(`Using ${language} language fallback due to AWS error`);
+        
+        // Use language-specific fallback
+        const languageFallback = LANGUAGE_FALLBACKS[language as keyof typeof LANGUAGE_FALLBACKS] || LANGUAGE_FALLBACKS.en;
+        console.log(`Selected fallback for language: ${language}`, languageFallback ? 'found' : 'not found');
+        
+        if (questionNumber === 1 && conversationHistory.length === 0) {
+          const result = languageFallback.firstQuestion(
+            session.userJobPosition || "Software Engineer",
+            session.userCompanyName || "Technology Company"
+          );
+          console.log(`Fallback first question result: ${result.substring(0, 50)}...`);
+          return result;
+        } else {
+          const result = languageFallback.followUpGeneric;
+          console.log(`Fallback follow-up result: ${result.substring(0, 50)}...`);
+          return result;
+        }
       }
     }
   }
@@ -161,7 +190,7 @@ export class AIService {
 
     try {
       // Generate comprehensive assessment using Bedrock
-      const assessment = await bedrockService.generateFinalAssessment(
+      const assessment = await bedrockService.generateSTARAssessment(
         context,
         conversationHistory,
         language
