@@ -68,7 +68,7 @@ export default function AISimulation() {
       {/* Header */}
       <div className="flex items-center mb-8">
         <Link href="/perform">
-          <Button variant="outline" size="sm" className="mr-4">
+          <Button size="sm" className="mr-4 bg-blue-600 hover:bg-blue-700 text-white">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>

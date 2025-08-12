@@ -331,8 +331,8 @@ export default function InterviewPractice() {
               </div>
               <div className="flex space-x-2">
                 <Button
-                  variant="outline"
                   size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={handleTryAgain}
                   disabled={aiQuestionMutation.isPending || session.messages.length === 0}
                 >
@@ -340,8 +340,8 @@ export default function InterviewPractice() {
                   Try Again
                 </Button>
                 <Button
-                  variant="destructive"
                   size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={handleEndInterview}
                   disabled={completeInterviewMutation.isPending}
                 >

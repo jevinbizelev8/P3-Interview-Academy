@@ -105,7 +105,7 @@ export default function Landing() {
                 Perform
               </Link>
               <Link href="/practice">
-                <Button>Start Practice</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white">Start Practice</Button>
               </Link>
             </div>
           </div>
@@ -129,12 +129,12 @@ export default function Landing() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/practice">
-                <Button size="lg" className="text-lg px-8 py-3">
+                <Button size="lg" className="text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white">
                   Start Free Practice
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3">
+              <Button size="lg" className="text-lg px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white">
                 Watch Demo
               </Button>
             </div>
@@ -209,14 +209,14 @@ export default function Landing() {
                   </ul>
                   {module.id === "practice" ? (
                     <Link href="/practice">
-                      <Button className="w-full group-hover:scale-105 transition-transform">
+                      <Button className="w-full group-hover:scale-105 transition-transform bg-blue-600 hover:bg-blue-700">
                         Start Practicing
                         <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
                     </Link>
                   ) : (
                     <Link href={`/${module.id}`}>
-                      <Button variant="outline" className="w-full group-hover:scale-105 transition-transform">
+                      <Button className="w-full group-hover:scale-105 transition-transform bg-blue-600 hover:bg-blue-700 text-white">
                         Start Evaluation
                         <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
