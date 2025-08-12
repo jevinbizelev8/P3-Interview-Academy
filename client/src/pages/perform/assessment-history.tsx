@@ -9,8 +9,10 @@ import { format } from "date-fns";
 interface Assessment {
   id: string;
   overallScore: string;
-  overallGrade: string;
+  overallRating: string;
   assessmentDate: string;
+  progressLevel: number;
+  performanceBadge?: string;
   session: {
     scenario: {
       title: string;
@@ -18,28 +20,35 @@ interface Assessment {
       jobRole: string;
     };
   };
-  relevanceScore: number;
-  structuredScore: number;
-  specificScore: number;
-  honestScore: number;
-  confidentScore: number;
-  alignedScore: number;
-  outcomeOrientedScore: number;
+  communicationScore: number;
+  empathyScore: number;
+  problemSolvingScore: number;
+  culturalAlignmentScore: number;
+  indicators: Array<{
+    indicatorType: string;
+    score: number;
+    description: string;
+  }>;
+  drills: Array<{
+    title: string;
+    drillType: string;
+    completed: boolean;
+  }>;
 }
 
 export default function AssessmentHistory() {
   const { data: assessments = [], isLoading } = useQuery<Assessment[]>({
-    queryKey: ['/api/assessments/user/dev-user-123'],
+    queryKey: ['/api/perform/assessments/user/dev-user-123'],
     retry: false,
   });
 
-  const getGradeColor = (grade: string) => {
-    switch (grade) {
-      case 'A': return 'text-green-600 bg-green-100 border-green-200';
-      case 'B': return 'text-blue-600 bg-blue-100 border-blue-200';
-      case 'C': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
-      case 'D': return 'text-orange-600 bg-orange-100 border-orange-200';
-      case 'F': return 'text-red-600 bg-red-100 border-red-200';
+  const getRatingColor = (rating: string) => {
+    switch (rating) {
+      case 'Outstanding': return 'text-purple-600 bg-purple-100 border-purple-200';
+      case 'Competent': return 'text-green-600 bg-green-100 border-green-200';
+      case 'Developing': return 'text-blue-600 bg-blue-100 border-blue-200';
+      case 'Needs Practice': return 'text-orange-600 bg-orange-100 border-orange-200';
+      case 'Emerging': return 'text-red-600 bg-red-100 border-red-200';
       default: return 'text-gray-600 bg-gray-100 border-gray-200';
     }
   };
@@ -117,9 +126,9 @@ export default function AssessmentHistory() {
             <Card>
               <CardContent className="p-6 text-center">
                 <div className="text-3xl font-bold text-gray-900">
-                  {assessments.filter(a => a.overallGrade === 'A' || a.overallGrade === 'B').length}
+                  {assessments.filter(a => a.overallRating === 'Outstanding' || a.overallRating === 'Competent').length}
                 </div>
-                <p className="text-gray-600">High Grades (A-B)</p>
+                <p className="text-gray-600">High Performance</p>
               </CardContent>
             </Card>
           </div>
@@ -143,41 +152,67 @@ export default function AssessmentHistory() {
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
-                      <Badge className={getGradeColor(assessment.overallGrade)}>
-                        Grade {assessment.overallGrade}
+                      <Badge className={getRatingColor(assessment.overallRating)}>
+                        {assessment.overallRating}
                       </Badge>
+                      {assessment.performanceBadge && (
+                        <Badge variant="outline" className="text-purple-600 border-purple-600">
+                          🏆 {assessment.performanceBadge}
+                        </Badge>
+                      )}
                       <div className="text-right">
                         <div className="text-2xl font-bold text-gray-900">
                           {parseFloat(assessment.overallScore).toFixed(1)}
                         </div>
-                        <div className="text-sm text-gray-600">out of 5.0</div>
+                        <div className="text-sm text-gray-600">Level {assessment.progressLevel}</div>
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 
                 <CardContent>
-                  {/* Score Breakdown */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+                  {/* Performance Indicators Breakdown */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                     {[
-                      { label: 'Relevance', score: assessment.relevanceScore },
-                      { label: 'STAR Method', score: assessment.structuredScore },
-                      { label: 'Specific', score: assessment.specificScore },
-                      { label: 'Honest', score: assessment.honestScore },
-                      { label: 'Confident', score: assessment.confidentScore },
-                      { label: 'Aligned', score: assessment.alignedScore },
-                      { label: 'Results-Focused', score: assessment.outcomeOrientedScore },
-                    ].map((criteria, index) => (
-                      <div key={index} className="text-center">
-                        <div className={`text-lg font-bold ${getScoreColor(criteria.score)}`}>
-                          {criteria.score}
+                      { label: 'Communication', score: assessment.communicationScore, icon: '💬' },
+                      { label: 'Empathy', score: assessment.empathyScore, icon: '🤝' },
+                      { label: 'Problem Solving', score: assessment.problemSolvingScore, icon: '🧩' },
+                      { label: 'Cultural Fit', score: assessment.culturalAlignmentScore, icon: '🎯' },
+                    ].map((indicator, index) => (
+                      <div key={index} className="text-center p-3 bg-gray-50 rounded-lg">
+                        <div className="text-lg mb-1">{indicator.icon}</div>
+                        <div className={`text-lg font-bold ${getScoreColor(indicator.score)}`}>
+                          {indicator.score}/5
                         </div>
                         <div className="text-xs text-gray-600 leading-tight">
-                          {criteria.label}
+                          {indicator.label}
                         </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* Learning Drills Progress */}
+                  {assessment.drills && assessment.drills.length > 0 && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <h4 className="font-semibold text-blue-900 mb-2">Learning Drills</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {assessment.drills.slice(0, 3).map((drill, index) => (
+                          <Badge 
+                            key={index}
+                            variant="outline"
+                            className={drill.completed ? 'text-green-600 border-green-600' : 'text-gray-600 border-gray-600'}
+                          >
+                            {drill.completed ? '✓' : '○'} {drill.title}
+                          </Badge>
+                        ))}
+                        {assessment.drills.length > 3 && (
+                          <Badge variant="outline" className="text-gray-600">
+                            +{assessment.drills.length - 3} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Action Buttons */}
                   <div className="flex gap-3">

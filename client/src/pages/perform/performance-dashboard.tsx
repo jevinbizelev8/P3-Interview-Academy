@@ -21,10 +21,14 @@ import { apiRequest } from "@/lib/queryClient";
 interface PerformanceOverview {
   totalAssessments: number;
   averageScore: number;
-  currentGrade: string;
-  strongestCriteria: string;
-  weakestCriteria: string;
+  currentRating: string;
+  strongestIndicator: string;
+  weakestIndicator: string;
   recentTrend: string;
+  progressLevel: number;
+  completedDrills: number;
+  availableDrills: number;
+  performanceBadges: string[];
   assessments: any[];
 }
 
@@ -45,7 +49,7 @@ export default function PerformanceDashboard() {
 
   // Get user performance overview
   const { data: performance, isLoading: performanceLoading } = useQuery<PerformanceOverview>({
-    queryKey: ['/api/performance/user/dev-user-123'],
+    queryKey: ['/api/perform/overview/user/dev-user-123'],
     retry: false,
   });
 
@@ -57,32 +61,34 @@ export default function PerformanceDashboard() {
 
   // Create assessment mutation
   const createAssessmentMutation = useMutation({
-    mutationFn: async (sessionId: string) => {
-      return await apiRequest('/api/assessments', {
+    mutationFn: async ({ sessionId, jobRole, companyName }: { sessionId: string; jobRole?: string; companyName?: string }) => {
+      return await apiRequest('/api/perform/assessment', {
         method: 'POST',
         body: JSON.stringify({
           sessionId,
-          userId: 'dev-user-123'
+          userId: 'dev-user-123',
+          jobRole,
+          companyName
         })
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/performance/user/dev-user-123'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/assessments/user/dev-user-123'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/perform/overview/user/dev-user-123'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/perform/assessments/user/dev-user-123'] });
     }
   });
 
   const completedSessions = sessions.filter(s => s.status === 'completed');
   const hasPerformanceData = performance && performance.totalAssessments > 0;
 
-  const getGradeColor = (grade: string) => {
-    switch (grade) {
-      case 'A': return 'text-green-600 bg-green-100';
-      case 'B': return 'text-blue-600 bg-blue-100';
-      case 'C': return 'text-yellow-600 bg-yellow-100';
-      case 'D': return 'text-orange-600 bg-orange-100';
-      case 'F': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+  const getRatingColor = (rating: string) => {
+    switch (rating) {
+      case 'Outstanding': return 'text-purple-600 bg-purple-100 border-purple-200';
+      case 'Competent': return 'text-green-600 bg-green-100 border-green-200';
+      case 'Developing': return 'text-blue-600 bg-blue-100 border-blue-200';
+      case 'Needs Practice': return 'text-orange-600 bg-orange-100 border-orange-200';
+      case 'Emerging': return 'text-red-600 bg-red-100 border-red-200';
+      default: return 'text-gray-600 bg-gray-100 border-gray-200';
     }
   };
 
@@ -142,7 +148,11 @@ export default function PerformanceDashboard() {
                         </p>
                       </div>
                       <Button
-                        onClick={() => createAssessmentMutation.mutate(session.id)}
+                        onClick={() => createAssessmentMutation.mutate({ 
+                          sessionId: session.id,
+                          jobRole: session.scenario.jobRole,
+                          companyName: session.scenario.companyBackground 
+                        })}
                         disabled={createAssessmentMutation.isPending}
                         size="sm"
                       >
@@ -182,12 +192,12 @@ export default function PerformanceDashboard() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Overall Grade</p>
-                    <p className={`text-3xl font-bold ${getGradeColor(performance.currentGrade).split(' ')[0]}`}>
-                      {performance.currentGrade}
+                    <p className="text-sm font-medium text-gray-600">Performance Rating</p>
+                    <p className={`text-2xl font-bold ${getRatingColor(performance.currentRating).split(' ')[0]}`}>
+                      {performance.currentRating}
                     </p>
                   </div>
-                  <Badge className={getGradeColor(performance.currentGrade)}>
+                  <Badge className={getRatingColor(performance.currentRating)}>
                     {performance.averageScore.toFixed(1)}/5.0
                   </Badge>
                 </div>
@@ -212,7 +222,7 @@ export default function PerformanceDashboard() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Strongest Area</p>
                     <p className="text-lg font-semibold text-gray-900 truncate">
-                      {performance.strongestCriteria}
+                      {performance.strongestIndicator}
                     </p>
                   </div>
                   <Star className="w-8 h-8 text-yellow-500" />
@@ -282,20 +292,42 @@ export default function PerformanceDashboard() {
             </Card>
 
             <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <Link href="/practice">
+              <Link href="/perform/simulation">
                 <CardHeader>
                   <CardTitle className="flex items-center text-lg">
                     <Plus className="w-5 h-5 mr-2 text-purple-600" />
-                    New Practice Session
+                    AI Simulation Generator
                   </CardTitle>
                   <CardDescription>
-                    Start a new interview practice to generate more assessments
+                    Generate personalized questions based on job role and company
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
-                      Continue improving your skills
+                      Create targeted practice questions
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  </div>
+                </CardContent>
+              </Link>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Link href="/perform/drills">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg">
+                    <BookOpen className="w-5 h-5 mr-2 text-blue-600" />
+                    Learning Drills
+                  </CardTitle>
+                  <CardDescription>
+                    Practice targeted skills with personalized mini-exercises
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      {performance?.completedDrills || 0} of {performance?.availableDrills || 0} completed
                     </span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </div>
@@ -317,7 +349,7 @@ export default function PerformanceDashboard() {
                 <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
                   <div>
                     <h4 className="font-semibold text-red-900">Needs Attention</h4>
-                    <p className="text-red-700">{performance.weakestCriteria}</p>
+                    <p className="text-red-700">{performance.weakestIndicator}</p>
                   </div>
                   <Badge variant="outline" className="text-red-600 border-red-600">
                     Priority
@@ -327,12 +359,43 @@ export default function PerformanceDashboard() {
                 <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
                   <div>
                     <h4 className="font-semibold text-green-900">Strength to Maintain</h4>
-                    <p className="text-green-700">{performance.strongestCriteria}</p>
+                    <p className="text-green-700">{performance.strongestIndicator}</p>
                   </div>
                   <Badge variant="outline" className="text-green-600 border-green-600">
                     Excellent
                   </Badge>
                 </div>
+
+                {/* Progress Level and Drills Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <h4 className="font-semibold text-blue-900">Progress Level</h4>
+                    <p className="text-blue-700">Level {performance.progressLevel}</p>
+                    <Progress value={(performance.progressLevel / 5) * 100} className="mt-2" />
+                  </div>
+                  
+                  <div className="p-4 bg-purple-50 rounded-lg">
+                    <h4 className="font-semibold text-purple-900">Learning Drills</h4>
+                    <p className="text-purple-700">
+                      {performance.completedDrills} of {performance.availableDrills} completed
+                    </p>
+                    <Progress value={(performance.completedDrills / performance.availableDrills) * 100} className="mt-2" />
+                  </div>
+                </div>
+
+                {/* Performance Badges */}
+                {performance.performanceBadges.length > 0 && (
+                  <div className="mt-4">
+                    <h4 className="font-semibold text-gray-900 mb-2">Achievement Badges</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {performance.performanceBadges.map((badge, index) => (
+                        <Badge key={index} variant="outline" className="text-purple-600 border-purple-600">
+                          🏆 {badge}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

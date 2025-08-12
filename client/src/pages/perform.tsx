@@ -3,8 +3,10 @@ import MainNav from "@/components/navigation/main-nav";
 import ModuleSwitcher from "@/components/navigation/module-switcher";
 import PerformanceDashboard from "./perform/performance-dashboard";
 import AssessmentHistory from "./perform/assessment-history";
-import DetailedAssessment from "./perform/detailed-assessment";
+import DetailedAssessment from "./perform/detailed-assessment";  
 import PerformanceTrends from "./perform/performance-trends";
+import AISimulation from "./perform/ai-simulation";
+import LearningDrills from "./perform/learning-drills";
 
 export default function Perform() {
   return (
@@ -18,6 +20,8 @@ export default function Perform() {
         <Route path="/perform/history" component={AssessmentHistory} />
         <Route path="/perform/assessment/:assessmentId" component={DetailedAssessment} />
         <Route path="/perform/trends" component={PerformanceTrends} />
+        <Route path="/perform/simulation" component={AISimulation} />
+        <Route path="/perform/drills" component={LearningDrills} />
         <Route component={PerformanceDashboard} />
       </Switch>
     </div>
