@@ -119,8 +119,26 @@ export default function PerformanceDashboard() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Performance Dashboard</h1>
-        <p className="text-gray-600">Track your interview performance and identify areas for improvement</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Perform Module</h1>
+        <p className="text-gray-600">Master advanced techniques and achieve interview excellence - Evaluation simulation to assess your improvement</p>
+        <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="flex items-center text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
+            Advanced strategies
+          </div>
+          <div className="flex items-center text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
+            Executive presence
+          </div>
+          <div className="flex items-center text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
+            Negotiation skills
+          </div>
+          <div className="flex items-center text-sm text-green-600">
+            <div className="w-2 h-2 bg-green-600 rounded-full mr-2"></div>
+            Career planning
+          </div>
+        </div>
       </div>
 
       {!hasPerformanceData ? (
@@ -129,9 +147,9 @@ export default function PerformanceDashboard() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-6">
             <Award className="w-8 h-8 text-purple-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Performance Assessment</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Ready for Advanced Interview Evaluation</h2>
           <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-            Complete interview practice sessions to unlock detailed performance analytics and personalized feedback.
+            The Perform module serves as an evaluation simulation to assess if you have improved after using the platform. Master advanced interview techniques and demonstrate career excellence.
           </p>
 
           {completedSessions.length > 0 ? (

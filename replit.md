@@ -6,6 +6,8 @@ P³ Interview Academy is a comprehensive interview preparation platform designed
 
 **Enhanced Perform Module (January 2025)**: Complete redesign based on team specifications featuring AI-generated simulation questions, 4-criteria performance indicators (Communication, Empathy, Problem Solving, Cultural Alignment), qualitative observations, actionable insights, personalized learning drills, self-reflection prompts, performance badges, and progress tracking with visual indicators.
 
+**Perform Module Purpose**: The Perform module serves as an evaluation simulation specifically designed to assess if candidates have improved after using the platform. It focuses on mastering advanced interview techniques including advanced strategies, executive presence, negotiation skills, and career planning to achieve interview excellence.
+
 **Multi-Language Support**: The platform now supports 10 Southeast Asian languages including English, Bahasa Malaysia, Bahasa Indonesia, Thai, Vietnamese, Filipino, Myanmar, Khmer, Lao, and Chinese (Singapore), with complete language integration throughout the interview process.
 
 ## User Preferences

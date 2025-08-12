@@ -75,7 +75,7 @@ export default function AISimulation() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold text-gray-900">AI Simulation Generator</h1>
-          <p className="text-gray-600">Generate personalized interview questions based on your target role and company</p>
+          <p className="text-gray-600">Advanced evaluation simulation - Generate executive-level questions based on your target role and company</p>
         </div>
       </div>
 
