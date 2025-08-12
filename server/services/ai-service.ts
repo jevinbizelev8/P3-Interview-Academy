@@ -157,8 +157,15 @@ export class AIService {
           console.log(`Fallback first question result: ${result.substring(0, 50)}...`);
           return result;
         } else {
-          const result = languageFallback.followUpGeneric;
-          console.log(`Fallback follow-up result: ${result.substring(0, 50)}...`);
+          // Generate contextual follow-up based on conversation and question number
+          const result = this.generateContextualFollowUp(
+            conversationHistory, 
+            questionNumber, 
+            session, 
+            languageFallback, 
+            language
+          );
+          console.log(`Contextual fallback follow-up result: ${result.substring(0, 50)}...`);
           return result;
         }
       }
@@ -260,5 +267,103 @@ export class AIService {
   static async shouldCompleteInterview(messageCount: number): Promise<boolean> {
     // Complete after 8-12 questions depending on conversation flow
     return messageCount >= 16; // 8 Q&A pairs
+  }
+
+  // Generate more contextual follow-up questions based on conversation flow
+  private static generateContextualFollowUp(
+    conversationHistory: Array<{ role: string; content: string; timestamp: Date }>,
+    questionNumber: number,
+    session: any,
+    languageFallback: any,
+    language: string
+  ): string {
+    const lastUserResponse = conversationHistory
+      .filter(msg => msg.role === 'user')
+      .pop()?.content?.toLowerCase() || '';
+
+    // Define contextual follow-up templates by language and question progression
+    const contextualTemplates = {
+      'zh-sg': {
+        3: [
+          '让我们换个角度。您认为在这个职位上最大的挑战是什么？',
+          '非常好。您能分享一个您解决复杂问题的经历吗？',
+          '了解了。您如何看待团队合作在这个角色中的重要性？'
+        ],
+        4: [
+          '您对我们公司有什么了解？为什么想加入我们？',
+          '描述一下您理想的工作环境是什么样的？',
+          '您在前一份工作中最大的成就是什么？'
+        ],
+        5: [
+          '如果遇到意见分歧，您通常如何处理？',
+          '您如何保持对行业发展的关注和学习？',
+          '描述一次您必须在压力下做决定的经历。'
+        ]
+      },
+      'id': {
+        3: [
+          'Mari kita ubah sudut pandang. Menurut Anda, tantangan terbesar dalam posisi ini apa?',
+          'Bagus sekali. Bisakah Anda berbagi pengalaman menyelesaikan masalah kompleks?',
+          'Saya paham. Bagaimana Anda melihat pentingnya kerja tim dalam peran ini?'
+        ],
+        4: [
+          'Apa yang Anda ketahui tentang perusahaan kami? Mengapa ingin bergabung?',
+          'Ceritakan tentang lingkungan kerja ideal menurut Anda?',
+          'Apa pencapaian terbesar Anda di pekerjaan sebelumnya?'
+        ],
+        5: [
+          'Jika ada perbedaan pendapat, biasanya Anda menanganinya bagaimana?',
+          'Bagaimana cara Anda mengikuti perkembangan industri dan terus belajar?',
+          'Ceritakan saat Anda harus membuat keputusan di bawah tekanan.'
+        ]
+      },
+      'th': {
+        3: [
+          'มาเปลี่ยนมุมมองกันหน่อย คุณคิดว่าความท้าทายที่ใหญ่ที่สุดในตำแหน่งนี้คืออะไร?',
+          'ดีมาก คุณช่วยแบ่งปันประสบการณ์การแก้ปัญหาที่ซับซ้อนได้ไหม?',
+          'เข้าใจแล้ว คุณมองเห็นความสำคัญของการทำงานเป็นทีมในบทบาทนี้อย่างไร?'
+        ],
+        4: [
+          'คุณรู้อะไรเกี่ยวกับบริษัทเราบ้าง? ทำไมถึงอยากเข้าร่วม?',
+          'บรรยากาศการทำงานในอุดมคติของคุณเป็นอย่างไร?',
+          'ความสำเร็จที่ยิ่งใหญ่ที่สุดในงานก่อนหน้าคืออะไร?'
+        ],
+        5: [
+          'หากมีความเห็นไม่ตรงกัน คุณมักจะจัดการอย่างไร?',
+          'คุณติดตามการพัฒนาของอุตสาหกรรมและเรียนรู้อย่างต่อเนื่องอย่างไร?',
+          'เล่าเหตุการณ์ที่คุณต้องตัดสินใจภายใต้ความกดดัน'
+        ]
+      },
+      'ms': {
+        3: [
+          'Mari tukar perspektif. Pada pendapat anda, apakah cabaran terbesar dalam jawatan ini?',
+          'Bagus sekali. Bolehkah anda kongsi pengalaman menyelesaikan masalah kompleks?',
+          'Saya faham. Bagaimana anda melihat kepentingan kerja berpasukan dalam peranan ini?'
+        ],
+        4: [
+          'Apa yang anda tahu tentang syarikat kami? Mengapa ingin menyertai kami?',
+          'Ceritakan tentang persekitaran kerja ideal menurut anda?',
+          'Apakah pencapaian terbesar anda dalam kerja sebelum ini?'
+        ],
+        5: [
+          'Jika ada perbezaan pendapat, biasanya anda mengendalikannya bagaimana?',
+          'Bagaimana cara anda mengikuti perkembangan industri dan terus belajar?',
+          'Ceritakan masa anda terpaksa membuat keputusan di bawah tekanan.'
+        ]
+      }
+    };
+
+    // Get available templates for this language and question number
+    const langTemplates = contextualTemplates[language as keyof typeof contextualTemplates];
+    const questionTemplates = langTemplates?.[questionNumber as keyof typeof langTemplates];
+
+    if (questionTemplates && questionTemplates.length > 0) {
+      // Select different template based on question number to avoid repetition
+      const templateIndex = (questionNumber - 3) % questionTemplates.length;
+      return questionTemplates[templateIndex];
+    }
+
+    // Fallback to generic if no specific template
+    return languageFallback.followUpGeneric;
   }
 }

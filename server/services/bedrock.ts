@@ -372,6 +372,25 @@ class BedrockService {
     language: string = 'en'
   ): Promise<AIResponse> {
     const languageInstructions = this.getLanguageInstructions(language);
+    
+    // Handle null persona case
+    if (!persona) {
+      console.log("Persona is null, using contextual fallback immediately");
+      const contextualFallbacks = this.generateContextualFollowUpFallback(
+        conversationHistory, 
+        currentQuestionNumber + 1, 
+        context, 
+        language
+      );
+      
+      console.log(`Using contextual fallback for question ${currentQuestionNumber + 1} in ${language}: ${contextualFallbacks.substring(0, 50)}...`);
+      
+      return {
+        content: contextualFallbacks,
+        questionNumber: currentQuestionNumber + 1
+      };
+    }
+    
     const systemPrompt = `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
 
     ${context.userJobPosition && context.userCompanyName ? 
@@ -417,24 +436,18 @@ class BedrockService {
     } catch (error) {
       console.error("Error generating follow-up question:", error);
       
-      // Use language-specific fallback
-      const languageFallbacks = {
-        en: "That's interesting. Can you tell me more about a specific situation where you demonstrated that skill?",
-        id: "Itu menarik. Bisakah Anda menceritakan lebih detail tentang situasi spesifik di mana Anda menunjukkan kemampuan tersebut?",
-        ms: "Itu menarik. Bolehkah anda ceritakan lebih lanjut tentang situasi khusus di mana anda menunjukkan kemahiran tersebut?",
-        th: "น่าสนใจมาก คุณช่วยเล่าให้ฟังเพิ่มเติมเกี่ยวกับสถานการณ์เฉพาะที่คุณแสดงทักษะนั้นได้ไหม?",
-        vi: "Điều đó thật thú vị. Bạn có thể kể thêm về một tình huống cụ thể mà bạn đã thể hiện kỹ năng đó không?",
-        fil: "Interesante yan. Maaari mo bang ikwento nang mas detalyado ang isang tiyak na sitwasyon kung saan mo naipakita ang kakayahang iyon?",
-        my: "စိတ်ဝင်စားဖွယ်ပါပဲ။ သင်ထိုကျွမ်းကျင်မှုကို ပြသခဲ့သည့် တိကျသောအခြေအနေတစ်ခုအကြောင်း နောက်ထပ်ပြောပြနိုင်မလား။",
-        km: "គួរឱ្យចាប់អារម្មណ៍។ តើអ្នកអាចប្រាប់ខ្ញុំបន្ថែមអំពីស្ថានការណ៍ជាក់លាក់មួយដែលអ្នកបានបង្ហាញជំនាញនោះទេ?",
-        lo: "ນ່າສົນໃຈຫຼາຍ. ເຈົ້າສາມາດບອກຂ້ອຍເພີ່ມເຕີມກ່ຽວກັບສະຖານະການສະເພາະທີ່ເຈົ້າໄດ້ສະແດງໃຫ້ເຫັນທັກສະນັ້ນໄດ້ບໍ?",
-        'zh-sg': "很有趣。您能详细描述一个您展示了该技能的具体情况吗？"
-      };
+      // Use contextual fallback that varies by question number instead of static text
+      const contextualFallbacks = this.generateContextualFollowUpFallback(
+        conversationHistory, 
+        currentQuestionNumber + 1, 
+        context, 
+        language
+      );
       
-      const fallbackContent = languageFallbacks[language as keyof typeof languageFallbacks] || languageFallbacks.en;
+      console.log(`Using contextual fallback for question ${currentQuestionNumber + 1} in ${language}: ${contextualFallbacks.substring(0, 50)}...`);
       
       return {
-        content: fallbackContent,
+        content: contextualFallbacks,
         questionNumber: currentQuestionNumber + 1
       };
     }
@@ -662,6 +675,132 @@ Provide brief encouraging feedback:`
         status: "active"
       };
     }
+  }
+
+  // Generate contextual follow-up fallbacks that vary by question number
+  private generateContextualFollowUpFallback(
+    conversationHistory: Array<{ role: string; content: string; timestamp: Date }>,
+    questionNumber: number,
+    context: InterviewContext,
+    language: string
+  ): string {
+    // Define contextual follow-up templates by language and question progression
+    const contextualTemplates = {
+      'zh-sg': {
+        2: [
+          '很有趣。您能详细描述一个您展示了该技能的具体情况吗？',
+          '不错的经历。您在这个过程中遇到了什么挑战？',
+          '听起来很有挑战性。您是如何解决这个问题的？'
+        ],
+        3: [
+          '让我们换个角度。您认为在这个职位上最大的挑战是什么？',
+          '非常好。您能分享一个您解决复杂问题的经历吗？',
+          '了解了。您如何看待团队合作在这个角色中的重要性？'
+        ],
+        4: [
+          '您对我们公司有什么了解？为什么想加入我们？',
+          '描述一下您理想的工作环境是什么样的？',
+          '您在前一份工作中最大的成就是什么？'
+        ],
+        5: [
+          '如果遇到意见分歧，您通常如何处理？',
+          '您如何保持对行业发展的关注和学习？',
+          '描述一次您必须在压力下做决定的经历。'
+        ]
+      },
+      'id': {
+        2: [
+          'Itu menarik. Bisakah Anda menceritakan lebih detail tentang situasi spesifik di mana Anda menunjukkan kemampuan tersebut?',
+          'Pengalaman yang bagus. Tantangan apa yang Anda hadapi dalam proses tersebut?',
+          'Terdengar menantang. Bagaimana cara Anda mengatasi masalah tersebut?'
+        ],
+        3: [
+          'Mari kita ubah sudut pandang. Menurut Anda, tantangan terbesar dalam posisi ini apa?',
+          'Bagus sekali. Bisakah Anda berbagi pengalaman menyelesaikan masalah kompleks?',
+          'Saya paham. Bagaimana Anda melihat pentingnya kerja tim dalam peran ini?'
+        ],
+        4: [
+          'Apa yang Anda ketahui tentang perusahaan kami? Mengapa ingin bergabung?',
+          'Ceritakan tentang lingkungan kerja ideal menurut Anda?',
+          'Apa pencapaian terbesar Anda di pekerjaan sebelumnya?'
+        ],
+        5: [
+          'Jika ada perbedaan pendapat, biasanya Anda menanganinya bagaimana?',
+          'Bagaimana cara Anda mengikuti perkembangan industri dan terus belajar?',
+          'Ceritakan saat Anda harus membuat keputusan di bawah tekanan.'
+        ]
+      },
+      'th': {
+        2: [
+          'น่าสนใจมาก คุณช่วยเล่าให้ฟังเพิ่มเติมเกี่ยวกับสถานการณ์เฉพาะที่คุณแสดงทักษะนั้นได้ไหม?',
+          'ประสบการณ์ที่ดี คุณเจอความท้าทายอะไรบ้างในกระบวนการนั้น?',
+          'ฟังดูท้าทายมาก คุณแก้ไขปัญหานั้นอย่างไร?'
+        ],
+        3: [
+          'มาเปลี่ยนมุมมองกันหน่อย คุณคิดว่าความท้าทายที่ใหญ่ที่สุดในตำแหน่งนี้คืออะไร?',
+          'ดีมาก คุณช่วยแบ่งปันประสบการณ์การแก้ปัญหาที่ซับซ้อนได้ไหม?',
+          'เข้าใจแล้ว คุณมองเห็นความสำคัญของการทำงานเป็นทีมในบทบาทนี้อย่างไร?'
+        ],
+        4: [
+          'คุณรู้อะไรเกี่ยวกับบริษัทเราบ้าง? ทำไมถึงอยากเข้าร่วม?',
+          'บรรยากาศการทำงานในอุดมคติของคุณเป็นอย่างไร?',
+          'ความสำเร็จที่ยิ่งใหญ่ที่สุดในงานก่อนหน้าคืออะไร?'
+        ],
+        5: [
+          'หากมีความเห็นไม่ตรงกัน คุณมักจะจัดการอย่างไร?',
+          'คุณติดตามการพัฒนาของอุตสาหกรรมและเรียนรู้อย่างต่อเนื่องอย่างไร?',
+          'เล่าเหตุการณ์ที่คุณต้องตัดสินใจภายใต้ความกดดัน'
+        ]
+      },
+      'ms': {
+        2: [
+          'Itu menarik. Bolehkah anda ceritakan lebih lanjut tentang situasi khusus di mana anda menunjukkan kemahiran tersebut?',
+          'Pengalaman yang bagus. Cabaran apa yang anda hadapi dalam proses tersebut?',
+          'Kedengaran mencabar. Bagaimana anda mengatasi masalah tersebut?'
+        ],
+        3: [
+          'Mari tukar perspektif. Pada pendapat anda, apakah cabaran terbesar dalam jawatan ini?',
+          'Bagus sekali. Bolehkah anda kongsi pengalaman menyelesaikan masalah kompleks?',
+          'Saya faham. Bagaimana anda melihat kepentingan kerja berpasukan dalam peranan ini?'
+        ],
+        4: [
+          'Apa yang anda tahu tentang syarikat kami? Mengapa ingin menyertai kami?',
+          'Ceritakan tentang persekitaran kerja ideal menurut anda?',
+          'Apakah pencapaian terbesar anda dalam kerja sebelum ini?'
+        ],
+        5: [
+          'Jika ada perbezaan pendapat, biasanya anda mengendalikannya bagaimana?',
+          'Bagaimana cara anda mengikuti perkembangan industri dan terus belajar?',
+          'Ceritakan masa anda terpaksa membuat keputusan di bawah tekanan.'
+        ]
+      }
+    };
+
+    // Get templates for this language
+    const langTemplates = contextualTemplates[language as keyof typeof contextualTemplates];
+    const questionTemplates = langTemplates?.[questionNumber as keyof typeof langTemplates];
+
+    if (questionTemplates && questionTemplates.length > 0) {
+      // Use modulo to ensure we get different questions even if we go beyond the template count
+      const templateIndex = (questionNumber - 2) % questionTemplates.length;
+      return questionTemplates[templateIndex];
+    }
+
+    // Fallback to generic language-specific text
+    const genericFallbacks = {
+      en: "That's interesting. Can you tell me more about a specific situation where you demonstrated that skill?",
+      id: "Itu menarik. Bisakah Anda menceritakan lebih detail tentang situasi spesifik di mana Anda menunjukkan kemampuan tersebut?",
+      ms: "Itu menarik. Bolehkah anda ceritakan lebih lanjut tentang situasi khusus di mana anda menunjukkan kemahiran tersebut?",
+      th: "น่าสนใจมาก คุณช่วยเล่าให้ฟังเพิ่มเติมเกี่ยวกับสถานการณ์เฉพาะที่คุณแสดงทักษะนั้นได้ไหม?",
+      vi: "Điều đó thật thú vị. Bạn có thể kể thêm về một tình huống cụ thể mà bạn đã thể hiện kỹ năng đó không?",
+      fil: "Interesante yan. Maaari mo bang ikwento nang mas detalyado ang isang tiyak na sitwasyon kung saan mo naipakita ang kakayahang iyon?",
+      my: "စိတ်ဝင်စားဖွယ်ပါပဲ။ သင်ထိုကျွမ်းကျင်မှုကို ပြသခဲ့သည့် တိကျသောအခြေအနေတစ်ခုအကြောင်း နောက်ထပ်ပြောပြနိုင်မလား။",
+      km: "គួរឱ្យចាប់អារម្មណ៍។ តើអ្នកអាចប្រាប់ខ្ញុំបន្ថែមអំពីស្ថានការណ៍ជាក់លាក់មួយដែលអ្នកបានបង្ហាញជំនាញនោះទេ?",
+      lo: "ນ່າສົນໃຈຫຼາຍ. ເຈົ້າສາມາດບອກຂ້ອຍເພີ່ມເຕີມກ່ຽວກັບສະຖານະການສະເພາະທີ່ເຈົ້າໄດ້ສະແດງໃຫ້ເຫັນທັກສະນັ້ນໄດ້ບໍ?",
+      'zh-sg': "很有趣。您能详细描述一个您展示了该技能的具体情况吗？"
+    };
+    
+    return genericFallbacks[language as keyof typeof genericFallbacks] || genericFallbacks.en;
   }
 }
 
