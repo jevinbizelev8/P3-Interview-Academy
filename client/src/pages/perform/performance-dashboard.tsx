@@ -62,14 +62,11 @@ export default function PerformanceDashboard() {
   // Create assessment mutation
   const createAssessmentMutation = useMutation({
     mutationFn: async ({ sessionId, jobRole, companyName }: { sessionId: string; jobRole?: string; companyName?: string }) => {
-      return await apiRequest('/api/perform/assessment', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionId,
-          userId: 'dev-user-123',
-          jobRole,
-          companyName
-        })
+      return await apiRequest('POST', '/api/perform/assessment', {
+        sessionId,
+        userId: 'dev-user-123',
+        jobRole,
+        companyName
       });
     },
     onSuccess: () => {

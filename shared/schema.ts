@@ -212,7 +212,7 @@ export const assessments = pgTable("assessments", {
   culturalAlignmentScore: integer("cultural_alignment_score").notNull(),
   
   // Overall Performance Score Rating
-  overallScore: numeric("overall_score", { precision: 3, scale: 2 }).notNull(),
+  overallScore: varchar("overall_score").notNull(),
   overallRating: varchar("overall_rating", { length: 20 }).notNull(), // "Competent", "Needs Practice", etc.
   
   // Qualitative Observations - AI-generated summary
@@ -229,16 +229,14 @@ export const assessments = pgTable("assessments", {
   
   // Self-Reflection Integration
   selfReflectionPrompts: jsonb("self_reflection_prompts"), // AI-generated reflection questions
-  learnerReflection: text("learner_reflection"), // User's reflection response
-  aiCoachSummary: text("ai_coach_summary"), // AI coach reflection summary
   
   // Progress Tracking
   performanceBadge: varchar("performance_badge", { length: 50 }), // Achievement badge
   progressLevel: integer("progress_level").default(1), // Learning progression level
   
   // Metadata
-  assessmentDate: timestamp("assessment_date").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // AI-Generated Simulation Questions based on job role and company
