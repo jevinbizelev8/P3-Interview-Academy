@@ -416,8 +416,25 @@ class BedrockService {
       };
     } catch (error) {
       console.error("Error generating follow-up question:", error);
+      
+      // Use language-specific fallback
+      const languageFallbacks = {
+        en: "That's interesting. Can you tell me more about a specific situation where you demonstrated that skill?",
+        id: "Itu menarik. Bisakah Anda menceritakan lebih detail tentang situasi spesifik di mana Anda menunjukkan kemampuan tersebut?",
+        ms: "Itu menarik. Bolehkah anda ceritakan lebih lanjut tentang situasi khusus di mana anda menunjukkan kemahiran tersebut?",
+        th: "น่าสนใจมาก คุณช่วยเล่าให้ฟังเพิ่มเติมเกี่ยวกับสถานการณ์เฉพาะที่คุณแสดงทักษะนั้นได้ไหม?",
+        vi: "Điều đó thật thú vị. Bạn có thể kể thêm về một tình huống cụ thể mà bạn đã thể hiện kỹ năng đó không?",
+        fil: "Interesante yan. Maaari mo bang ikwento nang mas detalyado ang isang tiyak na sitwasyon kung saan mo naipakita ang kakayahang iyon?",
+        my: "စိတ်ဝင်စားဖွယ်ပါပဲ။ သင်ထိုကျွမ်းကျင်မှုကို ပြသခဲ့သည့် တိကျသောအခြေအနေတစ်ခုအကြောင်း နောက်ထပ်ပြောပြနိုင်မလား။",
+        km: "គួរឱ្យចាប់អារម្មណ៍។ តើអ្នកអាចប្រាប់ខ្ញុំបន្ថែមអំពីស្ថានការណ៍ជាក់លាក់មួយដែលអ្នកបានបង្ហាញជំនាញនោះទេ?",
+        lo: "ນ່າສົນໃຈຫຼາຍ. ເຈົ້າສາມາດບອກຂ້ອຍເພີ່ມເຕີມກ່ຽວກັບສະຖານະການສະເພາະທີ່ເຈົ້າໄດ້ສະແດງໃຫ້ເຫັນທັກສະນັ້ນໄດ້ບໍ?",
+        'zh-sg': "很有趣。您能详细描述一个您展示了该技能的具体情况吗？"
+      };
+      
+      const fallbackContent = languageFallbacks[language as keyof typeof languageFallbacks] || languageFallbacks.en;
+      
       return {
-        content: "That's interesting. Can you tell me more about a specific situation where you demonstrated that skill?",
+        content: fallbackContent,
         questionNumber: currentQuestionNumber + 1
       };
     }
