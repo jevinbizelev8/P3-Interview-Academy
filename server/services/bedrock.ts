@@ -59,6 +59,23 @@ class BedrockService {
     }
   }
 
+  private getLanguageInstructions(language: string): string {
+    const languageMap: Record<string, string> = {
+      'en': 'Conduct the interview in English.',
+      'ms': 'Menjalankan temu bual dalam Bahasa Malaysia. Gunakan bahasa yang profesional dan sopan.',
+      'id': 'Lakukan wawancara dalam Bahasa Indonesia. Gunakan bahasa yang profesional dan sopan.',
+      'th': 'ดำเนินการสัมภาษณ์ในภาษาไทย ใช้ภาษาที่เป็นทางการและสุภาพ',
+      'vi': 'Thực hiện cuộc phỏng vấn bằng tiếng Việt. Sử dụng ngôn ngữ chuyên nghiệp và lịch sự.',
+      'fil': 'Isagawa ang interview sa Filipino. Gumamit ng propesyonal at magalang na wika.',
+      'my': 'မြန်မာဘာသာဖြင့် အင်တာဗျူး ပြုလုပ်ပါ။ ပရော်ဖက်ရှင်နယ်နှင့် ယဉ်ကျေးသော ဘာသာစကားကို အသုံးပြုပါ။',
+      'km': 'បង្កើតការសម្ភាសន៍ជាភាសាខ្មែរ។ ប្រើភាសាវិជ្ជាជីវៈនិងគួរសម។',
+      'lo': 'ດໍາເນີນການສໍາພາດເປັນພາສາລາວ. ໃຊ້ພາສາອາຊີບແລະສຸພາບ.',
+      'zh-sg': '用中文进行面试。使用专业和礼貌的语言。'
+    };
+    
+    return languageMap[language] || languageMap['en'];
+  }
+
   private async makeRequest(messages: any[], systemPrompt?: string, maxTokens: number = 1024): Promise<any> {
     // If no AWS client is configured, return mock response
     if (!this.client) {
@@ -248,9 +265,13 @@ class BedrockService {
 
   async generateFirstQuestion(
     context: InterviewContext,
-    persona: InterviewerPersona
+    persona: InterviewerPersona,
+    language: string = 'en'
   ): Promise<AIResponse> {
+    const languageInstructions = this.getLanguageInstructions(language);
     const systemPrompt = `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
+
+    ${languageInstructions}
 
     ${context.userJobPosition && context.userCompanyName ? 
       `You are conducting a ${context.stage} interview for a ${context.userJobPosition} position at ${context.userCompanyName}. 
@@ -322,8 +343,10 @@ class BedrockService {
     context: InterviewContext,
     persona: InterviewerPersona,
     conversationHistory: Array<{ role: string; content: string; timestamp: Date }>,
-    currentQuestionNumber: number
+    currentQuestionNumber: number,
+    language: string = 'en'
   ): Promise<AIResponse> {
+    const languageInstructions = this.getLanguageInstructions(language);
     const systemPrompt = `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
 
     ${context.userJobPosition && context.userCompanyName ? 

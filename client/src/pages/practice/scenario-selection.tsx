@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ScenarioCard from "@/components/practice/scenario-card";
 import ProgressTracker from "@/components/practice/progress-tracker";
-import { Clock, Eye } from "lucide-react";
+import { Clock, Eye, Globe } from "lucide-react";
 import type { InterviewScenario, InterviewSession } from "@shared/schema";
+import { SUPPORTED_LANGUAGES } from "@shared/schema";
 
 const INTERVIEW_STAGES = [
   {
@@ -72,6 +74,7 @@ const INTERVIEW_STAGES = [
 export default function ScenarioSelection() {
   const [jobPosition, setJobPosition] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState<keyof typeof SUPPORTED_LANGUAGES>("en");
 
   const { data: scenarios = [], isLoading } = useQuery<InterviewScenario[]>({
     queryKey: ["/api/practice/scenarios", jobPosition, companyName],
@@ -113,7 +116,7 @@ export default function ScenarioSelection() {
             {/* Job Context Form */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <h3 className="text-md font-medium text-blue-900 mb-3">Personalise Your Interview</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label htmlFor="jobPosition" className="block text-sm font-medium text-gray-700 mb-1">
                     Job Position
@@ -139,6 +142,24 @@ export default function ScenarioSelection() {
                     placeholder="e.g. Google, Meta, Microsoft"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
+                </div>
+                <div>
+                  <label htmlFor="language" className="block text-sm font-medium text-gray-700 mb-1">
+                    <Globe className="w-4 h-4 inline mr-1" />
+                    Interview Language
+                  </label>
+                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(SUPPORTED_LANGUAGES).map(([code, name]) => (
+                        <SelectItem key={code} value={code}>
+                          {name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <p className="text-sm text-blue-600 mt-2">
@@ -173,7 +194,7 @@ export default function ScenarioSelection() {
                   <ScenarioCard
                     key={stage.id}
                     stage={stage}
-                    jobContext={{ jobPosition, companyName }}
+                    jobContext={{ jobPosition, companyName, interviewLanguage: selectedLanguage }}
                     scenarios={scenarios
                       .filter((s: InterviewScenario) => s.interviewStage === stage.id)
                       .map((s: InterviewScenario) => ({

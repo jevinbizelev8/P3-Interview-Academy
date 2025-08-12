@@ -330,14 +330,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       let aiResponse;
+      const language = session.interviewLanguage || 'en';
       if (questionNumber === 1) {
-        aiResponse = await bedrockService.generateFirstQuestion(context, persona);
+        aiResponse = await bedrockService.generateFirstQuestion(context, persona, language);
       } else {
         aiResponse = await bedrockService.generateFollowUpQuestion(
           context,
           persona,
           conversationMessages,
-          questionNumber - 1
+          questionNumber - 1,
+          language
         );
       }
 
