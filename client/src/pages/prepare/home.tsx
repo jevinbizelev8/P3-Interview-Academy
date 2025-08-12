@@ -22,18 +22,23 @@ export default function PrepareHome() {
   // Session creation mutation
   const createSessionMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/prepare/sessions", {
+      const response = await fetch("/api/prepare/sessions", {
         method: "POST",
-        body: JSON.stringify({
-          title: `Preparation Session ${new Date().toLocaleDateString()}`,
-          status: "in_progress",
-          sessionType: "wgll_framework",
-          currentStage: "wonder",
-        }),
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          title: `Preparation Session ${new Date().toLocaleDateString()}`,
+          stage: "wonder",
+        }),
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create session');
+      }
+      
+      return await response.json();
     },
     onSuccess: (session: any) => {
       toast({
