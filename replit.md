@@ -26,7 +26,7 @@ The server runs on **Node.js** with **Express.js** using **TypeScript** and ES m
 
 **AI Integration**: The platform integrates with **Anthropic's Claude** (using claude-sonnet-4-20250514) for intelligent interview coaching, dynamic question generation, and STAR-based evaluation. The AI system features **completely dynamic question generation** that creates fresh, unique interview questions in real-time based on the user's specific job position and company name. When users provide their job details (e.g., "AI Engineer" at "Meta"), the AI completely overrides generic scenarios and generates questions tailored to that exact role and company culture, making each interview unique and highly relevant.
 
-**Multi-Language AI**: The AI system now supports generating interview questions and feedback in 10 Southeast Asian languages with intelligent fallback systems and culturally appropriate language patterns for each supported locale.
+**Multi-Language AI**: The AI system now supports generating interview questions and feedback in 10 Southeast Asian languages with intelligent fallback systems and culturally appropriate language patterns for each supported locale. **Language consistency has been fully resolved** - all questions throughout the interview flow maintain the selected language, with proper fallback mechanisms that respect language selection when AWS Bedrock encounters authentication issues.
 
 ### Database Design
 The application uses **PostgreSQL** as the primary database with **Drizzle ORM** for type-safe database operations. The database is configured for **Neon serverless** deployment with connection pooling.

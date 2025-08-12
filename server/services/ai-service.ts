@@ -118,7 +118,7 @@ export class AIService {
           questionNumber,
           language
         );
-        console.log(`Successfully generated follow-up question in ${language}`);
+        console.log(`Successfully generated follow-up question in ${language}: ${response.content?.substring(0, 50)}...`);
         return response.content || response;
       }
     } catch (personaError) {
@@ -138,7 +138,7 @@ export class AIService {
             questionNumber,
             language
           );
-          console.log(`Successfully generated follow-up question without persona in ${language}`);
+          console.log(`Successfully generated follow-up question without persona in ${language}: ${response.content?.substring(0, 50)}...`);
           return response.content || response;
         }
       } catch (error) {
