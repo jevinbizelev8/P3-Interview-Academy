@@ -2,11 +2,7 @@
 
 ## Overview
 
-P³ Interview Academy is a comprehensive interview preparation platform designed to help users excel in job interviews through structured practice sessions. The platform follows a three-stage learning framework: Prepare, Practice, and Perform. It offers AI-powered coaching with real-time feedback, voice and text input capabilities, and comprehensive evaluation using performance indicators, qualitative observations, actionable insights, and personalized learning drills. The system supports multiple interview stages from phone screening to executive interviews, with **fully dynamic question generation** that creates personalized interviews based on the user's specific job position and company name, completely overriding generic scenarios.
-
-**Enhanced Perform Module (January 2025)**: Complete redesign based on team specifications featuring AI-generated simulation questions, 4-criteria performance indicators (Communication, Empathy, Problem Solving, Cultural Alignment), qualitative observations, actionable insights, personalized learning drills, self-reflection prompts, performance badges, and progress tracking with visual indicators.
-
-**Perform Module Purpose**: The Perform module serves as an evaluation simulation specifically designed to assess if candidates have improved after using the platform. It focuses on mastering advanced interview techniques including advanced strategies, executive presence, negotiation skills, and career planning to achieve interview excellence.
+P³ Interview Academy is a comprehensive interview preparation platform designed to help users excel in job interviews through structured practice sessions. The platform follows a three-stage learning framework: Prepare, Practice, and Perform. It offers AI-powered coaching with real-time feedback, voice and text input capabilities, and comprehensive evaluation using the STAR method (Situation, Task, Action, Result). The system supports multiple interview stages from phone screening to executive interviews, with **fully dynamic question generation** that creates personalized interviews based on the user's specific job position and company name, completely overriding generic scenarios.
 
 **Multi-Language Support**: The platform now supports 10 Southeast Asian languages including English, Bahasa Malaysia, Bahasa Indonesia, Thai, Vietnamese, Filipino, Myanmar, Khmer, Lao, and Chinese (Singapore), with complete language integration throughout the interview process.
 
@@ -28,16 +24,14 @@ The server runs on **Node.js** with **Express.js** using **TypeScript** and ES m
 
 **Session Management**: Multi-stage interview sessions are supported with progress tracking (setup → preparation → review → complete) and auto-save functionality. The system handles both text and voice responses with automatic data persistence.
 
-**AI Integration**: The platform integrates with **Anthropic's Claude** (using claude-sonnet-4-20250514) for intelligent interview coaching, dynamic question generation, and comprehensive performance evaluation. The AI system features **completely dynamic question generation** that creates fresh, unique interview questions in real-time based on the user's specific job position and company name. When users provide their job details (e.g., "AI Engineer" at "Meta"), the AI completely overrides generic scenarios and generates questions tailored to that exact role and company culture, making each interview unique and highly relevant.
-
-**Enhanced AI Assessment**: The new Perform module uses AI to generate comprehensive performance assessments with 4 key performance indicators, qualitative observations, actionable insights, STAR method recommendations, and personalized learning drills tailored to individual improvement areas.
+**AI Integration**: The platform integrates with **Anthropic's Claude** (using claude-sonnet-4-20250514) for intelligent interview coaching, dynamic question generation, and STAR-based evaluation. The AI system features **completely dynamic question generation** that creates fresh, unique interview questions in real-time based on the user's specific job position and company name. When users provide their job details (e.g., "AI Engineer" at "Meta"), the AI completely overrides generic scenarios and generates questions tailored to that exact role and company culture, making each interview unique and highly relevant.
 
 **Multi-Language AI**: The AI system now supports generating interview questions and feedback in 10 Southeast Asian languages with intelligent fallback systems and culturally appropriate language patterns for each supported locale.
 
 ### Database Design
 The application uses **PostgreSQL** as the primary database with **Drizzle ORM** for type-safe database operations. The database is configured for **Neon serverless** deployment with connection pooling.
 
-**Schema Structure**: Core entities include users (with Replit Auth integration), interview scenarios (organized by stage and industry), interview sessions (with state tracking), interview messages (supporting both user responses and AI feedback), and enhanced assessment system with assessments (4-criteria scoring), performance indicators (visual data support), simulation questions (AI-generated), and learning drills (personalized skill development). The schema supports comprehensive session analytics, progress tracking, and detailed performance evaluation.
+**Schema Structure**: Core entities include users (with Replit Auth integration), interview scenarios (organized by stage and industry), interview sessions (with state tracking), and interview messages (supporting both user responses and AI feedback). The schema supports comprehensive session analytics and progress tracking.
 
 **Data Flow**: The system manages end-to-end data flow from session creation and question retrieval through preparation, auto-saving, AI evaluation, and final review with performance analytics.
 
