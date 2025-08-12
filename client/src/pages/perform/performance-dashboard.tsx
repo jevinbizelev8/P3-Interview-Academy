@@ -173,6 +173,7 @@ export default function PerformanceDashboard() {
                         })}
                         disabled={createAssessmentMutation.isPending}
                         size="sm"
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
                         {createAssessmentMutation.isPending ? 'Assessing...' : 'Create Assessment'}
                       </Button>
@@ -191,7 +192,7 @@ export default function PerformanceDashboard() {
                     Complete your first practice session to begin receiving detailed performance feedback.
                   </p>
                   <Link href="/practice">
-                    <Button className="w-full">
+                    <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                       Start Practice Session
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
