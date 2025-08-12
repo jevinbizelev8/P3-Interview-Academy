@@ -26,7 +26,8 @@ export default function PerformSetup() {
 
   const createSessionMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      return await apiRequest("/api/perform/sessions", "POST", data);
+      const response = await apiRequest("POST", "/api/perform/sessions", data);
+      return await response.json();
     },
     onSuccess: (data) => {
       toast({
