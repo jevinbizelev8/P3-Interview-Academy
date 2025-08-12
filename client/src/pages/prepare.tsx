@@ -2,28 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, ArrowLeft, Construction } from "lucide-react";
 import { Link } from "wouter";
+import MainNav from "@/components/navigation/main-nav";
+import ModuleSwitcher from "@/components/navigation/module-switcher";
 
 export default function Prepare() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">P³</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Interview Academy</span>
-            </Link>
-            <div className="flex items-center space-x-4">
-              <Link href="/practice">
-                <Button variant="outline">Go to Practice</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <MainNav currentModule="prepare" />
+      <ModuleSwitcher currentModule="prepare" />
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
