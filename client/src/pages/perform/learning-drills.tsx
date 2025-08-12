@@ -87,8 +87,8 @@ export default function LearningDrills() {
           </Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold text-gray-900">Learning Drills</h1>
-          <p className="text-gray-600">Targeted practice exercises to improve specific interview skills</p>
+          <h1 className="text-3xl font-bold text-gray-900">Advanced Learning Drills</h1>
+          <p className="text-gray-600">Master advanced techniques through targeted exercises - Build executive presence and negotiation skills</p>
         </div>
       </div>
 
