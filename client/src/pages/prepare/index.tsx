@@ -1,13 +1,14 @@
 import { Switch, Route } from "wouter";
 import { PrepareSessionProvider } from "@/contexts/PrepareSessionContext";
 import PrepareHome from "./home";
+import PrepareSession from "./session";
 import NotFound from "@/pages/not-found";
 
 function PrepareRouter() {
   return (
     <Switch>
       <Route path="/prepare" component={PrepareHome} />
-      <Route path="/prepare/session/:sessionId" component={() => <div>Prepare Session (Coming Soon)</div>} />
+      <Route path="/prepare/session/:sessionId" component={PrepareSession} />
       <Route component={NotFound} />
     </Switch>
   );
