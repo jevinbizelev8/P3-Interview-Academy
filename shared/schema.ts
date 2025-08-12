@@ -185,7 +185,10 @@ export type InterviewScenarioWithStats = InterviewScenario & {
 export const prepareSessions = pgTable("prepare_sessions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
-  stage: varchar("stage").notNull(), // 'setup', 'preparation', 'review', 'complete'
+  title: varchar("title").notNull(),
+  status: varchar("status").notNull().default("in_progress"), // 'in_progress', 'completed', 'paused'
+  sessionType: varchar("session_type").notNull().default("wgll_framework"), // 'wgll_framework', 'star_practice', etc.
+  stage: varchar("stage").notNull(), // 'wonder', 'gather', 'link', 'launch' for WGLL
   currentQuestionIndex: integer("current_question_index").default(0),
   totalQuestions: integer("total_questions").default(12),
   interviewType: varchar("interview_type"), // 'phone-screening', 'functional-team', etc.
