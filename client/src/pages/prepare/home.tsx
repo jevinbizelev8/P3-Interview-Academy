@@ -119,22 +119,7 @@ export default function PrepareHome() {
           </div>
         </div>
 
-        {/* Navigation */}
-        <div className="flex justify-center mt-12">
-          <Button 
-            variant="outline" 
-            onClick={() => window.location.href = '/'}
-            className="mr-4"
-          >
-            Back to Home
-          </Button>
-          <Button 
-            onClick={() => window.location.href = '/practice'}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            Continue to Practice
-          </Button>
-        </div>
+
       </div>
     </div>
   );
