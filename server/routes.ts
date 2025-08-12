@@ -3,7 +3,13 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { bedrockService } from "./services/bedrock";
 import { setupAuth, isAuthenticated } from "./replit-auth";
-import { insertInterviewScenarioSchema, insertInterviewSessionSchema, insertInterviewMessageSchema } from "@shared/schema";
+import { 
+  insertInterviewScenarioSchema, 
+  insertInterviewSessionSchema, 
+  insertInterviewMessageSchema,
+  insertPrepareSessionSchema,
+  type PrepareSession 
+} from "@shared/schema";
 import { z } from "zod";
 
 // Extend Express Request to include user property
@@ -485,6 +491,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating transcript:", error);
       res.status(500).json({ message: "Failed to generate transcript" });
+    }
+  });
+
+  // Prepare Module API Routes
+  app.post("/api/prepare/sessions", addMockUser, async (req, res) => {
+    try {
+      const sessionData = {
+        ...req.body,
+        userId: req.user.id
+      };
+      
+      const validatedData = insertPrepareSessionSchema.parse(sessionData);
+      const session = await storage.createPrepareSession(validatedData);
+      res.status(201).json(session);
+    } catch (error: any) {
+      console.error("Error creating prepare session:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid session data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create prepare session" });
+    }
+  });
+
+  app.get("/api/prepare/sessions/:id", addMockUser, async (req, res) => {
+    try {
+      const session = await storage.getPrepareSession(req.params.id);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      if (session.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(session);
+    } catch (error) {
+      console.error("Error fetching prepare session:", error);
+      res.status(500).json({ message: "Failed to fetch session" });
+    }
+  });
+
+  app.get("/api/prepare/sessions", addMockUser, async (req, res) => {
+    try {
+      const sessions = await storage.getUserPrepareSessions(req.user.id);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching user prepare sessions:", error);
+      res.status(500).json({ message: "Failed to fetch sessions" });
+    }
+  });
+
+  app.put("/api/prepare/sessions/:id", addMockUser, async (req, res) => {
+    try {
+      const session = await storage.getPrepareSession(req.params.id);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      if (session.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const validatedData = insertPrepareSessionSchema.partial().parse(req.body);
+      const updatedSession = await storage.updatePrepareSession(req.params.id, validatedData);
+      res.json(updatedSession);
+    } catch (error: any) {
+      console.error("Error updating prepare session:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid session data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update session" });
     }
   });
 
