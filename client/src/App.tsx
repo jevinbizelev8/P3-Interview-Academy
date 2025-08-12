@@ -41,12 +41,26 @@ function Router() {
 
   return (
     <Switch>
+      {/* Prepare Module Routes - Add your prepare routes here */}
+      <Route path="/prepare" component={() => <div>Prepare Module (To be imported)</div>} />
+      <Route path="/prepare/*" component={() => <div>Prepare Module (To be imported)</div>} />
+      
+      {/* Practice Module Routes */}
       <Route path="/practice" component={Practice} />
       <Route path="/practice/*" component={Practice} />
+      
+      {/* Perform Module Routes - Future implementation */}
+      <Route path="/perform" component={() => <div>Perform Module (Coming Soon)</div>} />
+      <Route path="/perform/*" component={() => <div>Perform Module (Coming Soon)</div>} />
+      
+      {/* Default route */}
       <Route path="/" component={Practice} />
+      
+      {/* Admin Routes */}
       {user?.role === 'admin' && (
         <Route path="/admin/*" component={AdminDashboard} />
       )}
+      
       <Route component={NotFound} />
     </Switch>
   );
