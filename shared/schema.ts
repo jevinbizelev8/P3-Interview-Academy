@@ -199,43 +199,86 @@ export type InterviewScenarioWithStats = InterviewScenario & {
   averageRating: number;
 };
 
-// Assessment tables for Perform module
+// Assessment tables for Perform module - Enhanced based on team requirements
 export const assessments = pgTable("assessments", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: uuid("session_id").notNull().references(() => interviewSessions.id),
   userId: varchar("user_id").notNull().references(() => users.id),
   
-  // Assessment scores (1-5 scale based on PRD requirements)
-  relevanceScore: integer("relevance_score").notNull(),
-  structuredScore: integer("structured_score").notNull(), // STAR method
-  specificScore: integer("specific_score").notNull(),
-  honestScore: integer("honest_score").notNull(),
-  confidentScore: integer("confident_score").notNull(),
-  alignedScore: integer("aligned_score").notNull(), // Aligned with role
-  outcomeOrientedScore: integer("outcome_oriented_score").notNull(),
+  // Core Performance Indicators (KPIs) - Visual representation scores
+  communicationScore: integer("communication_score").notNull(),
+  empathyScore: integer("empathy_score").notNull(),
+  problemSolvingScore: integer("problem_solving_score").notNull(),
+  culturalAlignmentScore: integer("cultural_alignment_score").notNull(),
   
-  // Overall assessment
-  overallScore: numeric("overall_score", { precision: 3, scale: 2 }).notNull(), // Average of all scores
-  overallGrade: varchar("overall_grade", { length: 2 }).notNull(), // A, B, C, D, F
+  // Overall Performance Score Rating
+  overallScore: numeric("overall_score", { precision: 3, scale: 2 }).notNull(),
+  overallRating: varchar("overall_rating", { length: 20 }).notNull(), // "Competent", "Needs Practice", etc.
   
-  // AI-generated feedback
+  // Qualitative Observations - AI-generated summary
   strengths: text("strengths").notNull(),
-  improvements: text("improvements").notNull(),
-  specificFeedback: text("specific_feedback").notNull(),
-  nextSteps: text("next_steps").notNull(),
+  improvementAreas: text("improvement_areas").notNull(),
+  qualitativeObservations: text("qualitative_observations").notNull(),
+  
+  // Actionable Insights - Personalized recommendations
+  actionableInsights: text("actionable_insights").notNull(),
+  starMethodRecommendations: text("star_method_recommendations"),
+  
+  // Personalized Drills - Links to targeted practice
+  personalizedDrills: jsonb("personalized_drills").notNull(), // Array of drill recommendations
+  
+  // Self-Reflection Integration
+  selfReflectionPrompts: jsonb("self_reflection_prompts"), // AI-generated reflection questions
+  learnerReflection: text("learner_reflection"), // User's reflection response
+  aiCoachSummary: text("ai_coach_summary"), // AI coach reflection summary
+  
+  // Progress Tracking
+  performanceBadge: varchar("performance_badge", { length: 50 }), // Achievement badge
+  progressLevel: integer("progress_level").default(1), // Learning progression level
   
   // Metadata
   assessmentDate: timestamp("assessment_date").defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const assessmentCriteria = pgTable("assessment_criteria", {
+// AI-Generated Simulation Questions based on job role and company
+export const simulationQuestions = pgTable("simulation_questions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobRole: varchar("job_role", { length: 100 }).notNull(),
+  companyName: varchar("company_name", { length: 100 }).notNull(),
+  questionType: varchar("question_type", { length: 50 }).notNull(), // "behavioral", "technical", "situational"
+  question: text("question").notNull(),
+  context: text("context"), // Additional context for the question
+  expectedOutcomes: jsonb("expected_outcomes"), // What good answers should include
+  difficultyLevel: integer("difficulty_level").default(3), // 1-5 scale
+  generatedAt: timestamp("generated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Performance Indicators Tracking
+export const performanceIndicators = pgTable("performance_indicators", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   assessmentId: uuid("assessment_id").notNull().references(() => assessments.id),
-  criteriaName: varchar("criteria_name", { length: 50 }).notNull(),
+  indicatorType: varchar("indicator_type", { length: 50 }).notNull(),
   score: integer("score").notNull(),
-  feedback: text("feedback").notNull(),
-  examples: text("examples"), // Specific examples from the conversation
+  description: text("description").notNull(),
+  visualData: jsonb("visual_data"), // Data for radar charts, bar charts, etc.
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Personalized Learning Drills
+export const learningDrills = pgTable("learning_drills", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: uuid("assessment_id").notNull().references(() => assessments.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  drillType: varchar("drill_type", { length: 50 }).notNull(), // "star_method", "communication", etc.
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description").notNull(),
+  scenario: text("scenario").notNull(),
+  targetSkill: varchar("target_skill", { length: 100 }).notNull(),
+  estimatedDuration: integer("estimated_duration"), // in minutes
+  completed: boolean("completed").default(false),
+  completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -249,7 +292,7 @@ export const performanceTrends = pgTable("performance_trends", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Assessment relations
+// Assessment relations - Updated for new schema
 export const assessmentsRelations = relations(assessments, ({ one, many }) => ({
   user: one(users, {
     fields: [assessments.userId],
@@ -259,14 +302,30 @@ export const assessmentsRelations = relations(assessments, ({ one, many }) => ({
     fields: [assessments.sessionId],
     references: [interviewSessions.id],
   }),
-  criteria: many(assessmentCriteria),
+  indicators: many(performanceIndicators),
+  drills: many(learningDrills),
 }));
 
-export const assessmentCriteriaRelations = relations(assessmentCriteria, ({ one }) => ({
+export const performanceIndicatorsRelations = relations(performanceIndicators, ({ one }) => ({
   assessment: one(assessments, {
-    fields: [assessmentCriteria.assessmentId],
+    fields: [performanceIndicators.assessmentId],
     references: [assessments.id],
   }),
+}));
+
+export const learningDrillsRelations = relations(learningDrills, ({ one }) => ({
+  assessment: one(assessments, {
+    fields: [learningDrills.assessmentId],
+    references: [assessments.id],
+  }),
+  user: one(users, {
+    fields: [learningDrills.userId],
+    references: [users.id],
+  }),
+}));
+
+export const simulationQuestionsRelations = relations(simulationQuestions, ({ many }) => ({
+  // Can be linked to sessions if needed
 }));
 
 export const performanceTrendsRelations = relations(performanceTrends, ({ one }) => ({
@@ -276,28 +335,45 @@ export const performanceTrendsRelations = relations(performanceTrends, ({ one })
   }),
 }));
 
-// Insert schemas for assessments
+// Insert schemas for new assessment system
 export const insertAssessmentSchema = createInsertSchema(assessments).omit({
   id: true,
   assessmentDate: true,
   createdAt: true,
 });
 
-export const insertAssessmentCriteriaSchema = createInsertSchema(assessmentCriteria).omit({
+export const insertSimulationQuestionSchema = createInsertSchema(simulationQuestions).omit({
   id: true,
+  generatedAt: true,
+  createdAt: true,
+});
+
+export const insertPerformanceIndicatorSchema = createInsertSchema(performanceIndicators).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLearningDrillSchema = createInsertSchema(learningDrills).omit({
+  id: true,
+  completedAt: true,
   createdAt: true,
 });
 
 // Assessment types
 export type Assessment = typeof assessments.$inferSelect;
 export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
-export type AssessmentCriteria = typeof assessmentCriteria.$inferSelect;
-export type InsertAssessmentCriteria = z.infer<typeof insertAssessmentCriteriaSchema>;
+export type SimulationQuestion = typeof simulationQuestions.$inferSelect;
+export type InsertSimulationQuestion = z.infer<typeof insertSimulationQuestionSchema>;
+export type PerformanceIndicator = typeof performanceIndicators.$inferSelect;
+export type InsertPerformanceIndicator = z.infer<typeof insertPerformanceIndicatorSchema>;
+export type LearningDrill = typeof learningDrills.$inferSelect;
+export type InsertLearningDrill = z.infer<typeof insertLearningDrillSchema>;
 export type PerformanceTrend = typeof performanceTrends.$inferSelect;
 
-// Extended assessment types
-export type AssessmentWithCriteria = Assessment & {
-  criteria: AssessmentCriteria[];
+// Extended assessment types for new system
+export type AssessmentWithDetails = Assessment & {
+  indicators: PerformanceIndicator[];
+  drills: LearningDrill[];
   session: InterviewSession & {
     scenario: InterviewScenario;
   };
@@ -307,9 +383,21 @@ export type UserPerformanceOverview = {
   user: User;
   totalAssessments: number;
   averageScore: number;
-  currentGrade: string;
-  strongestCriteria: string;
-  weakestCriteria: string;
+  currentRating: string;
+  strongestIndicator: string;
+  weakestIndicator: string;
   recentTrend: string;
+  progressLevel: number;
+  completedDrills: number;
+  availableDrills: number;
+  performanceBadges: string[];
   assessments: Assessment[];
+};
+
+export type SimulationRequest = {
+  jobRole: string;
+  companyName: string;
+  questionCount: number;
+  difficultyLevel: number;
+  questionTypes: string[];
 };
