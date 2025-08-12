@@ -198,3 +198,118 @@ export type InterviewScenarioWithStats = InterviewScenario & {
   sessionCount: number;
   averageRating: number;
 };
+
+// Assessment tables for Perform module
+export const assessments = pgTable("assessments", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").notNull().references(() => interviewSessions.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Assessment scores (1-5 scale based on PRD requirements)
+  relevanceScore: integer("relevance_score").notNull(),
+  structuredScore: integer("structured_score").notNull(), // STAR method
+  specificScore: integer("specific_score").notNull(),
+  honestScore: integer("honest_score").notNull(),
+  confidentScore: integer("confident_score").notNull(),
+  alignedScore: integer("aligned_score").notNull(), // Aligned with role
+  outcomeOrientedScore: integer("outcome_oriented_score").notNull(),
+  
+  // Overall assessment
+  overallScore: numeric("overall_score", { precision: 3, scale: 2 }).notNull(), // Average of all scores
+  overallGrade: varchar("overall_grade", { length: 2 }).notNull(), // A, B, C, D, F
+  
+  // AI-generated feedback
+  strengths: text("strengths").notNull(),
+  improvements: text("improvements").notNull(),
+  specificFeedback: text("specific_feedback").notNull(),
+  nextSteps: text("next_steps").notNull(),
+  
+  // Metadata
+  assessmentDate: timestamp("assessment_date").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const assessmentCriteria = pgTable("assessment_criteria", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  assessmentId: uuid("assessment_id").notNull().references(() => assessments.id),
+  criteriaName: varchar("criteria_name", { length: 50 }).notNull(),
+  score: integer("score").notNull(),
+  feedback: text("feedback").notNull(),
+  examples: text("examples"), // Specific examples from the conversation
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const performanceTrends = pgTable("performance_trends", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  criteriaName: varchar("criteria_name", { length: 50 }).notNull(),
+  scores: jsonb("scores").notNull(), // Array of historical scores with dates
+  trend: varchar("trend", { length: 20 }).notNull(), // "improving", "stable", "declining"
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Assessment relations
+export const assessmentsRelations = relations(assessments, ({ one, many }) => ({
+  user: one(users, {
+    fields: [assessments.userId],
+    references: [users.id],
+  }),
+  session: one(interviewSessions, {
+    fields: [assessments.sessionId],
+    references: [interviewSessions.id],
+  }),
+  criteria: many(assessmentCriteria),
+}));
+
+export const assessmentCriteriaRelations = relations(assessmentCriteria, ({ one }) => ({
+  assessment: one(assessments, {
+    fields: [assessmentCriteria.assessmentId],
+    references: [assessments.id],
+  }),
+}));
+
+export const performanceTrendsRelations = relations(performanceTrends, ({ one }) => ({
+  user: one(users, {
+    fields: [performanceTrends.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for assessments
+export const insertAssessmentSchema = createInsertSchema(assessments).omit({
+  id: true,
+  assessmentDate: true,
+  createdAt: true,
+});
+
+export const insertAssessmentCriteriaSchema = createInsertSchema(assessmentCriteria).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Assessment types
+export type Assessment = typeof assessments.$inferSelect;
+export type InsertAssessment = z.infer<typeof insertAssessmentSchema>;
+export type AssessmentCriteria = typeof assessmentCriteria.$inferSelect;
+export type InsertAssessmentCriteria = z.infer<typeof insertAssessmentCriteriaSchema>;
+export type PerformanceTrend = typeof performanceTrends.$inferSelect;
+
+// Extended assessment types
+export type AssessmentWithCriteria = Assessment & {
+  criteria: AssessmentCriteria[];
+  session: InterviewSession & {
+    scenario: InterviewScenario;
+  };
+};
+
+export type UserPerformanceOverview = {
+  user: User;
+  totalAssessments: number;
+  averageScore: number;
+  currentGrade: string;
+  strongestCriteria: string;
+  weakestCriteria: string;
+  recentTrend: string;
+  assessments: Assessment[];
+};
