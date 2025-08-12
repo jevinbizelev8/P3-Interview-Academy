@@ -314,28 +314,53 @@ class BedrockService {
       };
     } catch (error) {
       console.error("Error generating first question:", error);
-      // Dynamic fallback based on context
+      // Dynamic fallback based on context and language
       const actualJobRole = context.userJobPosition || context.jobRole;
       const actualCompany = context.userCompanyName || context.company;
       
+      // Generate fallback response in the requested language
+      const languageFallbacks: Record<string, Record<string, string>> = {
+        'ai_meta': {
+          'en': "Thanks for joining me today. I'm excited to learn about your AI engineering background. Let's start with this: What specific areas of machine learning or AI have you been working on recently, and how do you see them applying to Meta's mission of building the next generation of social technology?",
+          'id': "Terima kasih bergabung hari ini. Saya tertarik mempelajari latar belakang AI engineering Anda. Mari mulai: Area machine learning atau AI apa yang sedang Anda kerjakan akhir-akhir ini, dan bagaimana Anda melihatnya dapat diterapkan pada misi Meta membangun teknologi sosial generasi berikutnya?",
+          'th': "ขอบคุณที่มาร่วมกับเราวันนี้ ผมตื่นเต้นที่จะเรียนรู้เกี่ยวกับพื้นฐาน AI engineering ของคุณ มาเริ่มกันเลย: คุณทำงานด้าน machine learning หรือ AI ส่วนไหนอยู่เมื่อเร็วๆ นี้ และเห็นว่าจะสามารถนำไปใช้กับภารกิจของ Meta ในการสร้างเทคโนโลยีโซเชียลรุ่นใหม่อย่างไรบ้าง?"
+        },
+        'ai_general': {
+          'en': "Thank you for your time today. Given your interest in an AI engineering role, I'd love to start by understanding your approach to machine learning problems. Can you walk me through a recent AI/ML project you worked on and the technical challenges you encountered?",
+          'id': "Terima kasih atas waktu Anda hari ini. Mengingat minat Anda pada posisi AI engineering, saya ingin memulai dengan memahami pendekatan Anda terhadap masalah machine learning. Bisakah Anda menceritakan proyek AI/ML terbaru yang Anda kerjakan dan tantangan teknis yang Anda hadapi?",
+          'th': "ขอบคุณสำหรับเวลาของคุณวันนี้ เนื่องจากคุณสนใจตำแหน่ง AI engineering ผมอยากเริ่มต้นด้วยการทำความเข้าใจแนวทางของคุณในการแก้ปัญหา machine learning คุณช่วยเล่าให้ฟังเกี่ยวกับโปรเจค AI/ML ล่าสุดที่คุณทำและความท้าทายทางเทคนิคที่พบได้ไหม?"
+        },
+        'general': {
+          'en': "Thank you for joining me today. Let's start with a simple question: Can you tell me a bit about yourself and what interests you about this role?",
+          'id': "Terima kasih telah bergabung dengan saya hari ini. Mari mulai dengan pertanyaan sederhana: Bisakah Anda ceritakan sedikit tentang diri Anda dan apa yang menarik dari posisi ini?",
+          'th': "ขอบคุณที่มาร่วมสัมภาษณ์วันนี้ เริ่มด้วยคำถามง่ายๆ: คุณช่วยเล่าเกี่ยวกับตัวคุณเองและสิ่งที่ทำให้คุณสนใจตำแหน่งนี้ได้ไหม?",
+          'ms': "Terima kasih kerana menyertai saya hari ini. Mari mulakan dengan soalan mudah: Bolehkah anda ceritakan sedikit tentang diri anda dan apa yang menarik tentang peranan ini?",
+          'vi': "Cảm ơn bạn đã tham gia phỏng vấn hôm nay. Hãy bắt đầu với một câu hỏi đơn giản: Bạn có thể kể về bản thân và điều gì thu hút bạn ở vị trí này?",
+          'fil': "Salamat sa pagsama mo sa akin ngayong araw. Magsimula tayo sa simpleng tanong: Maaari mo bang ikwento ang tungkol sa iyong sarili at kung ano ang nakakaakit sa iyo sa posisyong ito?",
+          'my': "ယနေ့ကျွန်တော်နဲ့ ပူးပေါင်းပါဝင်ပေးတဲ့အတွက် ကျေးဇူးတင်ပါတယ်။ ရိုးရှင်းတဲ့မေးခွန်းနဲ့ စပါမယ်။ သင့်အကြောင်းနဲ့ ဒီရာထူးမှာ သင့်ကို ဘာတွေဆွဲဆောင်တယ်ဆိုတာ ပြောပြနိုင်မလား?",
+          'km': "អរគុណសម្រាប់ការមកចូលរួមជាមួយខ្ញុំនៅថ្ងៃនេះ។ តោះចាប់ផ្តើមជាមួយនឹងសំណួរងាយមួយ៖ តើអ្នកអាចប្រាប់អំពីខ្លួនអ្នក និងអ្វីដែលធ្វើឱ្យអ្នកចាប់អារម្មណ៍លើតួនាទីនេះ?",
+          'lo': "ຂໍຂອບໃຈທີ່ມາຮ່ວມກັບຂ້ອຍໃນມື້ນີ້. ມາເລີ່ມຕົ້ນດ້ວຍຄໍາຖາມງ່າຍໆ: ເຈົ້າສາມາດບອກກ່ຽວກັບຕົວເຈົ້າເອງ ແລະສິ່ງທີ່ເຮັດໃຫ້ເຈົ້າສົນໃຈໃນຕໍາແໜ່ງນີ້ໄດ້ບໍ?",
+          'zh-sg': "感谢您今天参加面试。让我们从一个简单的问题开始：您能告诉我一些关于您自己的情况，以及是什么吸引您对这个职位感兴趣吗？"
+        }
+      };
+      
+      // Determine which fallback to use based on job role and company
+      let fallbackKey = 'general';
       if (actualJobRole.toLowerCase().includes('ai') || actualJobRole.toLowerCase().includes('ml')) {
         if (actualCompany.toLowerCase() === 'meta') {
-          return {
-            content: "Thanks for joining me today. I'm excited to learn about your AI engineering background. Let's start with this: What specific areas of machine learning or AI have you been working on recently, and how do you see them applying to Meta's mission of building the next generation of social technology?",
-            questionNumber: 1
-          };
+          fallbackKey = 'ai_meta';
         } else {
-          return {
-            content: "Thank you for your time today. Given your interest in an AI engineering role, I'd love to start by understanding your approach to machine learning problems. Can you walk me through a recent AI/ML project you worked on and the technical challenges you encountered?",
-            questionNumber: 1
-          };
+          fallbackKey = 'ai_general';
         }
-      } else {
-        return {
-          content: "Thank you for joining me today. Let's start with a simple question: Can you tell me a bit about yourself and what interests you about this role?",
-          questionNumber: 1
-        };
       }
+      
+      const responses = languageFallbacks[fallbackKey];
+      const content = responses[language] || responses['en'] || languageFallbacks['general'][language] || languageFallbacks['general']['en'];
+      
+      return {
+        content: content,
+        questionNumber: 1
+      };
     }
   }
 
