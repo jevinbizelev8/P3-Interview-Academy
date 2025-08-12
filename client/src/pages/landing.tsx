@@ -98,8 +98,11 @@ export default function Landing() {
               <a href="#modules" className="text-gray-600 hover:text-gray-900 transition-colors">Modules</a>
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
               <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">Reviews</a>
-              <Link href="/prepare" className="text-gray-600 hover:text-gray-900 transition-colors">
+              <Link href="/prepare" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
                 Prepare
+              </Link>
+              <Link href="/perform" className="text-gray-600 hover:text-purple-600 transition-colors font-medium">
+                Perform
               </Link>
               <Link href="/practice">
                 <Button>Start Practice</Button>
