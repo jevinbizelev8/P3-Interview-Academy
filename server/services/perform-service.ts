@@ -308,10 +308,12 @@ export class PerformService {
     const strongestIndicator = indicatorAverages[0].name;
     const weakestIndicator = indicatorAverages[indicatorAverages.length - 1].name;
 
-    // Calculate progress metrics
-    const allDrills = userAssessments.flatMap(a => a.drills);
-    const completedDrills = allDrills.filter(d => d.completed).length;
-    const availableDrills = allDrills.length;
+    // Get learning drills separately
+    const userDrills = await db.select().from(learningDrills)
+      .where(eq(learningDrills.userId, userId));
+    
+    const completedDrills = userDrills.filter(d => d.completed === true).length;
+    const availableDrills = userDrills.length;
 
     // Get performance badges
     const performanceBadges = [...new Set(userAssessments.map(a => a.performanceBadge).filter(Boolean))];

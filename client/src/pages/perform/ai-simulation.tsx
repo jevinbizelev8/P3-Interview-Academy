@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Bot, Sparkles, Target, Clock, Shuffle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, Bot, Sparkles, Target, Clock, Shuffle, Play, Send, MessageSquare, Mic } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface SimulationQuestion {
@@ -24,24 +25,39 @@ interface SimulationQuestion {
 
 export default function AISimulation() {
   const queryClient = useQueryClient();
+  
+  // Get URL parameters for assessment context
+  const urlParams = new URLSearchParams(window.location.search);
+  const assessmentId = urlParams.get('assessmentId');
+  const jobRole = urlParams.get('jobRole');
+  const company = urlParams.get('company');
+  
   const [simulationConfig, setSimulationConfig] = useState({
-    jobRole: '',
-    companyName: '',
+    jobRole: jobRole || '',
+    companyName: company || '',
     questionCount: 5,
     difficultyLevel: 3,
     questionTypes: ['behavioral', 'situational']
+  });
+  
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userResponses, setUserResponses] = useState<string[]>([]);
+  const [isSimulationActive, setIsSimulationActive] = useState(false);
+
+  // Get generated simulation questions
+  const { data: questions = [], isLoading: questionsLoading } = useQuery({
+    queryKey: ['/api/perform/simulation/questions', simulationConfig.jobRole, simulationConfig.companyName],
+    enabled: false // Only fetch when explicitly triggered
   });
 
   // Generate simulation questions mutation
   const generateQuestionsMutation = useMutation({
     mutationFn: async (config: typeof simulationConfig) => {
-      return await apiRequest('/api/perform/simulation/generate', {
-        method: 'POST',
-        body: JSON.stringify(config)
-      });
+      return await apiRequest('POST', '/api/perform/simulation/generate', config);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/perform/simulation/questions'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['/api/perform/simulation/questions', simulationConfig.jobRole, simulationConfig.companyName], data);
+      setIsSimulationActive(true);
     }
   });
 
@@ -50,6 +66,34 @@ export default function AISimulation() {
       generateQuestionsMutation.mutate(simulationConfig);
     }
   };
+
+  const handleStartSimulation = () => {
+    if (questions.length > 0) {
+      setIsSimulationActive(true);
+      setCurrentQuestionIndex(0);
+      setUserResponses([]);
+    }
+  };
+
+  const handleResponseSubmit = (response: string) => {
+    const newResponses = [...userResponses, response];
+    setUserResponses(newResponses);
+    
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      // Complete simulation
+      setIsSimulationActive(false);
+      // Could navigate to results or show completion
+    }
+  };
+
+  // Auto-start simulation if we have assessment context
+  useEffect(() => {
+    if (assessmentId && jobRole && company && !isSimulationActive && questions.length === 0) {
+      generateQuestionsMutation.mutate(simulationConfig);
+    }
+  }, [assessmentId, jobRole, company]);
 
   const getDifficultyColor = (level: number) => {
     if (level >= 4) return 'text-red-600 bg-red-100';
@@ -287,13 +331,54 @@ export default function AISimulation() {
               </div>
 
               <div className="flex justify-center pt-6">
-                <Link href="/practice">
-                  <Button size="lg">
-                    Start Practice Session
-                    <ArrowLeft className="ml-2 w-4 h-4 rotate-180" />
-                  </Button>
-                </Link>
+                <Button 
+                  size="lg"
+                  onClick={handleStartSimulation}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  Start Interview Simulation
+                </Button>
               </div>
+              
+              {/* Interview Simulation Interface */}
+              {isSimulationActive && generateQuestionsMutation.data && (
+                <Card className="mt-6 bg-blue-50 border-blue-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between">
+                      <span className="flex items-center">
+                        <Play className="w-6 h-6 mr-2 text-blue-600" />
+                        Interview Simulation Active
+                      </span>
+                      <Badge variant="outline">
+                        Question {currentQuestionIndex + 1} of {generateQuestionsMutation.data.length}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {generateQuestionsMutation.data[currentQuestionIndex] && (
+                      <div className="space-y-4">
+                        <div className="bg-white p-4 rounded-lg border-2 border-blue-300">
+                          <h3 className="font-semibold text-lg mb-2">
+                            {generateQuestionsMutation.data[currentQuestionIndex].question}
+                          </h3>
+                          {generateQuestionsMutation.data[currentQuestionIndex].context && (
+                            <p className="text-sm text-gray-600 italic">
+                              {generateQuestionsMutation.data[currentQuestionIndex].context}
+                            </p>
+                          )}
+                        </div>
+
+                        <SimpleResponseInput 
+                          onResponseSubmit={handleResponseSubmit}
+                          questionIndex={currentQuestionIndex}
+                          totalQuestions={generateQuestionsMutation.data.length}
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </>
           ) : (
             <Card className="text-center py-12">

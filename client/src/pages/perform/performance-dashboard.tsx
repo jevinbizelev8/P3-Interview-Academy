@@ -84,10 +84,13 @@ export default function PerformanceDashboard() {
         companyName
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setAssessmentDialog({ open: false, sessionId: '', jobRole: '', companyName: '' });
       queryClient.invalidateQueries({ queryKey: ['/api/perform/overview/user/dev-user-123'] });
       queryClient.invalidateQueries({ queryKey: ['/api/perform/assessments/user/dev-user-123'] });
+      
+      // Navigate to AI simulation with the assessment data
+      window.location.href = `/perform/simulation?assessmentId=${data.id}&jobRole=${encodeURIComponent(assessmentDialog.jobRole)}&company=${encodeURIComponent(assessmentDialog.companyName)}`;
     }
   });
 
