@@ -490,6 +490,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Assessment routes for Perform module
+  app.post("/api/assessments", async (req, res) => {
+    try {
+      const { sessionId, userId } = req.body;
+      
+      if (!sessionId || !userId) {
+        return res.status(400).json({ message: "Session ID and User ID are required" });
+      }
+
+      const { assessmentService } = await import("./services/assessment");
+      const assessment = await assessmentService.assessInterviewSession(sessionId, userId);
+      
+      res.json(assessment);
+    } catch (error) {
+      console.error("Error creating assessment:", error);
+      res.status(500).json({ message: "Failed to create assessment" });
+    }
+  });
+
+  app.get("/api/assessments/user/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      const { assessmentService } = await import("./services/assessment");
+      const assessments = await assessmentService.getUserAssessments(userId, limit);
+      
+      res.json(assessments);
+    } catch (error) {
+      console.error("Error fetching user assessments:", error);
+      res.status(500).json({ message: "Failed to fetch assessments" });
+    }
+  });
+
+  app.get("/api/performance/user/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+
+      const { assessmentService } = await import("./services/assessment");
+      const overview = await assessmentService.getUserPerformanceOverview(userId);
+      
+      res.json(overview);
+    } catch (error) {
+      console.error("Error fetching performance overview:", error);
+      if (error.message === "No assessments found for user") {
+        return res.status(404).json({ message: "No performance data available" });
+      }
+      res.status(500).json({ message: "Failed to fetch performance overview" });
+    }
+  });
+
+  // Get assessment criteria definitions
+  app.get("/api/assessment-criteria", async (req, res) => {
+    try {
+      const { ASSESSMENT_CRITERIA } = await import("./services/assessment");
+      res.json(ASSESSMENT_CRITERIA);
+    } catch (error) {
+      console.error("Error fetching assessment criteria:", error);
+      res.status(500).json({ message: "Failed to fetch assessment criteria" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
