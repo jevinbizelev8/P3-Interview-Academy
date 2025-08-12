@@ -15,6 +15,22 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
+// Supported languages for Southeast Asia
+export const SUPPORTED_LANGUAGES = {
+  'en': 'English',
+  'ms': 'Bahasa Malaysia',
+  'id': 'Bahasa Indonesia', 
+  'th': 'ไทย (Thai)',
+  'vi': 'Tiếng Việt (Vietnamese)',
+  'fil': 'Filipino',
+  'my': 'မြန်မာ (Myanmar)',
+  'km': 'ខ្មែរ (Khmer)',
+  'lo': 'ລາວ (Lao)',
+  'zh-sg': '中文 (Chinese - Singapore)'
+} as const;
+
+export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -70,6 +86,8 @@ export const interviewSessions = pgTable("interview_sessions", {
   // User-provided job context for personalized AI questions
   userJobPosition: varchar("user_job_position", { length: 200 }),
   userCompanyName: varchar("user_company_name", { length: 200 }),
+  // Interview language preference
+  interviewLanguage: varchar("interview_language", { length: 10 }).default("en"),
   startedAt: timestamp("started_at").defaultNow(),
   completedAt: timestamp("completed_at"),
   duration: integer("duration"), // in seconds

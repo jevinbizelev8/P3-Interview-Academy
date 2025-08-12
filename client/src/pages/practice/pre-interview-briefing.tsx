@@ -67,7 +67,7 @@ export default function PreInterviewBriefing() {
 
       // Get job context from session storage
       const jobContextStr = sessionStorage.getItem('jobContext');
-      const jobContext = jobContextStr ? JSON.parse(jobContextStr) : { jobPosition: '', companyName: '' };
+      const jobContext = jobContextStr ? JSON.parse(jobContextStr) : { jobPosition: '', companyName: '', interviewLanguage: 'en' };
       
       // Create new interview session
       const response = await fetch("/api/practice/sessions", {
@@ -81,6 +81,7 @@ export default function PreInterviewBriefing() {
           totalQuestions: 15,
           userJobPosition: jobContext.jobPosition,
           userCompanyName: jobContext.companyName,
+          interviewLanguage: jobContext.interviewLanguage || 'en',
         }),
       });
 

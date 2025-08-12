@@ -28,6 +28,7 @@ interface ScenarioCardProps {
   jobContext: {
     jobPosition: string;
     companyName: string;
+    interviewLanguage?: string;
   };
   scenarios: Array<{
     id: string;
