@@ -3,6 +3,7 @@ import {
   interviewScenarios,
   interviewSessions,
   interviewMessages,
+  aiEvaluationResults,
   type User,
   type UpsertUser,
   type InsertInterviewScenario,
@@ -11,6 +12,8 @@ import {
   type InterviewSession,
   type InsertInterviewMessage,
   type InterviewMessage,
+  type InsertAiEvaluationResult,
+  type AiEvaluationResult,
   type InterviewSessionWithScenario,
   type InterviewScenarioWithStats,
 } from "@shared/schema";
@@ -165,6 +168,9 @@ export class DatabaseStorage implements IStorage {
         improvements: interviewSessions.improvements,
         recommendations: interviewSessions.recommendations,
         transcript: interviewSessions.transcript,
+        userJobPosition: interviewSessions.userJobPosition,
+        userCompanyName: interviewSessions.userCompanyName,
+        interviewLanguage: interviewSessions.interviewLanguage,
         autoSavedAt: interviewSessions.autoSavedAt,
         createdAt: interviewSessions.createdAt,
         updatedAt: interviewSessions.updatedAt,
@@ -196,7 +202,13 @@ export class DatabaseStorage implements IStorage {
     if (!session) return undefined;
 
     const messages = await this.getSessionMessages(id);
-    return { ...session, messages };
+    return { 
+      ...session, 
+      userJobPosition: session.userJobPosition || null,
+      userCompanyName: session.userCompanyName || null,
+      interviewLanguage: session.interviewLanguage || 'en',
+      messages 
+    };
   }
 
   async updateInterviewSession(id: string, session: Partial<InsertInterviewSession>): Promise<InterviewSession> {
@@ -232,6 +244,9 @@ export class DatabaseStorage implements IStorage {
         improvements: interviewSessions.improvements,
         recommendations: interviewSessions.recommendations,
         transcript: interviewSessions.transcript,
+        userJobPosition: interviewSessions.userJobPosition,
+        userCompanyName: interviewSessions.userCompanyName,
+        interviewLanguage: interviewSessions.interviewLanguage,
         autoSavedAt: interviewSessions.autoSavedAt,
         createdAt: interviewSessions.createdAt,
         updatedAt: interviewSessions.updatedAt,
@@ -265,7 +280,13 @@ export class DatabaseStorage implements IStorage {
     const sessionsWithMessages = await Promise.all(
       sessions.map(async (session) => {
         const messages = await this.getSessionMessages(session.id);
-        return { ...session, messages };
+        return { 
+          ...session, 
+          userJobPosition: session.userJobPosition || null,
+          userCompanyName: session.userCompanyName || null,
+          interviewLanguage: session.interviewLanguage || 'en',
+          messages 
+        };
       })
     );
 
@@ -294,6 +315,34 @@ export class DatabaseStorage implements IStorage {
       .from(interviewMessages)
       .where(eq(interviewMessages.sessionId, sessionId))
       .orderBy(interviewMessages.timestamp);
+  }
+
+  // Additional methods for Perform module
+  async createInterviewMessage(data: InsertInterviewMessage): Promise<InterviewMessage> {
+    const [message] = await db.insert(interviewMessages)
+      .values(data)
+      .returning();
+    return message;
+  }
+
+  async updateSessionStatus(sessionId: string, status: string): Promise<void> {
+    await db.update(interviewSessions)
+      .set({ status, completedAt: status === 'completed' ? new Date() : null })
+      .where(eq(interviewSessions.id, sessionId));
+  }
+
+  async createEvaluationResult(data: InsertAiEvaluationResult): Promise<AiEvaluationResult> {
+    const [evaluation] = await db.insert(aiEvaluationResults)
+      .values(data)
+      .returning();
+    return evaluation;
+  }
+
+  async getEvaluationResult(sessionId: string): Promise<AiEvaluationResult | undefined> {
+    const [evaluation] = await db.select()
+      .from(aiEvaluationResults)
+      .where(eq(aiEvaluationResults.sessionId, sessionId));
+    return evaluation;
   }
 }
 

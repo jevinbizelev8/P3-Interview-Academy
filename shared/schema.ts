@@ -119,6 +119,44 @@ export const interviewMessages = pgTable("interview_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// AI Evaluation Results table for the 10 features
+export const aiEvaluationResults = pgTable("ai_evaluation_results", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").notNull().references(() => interviewSessions.id, { onDelete: "cascade" }),
+  // Feature 1: Overall Performance Score
+  overallScore: numeric("overall_score", { precision: 3, scale: 2 }),
+  overallRating: varchar("overall_rating", { length: 50 }), // "Competent", "Needs Practice", etc.
+  // Feature 2: Key Performance Indicators
+  communicationScore: numeric("communication_score", { precision: 3, scale: 2 }),
+  empathyScore: numeric("empathy_score", { precision: 3, scale: 2 }),
+  problemSolvingScore: numeric("problem_solving_score", { precision: 3, scale: 2 }),
+  culturalAlignmentScore: numeric("cultural_alignment_score", { precision: 3, scale: 2 }),
+  // Feature 3: Qualitative Observations
+  qualitativeObservations: text("qualitative_observations"),
+  strengths: jsonb("strengths"), // array of strings
+  improvementAreas: jsonb("improvement_areas"), // array of strings
+  // Feature 4: Actionable Insights
+  actionableInsights: jsonb("actionable_insights"), // array of specific recommendations
+  // Feature 5: Personalized Drills
+  personalizedDrills: jsonb("personalized_drills"), // array of drill recommendations
+  // Feature 6: Self-Reflection Prompts
+  reflectionPrompts: jsonb("reflection_prompts"), // array of open-ended questions
+  // Feature 7: AI Coach reflection summary (will be updated when user reflects)
+  coachReflectionSummary: text("coach_reflection_summary"),
+  // Feature 8: Share Progress data
+  shareableData: jsonb("shareable_data"), // anonymized performance summary
+  // Feature 9: Performance Badge
+  badgeEarned: varchar("badge_earned", { length: 100 }),
+  // Feature 10: Gamification rewards
+  pointsEarned: integer("points_earned").default(0),
+  rewardsUnlocked: jsonb("rewards_unlocked"), // array of rewards
+  // Metadata
+  evaluationLanguage: varchar("evaluation_language", { length: 10 }).default("en"),
+  culturalContext: varchar("cultural_context", { length: 50 }), // SEA cultural adaptation
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   createdScenarios: many(interviewScenarios),
@@ -143,11 +181,19 @@ export const interviewSessionsRelations = relations(interviewSessions, ({ one, m
     references: [interviewScenarios.id],
   }),
   messages: many(interviewMessages),
+  evaluation: one(aiEvaluationResults),
 }));
 
 export const interviewMessagesRelations = relations(interviewMessages, ({ one }) => ({
   session: one(interviewSessions, {
     fields: [interviewMessages.sessionId],
+    references: [interviewSessions.id],
+  }),
+}));
+
+export const aiEvaluationResultsRelations = relations(aiEvaluationResults, ({ one }) => ({
+  session: one(interviewSessions, {
+    fields: [aiEvaluationResults.sessionId],
     references: [interviewSessions.id],
   }),
 }));
@@ -178,6 +224,12 @@ export const insertInterviewMessageSchema = createInsertSchema(interviewMessages
   createdAt: true,
 });
 
+export const insertAiEvaluationResultSchema = createInsertSchema(aiEvaluationResults).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -187,11 +239,14 @@ export type InsertInterviewSession = z.infer<typeof insertInterviewSessionSchema
 export type InterviewSession = typeof interviewSessions.$inferSelect;
 export type InsertInterviewMessage = z.infer<typeof insertInterviewMessageSchema>;
 export type InterviewMessage = typeof interviewMessages.$inferSelect;
+export type InsertAiEvaluationResult = z.infer<typeof insertAiEvaluationResultSchema>;
+export type AiEvaluationResult = typeof aiEvaluationResults.$inferSelect;
 
 // Extended types for API responses
 export type InterviewSessionWithScenario = InterviewSession & {
   scenario: InterviewScenario;
   messages: InterviewMessage[];
+  evaluation?: AiEvaluationResult;
 };
 
 export type InterviewScenarioWithStats = InterviewScenario & {

@@ -490,6 +490,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Perform Module API Routes
+  
+  // Create perform session with job context
+  app.post('/api/perform/sessions', async (req, res) => {
+    try {
+      const sessionData = {
+        userId: "dev-user-123", // Development user
+        scenarioId: "00000000-0000-0000-0000-000000000000", // Placeholder scenario for perform module
+        userJobPosition: req.body.jobPosition,
+        userCompanyName: req.body.companyName,
+        interviewLanguage: req.body.interviewLanguage || "en",
+        status: "in_progress"
+      };
+
+      const session = await storage.createInterviewSession(sessionData);
+      
+      // Generate initial AI greeting
+      const greeting = `Hello! I'm your AI interviewer for the ${req.body.jobPosition} position at ${req.body.companyName}. I'll be conducting a comprehensive interview tailored specifically to this role and company. Let's begin with an introduction - please tell me about yourself and why you're interested in this position at ${req.body.companyName}.`;
+      
+      await storage.createInterviewMessage({
+        sessionId: session.id,
+        messageType: "ai",
+        content: greeting,
+        questionNumber: 1
+      });
+
+      res.json(session);
+    } catch (error) {
+      console.error("Error creating perform session:", error);
+      res.status(500).json({ message: "Failed to create session" });
+    }
+  });
+
+  // Get perform session
+  app.get('/api/perform/sessions/:sessionId', async (req, res) => {
+    try {
+      const session = await storage.getInterviewSession(req.params.sessionId);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      res.json(session);
+    } catch (error) {
+      console.error("Error fetching session:", error);
+      res.status(500).json({ message: "Failed to fetch session" });
+    }
+  });
+
+  // Get session messages
+  app.get('/api/perform/sessions/:sessionId/messages', async (req, res) => {
+    try {
+      const messages = await storage.getSessionMessages(req.params.sessionId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Add user message
+  app.post('/api/perform/sessions/:sessionId/messages', async (req, res) => {
+    try {
+      const message = await storage.createInterviewMessage({
+        sessionId: req.params.sessionId,
+        messageType: "user",
+        content: req.body.content,
+        questionNumber: req.body.questionNumber
+      });
+      res.json(message);
+    } catch (error) {
+      console.error("Error creating message:", error);
+      res.status(500).json({ message: "Failed to create message" });
+    }
+  });
+
+  // Generate AI response
+  app.post('/api/perform/sessions/:sessionId/ai-response', async (req, res) => {
+    try {
+      const session = await storage.getInterviewSession(req.params.sessionId);
+      const messages = await storage.getSessionMessages(req.params.sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      // Check if we should complete the interview
+      const shouldComplete = await AIService.shouldCompleteInterview(messages.length);
+      
+      if (shouldComplete) {
+        // Generate final message and complete interview
+        const finalMessage = `Thank you for this comprehensive interview! You've provided excellent insights into your experience and approach to the ${session.userJobPosition} role at ${session.userCompanyName}. I'm now preparing your detailed performance evaluation with personalized feedback and recommendations. This will be available shortly.`;
+        
+        await storage.createInterviewMessage({
+          sessionId: req.params.sessionId,
+          messageType: "ai",
+          content: finalMessage
+        });
+
+        // Update session status
+        await storage.updateSessionStatus(req.params.sessionId, "completed");
+        
+        // Generate comprehensive evaluation
+        const evaluation = await AIService.generateComprehensiveEvaluation(session, messages);
+        await storage.createEvaluationResult({
+          sessionId: req.params.sessionId,
+          evaluationLanguage: session.interviewLanguage,
+          culturalContext: "SEA", // Southeast Asia
+          ...evaluation
+        });
+
+        res.json({ message: finalMessage, isCompleted: true });
+      } else {
+        // Generate next question
+        const currentQuestionNumber = Math.floor(messages.length / 2) + 1;
+        const nextQuestion = await AIService.generateInterviewQuestion(session, messages, currentQuestionNumber);
+        
+        await storage.createInterviewMessage({
+          sessionId: req.params.sessionId,
+          messageType: "ai",
+          content: nextQuestion,
+          questionNumber: currentQuestionNumber
+        });
+
+        res.json({ message: nextQuestion, isCompleted: false });
+      }
+    } catch (error) {
+      console.error("Error generating AI response:", error);
+      res.status(500).json({ message: "Failed to generate response" });
+    }
+  });
+
+  // Complete interview manually
+  app.post('/api/perform/sessions/:sessionId/complete', async (req, res) => {
+    try {
+      const session = await storage.getInterviewSession(req.params.sessionId);
+      const messages = await storage.getSessionMessages(req.params.sessionId);
+      
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+
+      await storage.updateSessionStatus(req.params.sessionId, "completed");
+      
+      // Generate comprehensive evaluation
+      const evaluation = await AIService.generateComprehensiveEvaluation(session, messages);
+      await storage.createEvaluationResult({
+        sessionId: req.params.sessionId,
+        evaluationLanguage: session.interviewLanguage,
+        culturalContext: "SEA",
+        ...evaluation
+      });
+
+      res.json({ message: "Interview completed successfully" });
+    } catch (error) {
+      console.error("Error completing interview:", error);
+      res.status(500).json({ message: "Failed to complete interview" });
+    }
+  });
+
+  // Get evaluation results
+  app.get('/api/perform/sessions/:sessionId/evaluation', async (req, res) => {
+    try {
+      const evaluation = await storage.getEvaluationResult(req.params.sessionId);
+      if (!evaluation) {
+        return res.status(404).json({ message: "Evaluation not found" });
+      }
+      res.json(evaluation);
+    } catch (error) {
+      console.error("Error fetching evaluation:", error);
+      res.status(500).json({ message: "Failed to fetch evaluation" });
+    }
+  });
+
+  // Share progress (anonymized)
+  app.post('/api/perform/sessions/:sessionId/share', async (req, res) => {
+    try {
+      // For now, just return success - in real app would share anonymized data
+      res.json({ message: "Progress shared successfully" });
+    } catch (error) {
+      console.error("Error sharing progress:", error);
+      res.status(500).json({ message: "Failed to share progress" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
