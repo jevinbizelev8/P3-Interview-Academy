@@ -507,8 +507,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const session = await storage.createInterviewSession(sessionData);
       
-      // Generate initial AI greeting
-      const greeting = `Hello! I'm your AI interviewer for the ${req.body.jobPosition} position at ${req.body.companyName}. I'll be conducting a comprehensive interview tailored specifically to this role and company. Let's begin with an introduction - please tell me about yourself and why you're interested in this position at ${req.body.companyName}.`;
+      // Generate initial AI greeting using the language-aware AI service
+      const greeting = await AIService.generateInterviewQuestion(session, [], 1);
       
       await storage.createInterviewMessage({
         sessionId: session.id,
