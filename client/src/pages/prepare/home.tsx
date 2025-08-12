@@ -1,23 +1,61 @@
-import { useState } from "react";
+
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, BookOpen, Clock, Trophy } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PrepareHome() {
   const { user } = useAuth();
-  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const { toast } = useToast();
 
-  const handleStartNewSession = async () => {
-    setIsCreatingSession(true);
-    try {
-      // TODO: Implement session creation
-      console.log("Creating new prepare session for user:", user?.id);
-    } catch (error) {
+  // Fetch user's existing prepare sessions
+  const { data: sessions = [] } = useQuery({
+    queryKey: ["/api/prepare/sessions"],
+    enabled: !!user,
+  });
+
+  const typedSessions = sessions as any[];
+
+  // Session creation mutation
+  const createSessionMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/prepare/sessions", {
+        method: "POST",
+        body: JSON.stringify({
+          title: `Preparation Session ${new Date().toLocaleDateString()}`,
+          status: "in_progress",
+          sessionType: "wgll_framework",
+          currentStage: "wonder",
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+    },
+    onSuccess: (session: any) => {
+      toast({
+        title: "Session Created",
+        description: "Your preparation session has been started successfully!",
+      });
+      // Navigate to the session
+      window.location.href = `/prepare/session/${session.id}`;
+    },
+    onError: (error) => {
       console.error("Error creating session:", error);
-    } finally {
-      setIsCreatingSession(false);
-    }
+      toast({
+        title: "Error",
+        description: "Failed to create preparation session. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartNewSession = () => {
+    console.log("Creating new prepare session for user:", user?.id);
+    createSessionMutation.mutate();
   };
 
   return (
@@ -39,7 +77,7 @@ export default function PrepareHome() {
 
         {/* Action Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={handleStartNewSession}>
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer">
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <Plus className="w-6 h-6 text-blue-600" />
@@ -52,9 +90,10 @@ export default function PrepareHome() {
               </p>
               <Button 
                 className="w-full bg-blue-600 hover:bg-blue-700" 
-                disabled={isCreatingSession}
+                disabled={createSessionMutation.isPending}
+                onClick={handleStartNewSession}
               >
-                {isCreatingSession ? "Starting..." : "Begin Preparation"}
+                {createSessionMutation.isPending ? "Starting..." : "Begin Preparation"}
               </Button>
             </CardContent>
           </Card>
@@ -70,8 +109,22 @@ export default function PrepareHome() {
               <p className="text-gray-600 mb-4">
                 Continue where you left off or review your completed preparation sessions.
               </p>
-              <Button variant="outline" className="w-full">
-                View Sessions
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => {
+                  if (typedSessions.length > 0) {
+                    // Navigate to most recent session
+                    window.location.href = `/prepare/session/${typedSessions[0].id}`;
+                  } else {
+                    toast({
+                      title: "No Sessions",
+                      description: "You haven't started any preparation sessions yet.",
+                    });
+                  }
+                }}
+              >
+                {typedSessions.length > 0 ? `View Sessions (${typedSessions.length})` : "No Sessions Yet"}
               </Button>
             </CardContent>
           </Card>
