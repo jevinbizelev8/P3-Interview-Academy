@@ -1,0 +1,164 @@
+SimuInterviewer - Project Reference
+Product Requirements Document (PRD)
+Product Vision
+SimuInterviewer is an AI-powered interview simulation platform that helps job seekers practice and improve their interview skills through realistic, interactive scenarios with real-time feedback and competency-based assessments.
+
+Core Features
+1. Profile & Scenario Creation
+
+Custom interview scenarios with role, company, industry, and interviewer persona
+Multi-stage interview support (5 stages from HR screening to executive rounds)
+Multilingual support with focus on Asian languages
+2. Interactive Interview Simulation
+
+AI voice avatar with text-to-speech capabilities
+Dual input modes: voice recording and text input
+Real-time audio processing and speech-to-text conversion
+Dynamic question progression based on interview stage
+3. Real-time Feedback System
+
+Instant feedback on responses during the interview
+AI-powered analysis using competency frameworks
+Contextual suggestions for improvement
+4. Assessment & Analytics
+
+STAR-based (Situation, Task, Action, Result) assessment methodology
+Competency scoring (1-5 scale) across multiple dimensions
+Detailed performance breakdown with specific improvement suggestions
+Interview transcript storage and retrieval
+5. AI Provider Flexibility
+
+Support for multiple AI providers (Gemini, Sea Lion)
+Runtime provider switching capability
+Provider availability indicators
+User Journey
+Setup: Create interview scenario with role, company, stage, and preferences
+Simulation: Engage with AI interviewer through voice or text
+Real-time Feedback: Receive immediate coaching during responses
+Assessment: Get comprehensive competency-based evaluation
+Improvement: Review detailed feedback and suggestions
+Technical Stack
+Frontend Framework
+Next.js 15.3.3 with App Router
+TypeScript for type safety
+Turbopack for fast development builds
+UI/UX
+Tailwind CSS for styling
+Radix UI component library for accessible primitives
+Lucide React for icons
+Custom design system following brand guidelines
+Design System
+Primary color: Soft blue (#79A8D3) to inspire confidence
+Background color: Very light desaturated blue (#F2F5F9)
+Accent color: Muted violet (#917DB3) for contrast
+Typography: Inter font family for body and headlines
+Code font: Source Code Pro for code examples
+Icons: Professional, clear icons representing industries and roles
+Animations: Subtle progress indicators and response highlighting
+AI & ML
+Google AI Genkit for AI workflow orchestration
+Zod for schema validation and type safety
+Multiple AI providers: Google Gemini, Sea Lion
+Custom flows for speech processing, feedback generation, and assessment
+Audio Processing
+Web Audio API for recording
+MediaRecorder API for voice capture
+Custom TTS/STT integration via server actions
+State Management
+React hooks (useState, useEffect, useCallback)
+localStorage for interview data persistence
+URL search params for scenario configuration
+Development Tools
+ESLint for code quality
+TypeScript compiler for type checking
+Genkit CLI for AI development workflow
+Deployment
+Replit hosting platform
+Auto-scale deployments for traffic handling
+Environment variable management for API keys
+Key Dependencies
+{
+  "@genkit-ai/googleai": "^1.8.0",
+  "@genkit-ai/next": "^1.8.0",
+  "genkit": "^1.8.0",
+  "next": "15.3.3",
+  "react": "^18.3.1",
+  "react-dom": "^18.3.1",
+  "react-hook-form": "^7.54.2",
+  "recharts": "^2.15.1",
+  "tailwind-merge": "^3.0.1",
+  "tailwindcss-animate": "^1.0.7",
+  "zod": "^3.24.2"
+}
+Architecture Highlights
+Server-side AI flows for secure API key management
+Modular component structure for maintainability
+Progressive enhancement with graceful fallbacks
+Responsive design for desktop and mobile compatibility
+Real-time audio processing with permission handling
+Project Structure
+src/
+├── ai/
+│   ├── flows/
+│   │   ├── analyze-interview-response.ts
+│   │   ├── generate-interviewer-persona.ts
+│   │   ├── provide-real-time-feedback.ts
+│   │   ├── speech-to-text.ts
+│   │   └── text-to-speech.ts
+│   ├── dev.ts
+│   └── genkit.ts
+├── app/
+│   ├── assessment/
+│   ├── interview/
+│   ├── actions.ts
+│   ├── globals.css
+│   ├── layout.tsx
+│   └── page.tsx
+├── components/
+│   ├── ui/ (Radix UI components)
+│   ├── logo.tsx
+│   └── scenario-form.tsx
+├── hooks/
+│   ├── use-mobile.tsx
+│   └── use-toast.ts
+└── lib/
+    ├── ai-provider.ts
+    ├── constants.ts
+    ├── types.ts
+    └── utils.ts
+Configuration Files
+Tailwind Config
+Custom color scheme with HSL variables
+Inter font family configuration
+Source Code Pro for code
+Custom animations and keyframes
+Responsive design utilities
+Component Library
+shadcn/ui components with Radix UI primitives
+Customized for brand colors and styling
+Accessible components with proper ARIA attributes
+Consistent design patterns across the application
+Development Environment
+Node.js 20 runtime
+Nix package management
+Replit hosting with auto-deployment
+Port 9002 for development server
+Hot reload with Turbopack
+Key Features Implementation
+Interview Simulation
+Dynamic question generation based on role and stage
+Real-time audio recording and processing
+Voice avatar interaction with TTS capabilities
+Contextual follow-up questions
+Assessment System
+STAR methodology integration
+Multi-dimensional competency scoring
+Detailed feedback generation
+Performance tracking and analytics
+User Experience
+Intuitive scenario setup flow
+Seamless voice/text input switching
+Real-time feedback during interviews
+Comprehensive post-interview analysis
+This architecture supports the core vision of providing an accessible, multilingual interview practice platform with sophisticated AI-powered feedback and assessment capabilities.
+
