@@ -565,6 +565,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/prepare/sessions/:id", addMockUser, async (req, res) => {
+    try {
+      const session = await storage.getPrepareSession(req.params.id);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      if (session.userId !== req.user.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const validatedData = insertPrepareSessionSchema.partial().parse(req.body);
+      const updatedSession = await storage.updatePrepareSession(req.params.id, validatedData);
+      res.json(updatedSession);
+    } catch (error: any) {
+      console.error("Error updating prepare session:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid session data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update session" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
