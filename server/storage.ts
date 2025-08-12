@@ -3,10 +3,6 @@ import {
   interviewScenarios,
   interviewSessions,
   interviewMessages,
-  prepareSessions,
-  prepareQuestions,
-  prepareResponses,
-  jobDescriptions,
   type User,
   type UpsertUser,
   type InsertInterviewScenario,
@@ -17,14 +13,6 @@ import {
   type InterviewMessage,
   type InterviewSessionWithScenario,
   type InterviewScenarioWithStats,
-  type PrepareSession,
-  type PrepareQuestion,
-  type PrepareResponse,
-  type JobDescription,
-  type InsertPrepareSession,
-  type InsertPrepareQuestion,
-  type InsertPrepareResponse,
-  type InsertJobDescription,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, avg, sql } from "drizzle-orm";
@@ -51,12 +39,6 @@ export interface IStorage {
   // Interview message operations
   addInterviewMessage(message: InsertInterviewMessage): Promise<InterviewMessage>;
   getSessionMessages(sessionId: string): Promise<InterviewMessage[]>;
-
-  // Prepare Module operations
-  createPrepareSession(session: InsertPrepareSession): Promise<PrepareSession>;
-  getPrepareSession(id: string): Promise<PrepareSession | undefined>;
-  updatePrepareSession(id: string, session: Partial<InsertPrepareSession>): Promise<PrepareSession>;
-  getUserPrepareSessions(userId: string): Promise<PrepareSession[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -312,40 +294,6 @@ export class DatabaseStorage implements IStorage {
       .from(interviewMessages)
       .where(eq(interviewMessages.sessionId, sessionId))
       .orderBy(interviewMessages.timestamp);
-  }
-
-  // Prepare Module operations
-  async createPrepareSession(session: InsertPrepareSession): Promise<PrepareSession> {
-    const [newSession] = await db
-      .insert(prepareSessions)
-      .values(session)
-      .returning();
-    return newSession;
-  }
-
-  async getPrepareSession(id: string): Promise<PrepareSession | undefined> {
-    const [session] = await db
-      .select()
-      .from(prepareSessions)
-      .where(eq(prepareSessions.id, id));
-    return session;
-  }
-
-  async updatePrepareSession(id: string, session: Partial<InsertPrepareSession>): Promise<PrepareSession> {
-    const [updatedSession] = await db
-      .update(prepareSessions)
-      .set({ ...session, updatedAt: new Date() })
-      .where(eq(prepareSessions.id, id))
-      .returning();
-    return updatedSession;
-  }
-
-  async getUserPrepareSessions(userId: string): Promise<PrepareSession[]> {
-    return await db
-      .select()
-      .from(prepareSessions)
-      .where(eq(prepareSessions.userId, userId))
-      .orderBy(desc(prepareSessions.createdAt));
   }
 }
 
