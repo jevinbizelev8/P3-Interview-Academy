@@ -20,7 +20,7 @@ export default function Perform() {
         <Route path="/perform/history" component={AssessmentHistory} />
         <Route path="/perform/assessment/:assessmentId" component={DetailedAssessment} />
         <Route path="/perform/trends" component={PerformanceTrends} />
-        <Route path="/perform/simulation" component={AISimulation} />
+        <Route path="/perform/ai-simulation" component={AISimulation} />
         <Route path="/perform/drills" component={LearningDrills} />
         <Route component={PerformanceDashboard} />
       </Switch>

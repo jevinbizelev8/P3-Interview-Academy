@@ -45,7 +45,7 @@ export default function AISimulation() {
   const [isSimulationActive, setIsSimulationActive] = useState(false);
 
   // Get generated simulation questions
-  const { data: questions = [], isLoading: questionsLoading } = useQuery({
+  const { data: questions = [], isLoading: questionsLoading } = useQuery<SimulationQuestion[]>({
     queryKey: ['/api/perform/simulation/questions', simulationConfig.jobRole, simulationConfig.companyName],
     enabled: false // Only fetch when explicitly triggered
   });
@@ -53,9 +53,9 @@ export default function AISimulation() {
   // Generate simulation questions mutation
   const generateQuestionsMutation = useMutation({
     mutationFn: async (config: typeof simulationConfig) => {
-      return await apiRequest('POST', '/api/perform/simulation/generate', config);
+      return await apiRequest('POST', '/api/perform/simulation/generate', config) as SimulationQuestion[];
     },
-    onSuccess: (data) => {
+    onSuccess: (data: SimulationQuestion[]) => {
       queryClient.setQueryData(['/api/perform/simulation/questions', simulationConfig.jobRole, simulationConfig.companyName], data);
       setIsSimulationActive(true);
     }
@@ -369,7 +369,7 @@ export default function AISimulation() {
                           )}
                         </div>
 
-                        <SimpleResponseInput 
+                        <ResponseInput 
                           onResponseSubmit={handleResponseSubmit}
                           questionIndex={currentQuestionIndex}
                           totalQuestions={generateQuestionsMutation.data.length}
@@ -393,6 +393,89 @@ export default function AISimulation() {
           )}
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// Response Input Component
+function ResponseInput({ 
+  onResponseSubmit, 
+  questionIndex, 
+  totalQuestions 
+}: { 
+  onResponseSubmit: (response: string) => void; 
+  questionIndex: number; 
+  totalQuestions: number; 
+}) {
+  const [response, setResponse] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+
+  const handleSubmit = () => {
+    if (response.trim()) {
+      onResponseSubmit(response.trim());
+      setResponse('');
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && e.ctrlKey) {
+      handleSubmit();
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="response">Your Response</Label>
+        <Textarea
+          id="response"
+          value={response}
+          onChange={(e) => setResponse(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Provide your detailed response using the STAR method (Situation, Task, Action, Result)..."
+          className="min-h-[120px] resize-none"
+        />
+        <p className="text-xs text-gray-500">
+          Tip: Use Ctrl + Enter to submit quickly
+        </p>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsRecording(!isRecording)}
+            disabled={true}
+          >
+            <Mic className="w-4 h-4 mr-2" />
+            Voice Response (Coming Soon)
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-600">
+            {response.length} characters
+          </span>
+          <Button
+            onClick={handleSubmit}
+            disabled={!response.trim()}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {questionIndex === totalQuestions - 1 ? (
+              <>
+                <Target className="w-4 h-4 mr-2" />
+                Complete Simulation
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Next Question
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
