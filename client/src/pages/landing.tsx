@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SeaLionLogo } from "@/components/ui/sealion-logo";
 import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCircle } from "lucide-react";
 
 const FEATURES = [
@@ -296,9 +297,10 @@ export default function Landing() {
                   href="https://sea-lion.ai/" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                  className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors font-medium"
                 >
-                  SeaLion AI
+                  <SeaLionLogo size={16} className="text-blue-400" />
+                  <span>SeaLion AI</span>
                 </a>
               </div>
               <div className="flex space-x-4">
@@ -326,15 +328,16 @@ export default function Landing() {
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             <p>&copy; 2025 P³ Interview Academy. All rights reserved.</p>
-            <p className="text-sm mt-2">
-              AI capabilities powered by{" "}
+            <p className="text-sm mt-2 flex items-center justify-center space-x-2">
+              <span>AI capabilities powered by</span>
               <a 
                 href="https://sea-lion.ai/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-blue-400 hover:text-blue-300 transition-colors"
+                className="flex items-center space-x-1 text-blue-400 hover:text-blue-300 transition-colors"
               >
-                SeaLion AI
+                <SeaLionLogo size={14} className="text-blue-400" />
+                <span>SeaLion AI</span>
               </a>
             </p>
           </div>
