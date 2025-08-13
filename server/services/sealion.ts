@@ -1,5 +1,28 @@
 import { OpenAI } from 'openai';
-import type { InterviewContext, InterviewerPersona, AIResponse } from '@shared/types';
+import { logSeaLionError, errorLogger } from './error-logger';
+
+// Define types locally since @shared/types may not exist
+interface InterviewContext {
+  stage: string;
+  jobRole: string;
+  company: string;
+  candidateBackground: string;
+  keyObjectives: string;
+  userJobPosition?: string;
+  userCompanyName?: string;
+}
+
+interface InterviewerPersona {
+  name: string;
+  title: string;
+  style: string;
+  personality: string;
+}
+
+interface AIResponse {
+  content: string;
+  questionNumber: number;
+}
 
 export interface SeaLionConfig {
   apiKey: string;
@@ -33,7 +56,7 @@ export class SeaLionService {
 
     this.client = new OpenAI({
       apiKey: this.config.apiKey,
-      baseUrl: this.config.baseUrl
+      baseURL: this.config.baseUrl
     });
   }
 
@@ -103,7 +126,7 @@ export class SeaLionService {
       return this.generateFallbackPersona(context);
       
     } catch (error) {
-      console.error("Error generating interviewer persona with SeaLion:", error);
+      logSeaLionError('generateInterviewerPersona', error, true, { language, context: context.userJobPosition });
       return this.generateFallbackPersona(context);
     }
   }
@@ -155,7 +178,7 @@ export class SeaLionService {
       };
       
     } catch (error) {
-      console.error("Error generating first question with SeaLion:", error);
+      logSeaLionError('generateFirstQuestion', error, true, { language, jobRole: context.userJobPosition });
       return this.generateFallbackQuestion(1, context, language);
     }
   }
@@ -204,7 +227,7 @@ export class SeaLionService {
     Make each question unique and purposeful. Avoid repetition.`;
 
     const messages = conversationHistory.map(msg => ({
-      role: msg.role === "user" ? "user" : "assistant",
+      role: msg.role === "user" ? "user" as const : "assistant" as const,
       content: msg.content
     }));
 
@@ -212,9 +235,9 @@ export class SeaLionService {
       const completion = await this.client.chat.completions.create({
         model: this.config.reasoningModel, // Use reasoning model for better follow-up questions
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system' as const, content: systemPrompt },
           ...messages,
-          { role: 'user', content: 'Generate the next appropriate interview question.' }
+          { role: 'user' as const, content: 'Generate the next appropriate interview question.' }
         ],
         max_tokens: 400,
         temperature: 0.8,
@@ -233,7 +256,7 @@ export class SeaLionService {
       };
       
     } catch (error) {
-      console.error("Error generating follow-up question with SeaLion:", error);
+      logSeaLionError('generateFollowUpQuestion', error, true, { language, questionNumber: currentQuestionNumber + 1 });
       
       // Use contextual fallback on error
       const contextualFallback = this.generateContextualFollowUpFallback(
@@ -243,7 +266,7 @@ export class SeaLionService {
         language
       );
       
-      console.log(`Using SeaLion contextual fallback for question ${currentQuestionNumber + 1} in ${language}: ${contextualFallback.substring(0, 50)}...`);
+      errorLogger.logFallbackSuccess('SeaLion', 'generateFollowUpQuestion', { language, questionNumber: currentQuestionNumber + 1 });
       
       return {
         content: contextualFallback,
@@ -286,7 +309,7 @@ export class SeaLionService {
     Consider Southeast Asian workplace cultures and ${context.userCompanyName || context.company} specific requirements.`;
 
     const messages = conversationHistory.map(msg => ({
-      role: msg.role === "user" ? "user" : "assistant",
+      role: msg.role === "user" ? "user" as const : "assistant" as const,
       content: msg.content
     }));
 
@@ -294,9 +317,9 @@ export class SeaLionService {
       const completion = await this.client.chat.completions.create({
         model: this.config.reasoningModel, // Use reasoning model for comprehensive analysis
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system' as const, content: systemPrompt },
           ...messages,
-          { role: 'user', content: 'Provide a comprehensive STAR-based evaluation of this interview.' }
+          { role: 'user' as const, content: 'Provide a comprehensive STAR-based evaluation of this interview.' }
         ],
         max_tokens: 1500,
         temperature: 0.3, // Lower temperature for more consistent evaluation
@@ -319,7 +342,7 @@ export class SeaLionService {
       return this.generateFallbackEvaluation(language);
       
     } catch (error) {
-      console.error("Error generating STAR assessment with SeaLion:", error);
+      logSeaLionError('generateSTARAssessment', error, true, { language, conversationLength: conversationHistory.length });
       return this.generateFallbackEvaluation(language);
     }
   }
