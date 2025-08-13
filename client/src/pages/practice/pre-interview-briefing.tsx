@@ -254,17 +254,17 @@ export default function PreInterviewBriefing() {
               <div className="flex items-center mb-4">
                 <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center mr-4">
                   <span className="text-lg font-medium text-gray-600">
-                    {scenario.interviewerName.split(' ').map(n => n[0]).join('')}
+                    {scenario.interviewerName ? scenario.interviewerName.split(' ').map(n => n[0]).join('') : 'AI'}
                   </span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900">{scenario.interviewerName}</h4>
-                  <p className="text-sm text-gray-600">{scenario.interviewerTitle}</p>
+                  <h4 className="font-semibold text-gray-900">{scenario.interviewerName || 'AI Interviewer'}</h4>
+                  <p className="text-sm text-gray-600">{scenario.interviewerTitle || 'Professional Interview Assistant'}</p>
                 </div>
               </div>
               <div className="space-y-2 text-sm text-gray-700">
-                <p><strong>Interview Style:</strong> {scenario.interviewerStyle}</p>
-                <p><strong>Personality:</strong> {scenario.personalityTraits}</p>
+                <p><strong>Interview Style:</strong> {scenario.interviewerStyle || 'Professional and engaging'}</p>
+                <p><strong>Personality:</strong> {scenario.personalityTraits || 'Thoughtful and supportive'}</p>
               </div>
             </CardContent>
           </Card>
