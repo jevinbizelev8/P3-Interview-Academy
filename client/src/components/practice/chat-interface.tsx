@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { SeaLionLogo } from "@/components/ui/sealion-logo";
 import { Send, Mic, Save, CheckCircle, AlertCircle } from "lucide-react";
 import type { InterviewSessionWithScenario, InterviewMessage } from "@shared/schema";
 
@@ -203,15 +204,16 @@ export default function ChatInterface({
           </span>
           <div className="flex items-center space-x-4">
             <span>Press Enter to send, Shift+Enter for new line</span>
-            <span className="text-gray-400">
-              Powered by{" "}
+            <span className="flex items-center space-x-1 text-gray-400">
+              <span>Powered by</span>
               <a 
                 href="https://sea-lion.ai/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-blue-500 hover:text-blue-600 transition-colors"
+                className="flex items-center space-x-1 text-blue-500 hover:text-blue-600 transition-colors"
               >
-                SeaLion AI
+                <SeaLionLogo size={12} className="text-blue-500" />
+                <span>SeaLion AI</span>
               </a>
             </span>
           </div>
