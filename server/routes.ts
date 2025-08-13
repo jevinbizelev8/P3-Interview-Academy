@@ -336,7 +336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userCompanyName: session.userCompanyName || undefined,
       };
 
-      // Convert conversation history to the format expected by Bedrock service
+      // Convert conversation history to the format expected by SeaLion service
       const conversationMessages = session.messages.map(msg => ({
         role: msg.messageType === 'ai' ? 'assistant' : 'user',
         content: msg.content,
@@ -476,6 +476,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error completing session:", error);
       res.status(500).json({ message: "Failed to complete interview session" });
+    }
+  });
+
+  // Test endpoint for SeaLion integration
+  app.post("/api/test-sealion", async (req, res) => {
+    try {
+      console.log("Testing SeaLion integration...");
+      
+      // Test basic connectivity
+      const testContext = {
+        stage: "phone-screening",
+        jobRole: "AI Engineer",
+        company: "Meta",
+        candidateBackground: "Experienced professional",
+        keyObjectives: "Test SeaLion integration",
+        userJobPosition: "AI Engineer", 
+        userCompanyName: "Meta"
+      };
+
+      // Test persona generation
+      console.log("Testing persona generation...");
+      const persona = await sealionService.generateInterviewerPersona(testContext, 'en');
+      console.log("Persona generated:", persona);
+
+      // Test first question generation
+      console.log("Testing first question generation...");
+      const firstQuestion = await sealionService.generateFirstQuestion(testContext, persona, 'en');
+      console.log("First question generated:", firstQuestion);
+
+      // Test assessment with mock conversation
+      console.log("Testing STAR assessment...");
+      const mockConversation = [
+        { role: 'assistant', content: 'Tell me about a challenging project you worked on.', timestamp: new Date() },
+        { role: 'user', content: 'I worked on implementing a machine learning model that improved our recommendation system by 25%. The main challenge was handling the large dataset and optimizing for real-time inference.', timestamp: new Date() }
+      ];
+      
+      const assessment = await sealionService.generateSTARAssessment(mockConversation, testContext, 'en');
+      console.log("Assessment generated:", assessment);
+
+      res.json({
+        success: true,
+        message: "SeaLion integration test completed successfully",
+        results: {
+          persona: persona,
+          firstQuestion: firstQuestion,
+          assessment: assessment,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error("SeaLion test failed:", error);
+      res.status(500).json({
+        success: false,
+        message: "SeaLion integration test failed",
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
