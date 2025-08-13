@@ -136,10 +136,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Interview session operations
-  async createInterviewSession(session: InsertInterviewSession): Promise<InterviewSession> {
+  async createInterviewSession(session: any): Promise<InterviewSession> {
+    // Handle both UUID and dynamic scenario IDs
+    const sessionValues = {
+      ...session,
+      // Ensure we have all required fields with defaults
+      status: session.status || "in_progress",
+      currentQuestion: session.currentQuestion || 1,
+      totalQuestions: session.totalQuestions || 15,
+      startedAt: new Date(),
+    };
+    
     const [newSession] = await db
       .insert(interviewSessions)
-      .values(session)
+      .values(sessionValues)
       .returning();
     return newSession;
   }

@@ -203,15 +203,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Creating session with body:", req.body);
       console.log("User:", req.user);
       
+      // Simple validation without strict UUID checking for scenarioId
       const sessionData = {
-        ...req.body,
-        userId: req.user?.id || "dev-user-123"
+        userId: req.user?.id || "dev-user-123",
+        scenarioId: req.body.scenarioId, // Accept any string ID
+        userJobPosition: req.body.userJobPosition || null,
+        userCompanyName: req.body.userCompanyName || null,
+        interviewLanguage: req.body.interviewLanguage || "en",
       };
       
-      console.log("Session data to validate:", sessionData);
-      const validatedData = insertInterviewSessionSchema.parse(sessionData);
+      // Basic validation
+      if (!sessionData.scenarioId) {
+        return res.status(400).json({ message: "scenarioId is required" });
+      }
       
-      const session = await storage.createInterviewSession(validatedData);
+      console.log("Session data to create:", sessionData);
+      
+      const session = await storage.createInterviewSession(sessionData);
       res.status(201).json(session);
     } catch (error: any) {
       console.error("Error creating session:", error);
