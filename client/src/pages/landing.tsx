@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { SeaLionLogo } from "@/components/ui/sealion-logo";
 import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCircle } from "lucide-react";
+import professionalInterviewImage from "@assets/generated_images/Professional_interview_scene_0e52b9e3.png";
+import aiCoachingImage from "@assets/generated_images/AI_coaching_dashboard_732a8dd4.png";
+import careerSuccessImage from "@assets/generated_images/Career_success_celebration_559e261d.png";
 
 const FEATURES = [
   {
@@ -146,6 +149,44 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Visual Showcase Section */}
+      <section className="py-16 bg-gradient-to-r from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <img 
+                src={professionalInterviewImage} 
+                alt="Professional interview scene with diverse professionals" 
+                className="rounded-lg shadow-2xl w-full"
+              />
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                Experience Real Interview Scenarios
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Practice with AI-powered simulations that mirror real-world interview experiences. 
+                Our platform creates dynamic scenarios tailored to your specific role and company.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-gray-700">Realistic interview environments</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-gray-700">Industry-specific question sets</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-gray-700">Multi-stage interview preparation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
       <section id="features" className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -168,6 +209,44 @@ export default function Landing() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* AI Technology Section */}
+      <section className="py-16 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                AI-Powered Coaching Technology
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Experience the future of interview preparation with our advanced SeaLion AI technology. 
+                Get personalized coaching that adapts to your learning style and career goals.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <Zap className="w-5 h-5 text-blue-500 mr-3" />
+                  <span className="text-gray-700">Real-time response analysis</span>
+                </div>
+                <div className="flex items-center">
+                  <Globe className="w-5 h-5 text-purple-500 mr-3" />
+                  <span className="text-gray-700">10 Southeast Asian languages</span>
+                </div>
+                <div className="flex items-center">
+                  <Target className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-gray-700">STAR method evaluation</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <img 
+                src={aiCoachingImage} 
+                alt="AI-powered coaching dashboard interface" 
+                className="rounded-lg shadow-2xl w-full"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -256,6 +335,44 @@ export default function Landing() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Success Stories Visual */}
+      <section className="py-16 bg-gradient-to-r from-green-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                Join Thousands of Success Stories
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Our graduates have landed positions at top companies across Southeast Asia. 
+                Transform your career with confidence through proven interview preparation.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <Star className="w-5 h-5 text-yellow-500 mr-3" />
+                  <span className="text-gray-700">95% success rate for users</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className="w-5 h-5 text-blue-500 mr-3" />
+                  <span className="text-gray-700">10,000+ interviews practiced</span>
+                </div>
+                <div className="flex items-center">
+                  <Award className="w-5 h-5 text-purple-500 mr-3" />
+                  <span className="text-gray-700">Top companies hiring our graduates</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <img 
+                src={careerSuccessImage} 
+                alt="Career success celebration with diverse professionals" 
+                className="rounded-lg shadow-2xl w-full"
+              />
+            </div>
           </div>
         </div>
       </section>
