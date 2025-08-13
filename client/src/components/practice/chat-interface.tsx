@@ -81,10 +81,10 @@ export default function ChatInterface({
           </div>
           <div>
             <p className="font-medium text-gray-900">{session.scenario.interviewerName}</p>
-            <p className="text-sm text-green-600 flex items-center">
+            <div className="text-sm text-green-600 flex items-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
               Active
-            </p>
+            </div>
           </div>
         </div>
       </div>
@@ -104,7 +104,7 @@ export default function ChatInterface({
                 <div className="bg-gray-100 rounded-lg px-4 py-3 max-w-md">
                   <p className="text-gray-900">{msg.content}</p>
                   <span className="text-xs text-gray-500 mt-2 block">
-                    {formatTime(msg.timestamp)}
+                    {msg.timestamp ? formatTime(msg.timestamp) : ''}
                   </span>
                 </div>
               </div>
@@ -126,7 +126,7 @@ export default function ChatInterface({
                 <div className="bg-primary rounded-lg px-4 py-3 max-w-md text-primary-foreground">
                   <p>{msg.content}</p>
                   <span className="text-xs opacity-80 mt-2 block">
-                    {formatTime(msg.timestamp)}
+                    {msg.timestamp ? formatTime(msg.timestamp) : ''}
                   </span>
                 </div>
               </div>
