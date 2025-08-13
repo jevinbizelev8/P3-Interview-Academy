@@ -20,7 +20,8 @@ const languageNames = {
   'my': 'Myanmar',
   'km': 'Khmer',
   'lo': 'Lao',
-  'zh': 'Chinese (Singapore)'
+  'zh': 'Chinese (Singapore)',
+  'zh-sg': 'Chinese (Singapore)' // Handle both formats
 };
 
 const getLanguageName = (code: string) => languageNames[code as keyof typeof languageNames] || 'English';
@@ -337,7 +338,7 @@ export default function PreInterviewBriefing() {
                       <SelectItem value="my">🇲🇲 Myanmar</SelectItem>
                       <SelectItem value="km">🇰🇭 Khmer</SelectItem>
                       <SelectItem value="lo">🇱🇦 Lao</SelectItem>
-                      <SelectItem value="zh">🇸🇬 Chinese (Singapore)</SelectItem>
+                      <SelectItem value="zh-sg">🇸🇬 Chinese (Singapore)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
