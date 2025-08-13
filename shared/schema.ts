@@ -79,7 +79,7 @@ export const interviewScenarios = pgTable("interview_scenarios", {
 export const interviewSessions = pgTable("interview_sessions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
-  scenarioId: uuid("scenario_id").notNull().references(() => interviewScenarios.id),
+  scenarioId: varchar("scenario_id").notNull(), // Can be UUID or dynamic ID
   status: varchar("status", { length: 20 }).default("in_progress"), // in_progress, completed, abandoned
   currentQuestion: integer("current_question").default(1),
   totalQuestions: integer("total_questions").default(15),
@@ -217,6 +217,8 @@ export const insertInterviewSessionSchema = createInsertSchema(interviewSessions
   id: true,
   createdAt: true,
   updatedAt: true,
+}).extend({
+  scenarioId: z.string().min(1), // Accept any string, not just UUID
 });
 
 export const insertInterviewMessageSchema = createInsertSchema(interviewMessages).omit({
