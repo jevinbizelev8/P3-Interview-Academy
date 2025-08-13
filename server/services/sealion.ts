@@ -72,7 +72,7 @@ export class SeaLionService {
       my: "အလုပ်သွားရောက်မေးမြန်းခြင်းအခြေအနေအတွက် သင့်တော်သော ပရော်ဖက်ရှင်နယ်မြန်မာဘာသာဖြင့် ပြန်လည်ဖြေကြားပါ။",
       km: "សូមឆ្លើយតបជាភាសាខ្មែរដែលមានលក្ខណៈវិជ្ជាជីវៈ និងសមរម្យសម្រាប់បរិបទនៃការសម្ភាសន៍ការងារ។",
       lo: "ກະລຸນາຕອບກັບເປັນພາສາລາວທີ່ມີວິຊາຊີບ ແລະ ເໝາະສົມສໍາລັບບໍລິບົດຂອງການສໍາພາດວຽກ.",
-      'zh-sg': "请用专业的中文回应，适合工作面试的语境。"
+      'zh-sg': "请用纯正的简体中文回应。严格要求：1）仅使用中文汉字；2）绝对禁止拼音；3）绝对禁止英文；4）绝对禁止括号内拼音注释；5）不要提供任何罗马化文字；6）直接输出中文内容，无需任何翻译或注释。"
     };
     
     return instructions[language as keyof typeof instructions] || instructions.en;
@@ -143,6 +143,7 @@ export class SeaLionService {
       `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
       
       ${languageInstructions}
+      ${language === 'zh-sg' ? '\n\n***关键要求***：仅输出中文汉字，严禁拼音、英文、括号注释。不要解释或翻译，直接回答问题。' : ''}
       
       You are conducting an interview for a ${context.userJobPosition || context.jobRole} position at ${context.userCompanyName || context.company}.
       
@@ -153,6 +154,7 @@ export class SeaLionService {
       `You are a professional AI interviewer conducting a job interview.
       
       ${languageInstructions}
+      ${language === 'zh-sg' ? '\n\n***关键要求***：仅输出中文汉字，严禁拼音、英文、括号注释。不要解释或翻译，直接回答问题。' : ''}
       
       Start the interview for a ${context.userJobPosition || context.jobRole} position at ${context.userCompanyName || context.company} with a professional greeting and introduction request.`;
 
@@ -214,6 +216,7 @@ export class SeaLionService {
     const systemPrompt = `You are ${persona.name}, a ${persona.title}. Your interviewing style is ${persona.style} and you are ${persona.personality}.
 
     ${languageInstructions}
+    ${language === 'zh-sg' ? '\n\n***关键要求***：仅输出中文汉字，严禁拼音、英文、括号注释。不要解释或翻译，直接回答问题。' : ''}
     
     You are conducting an interview for a ${context.userJobPosition || context.jobRole} position at ${context.userCompanyName || context.company}.
     
@@ -240,12 +243,7 @@ export class SeaLionService {
           { role: 'user' as const, content: 'Generate the next appropriate interview question.' }
         ],
         max_tokens: 400,
-        temperature: 0.8,
-        extra_body: {
-          chat_template_kwargs: {
-            thinking_mode: "off" // Disable thinking mode for cleaner responses
-          }
-        }
+        temperature: 0.8
       });
 
       const content = completion.choices[0].message.content || '';
@@ -322,12 +320,7 @@ export class SeaLionService {
           { role: 'user' as const, content: 'Provide a comprehensive STAR-based evaluation of this interview.' }
         ],
         max_tokens: 1500,
-        temperature: 0.3, // Lower temperature for more consistent evaluation
-        extra_body: {
-          chat_template_kwargs: {
-            thinking_mode: "on" // Enable thinking mode for better analysis
-          }
-        }
+        temperature: 0.3 // Lower temperature for more consistent evaluation
       });
 
       const content = completion.choices[0].message.content || '';
