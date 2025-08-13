@@ -8,7 +8,7 @@ const FEATURES = [
   {
     icon: Zap,
     title: "AI-Powered Coaching",
-    description: "Dynamic question generation tailored to your specific job role and company"
+    description: "Dynamic question generation powered by SeaLion AI, tailored to your specific job role and company"
   },
   {
     icon: Globe,
@@ -290,6 +290,17 @@ export default function Landing() {
                 Empowering professionals across Southeast Asia with AI-powered interview preparation 
                 and multi-language support.
               </p>
+              <div className="flex items-center space-x-2 mb-4">
+                <span className="text-sm text-gray-500">Powered by</span>
+                <a 
+                  href="https://sea-lion.ai/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                >
+                  SeaLion AI
+                </a>
+              </div>
               <div className="flex space-x-4">
                 <Badge variant="outline" className="text-gray-400 border-gray-600">10 Languages</Badge>
                 <Badge variant="outline" className="text-gray-400 border-gray-600">AI-Powered</Badge>
@@ -315,6 +326,17 @@ export default function Landing() {
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             <p>&copy; 2025 P³ Interview Academy. All rights reserved.</p>
+            <p className="text-sm mt-2">
+              AI capabilities powered by{" "}
+              <a 
+                href="https://sea-lion.ai/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                SeaLion AI
+              </a>
+            </p>
           </div>
         </div>
       </footer>

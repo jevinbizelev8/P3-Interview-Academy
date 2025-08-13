@@ -201,7 +201,20 @@ export default function ChatInterface({
               </>
             )}
           </span>
-          <span>Press Enter to send, Shift+Enter for new line</span>
+          <div className="flex items-center space-x-4">
+            <span>Press Enter to send, Shift+Enter for new line</span>
+            <span className="text-gray-400">
+              Powered by{" "}
+              <a 
+                href="https://sea-lion.ai/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-600 transition-colors"
+              >
+                SeaLion AI
+              </a>
+            </span>
+          </div>
         </div>
       </div>
     </Card>
