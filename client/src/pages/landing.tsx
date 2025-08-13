@@ -217,7 +217,7 @@ export default function Landing() {
                     </Link>
                   ) : (
                     <Link href={`/${module.id}`}>
-                      <Button variant="outline" className="w-full group-hover:scale-105 transition-transform">
+                      <Button variant="outline" className="w-full group-hover:scale-105 transition-transform bg-[#1e9df1]">
                         View Module
                         <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
