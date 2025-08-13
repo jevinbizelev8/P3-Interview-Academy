@@ -299,7 +299,7 @@ export default function Landing() {
                   rel="noopener noreferrer"
                   className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors font-medium"
                 >
-                  <SeaLionLogo size={16} className="text-blue-400" />
+                  <SeaLionLogo size={16} />
                   <span>SeaLion AI</span>
                 </a>
               </div>
@@ -336,7 +336,7 @@ export default function Landing() {
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1 text-blue-400 hover:text-blue-300 transition-colors"
               >
-                <SeaLionLogo size={14} className="text-blue-400" />
+                <SeaLionLogo size={14} />
                 <span>SeaLion AI</span>
               </a>
             </p>

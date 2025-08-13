@@ -212,7 +212,7 @@ export default function ChatInterface({
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1 text-blue-500 hover:text-blue-600 transition-colors"
               >
-                <SeaLionLogo size={12} className="text-blue-500" />
+                <SeaLionLogo size={12} />
                 <span>SeaLion AI</span>
               </a>
             </span>
