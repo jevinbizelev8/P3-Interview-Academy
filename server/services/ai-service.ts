@@ -122,7 +122,7 @@ export class AIService {
         return response.content || response;
       }
     } catch (personaError) {
-      console.error(`Error generating persona: ${personaError.message}`);
+      console.error(`Error generating persona: ${personaError instanceof Error ? personaError.message : String(personaError)}`);
       
       // If persona fails, try direct question generation
       try {
@@ -207,14 +207,14 @@ export class AIService {
       const overallScore = (assessment.overallScore || 75) / 10; // Convert to 0-10 scale
       
       return {
-        overallScore: overallScore,
+        overallScore: overallScore.toString(),
         overallRating: overallScore >= 8 ? "Excellent Performance" : 
                       overallScore >= 7 ? "Good Performance" : 
                       overallScore >= 6 ? "Satisfactory Performance" : "Needs Improvement",
-        communicationScore: assessment.starAnalysis?.situation?.score || 7.5,
-        empathyScore: assessment.starAnalysis?.task?.score || 7.5,
-        problemSolvingScore: assessment.starAnalysis?.action?.score || 7.5,
-        culturalAlignmentScore: assessment.culturalFit?.score || assessment.starAnalysis?.result?.score || 7.5,
+        communicationScore: (assessment.starAnalysis?.situation?.score || 7.5).toString(),
+        empathyScore: (assessment.starAnalysis?.task?.score || 7.5).toString(),
+        problemSolvingScore: (assessment.starAnalysis?.action?.score || 7.5).toString(),
+        culturalAlignmentScore: (assessment.culturalFit?.score || assessment.starAnalysis?.result?.score || 7.5).toString(),
         qualitativeObservations: assessment.summary || assessment.qualitativeFeedback || "Candidate demonstrated solid understanding of the role requirements.",
         actionableInsights: Array.isArray(assessment.recommendations) ? assessment.recommendations : 
                           typeof assessment.recommendations === 'string' ? [assessment.recommendations] : [
@@ -251,12 +251,12 @@ export class AIService {
     } catch (error) {
       console.error('Error generating comprehensive evaluation:', error);
       return {
-        overallScore: 7.0,
+        overallScore: "7.0",
         overallRating: "Good",
-        communicationScore: 7.0,
-        empathyScore: 7.0,
-        problemSolvingScore: 7.0,
-        culturalAlignmentScore: 7.0,
+        communicationScore: "7.0",
+        empathyScore: "7.0",
+        problemSolvingScore: "7.0",
+        culturalAlignmentScore: "7.0",
         qualitativeObservations: "Interview completed successfully. Detailed evaluation processing encountered an issue.",
         actionableInsights: ["Continue practicing interview skills", "Research company-specific information"],
         personalizedDrills: ["Practice behavioral questions", "Prepare technical examples"],
