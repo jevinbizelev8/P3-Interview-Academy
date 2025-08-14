@@ -30,6 +30,8 @@ The server runs on **Node.js** with **Express.js** using **TypeScript** and ES m
 
 **Multi-Language AI**: The AI system now supports generating interview questions and feedback in 10 Southeast Asian languages using SeaLion's specialized regional language models with comprehensive error logging and robust fallback systems. **Full SeaLion functionality confirmed** - all AI responses include culturally appropriate Southeast Asian business contexts, with intelligent persona generation, contextual question flow, and detailed STAR-method assessments. The platform maintains 100% uptime through sophisticated fallback mechanisms while providing authentic SeaLion responses when the API is available.
 
+**Prepare Module Integration**: The Prepare module is now fully integrated as an embedded iframe at `/prepare`, displaying the external deployment (https://p3-prepare-sealion.replit.app) within the main platform's navigation structure. This provides seamless user experience while maintaining module separation and independent deployments.
+
 ### Database Design
 The application uses **PostgreSQL** as the primary database with **Drizzle ORM** for type-safe database operations. The database is configured for **Neon serverless** deployment with connection pooling.
 
