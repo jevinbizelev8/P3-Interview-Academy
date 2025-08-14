@@ -102,9 +102,9 @@ export default function Landing() {
               <a href="#modules" className="text-gray-600 hover:text-gray-900 transition-colors">Modules</a>
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
               <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">Reviews</a>
-              <a href="https://p3-prepare-sealion.replit.app" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
+              <Link href="/prepare" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
                 Prepare
-              </a>
+              </Link>
               <Link href="/perform" className="text-gray-600 hover:text-purple-600 transition-colors font-medium">
                 Perform
               </Link>
@@ -138,11 +138,11 @@ export default function Landing() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <a href="https://p3-prepare-sealion.replit.app" target="_blank" rel="noopener noreferrer">
+              <Link href="/prepare">
                 <Button variant="outline" size="lg" className="text-lg px-8 py-3">
                   Explore Features
                 </Button>
-              </a>
+              </Link>
             </div>
             <p className="text-sm text-gray-500 mt-4">
               No signup required • Instant feedback • Multi-language support
@@ -297,12 +297,12 @@ export default function Landing() {
                       </Button>
                     </Link>
                   ) : module.id === "prepare" ? (
-                    <a href="https://p3-prepare-sealion.replit.app" target="_blank" rel="noopener noreferrer">
+                    <Link href="/prepare">
                       <Button variant="outline" className="w-full group-hover:scale-105 transition-transform bg-[#1e9df1] text-[#ffffff]">
                         View Module
                         <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
-                    </a>
+                    </Link>
                   ) : (
                     <Link href={`/${module.id}`}>
                       <Button variant="outline" className="w-full group-hover:scale-105 transition-transform bg-[#1e9df1] text-[#ffffff]">
