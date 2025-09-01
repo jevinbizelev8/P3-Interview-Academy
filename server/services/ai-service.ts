@@ -1,4 +1,4 @@
-import { bedrockService } from './bedrock';
+import { sealionService } from './sealion';
 import type { InterviewMessage, InterviewSession, AiEvaluationResult } from '@shared/schema';
 import { SUPPORTED_LANGUAGES } from '@shared/schema';
 
@@ -103,15 +103,15 @@ export class AIService {
     console.log(`Generating question in language: ${language} for session ${session.id}`);
 
     try {
-      const persona = await bedrockService.generateInterviewerPersona(context);
+      const persona = await sealionService.generateInterviewerPersona(context, language);
       console.log(`Successfully generated persona for ${language}`);
       
       if (questionNumber === 1 && conversationHistory.length === 0) {
-        const response = await bedrockService.generateFirstQuestion(context, persona, language);
+        const response = await sealionService.generateFirstQuestion(context, persona, language);
         console.log(`Successfully generated first question in ${language}`);
         return response.content || response;
       } else {
-        const response = await bedrockService.generateFollowUpQuestion(
+        const response = await sealionService.generateFollowUpQuestion(
           context,
           persona,
           conversationHistory,
@@ -122,16 +122,16 @@ export class AIService {
         return response.content || response;
       }
     } catch (personaError) {
-      console.error(`Error generating persona: ${personaError.message}`);
+      console.error(`Error generating persona: ${personaError instanceof Error ? personaError.message : String(personaError)}`);
       
       // If persona fails, try direct question generation
       try {
         if (questionNumber === 1 && conversationHistory.length === 0) {
-          const response = await bedrockService.generateFirstQuestion(context, null, language);
+          const response = await sealionService.generateFirstQuestion(context, null, language);
           console.log(`Successfully generated first question without persona in ${language}`);
           return response.content || response;
         } else {
-          const response = await bedrockService.generateFollowUpQuestion(
+          const response = await sealionService.generateFollowUpQuestion(
             context,
             null,
             conversationHistory,
@@ -196,23 +196,28 @@ export class AIService {
     const language = session.interviewLanguage || 'en';
 
     try {
-      // Generate comprehensive assessment using Bedrock
-      const assessment = await bedrockService.generateSTARAssessment(
-        context,
+      // Generate comprehensive assessment using SeaLion
+      const assessment = await sealionService.generateSTARAssessment(
         conversationHistory,
+        context,
         language
       );
 
-      // Parse and structure the assessment for our 10-feature evaluation
+      // Parse and structure the SeaLion assessment for our 10-feature evaluation
+      const overallScore = (assessment.overallScore || 75) / 10; // Convert to 0-10 scale
+      
       return {
-        overallScore: assessment.overallScore || 7.5,
-        overallRating: assessment.overallRating || "Good Performance",
-        communicationScore: assessment.scores?.communication || 7.5,
-        empathyScore: assessment.scores?.empathy || 7.5,
-        problemSolvingScore: assessment.scores?.problemSolving || 7.5,
-        culturalAlignmentScore: assessment.scores?.culturalAlignment || 7.5,
-        qualitativeObservations: assessment.qualitativeFeedback || "Candidate demonstrated solid understanding of the role requirements.",
-        actionableInsights: assessment.recommendations || [
+        overallScore: overallScore.toString(),
+        overallRating: overallScore >= 8 ? "Excellent Performance" : 
+                      overallScore >= 7 ? "Good Performance" : 
+                      overallScore >= 6 ? "Satisfactory Performance" : "Needs Improvement",
+        communicationScore: (assessment.starAnalysis?.situation?.score || 7.5).toString(),
+        empathyScore: (assessment.starAnalysis?.task?.score || 7.5).toString(),
+        problemSolvingScore: (assessment.starAnalysis?.action?.score || 7.5).toString(),
+        culturalAlignmentScore: (assessment.culturalFit?.score || assessment.starAnalysis?.result?.score || 7.5).toString(),
+        qualitativeObservations: assessment.summary || assessment.qualitativeFeedback || "Candidate demonstrated solid understanding of the role requirements.",
+        actionableInsights: Array.isArray(assessment.recommendations) ? assessment.recommendations : 
+                          typeof assessment.recommendations === 'string' ? [assessment.recommendations] : [
           `Focus on demonstrating specific examples relevant to ${session.userJobPosition}`,
           `Research ${session.userCompanyName}'s recent initiatives and values`,
           "Practice articulating your problem-solving approach using the STAR method"
@@ -228,16 +233,16 @@ export class AIService {
           "What specific value would you bring to this role that others might not?",
           "How do you plan to grow in this position over the next 2 years?"
         ],
-        badgeEarned: assessment.overallScore >= 8 ? "Interview Excellence" : 
-                     assessment.overallScore >= 7 ? "Strong Candidate" : 
+        badgeEarned: overallScore >= 8 ? "Interview Excellence" : 
+                     overallScore >= 7 ? "Strong Candidate" : 
                      "Interview Participant",
-        pointsEarned: Math.floor((assessment.overallScore || 7.5) * 10),
-        strengths: assessment.strengths || [
+        pointsEarned: Math.floor(overallScore * 10),
+        strengths: assessment.keyStrengths || assessment.strengths || [
           "Clear communication style",
           "Relevant experience",
           "Professional demeanor"
         ],
-        improvementAreas: assessment.improvements || [
+        improvementAreas: assessment.areasForImprovement || assessment.improvements || [
           "Provide more specific examples",
           "Ask more insightful questions",
           "Connect experience to company needs"
@@ -246,12 +251,12 @@ export class AIService {
     } catch (error) {
       console.error('Error generating comprehensive evaluation:', error);
       return {
-        overallScore: 7.0,
+        overallScore: "7.0",
         overallRating: "Good",
-        communicationScore: 7.0,
-        empathyScore: 7.0,
-        problemSolvingScore: 7.0,
-        culturalAlignmentScore: 7.0,
+        communicationScore: "7.0",
+        empathyScore: "7.0",
+        problemSolvingScore: "7.0",
+        culturalAlignmentScore: "7.0",
         qualitativeObservations: "Interview completed successfully. Detailed evaluation processing encountered an issue.",
         actionableInsights: ["Continue practicing interview skills", "Research company-specific information"],
         personalizedDrills: ["Practice behavioral questions", "Prepare technical examples"],

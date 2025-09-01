@@ -2,13 +2,17 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { SeaLionLogo } from "@/components/ui/sealion-logo";
 import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCircle } from "lucide-react";
+import professionalInterviewImage from "@assets/generated_images/Professional_interview_scene_0e52b9e3.png";
+import aiCoachingImage from "@assets/generated_images/AI_coaching_dashboard_732a8dd4.png";
+import careerSuccessImage from "@assets/generated_images/Career_success_celebration_559e261d.png";
 
 const FEATURES = [
   {
     icon: Zap,
     title: "AI-Powered Coaching",
-    description: "Dynamic question generation tailored to your specific job role and company"
+    description: "Dynamic question generation powered by SeaLion AI, tailored to your specific job role and company"
   },
   {
     icon: Globe,
@@ -134,13 +138,53 @@ export default function Landing() {
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
               </Link>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3">
-                Watch Demo
-              </Button>
+              <Link href="/prepare">
+                <Button variant="outline" size="lg" className="text-lg px-8 py-3">
+                  Explore Features
+                </Button>
+              </Link>
             </div>
             <p className="text-sm text-gray-500 mt-4">
               No signup required • Instant feedback • Multi-language support
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Visual Showcase Section */}
+      <section className="py-16 bg-gradient-to-r from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <img 
+                src={professionalInterviewImage} 
+                alt="Professional interview scene with diverse professionals" 
+                className="rounded-lg shadow-2xl w-full"
+              />
+            </div>
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                Experience Real Interview Scenarios
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Practice with AI-powered simulations that mirror real-world interview experiences. 
+                Our platform creates dynamic scenarios tailored to your specific role and company.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-gray-700">Realistic interview environments</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-gray-700">Industry-specific question sets</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-gray-700">Multi-stage interview preparation</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -167,6 +211,44 @@ export default function Landing() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* AI Technology Section */}
+      <section className="py-16 bg-gradient-to-r from-blue-50 to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                AI-Powered Coaching Technology
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Experience the future of interview preparation with our advanced SeaLion AI technology. 
+                Get personalized coaching that adapts to your learning style and career goals.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <Zap className="w-5 h-5 text-blue-500 mr-3" />
+                  <span className="text-gray-700">Real-time response analysis</span>
+                </div>
+                <div className="flex items-center">
+                  <Globe className="w-5 h-5 text-purple-500 mr-3" />
+                  <span className="text-gray-700">10 Southeast Asian languages</span>
+                </div>
+                <div className="flex items-center">
+                  <Target className="w-5 h-5 text-green-500 mr-3" />
+                  <span className="text-gray-700">STAR method evaluation</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <img 
+                src={aiCoachingImage} 
+                alt="AI-powered coaching dashboard interface" 
+                className="rounded-lg shadow-2xl w-full"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -214,9 +296,16 @@ export default function Landing() {
                         <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
                     </Link>
+                  ) : module.id === "prepare" ? (
+                    <Link href="/prepare">
+                      <Button variant="outline" className="w-full group-hover:scale-105 transition-transform bg-[#1e9df1] text-[#ffffff]">
+                        View Module
+                        <ArrowRight className="ml-2 w-4 h-4" />
+                      </Button>
+                    </Link>
                   ) : (
                     <Link href={`/${module.id}`}>
-                      <Button variant="outline" className="w-full group-hover:scale-105 transition-transform">
+                      <Button variant="outline" className="w-full group-hover:scale-105 transition-transform bg-[#1e9df1] text-[#ffffff]">
                         View Module
                         <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
@@ -259,6 +348,44 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Success Stories Visual */}
+      <section className="py-16 bg-gradient-to-r from-green-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl font-bold text-gray-900 mb-6">
+                Join Thousands of Success Stories
+              </h2>
+              <p className="text-lg text-gray-600 mb-6">
+                Our graduates have landed positions at top companies across Southeast Asia. 
+                Transform your career with confidence through proven interview preparation.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <Star className="w-5 h-5 text-yellow-500 mr-3" />
+                  <span className="text-gray-700">95% success rate for users</span>
+                </div>
+                <div className="flex items-center">
+                  <Users className="w-5 h-5 text-blue-500 mr-3" />
+                  <span className="text-gray-700">10,000+ interviews practiced</span>
+                </div>
+                <div className="flex items-center">
+                  <Award className="w-5 h-5 text-purple-500 mr-3" />
+                  <span className="text-gray-700">Top companies hiring our graduates</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <img 
+                src={careerSuccessImage} 
+                alt="Career success celebration with diverse professionals" 
+                className="rounded-lg shadow-2xl w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
@@ -290,6 +417,18 @@ export default function Landing() {
                 Empowering professionals across Southeast Asia with AI-powered interview preparation 
                 and multi-language support.
               </p>
+              <div className="flex items-center space-x-2 mb-4">
+                <span className="text-sm text-gray-500">Powered by</span>
+                <a 
+                  href="https://sea-lion.ai/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 transition-colors font-medium"
+                >
+                  <SeaLionLogo size={16} />
+                  <span>SeaLion AI</span>
+                </a>
+              </div>
               <div className="flex space-x-4">
                 <Badge variant="outline" className="text-gray-400 border-gray-600">10 Languages</Badge>
                 <Badge variant="outline" className="text-gray-400 border-gray-600">AI-Powered</Badge>
@@ -315,6 +454,18 @@ export default function Landing() {
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             <p>&copy; 2025 P³ Interview Academy. All rights reserved.</p>
+            <p className="text-sm mt-2 flex items-center justify-center space-x-2">
+              <span>AI capabilities powered by</span>
+              <a 
+                href="https://sea-lion.ai/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1 text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                <SeaLionLogo size={14} />
+                <span>SeaLion AI</span>
+              </a>
+            </p>
           </div>
         </div>
       </footer>

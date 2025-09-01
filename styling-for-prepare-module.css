@@ -1,0 +1,60 @@
+/* Styling for P³ Prepare Module */
+/* Copy these styles into your prepare module's CSS file */
+
+/* Make sure to include Tailwind CSS in your prepare module project */
+
+/* Custom gradients matching the main project */
+.bg-gradient-to-r.from-blue-50.to-purple-50 {
+  background: linear-gradient(to right, #eff6ff, #faf5ff);
+}
+
+.bg-gradient-to-r.from-blue-600.to-purple-600 {
+  background: linear-gradient(to right, #2563eb, #9333ea);
+}
+
+.bg-clip-text.text-transparent {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Backdrop blur for navigation */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+/* Hover effects */
+.transition-colors {
+  transition: color 0.15s ease-in-out;
+}
+
+.transition-transform {
+  transition: transform 0.15s ease-in-out;
+}
+
+.group-hover\:scale-105:hover {
+  transform: scale(1.05);
+}
+
+/* Shadow utilities */
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-2xl {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Ensure consistent font family */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Z-index for sticky navigation */
+.z-50 {
+  z-index: 50;
+}

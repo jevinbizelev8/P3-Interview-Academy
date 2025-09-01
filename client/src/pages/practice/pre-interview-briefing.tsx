@@ -3,10 +3,28 @@ import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Briefcase, Lightbulb, ArrowLeft, Play } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Briefcase, Lightbulb, ArrowLeft, Play, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/auth-utils";
 import type { InterviewScenario } from "@shared/schema";
+
+// Language mapping
+const languageNames = {
+  'en': 'English',
+  'ms': 'Bahasa Malaysia', 
+  'id': 'Bahasa Indonesia',
+  'th': 'Thai',
+  'vi': 'Vietnamese',
+  'fil': 'Filipino',
+  'my': 'Myanmar',
+  'km': 'Khmer',
+  'lo': 'Lao',
+  'zh': 'Chinese (Singapore)',
+  'zh-sg': 'Chinese (Singapore)' // Handle both formats
+};
+
+const getLanguageName = (code: string) => languageNames[code as keyof typeof languageNames] || 'English';
 
 export default function PreInterviewBriefing() {
   const { scenarioId } = useParams<{ scenarioId: string }>();
@@ -254,17 +272,17 @@ export default function PreInterviewBriefing() {
               <div className="flex items-center mb-4">
                 <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center mr-4">
                   <span className="text-lg font-medium text-gray-600">
-                    {scenario.interviewerName.split(' ').map(n => n[0]).join('')}
+                    {scenario.interviewerName ? scenario.interviewerName.split(' ').map(n => n[0]).join('') : 'AI'}
                   </span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900">{scenario.interviewerName}</h4>
-                  <p className="text-sm text-gray-600">{scenario.interviewerTitle}</p>
+                  <h4 className="font-semibold text-gray-900">{scenario.interviewerName || 'AI Interviewer'}</h4>
+                  <p className="text-sm text-gray-600">{scenario.interviewerTitle || 'Professional Interview Assistant'}</p>
                 </div>
               </div>
               <div className="space-y-2 text-sm text-gray-700">
-                <p><strong>Interview Style:</strong> {scenario.interviewerStyle}</p>
-                <p><strong>Personality:</strong> {scenario.personalityTraits}</p>
+                <p><strong>Interview Style:</strong> {scenario.interviewerStyle || 'Professional and engaging'}</p>
+                <p><strong>Personality:</strong> {scenario.personalityTraits || 'Thoughtful and supportive'}</p>
               </div>
             </CardContent>
           </Card>
@@ -283,8 +301,46 @@ export default function PreInterviewBriefing() {
                   <span className="font-medium">15-20 minutes</span>
                 </div>
                 <div className="flex justify-between">
+                  <span className="text-gray-600">Interview Language:</span>
+                  <span className="font-medium">{getLanguageName(jobContext.interviewLanguage || 'en')}</span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-gray-600">Auto-save:</span>
                   <span className="font-medium text-green-600">Enabled</span>
+                </div>
+              </div>
+              
+              {/* Language Selection */}
+              <div className="mt-4 space-y-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 flex items-center">
+                    <Globe className="w-4 h-4 mr-2" />
+                    Interview Language
+                  </label>
+                  <Select 
+                    value={jobContext.interviewLanguage || 'en'}
+                    onValueChange={(value) => {
+                      const newContext = { ...jobContext, interviewLanguage: value };
+                      setJobContext(newContext);
+                      sessionStorage.setItem('jobContext', JSON.stringify(newContext));
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">🇺🇸 English</SelectItem>
+                      <SelectItem value="ms">🇲🇾 Bahasa Malaysia</SelectItem>
+                      <SelectItem value="id">🇮🇩 Bahasa Indonesia</SelectItem>
+                      <SelectItem value="th">🇹🇭 Thai</SelectItem>
+                      <SelectItem value="vi">🇻🇳 Vietnamese</SelectItem>
+                      <SelectItem value="fil">🇵🇭 Filipino</SelectItem>
+                      <SelectItem value="my">🇲🇲 Myanmar</SelectItem>
+                      <SelectItem value="km">🇰🇭 Khmer</SelectItem>
+                      <SelectItem value="lo">🇱🇦 Lao</SelectItem>
+                      <SelectItem value="zh-sg">🇸🇬 Chinese (Singapore)</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               

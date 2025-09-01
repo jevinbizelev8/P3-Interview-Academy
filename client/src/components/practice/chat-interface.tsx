@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { SeaLionLogo } from "@/components/ui/sealion-logo";
 import { Send, Mic, Save, CheckCircle, AlertCircle } from "lucide-react";
 import type { InterviewSessionWithScenario, InterviewMessage } from "@shared/schema";
 
@@ -81,10 +82,10 @@ export default function ChatInterface({
           </div>
           <div>
             <p className="font-medium text-gray-900">{session.scenario.interviewerName}</p>
-            <p className="text-sm text-green-600 flex items-center">
+            <div className="text-sm text-green-600 flex items-center">
               <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
               Active
-            </p>
+            </div>
           </div>
         </div>
       </div>
@@ -104,7 +105,7 @@ export default function ChatInterface({
                 <div className="bg-gray-100 rounded-lg px-4 py-3 max-w-md">
                   <p className="text-gray-900">{msg.content}</p>
                   <span className="text-xs text-gray-500 mt-2 block">
-                    {formatTime(msg.timestamp)}
+                    {msg.timestamp ? formatTime(msg.timestamp) : ''}
                   </span>
                 </div>
               </div>
@@ -126,7 +127,7 @@ export default function ChatInterface({
                 <div className="bg-primary rounded-lg px-4 py-3 max-w-md text-primary-foreground">
                   <p>{msg.content}</p>
                   <span className="text-xs opacity-80 mt-2 block">
-                    {formatTime(msg.timestamp)}
+                    {msg.timestamp ? formatTime(msg.timestamp) : ''}
                   </span>
                 </div>
               </div>
@@ -201,7 +202,21 @@ export default function ChatInterface({
               </>
             )}
           </span>
-          <span>Press Enter to send, Shift+Enter for new line</span>
+          <div className="flex items-center space-x-4">
+            <span>Press Enter to send, Shift+Enter for new line</span>
+            <span className="flex items-center space-x-1 text-gray-400">
+              <span>Powered by</span>
+              <a 
+                href="https://sea-lion.ai/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center space-x-1 text-blue-500 hover:text-blue-600 transition-colors"
+              >
+                <SeaLionLogo size={12} />
+                <span>SeaLion AI</span>
+              </a>
+            </span>
+          </div>
         </div>
       </div>
     </Card>
