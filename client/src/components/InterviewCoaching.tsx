@@ -342,7 +342,7 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                           </div>
                         )}
                         
-                        <div className={`max-w-md ${message.messageType === 'user' ? 'order-first' : ''}`}>
+                        <div className={`max-w-lg ${message.messageType === 'user' ? 'order-first' : ''}`}>
                           {message.messageType === 'coach' && message.coachingType === 'feedback' && message.feedback ? (
                             <FeedbackCard feedback={message.feedback} />
                           ) : (
@@ -492,24 +492,18 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
 // Feedback Card Component
 function FeedbackCard({ feedback }: { feedback: any }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="bg-blue-50 px-4 py-3 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-blue-600" />
-            <span className="font-medium text-blue-900 text-sm">AI Preceptor - Interview Coach</span>
-            <span className="bg-blue-800 text-white px-2 py-0.5 rounded text-xs font-medium">Professional</span>
-          </div>
-          <ChevronDown className="h-4 w-4 text-blue-600" />
-        </div>
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-full">
+      <div className="flex items-center gap-2 mb-2">
+        <Bot className="h-4 w-4 text-blue-600" />
+        <span className="font-medium text-blue-900 text-sm">Interview Coach</span>
       </div>
 
-      <div className="p-4 space-y-4">
+      <div className="space-y-3 text-sm">
         {/* STAR Scores */}
         {feedback.starScores && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-gray-600">STAR:</span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               {Object.entries(feedback.starScores).filter(([key]) => key !== 'overall').map(([key, score]) => (
                 <div key={key} className="flex items-center gap-1">
                   <span className="text-xs font-medium text-gray-500 uppercase">{key[0]}</span>
@@ -517,8 +511,8 @@ function FeedbackCard({ feedback }: { feedback: any }) {
                     {[1, 2, 3, 4, 5].map((dot) => (
                       <div
                         key={dot}
-                        className={`w-2 h-2 rounded-full ${
-                          dot <= (score as number) ? 'bg-green-500' : 'bg-gray-200'
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          dot <= (score as number) ? 'bg-green-500' : 'bg-gray-300'
                         }`}
                       />
                     ))}
@@ -532,10 +526,10 @@ function FeedbackCard({ feedback }: { feedback: any }) {
         {/* Feedback */}
         {feedback.improvementPoints && feedback.improvementPoints.length > 0 && (
           <div>
-            <h4 className="font-medium text-gray-900 text-sm mb-2">Feedback</h4>
-            <div className="text-sm text-gray-700 space-y-1">
+            <div className="font-medium text-gray-900 mb-1">Feedback</div>
+            <div className="text-gray-700 space-y-1">
               {feedback.improvementPoints.map((point: string, index: number) => (
-                <div key={index}>{point}</div>
+                <div key={index} className="break-words">{point}</div>
               ))}
             </div>
           </div>
@@ -544,30 +538,12 @@ function FeedbackCard({ feedback }: { feedback: any }) {
         {/* Model Answer */}
         {feedback.modelAnswer && (
           <div>
-            <h4 className="font-medium text-gray-900 text-sm mb-2">Model Answer</h4>
-            <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+            <div className="font-medium text-gray-900 mb-1">Model Answer</div>
+            <div className="text-gray-700 bg-white p-2 rounded border text-xs break-words">
               {feedback.modelAnswer}
             </div>
           </div>
         )}
-
-        {/* Learning Tip */}
-        <div>
-          <h4 className="font-medium text-gray-900 text-sm mb-2">Learning Tip</h4>
-          <div className="text-sm text-gray-700">
-            Structure responses using STAR method. Include specific metrics and focus on your role in achieving business outcomes.
-          </div>
-        </div>
-
-        {/* Next Interview Question */}
-        <div>
-          <h4 className="font-medium text-gray-900 text-sm mb-2">Next Interview Question</h4>
-          <div className="bg-blue-50 border border-blue-200 rounded p-3">
-            <div className="text-sm text-gray-600 italic">
-              Ready for the next question? Continue the conversation above.
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
