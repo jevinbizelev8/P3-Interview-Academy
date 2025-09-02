@@ -3,6 +3,7 @@ import MainNav from "@/components/navigation/main-nav";
 import Home from "./home";
 import PrepareDashboard from "./prepare/prepare-dashboard";
 import EnhancedDashboard from "./prepare/enhanced-dashboard";
+import { CoachingSessionPage } from "./prepare/coaching-session";
 import InterviewStrategies from "./prepare/interview-strategies";
 import CommonQuestions from "./prepare/common-questions";
 import Complete from "./complete";
@@ -21,6 +22,7 @@ export default function Prepare() {
         <Route path="/prepare/questions" component={CommonQuestions} />
         <Route path="/prepare/dashboard" component={EnhancedDashboard} />
         <Route path="/prepare/session" component={PrepareDashboard} />
+        <Route path="/prepare/coaching/:sessionId" component={CoachingSessionPage} />
         <Route path="/prepare/complete" component={Complete} />
         <Route path="/prepare/review" component={Review} />
         <Route path="/prepare/language-test" component={LanguageTest} />

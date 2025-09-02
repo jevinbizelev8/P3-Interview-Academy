@@ -99,27 +99,35 @@ export default function Home() {
 
   const createSessionMutation = useMutation({
     mutationFn: async (sessionData: any) => {
-      // Create preparation session with correct format for prepare module
+      // Create coaching session with new format
       const sessionPayload = {
         jobPosition: sessionData.position,
         companyName: sessionData.company || null,
-        targetInterviewDate: null,
         interviewStage: sessionData.interviewType,
-        preferredLanguage: sessionData.language || 'en',
-        status: 'active',
-        overallProgress: 0
+        primaryIndustry: sessionData.industry || null,
+        specializations: [],
+        experienceLevel: 'intermediate' as const,
+        companyContext: {
+          type: 'enterprise' as const,
+          businessModel: '',
+          technicalStack: []
+        }
       };
       
-      const response = await apiRequest('POST', '/api/prepare/sessions', sessionPayload);
-      return response.json();
+      const response = await apiRequest('POST', '/api/coaching/sessions', sessionPayload);
+      if (!response.ok) {
+        throw new Error('Failed to create coaching session');
+      }
+      const result = await response.json();
+      return result.data;
     },
     onSuccess: (session) => {
       toast({
-        title: "Preparation Session Created",
-        description: "Your personalized interview preparation journey is ready!",
+        title: "Coaching Session Created",
+        description: "Your personalized AI coaching session is ready!",
       });
-      // Redirect to prepare dashboard with session ID
-      setLocation(`/prepare/dashboard?sessionId=${session.id}`);
+      // Redirect to new coaching interface
+      setLocation(`/prepare/coaching/${session.id}`);
     },
     onError: (error) => {
       console.error('Session creation error:', error);
@@ -199,25 +207,24 @@ export default function Home() {
           </div>
           
           <h2 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-green-600 bg-clip-text text-transparent mb-6">
-            Master Your Interview Skills
+            AI Interview Coaching
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Prepare with AI-powered feedback, comprehensive 5-star evaluation system, and expert insights 
-            to ace your next interview. Get personalised coaching across all 5 interview stages.
+            Get real-time AI coaching through interactive conversation. Practice interview questions with immediate guidance and receive model answers at the end of your session.
           </p>
           
           <div className="flex justify-center items-center space-x-8 mt-8 text-sm text-gray-500">
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>AI-Powered</span>
+              <span>Real-time AI Coaching</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>5-Star Evaluation</span>
+              <span>Interactive Conversation</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span>Expert Examples</span>
+              <span>Model Answers</span>
             </div>
           </div>
         </div>
@@ -230,7 +237,7 @@ export default function Home() {
                   <path d="M10 2L12 6L16 6L13 9L14 13L10 11L6 13L7 9L4 6L8 6L10 2Z" fill="white"/>
                 </svg>
               </div>
-              <span>Setup Your Preparation Session</span>
+              <span>Start AI Coaching Session</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -326,75 +333,30 @@ export default function Home() {
               </div>
             )}
 
-            {/* Job Description Upload - Positioned before Start Button */}
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-2">
-                  📄 Supercharge Your Preparation with Your Job Description
-                </h3>
-                <p className="text-sm text-blue-800 mb-3">
-                  Upload your job description to get <strong>personalised AI feedback</strong> tailored specifically to your target role. 
-                  Our AI will analyse the required skills and responsibilities to provide more relevant interview questions and targeted improvement suggestions.
-                </p>
-                <div className="text-xs text-blue-700">
-                  <span className="font-medium">Benefits:</span> Role-specific questions • Tailored feedback • Skills-focused coaching • Higher success rate
-                </div>
-              </div>
-              
-              <JobDescriptionUpload
-                userId="user-1"
-                selectedJobDescriptionId={selectedJobDescription?.id}
-                onJobDescriptionSelect={setSelectedJobDescription}
-              />
-            </div>
-
-            {/* ASEAN Language Selection */}
-            <div className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-green-900 mb-2">
-                  🌏 ASEAN Multi-Language Support
-                </h3>
-                <p className="text-sm text-green-800 mb-3">
-                  Experience interviews in your preferred language! Questions will be displayed in both English and your selected ASEAN language, 
-                  powered by AI translation optimized for Southeast Asian cultures and professional contexts.
-                </p>
-                <div className="text-xs text-green-700">
-                  <span className="font-medium">Features:</span> 9 ASEAN languages • Professional translations • Cultural context • Bilingual display
-                </div>
-              </div>
-              
-              <LanguageSelector
-                value={selectedLanguage}
-                onValueChange={setSelectedLanguage}
-              />
-            </div>
-
             <Button
-              className="w-full py-3 text-lg"
+              className="w-full py-3 text-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               onClick={handleStartSession}
               disabled={createSessionMutation.isPending || !selectedType || !position || !company}
             >
-              {createSessionMutation.isPending ? "Creating Session..." : "Create Preparation Session"}
+              {createSessionMutation.isPending ? "Starting AI Coach..." : "Start AI Coaching Session"}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Features Preview */}
+        {/* Core Features */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
           <Card className="text-center hover:shadow-xl transition-all duration-300 border-2 border-transparent hover:border-blue-200 group">
             <CardContent className="p-8">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20 4L24.7 10.3L32.5 10.625L28.75 17.075L30.325 24.875L20 19.675L9.675 24.875L11.25 17.075L7.5 10.625L15.3 10.3L20 4Z" fill="#FFFFFF" opacity="0.95"/>
-                  <circle cx="30" cy="12" r="4" fill="#10B981"/>
-                  <path d="M27.5 12L29 13.5L32.5 10" stroke="#fff" strokeWidth="2" fill="none"/>
-                  <circle cx="20" cy="32" r="2" fill="#F59E0B" opacity="0.8"/>
-                  <path d="M16 28L20 32L24 28" stroke="#3B82F6" strokeWidth="2" fill="none"/>
+                  <circle cx="20" cy="20" r="18" fill="#FFFFFF" opacity="0.9"/>
+                  <path d="M20 8v8l6 6" stroke="#3B82F6" strokeWidth="3" fill="none"/>
+                  <circle cx="20" cy="20" r="2" fill="#3B82F6"/>
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">AI-Powered Feedback</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Real-time AI Coaching</h3>
               <p className="text-gray-600 leading-relaxed text-base">
-                Get instant, intelligent feedback on your responses with actionable improvement suggestions powered by advanced AI technology.
+                Get immediate guidance and feedback as you practice. Our AI coach provides instant suggestions to improve your responses.
               </p>
             </CardContent>
           </Card>
@@ -403,19 +365,16 @@ export default function Home() {
             <CardContent className="p-8">
               <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
                 <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="5" y="10" width="30" height="20" rx="5" fill="#FFFFFF" opacity="0.95"/>
-                  <path d="M12 20L16 24L28 12" stroke="#16A34A" strokeWidth="3" fill="none"/>
-                  <circle cx="10" cy="34" r="2" fill="#F59E0B"/>
-                  <circle cx="16" cy="34" r="2" fill="#F59E0B"/>
-                  <circle cx="22" cy="34" r="2" fill="#F59E0B"/>
-                  <circle cx="28" cy="34" r="2" fill="#F59E0B"/>
-                  <circle cx="34" cy="34" r="2" fill="#F59E0B"/>
-                  <path d="M8 6L12 2L16 6M24 6L28 2L32 6" stroke="#10B981" strokeWidth="2" fill="none"/>
+                  <rect x="8" y="12" width="24" height="16" rx="4" fill="#FFFFFF" opacity="0.9"/>
+                  <circle cx="16" cy="20" r="2" fill="#10B981"/>
+                  <circle cx="24" cy="20" r="2" fill="#10B981"/>
+                  <path d="M12 26c2-2 4-2 8 0s6 2 8 0" stroke="#10B981" strokeWidth="2" fill="none"/>
+                  <path d="M14 8l6-4 6 4" stroke="#10B981" strokeWidth="2" fill="none"/>
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">5-Star Evaluation</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Interactive Conversation</h3>
               <p className="text-gray-600 leading-relaxed text-base">
-                Get detailed feedback with our comprehensive 5-star rating system: Relevant, Structured, Specific, Aligned, Outcome-orientated.
+                Practice through natural conversation flow. Ask questions, get clarification, and receive personalized coaching throughout.
               </p>
             </CardContent>
           </Card>
@@ -428,14 +387,11 @@ export default function Home() {
                   <path d="M12 12H28M12 18H26M12 24H22" stroke="#9333EA" strokeWidth="2.5"/>
                   <circle cx="30" cy="15" r="5" fill="#F59E0B"/>
                   <path d="M27 15L29 17L33 13" stroke="#fff" strokeWidth="2" fill="none"/>
-                  <rect x="10" y="28" width="4" height="4" rx="1" fill="#8B5CF6"/>
-                  <rect x="16" y="28" width="4" height="4" rx="1" fill="#8B5CF6"/>
-                  <rect x="22" y="28" width="4" height="4" rx="1" fill="#8B5CF6"/>
                 </svg>
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Expert Examples</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Model Answers</h3>
               <p className="text-gray-600 leading-relaxed text-base">
-                Access professional model answers and expert tips after completing your preparation session for continuous improvement.
+                Receive comprehensive model answers at the end of your session showing you exactly how to structure perfect responses.
               </p>
             </CardContent>
           </Card>

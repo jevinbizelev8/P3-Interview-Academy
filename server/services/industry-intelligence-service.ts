@@ -53,7 +53,11 @@ export class IndustryIntelligenceService {
         Focus on accurate industry classification and relevant technical specializations for interview preparation.
       `;
 
-      const analysisResult = await sealionService.callSeaLionAPI(analysisPrompt, 800);
+      const analysisResult = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: analysisPrompt }],
+        maxTokens: 800,
+        temperature: 0.5
+      });
       
       // Parse the AI response
       const analysis = this.parseIndustryAnalysis(analysisResult);
@@ -305,7 +309,11 @@ export class IndustryIntelligenceService {
     `;
 
     try {
-      const aiResponse = await sealionService.callSeaLionAPI(knowledgePrompt, 1200);
+      const aiResponse = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: knowledgePrompt }],
+        maxTokens: 1200,
+        temperature: 0.5
+      });
       const parsedKnowledge = this.parseIndustryKnowledge(aiResponse);
       
       // Save to knowledge base
@@ -383,7 +391,11 @@ export class IndustryIntelligenceService {
     `;
 
     try {
-      const aiResponse = await sealionService.callSeaLionAPI(companyPrompt, 1200);
+      const aiResponse = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: companyPrompt }],
+        maxTokens: 1200,
+        temperature: 0.5
+      });
       const parsedKnowledge = this.parseCompanyKnowledge(aiResponse);
       
       // Save to knowledge base

@@ -27,20 +27,18 @@ const respondToCoachingSchema = z.object({
 // Create coaching session
 router.post('/sessions', async (req, res) => {
   try {
+    console.log('Creating coaching session - req.user:', req.user);
     const userId = req.user?.id || 'dev-user-123';
+    console.log('Using userId:', userId);
     const validatedData = createCoachingSessionSchema.parse(req.body);
 
-    const session = await storage.createCoachingSession(userId, {
-      ...validatedData,
-      sessionSettings: {
-        questionCount: 15,
-        timePerQuestion: 300, // 5 minutes
-        enableTranslation: true,
-        targetLanguage: 'en',
-        difficultyLevel: 'intermediate',
-        focusAreas: ['communication', 'problem-solving', 'technical-skills']
-      }
-    });
+    const sessionPayload = {
+      userId,
+      ...validatedData
+    };
+    console.log('Session payload:', sessionPayload);
+
+    const session = await storage.createCoachingSession(sessionPayload);
 
     res.status(201).json({
       success: true,

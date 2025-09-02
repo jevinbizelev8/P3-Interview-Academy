@@ -246,7 +246,11 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.callSeaLionAPI(introPrompt, 400);
+      const response = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: introPrompt }],
+        maxTokens: 400,
+        temperature: 0.7
+      });
       return response.trim();
     } catch (error) {
       console.error('Error generating coaching introduction:', error);
@@ -303,7 +307,11 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.callSeaLionAPI(questionPrompt, 600);
+      const response = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: questionPrompt }],
+        maxTokens: 600,
+        temperature: 0.8
+      });
       return response.trim();
     } catch (error) {
       console.error('Error generating contextual question:', error);
@@ -384,7 +392,11 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.callSeaLionAPI(analysisPrompt, 1000);
+      const response = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: analysisPrompt }],
+        maxTokens: 1000,
+        temperature: 0.3
+      });
       const cleanResponse = response.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
       
@@ -437,7 +449,11 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.callSeaLionAPI(feedbackPrompt, 1200);
+      const response = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: feedbackPrompt }],
+        maxTokens: 1200,
+        temperature: 0.7
+      });
       
       return {
         tips: this.extractCoachingTips(response),
@@ -482,7 +498,11 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.callSeaLionAPI(modelAnswerPrompt, 800);
+      const response = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: modelAnswerPrompt }],
+        maxTokens: 800,
+        temperature: 0.5
+      });
       const cleanResponse = response.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
       
@@ -558,7 +578,11 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.callSeaLionAPI(summaryPrompt, 600);
+      const response = await sealionService.generateResponse({
+        messages: [{ role: 'user', content: summaryPrompt }],
+        maxTokens: 600,
+        temperature: 0.6
+      });
       return response.trim();
     } catch (error) {
       console.error('Error generating session summary:', error);
