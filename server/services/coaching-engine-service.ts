@@ -419,26 +419,19 @@ export class CoachingEngineService {
     const { session } = context;
 
     const feedbackPrompt = `
-Create brief feedback in JSON format:
+JSON only. No explanations.
 
-Response: "${userResponse.substring(0, 150)}..."
-
-JSON format (strict limits):
 {
-  "improvementPoints": ["✓ Clear communication", "⚠ Add metrics"],
-  "modelAnswer": "Led team migration. Resolved issues with engineers. 15% performance boost."
+  "improvementPoints": ["✓ Good clarity", "⚠ Add numbers"],
+  "modelAnswer": "Managed team. Fixed issues. 20% better results."
 }
 
-Rules:
-- 2 points only: 1 ✓ strength, 1 ⚠ improvement
-- Max 3 words per point
-- Model answer: max 15 words, STAR format
-- No extra text`;
+STRICT: 2 bullets max. 3 words each. Model answer 10 words max. JSON ONLY.`;
 
     try {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: feedbackPrompt }],
-        maxTokens: 100,
+        maxTokens: 50,
         temperature: 0.3
       });
       
@@ -448,9 +441,13 @@ Rules:
       
       if (jsonMatch) {
         const feedback = JSON.parse(jsonMatch[0]);
-        return {
-          improvementPoints: feedback.improvementPoints || [],
-          modelAnswer: feedback.modelAnswer || '',
+        
+        // Force truncate if still too long
+        const truncatedFeedback = {
+          improvementPoints: (feedback.improvementPoints || []).slice(0, 2).map((point: string) => 
+            point.split(' ').slice(0, 3).join(' ')
+          ),
+          modelAnswer: (feedback.modelAnswer || '').split(' ').slice(0, 10).join(' '),
           starScores: {
             situation: starAnalysis.situation.score,
             task: starAnalysis.task.score,
@@ -459,6 +456,8 @@ Rules:
             overall: Math.round((starAnalysis.situation.score + starAnalysis.task.score + starAnalysis.action.score + starAnalysis.result.score) / 4)
           }
         };
+        
+        return truncatedFeedback;
       }
       
       return this.getDefaultCoachingFeedback(starAnalysis);
