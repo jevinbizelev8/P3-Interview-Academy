@@ -15,6 +15,7 @@ export interface AIGenerationOptions {
   model?: string;
   timeout?: number;
   domain?: 'study-plan' | 'company-research' | 'resource-generation' | 'general';
+  language?: string;
 }
 
 export class AIRouter {
@@ -27,95 +28,101 @@ export class AIRouter {
   private readonly RECOVERY_TIME_MS = 5 * 60 * 1000; // 5 minutes
   private readonly DEFAULT_TIMEOUT_MS = 30000; // 30 seconds
 
+  // Response caching for performance optimization
+  private cache = new Map<string, { content: string; timestamp: number; provider: string }>();
+  private readonly CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+  private readonly MAX_CACHE_SIZE = 100;
+
   constructor() {
     console.log('🔀 AI Router initialized with OpenAI (primary) + SeaLion (fallback)');
+    
+    // Clean expired cache entries every 5 minutes
+    setInterval(() => this.cleanExpiredCache(), 5 * 60 * 1000);
   }
 
   /**
-   * Generate AI content with intelligent fallback
+   * Generate AI content with intelligent fallback and language-based routing
    */
   async generateResponse(options: AIGenerationOptions): Promise<AIResponse> {
     const startTime = Date.now();
     let fallbackUsed = false;
+    
+    // Generate cache key based on request content
+    const cacheKey = this.generateCacheKey(options);
+    
+    // Check cache first
+    const cachedResponse = this.getFromCache(cacheKey);
+    if (cachedResponse) {
+      console.log(`📦 Cache hit for ${options.language || 'en'} request`);
+      return {
+        content: cachedResponse.content,
+        provider: cachedResponse.provider as 'sealion' | 'openai',
+        responseTime: Date.now() - startTime,
+        fallbackUsed: false
+      };
+    }
+    
+    // Determine optimal service based on language
+    const { primaryService, fallbackService } = this.determineServicePriority(options.language);
 
-    // Try OpenAI first for better reliability
-    if (this.isServiceAvailable('openai')) {
+    // Try primary service first
+    if (this.isServiceAvailable(primaryService)) {
       try {
-        console.log('🤖 Using OpenAI (primary)...');
+        console.log(`🤖 Using ${primaryService} (primary for ${options.language || 'en'})...`);
         
-        // Optimize messages for OpenAI if domain is specified
-        const optimizedMessages = options.domain ? 
-          this.optimizeMessagesForOpenAI(options.messages, options.domain) : 
-          options.messages;
-
-        const content = await this.callWithTimeout(
-          () => this.openaiService.generateResponse({
-            messages: optimizedMessages,
-            maxTokens: options.maxTokens,
-            temperature: options.temperature,
-            model: options.model
-          }),
-          options.timeout || this.DEFAULT_TIMEOUT_MS
-        );
+        const content = await this.callService(primaryService, options);
+        
+        // Cache successful response
+        this.setCache(cacheKey, content, primaryService);
 
         // Reset failure count on success
-        this.failureCount.openai = 0;
-        delete this.lastFailure.openai;
+        this.failureCount[primaryService] = 0;
+        delete this.lastFailure[primaryService];
 
         return {
           content,
-          provider: 'openai',
+          provider: primaryService,
           responseTime: Date.now() - startTime,
           fallbackUsed: false
         };
       } catch (error) {
-        console.warn('⚠️ OpenAI failed, falling back to SeaLion:', error instanceof Error ? error.message : error);
-        this.recordFailure('openai');
+        console.warn(`⚠️ ${primaryService} failed, falling back to ${fallbackService}:`, error instanceof Error ? error.message : error);
+        this.recordFailure(primaryService);
         fallbackUsed = true;
       }
     } else {
-      console.log('⏭️ OpenAI unavailable, trying SeaLion');
+      console.log(`⏭️ ${primaryService} unavailable, trying ${fallbackService}`);
       fallbackUsed = true;
     }
 
-    // Fallback to SeaLion
-    if (this.isServiceAvailable('openai')) {
+    // Fallback to secondary service
+    if (this.isServiceAvailable(fallbackService)) {
       try {
-        console.log('🤖 Using OpenAI fallback...');
+        console.log(`🤖 Using ${fallbackService} fallback...`);
         
-        // Optimize messages for OpenAI if domain is specified
-        const optimizedMessages = options.domain ? 
-          this.optimizeMessagesForOpenAI(options.messages, options.domain) : 
-          options.messages;
-
-        const content = await this.callWithTimeout(
-          () => this.openaiService.generateResponse({
-            messages: optimizedMessages,
-            maxTokens: options.maxTokens,
-            temperature: options.temperature,
-            model: options.model
-          }),
-          options.timeout || this.DEFAULT_TIMEOUT_MS
-        );
+        const content = await this.callService(fallbackService, options);
+        
+        // Cache successful fallback response
+        this.setCache(cacheKey, content, fallbackService);
 
         // Reset failure count on success
-        this.failureCount.openai = 0;
-        delete this.lastFailure.openai;
+        this.failureCount[fallbackService] = 0;
+        delete this.lastFailure[fallbackService];
 
         return {
           content,
-          provider: 'openai',
+          provider: fallbackService,
           responseTime: Date.now() - startTime,
           fallbackUsed
         };
       } catch (error) {
-        console.error('❌ OpenAI also failed:', error instanceof Error ? error.message : error);
-        this.recordFailure('openai');
-        throw new Error(`Both AI services failed. SeaLion: circuit breaker open. OpenAI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error(`❌ ${fallbackService} also failed:`, error instanceof Error ? error.message : error);
+        this.recordFailure(fallbackService);
+        throw new Error(`Both AI services failed. ${primaryService}: ${fallbackUsed ? 'circuit breaker open or failed' : 'failed'}. ${fallbackService}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
 
-    throw new Error('No AI services available. Both SeaLion and OpenAI are unavailable.');
+    throw new Error(`No AI services available. Both ${primaryService} and ${fallbackService} are unavailable.`);
   }
 
   /**
@@ -174,6 +181,54 @@ export class AIRouter {
   }
 
   /**
+   * Determine service priority based on language
+   */
+  private determineServicePriority(language?: string): { primaryService: 'sealion' | 'openai'; fallbackService: 'sealion' | 'openai' } {
+    const seaLionOptimalLanguages = ['ms', 'id', 'th', 'vi', 'tl', 'fil', 'my', 'km', 'lo', 'zh-sg'];
+    
+    if (language && seaLionOptimalLanguages.includes(language)) {
+      // For Southeast Asian languages, prefer SeaLion
+      return { primaryService: 'sealion', fallbackService: 'openai' };
+    } else {
+      // For English and other languages, prefer OpenAI
+      return { primaryService: 'openai', fallbackService: 'sealion' };
+    }
+  }
+
+  /**
+   * Call specific AI service with proper message optimization
+   */
+  private async callService(service: 'sealion' | 'openai', options: AIGenerationOptions): Promise<string> {
+    if (service === 'openai') {
+      // Optimize messages for OpenAI if domain is specified
+      const optimizedMessages = options.domain ? 
+        this.optimizeMessagesForOpenAI(options.messages, options.domain) : 
+        options.messages;
+
+      return await this.callWithTimeout(
+        () => this.openaiService.generateResponse({
+          messages: optimizedMessages,
+          maxTokens: options.maxTokens,
+          temperature: options.temperature,
+          model: options.model
+        }),
+        options.timeout || this.DEFAULT_TIMEOUT_MS
+      );
+    } else {
+      // Call SeaLion service
+      return await this.callWithTimeout(
+        () => sealionService.generateResponse({
+          messages: options.messages,
+          maxTokens: options.maxTokens,
+          temperature: options.temperature,
+          model: options.model
+        }),
+        options.timeout || this.DEFAULT_TIMEOUT_MS
+      );
+    }
+  }
+
+  /**
    * Optimize messages for OpenAI based on domain
    */
   private optimizeMessagesForOpenAI(
@@ -223,6 +278,73 @@ export class AIRouter {
     this.failureCount = { sealion: 0, openai: 0 };
     this.lastFailure = {};
     console.log('🔄 All circuit breakers reset');
+  }
+
+  /**
+   * Generate cache key from request options
+   */
+  private generateCacheKey(options: AIGenerationOptions): string {
+    const keyData = {
+      messages: options.messages,
+      language: options.language || 'en',
+      domain: options.domain,
+      maxTokens: options.maxTokens,
+      temperature: options.temperature
+    };
+    return Buffer.from(JSON.stringify(keyData)).toString('base64').slice(0, 64);
+  }
+
+  /**
+   * Get response from cache if available and not expired
+   */
+  private getFromCache(key: string): { content: string; provider: string } | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+    
+    // Check if expired
+    if (Date.now() - cached.timestamp > this.CACHE_TTL_MS) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return { content: cached.content, provider: cached.provider };
+  }
+
+  /**
+   * Store response in cache
+   */
+  private setCache(key: string, content: string, provider: string): void {
+    // Remove oldest entries if cache is full
+    if (this.cache.size >= this.MAX_CACHE_SIZE) {
+      const oldestKey = this.cache.keys().next().value;
+      if (oldestKey) this.cache.delete(oldestKey);
+    }
+    
+    this.cache.set(key, {
+      content,
+      provider,
+      timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Clean expired cache entries
+   */
+  private cleanExpiredCache(): void {
+    const now = Date.now();
+    const expiredKeys: string[] = [];
+    
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp > this.CACHE_TTL_MS) {
+        expiredKeys.push(key);
+      }
+    }
+    
+    expiredKeys.forEach(key => this.cache.delete(key));
+    
+    if (expiredKeys.length > 0) {
+      console.log(`🧹 Cleaned ${expiredKeys.length} expired cache entries`);
+    }
   }
 }
 

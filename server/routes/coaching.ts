@@ -17,11 +17,19 @@ const createCoachingSessionSchema = z.object({
     type: z.enum(['startup', 'enterprise', 'consulting', 'agency']).default('enterprise'),
     businessModel: z.string().default(''),
     technicalStack: z.array(z.string()).default([])
-  }).default({})
+  }).default({}),
+  interviewLanguage: z.string().min(2).max(10).default('en')
 });
 
 const respondToCoachingSchema = z.object({
-  response: z.string().min(1, 'Response is required')
+  response: z.string().min(1, 'Response is required'),
+  language: z.string().min(2).max(10).optional(),
+  useSeaLion: z.boolean().optional()
+});
+
+const startCoachingSchema = z.object({
+  language: z.string().min(2).max(10).optional(),
+  useSeaLion: z.boolean().optional()
 });
 
 // Create coaching session
@@ -148,7 +156,15 @@ router.post('/sessions/:sessionId/start', async (req, res) => {
       });
     }
 
-    const response = await coachingEngineService.startCoachingConversation(req.params.sessionId);
+    // Parse optional language parameters
+    const languageOptions = startCoachingSchema.safeParse(req.body);
+    const language = languageOptions.success ? languageOptions.data.language : undefined;
+    const useSeaLion = languageOptions.success ? languageOptions.data.useSeaLion : undefined;
+
+    const response = await coachingEngineService.startCoachingConversation(req.params.sessionId, {
+      language,
+      useSeaLion
+    });
 
     res.json({
       success: true,
@@ -188,7 +204,11 @@ router.post('/sessions/:sessionId/respond', async (req, res) => {
     const response = await coachingEngineService.processCoachingResponse(
       req.params.sessionId,
       validatedData.response,
-      session.currentQuestion || 1
+      session.currentQuestion || 1,
+      {
+        language: validatedData.language,
+        useSeaLion: validatedData.useSeaLion
+      }
     );
 
     res.json({

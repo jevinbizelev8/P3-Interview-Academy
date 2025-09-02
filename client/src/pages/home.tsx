@@ -111,7 +111,8 @@ export default function Home() {
           type: 'enterprise' as const,
           businessModel: '',
           technicalStack: []
-        }
+        },
+        interviewLanguage: sessionData.language || 'en'
       };
       
       const response = await apiRequest('POST', '/api/coaching/sessions', sessionPayload);
@@ -332,6 +333,15 @@ export default function Home() {
                 />
               </div>
             )}
+
+            {/* Language Selection */}
+            <div className="space-y-4">
+              <LanguageSelector
+                value={selectedLanguage}
+                onValueChange={setSelectedLanguage}
+                className="w-full"
+              />
+            </div>
 
             <Button
               className="w-full py-3 text-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"

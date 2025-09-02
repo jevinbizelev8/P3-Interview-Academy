@@ -31,6 +31,13 @@ export interface CoachingContext {
   messages: CoachingMessage[];
   industryKnowledge?: any;
   questionBank?: IndustryQuestion[];
+  language?: string;
+  useSeaLion?: boolean;
+}
+
+export interface LanguageOptions {
+  language?: string;
+  useSeaLion?: boolean;
 }
 
 export class CoachingEngineService {
@@ -42,7 +49,7 @@ export class CoachingEngineService {
   /**
    * Start a new coaching conversation
    */
-  async startCoachingConversation(sessionId: string): Promise<CoachingResponse> {
+  async startCoachingConversation(sessionId: string, languageOptions?: LanguageOptions): Promise<CoachingResponse> {
     try {
       // Check if conversation already started
       const existingMessages = await storage.getCoachingMessages(sessionId);
@@ -62,7 +69,7 @@ export class CoachingEngineService {
       console.log(`Starting coaching conversation for session ${sessionId} - ${session.interviewStage} stage`);
 
       // Build coaching context
-      const context = await this.buildCoachingContext(session);
+      const context = await this.buildCoachingContext(session, languageOptions);
       
       // Generate initial coaching introduction
       const introduction = await this.generateCoachingIntroduction(context);
@@ -117,7 +124,8 @@ export class CoachingEngineService {
   async processCoachingResponse(
     sessionId: string, 
     userResponse: string, 
-    questionNumber?: number
+    questionNumber?: number,
+    languageOptions?: LanguageOptions
   ): Promise<CoachingResponse> {
     try {
       const session = await storage.getCoachingSession(sessionId);
@@ -145,7 +153,7 @@ export class CoachingEngineService {
       });
 
       // Build coaching context
-      const context = await this.buildCoachingContext(session);
+      const context = await this.buildCoachingContext(session, languageOptions);
       
       // Analyze user response using STAR methodology
       const analysis = await this.analyzeResponseWithSTAR(userResponse, context, questionNumber);
@@ -235,7 +243,7 @@ export class CoachingEngineService {
   /**
    * Build comprehensive coaching context
    */
-  private async buildCoachingContext(session: CoachingSession): Promise<CoachingContext> {
+  private async buildCoachingContext(session: CoachingSession, languageOptions?: LanguageOptions): Promise<CoachingContext> {
     // Get existing messages
     const messages = await storage.getCoachingMessages(session.id);
     
@@ -256,11 +264,17 @@ export class CoachingEngineService {
       });
     }
 
+    // Determine language preference from session or language options
+    const language = languageOptions?.language || (session as any).interviewLanguage || 'en';
+    const useSeaLion = languageOptions?.useSeaLion;
+
     return {
       session,
       messages,
       industryKnowledge,
-      questionBank
+      questionBank,
+      language,
+      useSeaLion
     };
   }
 
@@ -280,7 +294,8 @@ export class CoachingEngineService {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: introPrompt }],
         maxTokens: 400,
-        temperature: 0.7
+        temperature: 0.7,
+        language: context.language
       });
       return response.content.trim();
     } catch (error) {
@@ -319,7 +334,8 @@ export class CoachingEngineService {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: questionPrompt }],
         maxTokens: 600,
-        temperature: 0.8
+        temperature: 0.8,
+        language: context.language
       });
       return response.content.trim();
     } catch (error) {
@@ -404,7 +420,8 @@ export class CoachingEngineService {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: analysisPrompt }],
         maxTokens: 1000,
-        temperature: 0.3
+        temperature: 0.3,
+        language: context.language
       });
       const cleanResponse = response.content.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
@@ -461,7 +478,8 @@ Focus on STAR structure and make the model answer relevant to the specific quest
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: feedbackPrompt }],
         maxTokens: 300,
-        temperature: 0.3
+        temperature: 0.3,
+        language: context.language
       });
       
       // Parse JSON response
@@ -527,7 +545,8 @@ Focus on STAR structure and make the model answer relevant to the specific quest
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: modelAnswerPrompt }],
         maxTokens: 50,
-        temperature: 0.5
+        temperature: 0.5,
+        language: context.language
       });
       const cleanResponse = response.content.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
