@@ -144,23 +144,38 @@ export class CoachingEngineService {
       const analysis = await this.analyzeResponseWithSTAR(userResponse, context, questionNumber);
       
       // Generate coaching feedback
-      const feedback = await this.generateCoachingFeedback(userResponse, analysis, context);
+      const rawFeedback = await this.generateCoachingFeedback(userResponse, analysis, context);
+      
+      // Clean the feedback content if it's a string
+      let cleanedFeedback = rawFeedback;
+      if (typeof rawFeedback === 'string') {
+        cleanedFeedback = this.cleanAIResponse(rawFeedback);
+      } else if (rawFeedback && typeof rawFeedback === 'object') {
+        // Clean individual string properties in feedback object
+        cleanedFeedback = { ...rawFeedback };
+        Object.keys(cleanedFeedback).forEach(key => {
+          if (typeof cleanedFeedback[key] === 'string') {
+            cleanedFeedback[key] = this.cleanAIResponse(cleanedFeedback[key]);
+          }
+        });
+      }
       
       // Save coaching feedback
-      await this.saveCoachingFeedback(sessionId, feedback, questionNumber);
+      await this.saveCoachingFeedback(sessionId, cleanedFeedback, questionNumber);
 
       // Determine if we should continue or complete the session
       const shouldContinue = questionNumber < (session.totalQuestions || 15);
       
       if (shouldContinue) {
         // Generate next question
-        const nextQuestion = await this.generateContextualQuestion(context, questionNumber + 1);
+        const rawNextQuestion = await this.generateContextualQuestion(context, questionNumber + 1);
+        const cleanNextQuestion = this.cleanAIResponse(rawNextQuestion);
         
         // Save next question
         await this.saveCoachingMessage(sessionId, {
           sessionId,
           messageType: 'coach',
-          content: nextQuestion,
+          content: cleanNextQuestion,
           coachingType: 'question',
           questionNumber: questionNumber + 1,
           industryContext: context.session.industryContext,
@@ -173,8 +188,8 @@ export class CoachingEngineService {
         });
 
         return {
-          feedback: feedback,
-          question: nextQuestion,
+          feedback: cleanedFeedback,
+          question: cleanNextQuestion,
           conversationComplete: false
         };
       } else {
@@ -182,7 +197,7 @@ export class CoachingEngineService {
         await this.completeCoachingSession(sessionId, context);
         
         return {
-          feedback: feedback,
+          feedback: cleanedFeedback,
           conversationComplete: true
         };
       }
@@ -560,13 +575,14 @@ export class CoachingEngineService {
     const { session } = context;
     
     // Generate session summary
-    const summary = await this.generateSessionSummary(context);
+    const rawSummary = await this.generateSessionSummary(context);
+    const cleanSummary = this.cleanAIResponse(rawSummary);
     
     // Save completion message
     await this.saveCoachingMessage(sessionId, {
       sessionId,
       messageType: 'coach',
-      content: summary,
+      content: cleanSummary,
       coachingType: 'summary',
       questionNumber: 0,
       aiMetadata: { type: 'session_completion' }
@@ -610,12 +626,12 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.generateResponse({
+      const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: summaryPrompt }],
         maxTokens: 600,
         temperature: 0.6
       });
-      return response.trim();
+      return this.cleanAIResponse(response.content.trim());
     } catch (error) {
       console.error('Error generating session summary:', error);
       return `🎉 **Session Complete!**\n\nYou've successfully completed your ${session.interviewStage.replace('-', ' ')} coaching session! You worked through ${userResponses} questions and demonstrated strong ${session.primaryIndustry} knowledge. Keep practicing the STAR method and focus on quantifying your results. Well done!`;
@@ -636,10 +652,28 @@ export class CoachingEngineService {
     // Remove the specific AI reasoning pattern that appears in our responses
     cleaned = cleaned.replace(/^[\s\S]*?>\s*\n\n/, '');
     
+    // Remove internal thinking patterns like "Okay, let's tackle this..."
+    const thinkingPatterns = [
+      /^Okay, let's tackle this[\s\S]*?(?=\n\n|\d+\.|\*\*|$)/,
+      /^Let me tackle this[\s\S]*?(?=\n\n|\d+\.|\*\*|$)/,
+      /^I need to[\s\S]*?(?=\n\n|\d+\.|\*\*|$)/,
+      /^The user wants[\s\S]*?(?=\n\n|\d+\.|\*\*|$)/,
+      /^First,[\s\S]*?(?=\n\n|\d+\.|\*\*|$)/,
+    ];
+    
+    for (const pattern of thinkingPatterns) {
+      cleaned = cleaned.replace(pattern, '');
+    }
+    
     // Handle [Question text: ...] format specifically
     const questionTextMatch = cleaned.match(/\[Question text:\s*([\s\S]+?)\]/);
     if (questionTextMatch) {
       return questionTextMatch[1].trim();
+    }
+    
+    // Handle standalone [Question text] without content - this indicates a generation error
+    if (cleaned.includes('[Question text]')) {
+      return 'Please provide a specific example from your experience that demonstrates your skills and accomplishments in this area.';
     }
     
     // Look for quoted content (typical AI response pattern)
@@ -652,6 +686,12 @@ export class CoachingEngineService {
     const markdownMatch = cleaned.match(/\*\*Question:\*\*\s*([\s\S]+?)(?:\*\*Context:\*\*|$)/);
     if (markdownMatch) {
       return markdownMatch[1].trim();
+    }
+    
+    // Look for numbered lists or structured content (typical for summaries/feedback)
+    const numberedMatch = cleaned.match(/(?:\d+\.\s*[\s\S]+?)(?=\n\n|$)/);
+    if (numberedMatch) {
+      return cleaned.trim();
     }
     
     // Look for content after common AI reasoning patterns
