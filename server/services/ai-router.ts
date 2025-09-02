@@ -28,7 +28,7 @@ export class AIRouter {
   private readonly DEFAULT_TIMEOUT_MS = 30000; // 30 seconds
 
   constructor() {
-    console.log('🔀 AI Router initialized with SeaLion (primary) + OpenAI (fallback)');
+    console.log('🔀 AI Router initialized with OpenAI (primary) + SeaLion (fallback)');
   }
 
   /**
@@ -38,13 +38,19 @@ export class AIRouter {
     const startTime = Date.now();
     let fallbackUsed = false;
 
-    // Try SeaLion first (if available)
-    if (this.isServiceAvailable('sealion')) {
+    // Try OpenAI first for better reliability
+    if (this.isServiceAvailable('openai')) {
       try {
-        console.log('🦁 Attempting SeaLion generation...');
+        console.log('🤖 Using OpenAI (primary)...');
+        
+        // Optimize messages for OpenAI if domain is specified
+        const optimizedMessages = options.domain ? 
+          this.optimizeMessagesForOpenAI(options.messages, options.domain) : 
+          options.messages;
+
         const content = await this.callWithTimeout(
-          () => sealionService.generateResponse({
-            messages: options.messages,
+          () => this.openaiService.generateResponse({
+            messages: optimizedMessages,
             maxTokens: options.maxTokens,
             temperature: options.temperature,
             model: options.model
@@ -53,26 +59,26 @@ export class AIRouter {
         );
 
         // Reset failure count on success
-        this.failureCount.sealion = 0;
-        delete this.lastFailure.sealion;
+        this.failureCount.openai = 0;
+        delete this.lastFailure.openai;
 
         return {
           content,
-          provider: 'sealion',
+          provider: 'openai',
           responseTime: Date.now() - startTime,
           fallbackUsed: false
         };
       } catch (error) {
-        console.warn('⚠️ SeaLion failed, falling back to OpenAI:', error instanceof Error ? error.message : error);
-        this.recordFailure('sealion');
+        console.warn('⚠️ OpenAI failed, falling back to SeaLion:', error instanceof Error ? error.message : error);
+        this.recordFailure('openai');
         fallbackUsed = true;
       }
     } else {
-      console.log('⏭️ SeaLion unavailable, using OpenAI directly');
+      console.log('⏭️ OpenAI unavailable, trying SeaLion');
       fallbackUsed = true;
     }
 
-    // Fallback to OpenAI
+    // Fallback to SeaLion
     if (this.isServiceAvailable('openai')) {
       try {
         console.log('🤖 Using OpenAI fallback...');
