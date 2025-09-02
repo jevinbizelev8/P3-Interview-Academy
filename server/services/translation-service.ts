@@ -24,30 +24,72 @@ export class TranslationService {
     }
 
     try {
-      const translationPrompt = `Translate the following English text to ${this.getLanguageName(targetLanguage)}.
-      
-      Requirements:
-      - Provide ONLY the translated text, no explanations
-      - Maintain professional interview context
-      - Keep technical terms accurate
-      - Preserve formatting and structure
-      
-      English text: "${content}"
-      
-      ${this.getLanguageInstruction(targetLanguage)}`;
+      const translationPrompt = `Translate this English interview coaching text to ${this.getLanguageName(targetLanguage)}:
+
+"${content}"
+
+Requirements:
+- ONLY provide the direct translation
+- NO explanations, reasoning, or commentary
+- Keep professional interview tone
+- Preserve technical terms like "STAR method"
+- Maintain original formatting
+
+${this.getLanguageInstruction(targetLanguage)}`;
 
       const translatedContent = await sealionService.generateResponse({
         messages: [
+          { 
+            role: 'system', 
+            content: 'You are a professional translator. Provide ONLY direct translations without any explanations, reasoning, or commentary.' 
+          },
           { role: 'user', content: translationPrompt }
         ],
-        maxTokens: 800,
-        temperature: 0.3,
+        maxTokens: 500,
+        temperature: 0.1,
         language: targetLanguage
       });
 
+      // Clean the translation by extracting only the translated content
+      let cleanTranslation = translatedContent.trim();
+      
+      // If the response contains reasoning, try to extract just the translation
+      const patterns = [
+        /(?:translation[:\s]*["']?([^"'\n]+)["']?)/i,
+        /(?:translating[:\s]*["']?([^"'\n]+)["']?)/i,
+        /(?:in bahasa malaysia[:\s]*["']?([^"'\n]+)["']?)/i,
+        /(?:translation is[:\s]*["']?([^"'\n]+)["']?)/i
+      ];
+      
+      for (const pattern of patterns) {
+        const match = cleanTranslation.match(pattern);
+        if (match && match[1] && match[1].length > 20) {
+          cleanTranslation = match[1].trim();
+          break;
+        }
+      }
+      
+      // Fallback: If translation is still full of reasoning, use a shorter approach
+      if (cleanTranslation.includes('requirements') || cleanTranslation.includes('translate') || cleanTranslation.length > content.length * 3) {
+        // Try to find the actual translation content after common phrases
+        const startIndicators = ['selamat datang', 'welcome', content.slice(0, 20).toLowerCase()];
+        for (const indicator of startIndicators) {
+          const startIndex = cleanTranslation.toLowerCase().indexOf(indicator);
+          if (startIndex > 0) {
+            cleanTranslation = cleanTranslation.slice(startIndex);
+            // Find end of sentence or reasonable stopping point
+            const endMatch = cleanTranslation.match(/[.!?]\s|$/);
+            if (endMatch) {
+              cleanTranslation = cleanTranslation.slice(0, endMatch.index + 1);
+            }
+            break;
+          }
+        }
+      }
+
       return {
         original: content,
-        translated: translatedContent.trim(),
+        translated: cleanTranslation,
         language: targetLanguage
       };
 
@@ -118,16 +160,16 @@ export class TranslationService {
 
   private getLanguageInstruction(language: string): string {
     const instructions = {
-      'ms': 'Terjemahkan ke Bahasa Malaysia yang standard dan profesional.',
-      'id': 'Terjemahkan ke Bahasa Indonesia yang baku dan profesional.',
-      'th': 'แปลเป็นภาษาไทยที่เป็นทางการและเหมาะสมสำหรับการสัมภาษณ์งาน',
-      'vi': 'Dịch sang tiếng Việt chuyên nghiệp và phù hợp với bối cảnh phỏng vấn việc làm.',
-      'fil': 'Isalin sa wikang Filipino na propesyonal at angkop sa interview.',
-      'my': 'မြန်မာဘာသာသို့ ပရော်ဖက်ရှင်နယ်စွာ ဘာသာပြန်ပါ။',
-      'km': 'បកប្រែជាភាសាខ្មែរដែលមានលក្ខណៈវិជ្ជាជីវៈ។',
-      'lo': 'ແປເປັນພາສາລາວທີ່ມີວິຊາຊີບ.',
-      'zh-sg': '翻译成专业的简体中文，适合面试场合使用。',
-      'en': 'Respond in English.'
+      'ms': 'Berikan terjemahan dalam Bahasa Malaysia sahaja.',
+      'id': 'Berikan terjemahan dalam Bahasa Indonesia saja.',
+      'th': 'ให้คำแปลเป็นภาษาไทยเท่านั้น',
+      'vi': 'Chỉ cung cấp bản dịch tiếng Việt.',
+      'fil': 'Magbigay ng salin sa Filipino lamang.',
+      'my': 'မြန်မာဘာသာဖြင့်သာ ဘာသာပြန်ပါ။',
+      'km': 'ផ្តល់តែការបកប្រែជាភាសាខ្មែរប៉ុណ្ណោះ។',
+      'lo': 'ໃຫ້ແຕ່ການແປພາສາລາວເທົ່ານັ້ນ.',
+      'zh-sg': '只提供中文翻译。',
+      'en': 'Respond in English only.'
     };
     return instructions[language as keyof typeof instructions] || instructions['en'];
   }

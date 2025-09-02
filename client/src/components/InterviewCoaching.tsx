@@ -61,7 +61,7 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
   const [currentResponse, setCurrentResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('ms'); // Default to Bahasa Malaysia for testing
+  const [selectedLanguage, setSelectedLanguage] = useState('ms');
   const [showDetails, setShowDetails] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();

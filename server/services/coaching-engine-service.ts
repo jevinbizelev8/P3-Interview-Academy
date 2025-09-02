@@ -407,7 +407,15 @@ export class CoachingEngineService {
   private async generateCoachingIntroduction(context: CoachingContext): Promise<string> {
     const { session } = context;
     
-    const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, respond in English, encouraging tone for ${session.experienceLevel} level.`;
+    const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, respond in English, encouraging tone for ${session.experienceLevel} level.
+
+DEBUG INFO: 
+Position: ${session.jobPosition}
+Company: ${session.companyName}
+Stage: ${session.interviewStage}
+Level: ${session.experienceLevel}
+
+Generate content specifically for this job position and company, not generic content.`;
 
     try {
       // console.log(`🎤 Generating introduction in language: ${context.language}`);
