@@ -111,6 +111,18 @@ export class CoachingEngineService {
       const cleanFirstQuestion = this.cleanAIResponse(firstQuestion);
 
       // Save introduction and first question as messages
+      // Get translations for introduction and first question if needed
+      let introTranslation: string | undefined;
+      let questionTranslation: string | undefined;
+      
+      if (context.language && context.language !== 'en') {
+        const introTransResult = await translationService.translateContent(cleanIntroduction, context.language);
+        introTranslation = introTransResult.translated;
+        
+        const questionTransResult = await translationService.translateContent(cleanFirstQuestion, context.language);
+        questionTranslation = questionTransResult.translated;
+      }
+
       await this.saveCoachingMessage(sessionId, {
         sessionId,
         messageType: 'coach',
@@ -118,7 +130,7 @@ export class CoachingEngineService {
         coachingType: 'introduction',
         questionNumber: 0,
         industryContext: context.session.industryContext as any,
-        aiMetadata: { type: 'introduction', generated: true } as any
+        aiMetadata: { type: 'introduction', generated: true, translation: introTranslation } as any
       });
 
       await this.saveCoachingMessage(sessionId, {
@@ -128,7 +140,7 @@ export class CoachingEngineService {
         coachingType: 'question',
         questionNumber: 1,
         industryContext: context.session.industryContext as any,
-        aiMetadata: { type: 'question', questionNumber: 1 } as any
+        aiMetadata: { type: 'question', questionNumber: 1, translation: questionTranslation } as any
       });
 
       // Update session progress
@@ -138,16 +150,16 @@ export class CoachingEngineService {
 
       // Translate content if language is not English
       let combinedQuestion = `${cleanIntroduction}\n\n**Question 1:**\n${cleanFirstQuestion}`;
-      let questionTranslation: string | undefined;
+      let combinedTranslation: string | undefined;
       
       if (context.language && context.language !== 'en') {
         const translation = await translationService.translateContent(combinedQuestion, context.language);
-        questionTranslation = translation.translated;
+        combinedTranslation = translation.translated;
       }
 
       return {
         question: combinedQuestion,
-        questionTranslation,
+        questionTranslation: combinedTranslation,
         conversationComplete: false,
         language: context.language
       };

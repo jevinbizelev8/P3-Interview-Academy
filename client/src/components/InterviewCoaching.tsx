@@ -61,7 +61,7 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
   const [currentResponse, setCurrentResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [selectedLanguage, setSelectedLanguage] = useState('ms'); // Default to Bahasa Malaysia for testing
   const [showDetails, setShowDetails] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
@@ -305,7 +305,7 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                               <div className="text-sm whitespace-pre-wrap">{message.content}</div>
                               
                               {/* Show translation if available and language is not English */}
-                              {message.messageType === 'coach' && selectedLanguage !== 'en' && (message as any).translation && (
+                              {message.messageType === 'coach' && selectedLanguage !== 'en' && (message as any).aiMetadata?.translation && (
                                 <div className="mt-3 pt-3 border-t border-gray-100">
                                   <div className="flex items-center gap-2 mb-2">
                                     <Globe className="h-3 w-3 text-gray-400" />
@@ -314,7 +314,7 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                                     </span>
                                   </div>
                                   <div className="text-sm text-gray-600 whitespace-pre-wrap">
-                                    {(message as any).translation}
+                                    {(message as any).aiMetadata?.translation}
                                   </div>
                                 </div>
                               )}
