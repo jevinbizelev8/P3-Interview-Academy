@@ -30,13 +30,9 @@ export class TranslationService {
       try {
         translatedContent = await sealionService.generateResponse({
           messages: [
-            { 
-              role: 'system', 
-              content: `Translate to ${this.getLanguageName(targetLanguage)}. Return only the translation without any explanations, reasoning, or commentary.` 
-            },
-            { role: 'user', content: content }
+            { role: 'user', content: `Translate this to ${this.getLanguageName(targetLanguage)} (provide only the translation): "${content}"` }
           ],
-          maxTokens: 150,
+          maxTokens: 100,
           temperature: 0.0,
           language: targetLanguage
         });
@@ -62,15 +58,22 @@ export class TranslationService {
       // Clean the translation to remove any reasoning or explanations
       let cleanTranslation = translatedContent.trim();
       
-      // Aggressively remove AI reasoning and commentary
+      // Extremely aggressive cleaning - remove all AI reasoning
       cleanTranslation = cleanTranslation
+        .replace(/^.*?(?:provide only the translation|i should use|appropriate|terms like|customer|resolve|menyelesaikan|cause|solution-oriented|would be good).*$/gim, '')
         .replace(/^.*?(?:but i should check|let me|i need|understanding|translate|translation|requirements).*$/gim, '')
         .replace(/^.*?(?:start by|carefully|first|original text|maintaining).*$/gim, '')
-        .replace(/^.*?(?:english|professional tone|correct term|job contexts).*$/gim, '')
+        .replace(/^.*?(?:english|professional tone|correct term|job contexts|formal language).*$/gim, '')
         .replace(/^\s*["']?/, '')  // Remove starting quotes
         .replace(/["']?\s*$/, '')  // Remove ending quotes
-        .replace(/\n\n+/g, '\n')   // Remove extra newlines
+        .replace(/\n\n+/g, ' ')   // Remove extra newlines
         .trim();
+      
+      // If it's still all in English or contains reasoning, try to extract Malaysian content
+      if (cleanTranslation.toLowerCase().includes('should use') || cleanTranslation.toLowerCase().includes('appropriate') || cleanTranslation.toLowerCase().includes('terms like')) {
+        // Last resort: Use fallback to OpenAI immediately
+        throw new Error('SeaLion output contains reasoning - fallback to OpenAI');
+      }
       
       // Extract only text before reasoning starts (case insensitive)
       const reasoningMarkers = ['But I should', 'Let me check', 'In Malaysian', 'I should check', 'Baik, saya perlu', 'soalan asalnya'];
