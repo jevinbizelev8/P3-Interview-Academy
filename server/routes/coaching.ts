@@ -163,6 +163,14 @@ router.post('/sessions/:sessionId/start', async (req, res) => {
     const language = languageOptions.success ? languageOptions.data.language : undefined;
     const useSeaLion = languageOptions.success ? languageOptions.data.useSeaLion : undefined;
 
+    // Update session language if provided
+    if (language && language !== session.preferredLanguage) {
+      await storage.updateCoachingSession(req.params.sessionId, {
+        preferredLanguage: language
+      });
+      console.log(`🌐 Updated session language to: ${language}`);
+    }
+
     const response = await coachingEngineService.startCoachingConversation(req.params.sessionId, {
       language,
       useSeaLion
@@ -203,6 +211,14 @@ router.post('/sessions/:sessionId/respond', async (req, res) => {
 
     const validatedData = respondToCoachingSchema.parse(req.body);
     
+    // Update session language if provided and different
+    if (validatedData.language && validatedData.language !== session.preferredLanguage) {
+      await storage.updateCoachingSession(req.params.sessionId, {
+        preferredLanguage: validatedData.language
+      });
+      console.log(`🌐 Updated session language to: ${validatedData.language}`);
+    }
+
     const response = await coachingEngineService.processCoachingResponse(
       req.params.sessionId,
       validatedData.response,
