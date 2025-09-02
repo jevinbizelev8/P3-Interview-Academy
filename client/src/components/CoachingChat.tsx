@@ -197,60 +197,63 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
     if (!feedback?.starAnalysis) return null;
 
     const getScoreColor = (score: number) => {
-      if (score >= 8) return 'text-green-600';
-      if (score >= 6) return 'text-yellow-600';
-      return 'text-red-600';
+      if (score >= 8) return 'bg-green-100 text-green-800 border-green-200';
+      if (score >= 6) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      return 'bg-red-100 text-red-800 border-red-200';
+    };
+
+    const getScoreBadge = (score: number) => {
+      if (score >= 8) return 'Excellent';
+      if (score >= 6) return 'Good';
+      return 'Needs Work';
     };
 
     return (
-      <Card className="mt-4 border-blue-200">
+      <Card className="mt-3 border-l-4 border-l-blue-500 bg-blue-50/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Star className="h-4 w-4 text-yellow-500" />
-            STAR Method Analysis
+          <CardTitle className="text-sm font-semibold flex items-center gap-2 text-blue-900">
+            <Star className="h-4 w-4 text-blue-600" />
+            STAR Analysis
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-2 gap-3">
             {feedback.starAnalysis.situation !== undefined && (
-              <div className="flex justify-between">
-                <span>Situation:</span>
-                <span className={getScoreColor(feedback.starAnalysis.situation)}>
-                  {feedback.starAnalysis.situation}/10
-                </span>
+              <div className={`p-3 rounded-lg border ${getScoreColor(feedback.starAnalysis.situation)}`}>
+                <div className="text-xs font-medium mb-1">Situation</div>
+                <div className="text-lg font-bold">{feedback.starAnalysis.situation}/10</div>
+                <div className="text-xs">{getScoreBadge(feedback.starAnalysis.situation)}</div>
               </div>
             )}
             {feedback.starAnalysis.task !== undefined && (
-              <div className="flex justify-between">
-                <span>Task:</span>
-                <span className={getScoreColor(feedback.starAnalysis.task)}>
-                  {feedback.starAnalysis.task}/10
-                </span>
+              <div className={`p-3 rounded-lg border ${getScoreColor(feedback.starAnalysis.task)}`}>
+                <div className="text-xs font-medium mb-1">Task</div>
+                <div className="text-lg font-bold">{feedback.starAnalysis.task}/10</div>
+                <div className="text-xs">{getScoreBadge(feedback.starAnalysis.task)}</div>
               </div>
             )}
             {feedback.starAnalysis.action !== undefined && (
-              <div className="flex justify-between">
-                <span>Action:</span>
-                <span className={getScoreColor(feedback.starAnalysis.action)}>
-                  {feedback.starAnalysis.action}/10
-                </span>
+              <div className={`p-3 rounded-lg border ${getScoreColor(feedback.starAnalysis.action)}`}>
+                <div className="text-xs font-medium mb-1">Action</div>
+                <div className="text-lg font-bold">{feedback.starAnalysis.action}/10</div>
+                <div className="text-xs">{getScoreBadge(feedback.starAnalysis.action)}</div>
               </div>
             )}
             {feedback.starAnalysis.result !== undefined && (
-              <div className="flex justify-between">
-                <span>Result:</span>
-                <span className={getScoreColor(feedback.starAnalysis.result)}>
-                  {feedback.starAnalysis.result}/10
-                </span>
+              <div className={`p-3 rounded-lg border ${getScoreColor(feedback.starAnalysis.result)}`}>
+                <div className="text-xs font-medium mb-1">Result</div>
+                <div className="text-lg font-bold">{feedback.starAnalysis.result}/10</div>
+                <div className="text-xs">{getScoreBadge(feedback.starAnalysis.result)}</div>
               </div>
             )}
           </div>
-          <Separator />
-          <div className="flex justify-between font-medium">
-            <span>Overall Score:</span>
-            <span className={getScoreColor(feedback.starAnalysis.overall)}>
-              {feedback.starAnalysis.overall}/10
-            </span>
+          
+          <div className={`p-4 rounded-lg border-2 ${getScoreColor(feedback.starAnalysis.overall)} font-semibold`}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm">Overall Score</span>
+              <span className="text-xl font-bold">{feedback.starAnalysis.overall}/10</span>
+            </div>
+            <div className="text-xs mt-1">{getScoreBadge(feedback.starAnalysis.overall)}</div>
           </div>
         </CardContent>
       </Card>
@@ -265,57 +268,67 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
         {renderSTARAnalysis(feedback)}
 
         {feedback.tips.length > 0 && (
-          <Card className="border-green-200">
+          <Card className="mt-3 border-l-4 border-l-green-500 bg-green-50/50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-green-500" />
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-green-900">
+                <Lightbulb className="h-4 w-4 text-green-600" />
                 Coaching Tips
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm">
+              <div className="space-y-3">
                 {feedback.tips.map((tip, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <span className="text-green-500 mt-1">•</span>
-                    <span>{tip}</span>
-                  </li>
+                  <div key={index} className="bg-white p-3 rounded-lg border border-green-200 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-green-700">{index + 1}</span>
+                      </div>
+                      <span className="text-sm text-gray-700 leading-relaxed">{tip}</span>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {feedback.modelAnswer && (
-          <Card className="border-purple-200">
+          <Card className="mt-3 border-l-4 border-l-purple-500 bg-purple-50/50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Target className="h-4 w-4 text-purple-500" />
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-purple-900">
+                <Target className="h-4 w-4 text-purple-600" />
                 Model Answer
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-gray-700">{feedback.modelAnswer}</p>
+              <div className="bg-white p-4 rounded-lg border border-purple-200 shadow-sm">
+                <p className="text-sm text-gray-700 leading-relaxed">{feedback.modelAnswer}</p>
+              </div>
             </CardContent>
           </Card>
         )}
 
         {feedback.learningPoints.length > 0 && (
-          <Card className="border-orange-200">
+          <Card className="mt-3 border-l-4 border-l-orange-500 bg-orange-50/50">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-orange-500" />
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-orange-900">
+                <BookOpen className="h-4 w-4 text-orange-600" />
                 Learning Points
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2 text-sm">
+              <div className="space-y-3">
                 {feedback.learningPoints.map((point, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <span className="text-orange-500 mt-1">•</span>
-                    <span>{point}</span>
-                  </li>
+                  <div key={index} className="bg-white p-3 rounded-lg border border-orange-200 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-bold text-orange-700">{index + 1}</span>
+                      </div>
+                      <span className="text-sm text-gray-700 leading-relaxed">{point}</span>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </CardContent>
           </Card>
         )}
