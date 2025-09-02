@@ -78,7 +78,8 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
       const response = await apiRequest('GET', `/api/coaching/sessions/${sessionId}/messages`);
       if (!response.ok) throw new Error('Failed to fetch messages');
       const result = await response.json();
-      return result.data;
+      // Filter out introduction messages since they're displayed separately
+      return result.data.filter((msg: any) => msg.coachingType !== 'introduction');
     },
     enabled: !!sessionId
   });
