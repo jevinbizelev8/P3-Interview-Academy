@@ -1,4 +1,5 @@
 import { OpenAI } from 'openai';
+import axios from 'axios';
 import { logSeaLionError, errorLogger } from './error-logger';
 
 // Define types locally since @shared/types may not exist
@@ -575,6 +576,57 @@ export class SeaLionService {
     };
     
     return evaluations[language as keyof typeof evaluations] || evaluations.en;
+  }
+
+  // Generic method for AI text generation with SeaLion using direct HTTP
+  async generateResponse(options: {
+    messages: Array<{ role: string; content: string }>;
+    maxTokens?: number;
+    temperature?: number;
+    model?: string;
+  }): Promise<string> {
+    try {
+      // Use direct HTTP call to SeaLion API
+      const response = await axios.post('https://api.sea-lion.ai/v1/chat/completions', {
+        model: options.model || this.config.reasoningModel,
+        messages: options.messages,
+        max_tokens: options.maxTokens || 1000,
+        temperature: options.temperature || 0.7,
+        top_p: 0.9,
+        stream: false
+      }, {
+        headers: {
+          'Authorization': `Bearer ${this.config.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 second timeout
+      });
+
+      if (response.data?.choices?.[0]?.message?.content) {
+        return response.data.choices[0].message.content.trim();
+      } else {
+        throw new Error('Invalid response structure from SeaLion API');
+      }
+    } catch (error) {
+      console.error('SeaLion generateResponse error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.error || error.message;
+        
+        if (status === 429) {
+          throw new Error('SeaLion API rate limit exceeded. Please wait and try again.');
+        } else if (status === 401) {
+          throw new Error('SeaLion API authentication failed. Please check your API key.');
+        } else if (status === 400) {
+          throw new Error(`SeaLion API request error: ${message}`);
+        } else {
+          throw new Error(`SeaLion API error (${status}): ${message}`);
+        }
+      }
+      
+      throw new Error(`SeaLion API generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 }
 

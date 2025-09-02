@@ -945,25 +945,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ================================
+  // AI SERVICES HEALTH CHECK
+  // ================================
+  
+  app.get('/api/ai/health', async (req, res) => {
+    try {
+      const { aiRouter } = await import('./services/ai-router');
+      const healthStatus = await aiRouter.getHealthStatus();
+      res.json({
+        status: 'ok',
+        services: healthStatus,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Health check failed:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Health check failed',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // ================================
   // PREPARE MODULE API ROUTES
   // ================================
 
   // Preparation Sessions
   app.post('/api/prepare/sessions', addMockUser, async (req, res) => {
     try {
-      // Parse body without userId since we get it from authenticated user
-      const bodyData = insertPreparationSessionSchema.omit({ userId: true }).parse(req.body);
-      // Add userId from authenticated user
-      const validatedData = { ...bodyData, userId: req.user!.id };
-      const session = await prepareService.createPreparationSession(req.user!.id, validatedData);
+      // Simple validation for preparation sessions - avoid complex schema validation for now
+      const sessionData = {
+        userId: req.user!.id,
+        title: req.body.title || "Preparation Session",
+        targetRole: req.body.targetRole || "Professional",
+        targetCompany: req.body.targetCompany || "Company",
+        targetIndustry: req.body.targetIndustry || "General",
+        interviewStage: req.body.interviewStage || "general",
+        preferredLanguage: req.body.preferredLanguage || "en",
+        status: "active"
+      };
+      
+      const session = await prepareService.createPreparationSession(req.user!.id, sessionData);
       res.json(session);
     } catch (error) {
       console.error("Error creating preparation session:", error);
-      if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid session data", errors: error.errors });
-      } else {
-        res.status(500).json({ message: "Failed to create preparation session" });
-      }
+      res.status(500).json({ message: "Failed to create preparation session" });
     }
   });
 

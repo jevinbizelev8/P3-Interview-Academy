@@ -1,5 +1,5 @@
 import { sealionService } from "./sealion";
-import type { SupportedLanguage, SUPPORTED_LANGUAGES } from "@shared/schema";
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@shared/schema";
 
 export class LanguageService {
   

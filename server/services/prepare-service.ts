@@ -1,6 +1,7 @@
 import { storage } from "../storage";
 import { sealionService } from "./sealion";
 import { languageService } from "./language-service";
+import { aiRouter } from "./ai-router";
 import type { 
   PreparationSession, 
   InsertPreparationSession, 
@@ -63,7 +64,7 @@ export class PrepareService {
     const prompt = this.buildStudyPlanPrompt(options);
     
     try {
-      const aiResponse = await sealionService.generateResponse({
+      const aiResult = await aiRouter.generateResponse({
         messages: [
           {
             role: "system",
@@ -75,8 +76,12 @@ export class PrepareService {
           }
         ],
         maxTokens: 2000,
-        temperature: 0.7
+        temperature: 0.7,
+        domain: 'study-plan'
       });
+
+      console.log(`📊 Study plan generated using ${aiResult.provider} in ${aiResult.responseTime}ms${aiResult.fallbackUsed ? ' (fallback)' : ''}`);
+      const aiResponse = aiResult.content;
 
       const studyPlanData = this.parseAIStudyPlanResponse(aiResponse, options);
       
@@ -239,7 +244,7 @@ Focus on practical, actionable steps that will help the candidate prepare effect
     const prompt = this.buildCompanyResearchPrompt(companyName, jobPosition);
     
     try {
-      const aiResponse = await sealionService.generateResponse({
+      const aiResult = await aiRouter.generateResponse({
         messages: [
           {
             role: "system",
@@ -251,8 +256,12 @@ Focus on practical, actionable steps that will help the candidate prepare effect
           }
         ],
         maxTokens: 3000,
-        temperature: 0.3
+        temperature: 0.3,
+        domain: 'company-research'
       });
+
+      console.log(`📊 Company research generated using ${aiResult.provider} in ${aiResult.responseTime}ms${aiResult.fallbackUsed ? ' (fallback)' : ''}`);
+      const aiResponse = aiResult.content;
 
       const researchData = this.parseCompanyResearchResponse(aiResponse, companyName);
       
@@ -453,7 +462,7 @@ Please provide a JSON response with:
 }`;
 
     try {
-      const aiResponse = await sealionService.generateResponse({
+      const aiResult = await aiRouter.generateResponse({
         messages: [
           {
             role: "system",
@@ -465,8 +474,12 @@ Please provide a JSON response with:
           }
         ],
         maxTokens: 1500,
-        temperature: 0.4
+        temperature: 0.4,
+        domain: 'general'
       });
+
+      console.log(`📊 STAR feedback generated using ${aiResult.provider} in ${aiResult.responseTime}ms${aiResult.fallbackUsed ? ' (fallback)' : ''}`);
+      const aiResponse = aiResult.content;
 
       return JSON.parse(aiResponse);
     } catch (error) {
@@ -561,7 +574,7 @@ Please provide a JSON response with:
       // Generate English content
       const prompt = this.buildResourceGenerationPrompt(topic, options);
       
-      const aiResponse = await sealionService.generateResponse({
+      const aiResult = await aiRouter.generateResponse({
         messages: [
           {
             role: "system",
@@ -573,8 +586,12 @@ Please provide a JSON response with:
           }
         ],
         maxTokens: 2000,
-        temperature: 0.6
+        temperature: 0.6,
+        domain: 'resource-generation'
       });
+
+      console.log(`📊 Resource generated using ${aiResult.provider} in ${aiResult.responseTime}ms${aiResult.fallbackUsed ? ' (fallback)' : ''}`);
+      const aiResponse = aiResult.content;
 
       const resource = await storage.createPreparationResource({
         title: `${topic} - ${options.resourceType}`,

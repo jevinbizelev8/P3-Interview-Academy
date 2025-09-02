@@ -468,25 +468,29 @@ export class DatabaseStorage implements IStorage {
     difficulty?: string;
     language?: string;
   }): Promise<PreparationResource[]> {
-    let query = db.select().from(preparationResources).where(eq(preparationResources.isActive, true));
+    const conditions = [eq(preparationResources.isActive, true)];
 
     if (filters.category) {
-      query = query.where(eq(preparationResources.category, filters.category));
+      conditions.push(eq(preparationResources.category, filters.category));
     }
     if (filters.interviewStage) {
-      query = query.where(eq(preparationResources.interviewStage, filters.interviewStage));
+      conditions.push(eq(preparationResources.interviewStage, filters.interviewStage));
     }
     if (filters.industry) {
-      query = query.where(eq(preparationResources.industry, filters.industry));
+      conditions.push(eq(preparationResources.industry, filters.industry));
     }
     if (filters.difficulty) {
-      query = query.where(eq(preparationResources.difficulty, filters.difficulty));
+      conditions.push(eq(preparationResources.difficulty, filters.difficulty));
     }
     if (filters.language) {
-      query = query.where(eq(preparationResources.language, filters.language));
+      conditions.push(eq(preparationResources.language, filters.language));
     }
 
-    return await query.orderBy(desc(preparationResources.popularity), desc(preparationResources.createdAt));
+    return await db
+      .select()
+      .from(preparationResources)
+      .where(and(...conditions))
+      .orderBy(desc(preparationResources.popularity), desc(preparationResources.createdAt));
   }
 
   // Preparation Progress
@@ -499,22 +503,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPreparationProgress(userId: string, preparationSessionId: string, activityType: string, activityId?: string): Promise<PreparationProgress | null> {
-    let query = db
-      .select()
-      .from(preparationProgress)
-      .where(
-        and(
-          eq(preparationProgress.userId, userId),
-          eq(preparationProgress.preparationSessionId, preparationSessionId),
-          eq(preparationProgress.activityType, activityType)
-        )
-      );
+    const conditions = [
+      eq(preparationProgress.userId, userId),
+      eq(preparationProgress.preparationSessionId, preparationSessionId),
+      eq(preparationProgress.activityType, activityType)
+    ];
 
     if (activityId) {
-      query = query.where(eq(preparationProgress.activityId, activityId));
+      conditions.push(eq(preparationProgress.activityId, activityId));
     }
 
-    const [progress] = await query;
+    const [progress] = await db
+      .select()
+      .from(preparationProgress)
+      .where(and(...conditions));
+      
     return progress || null;
   }
 
@@ -558,22 +561,26 @@ export class DatabaseStorage implements IStorage {
     industry?: string;
     difficulty?: string;
   }): Promise<PracticeTest[]> {
-    let query = db.select().from(practiceTests).where(eq(practiceTests.isActive, true));
+    const conditions = [eq(practiceTests.isActive, true)];
 
     if (filters.testType) {
-      query = query.where(eq(practiceTests.testType, filters.testType));
+      conditions.push(eq(practiceTests.testType, filters.testType));
     }
     if (filters.interviewStage) {
-      query = query.where(eq(practiceTests.interviewStage, filters.interviewStage));
+      conditions.push(eq(practiceTests.interviewStage, filters.interviewStage));
     }
     if (filters.industry) {
-      query = query.where(eq(practiceTests.industry, filters.industry));
+      conditions.push(eq(practiceTests.industry, filters.industry));
     }
     if (filters.difficulty) {
-      query = query.where(eq(practiceTests.difficulty, filters.difficulty));
+      conditions.push(eq(practiceTests.difficulty, filters.difficulty));
     }
 
-    return await query.orderBy(desc(practiceTests.createdAt));
+    return await db
+      .select()
+      .from(practiceTests)
+      .where(and(...conditions))
+      .orderBy(desc(practiceTests.createdAt));
   }
 
   // Practice Test Results
@@ -586,13 +593,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserPracticeTestResults(userId: string, testId?: string): Promise<PracticeTestResult[]> {
-    let query = db.select().from(practiceTestResults).where(eq(practiceTestResults.userId, userId));
+    const conditions = [eq(practiceTestResults.userId, userId)];
     
     if (testId) {
-      query = query.where(eq(practiceTestResults.practiceTestId, testId));
+      conditions.push(eq(practiceTestResults.practiceTestId, testId));
     }
 
-    return await query.orderBy(desc(practiceTestResults.completedAt));
+    return await db
+      .select()
+      .from(practiceTestResults)
+      .where(and(...conditions))
+      .orderBy(desc(practiceTestResults.completedAt));
   }
 
   // Company Research
