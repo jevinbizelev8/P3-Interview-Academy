@@ -286,7 +286,7 @@ export class CoachingEngineService {
     }
 
     // Determine language preference from session or language options
-    const language = languageOptions?.language || (session as any).interviewLanguage || 'en';
+    const language = languageOptions?.language || session.preferredLanguage || (session as any).interviewLanguage || 'en';
     const useSeaLion = languageOptions?.useSeaLion;
     
     console.log(`🔧 Context built with language: ${language}, useSeaLion: ${useSeaLion}`);
@@ -315,6 +315,7 @@ export class CoachingEngineService {
     const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, ${languageInstruction}, encouraging tone for ${session.experienceLevel} level.`;
 
     try {
+      // console.log(`🎤 Generating introduction in language: ${context.language}`);
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: introPrompt }],
         maxTokens: 400,
@@ -356,6 +357,7 @@ export class CoachingEngineService {
     const questionPrompt = `Generate a concise ${session.interviewStage} interview question for ${session.jobPosition}. Requirements: ${session.experienceLevel} level, STAR-suitable, industry-relevant for ${session.primaryIndustry}. Format: "Question text" followed by "Context: Why this matters (1 sentence)". Keep total under 50 words. ${languageInstruction}.`;
 
     try {
+      // console.log(`❓ Generating question in language: ${context.language}`);
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: questionPrompt }],
         maxTokens: 600,

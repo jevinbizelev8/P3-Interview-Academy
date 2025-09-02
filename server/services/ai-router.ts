@@ -65,7 +65,7 @@ export class AIRouter {
     // Determine optimal service based on language
     const { primaryService, fallbackService } = this.determineServicePriority(options.language);
 
-    // console.log(`Language routing: '${options.language || 'en'}' → Primary: ${primaryService}, Fallback: ${fallbackService}`);
+    // console.log(`🗺️ Language routing: '${options.language || 'en'}' → Primary: ${primaryService}, Fallback: ${fallbackService}`);
 
     // Try primary service first
     if (this.isServiceAvailable(primaryService)) {
