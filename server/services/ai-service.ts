@@ -95,8 +95,8 @@ export class AIService {
       company: session.userCompanyName || "Technology Company",
       candidateBackground: "Experienced professional",
       keyObjectives: `Assess candidate suitability for ${session.userJobPosition} at ${session.userCompanyName}`,
-      userJobPosition: session.userJobPosition,
-      userCompanyName: session.userCompanyName,
+      userJobPosition: session.userJobPosition || undefined,
+      userCompanyName: session.userCompanyName || undefined,
     };
 
     const language = session.interviewLanguage || 'en';
@@ -109,7 +109,7 @@ export class AIService {
       if (questionNumber === 1 && conversationHistory.length === 0) {
         const response = await sealionService.generateFirstQuestion(context, persona, language);
         console.log(`Successfully generated first question in ${language}`);
-        return response.content || response;
+        return typeof response === 'string' ? response : (response.content || 'Interview question generated');
       } else {
         const response = await sealionService.generateFollowUpQuestion(
           context,
@@ -119,7 +119,7 @@ export class AIService {
           language
         );
         console.log(`Successfully generated follow-up question in ${language}: ${response.content?.substring(0, 50)}...`);
-        return response.content || response;
+        return typeof response === 'string' ? response : (response.content || 'Interview question generated');
       }
     } catch (personaError) {
       console.error(`Error generating persona: ${personaError instanceof Error ? personaError.message : String(personaError)}`);
@@ -129,7 +129,7 @@ export class AIService {
         if (questionNumber === 1 && conversationHistory.length === 0) {
           const response = await sealionService.generateFirstQuestion(context, null, language);
           console.log(`Successfully generated first question without persona in ${language}`);
-          return response.content || response;
+          return typeof response === 'string' ? response : (response.content || 'Interview question generated');
         } else {
           const response = await sealionService.generateFollowUpQuestion(
             context,
@@ -139,7 +139,7 @@ export class AIService {
             language
           );
           console.log(`Successfully generated follow-up question without persona in ${language}: ${response.content?.substring(0, 50)}...`);
-          return response.content || response;
+          return typeof response === 'string' ? response : (response.content || 'Interview question generated');
         }
       } catch (error) {
         console.error(`Error generating ${questionNumber === 1 ? 'first' : 'follow-up'} question:`, error);
@@ -189,8 +189,8 @@ export class AIService {
       company: session.userCompanyName || "Technology Company",
       candidateBackground: "Experienced professional",
       keyObjectives: `Comprehensive evaluation for ${session.userJobPosition} at ${session.userCompanyName}`,
-      userJobPosition: session.userJobPosition,
-      userCompanyName: session.userCompanyName,
+      userJobPosition: session.userJobPosition || undefined,
+      userCompanyName: session.userCompanyName || undefined,
     };
 
     const language = session.interviewLanguage || 'en';

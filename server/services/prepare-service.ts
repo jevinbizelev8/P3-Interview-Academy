@@ -237,7 +237,7 @@ Focus on practical, actionable steps that will help the candidate prepare effect
   async generateCompanyResearch(userId: string, companyName: string, jobPosition?: string): Promise<CompanyResearch> {
     // Check if we already have recent research for this company
     const existingResearch = await storage.getCompanyResearch(userId, companyName);
-    if (existingResearch && this.isRecentResearch(existingResearch.lastUpdated)) {
+    if (existingResearch && existingResearch.lastUpdated && this.isRecentResearch(existingResearch.lastUpdated)) {
       return existingResearch;
     }
 
@@ -675,7 +675,7 @@ Make it practical, actionable, and focused on interview preparation success.`;
     
     if (existing) {
       return storage.updatePreparationProgress(existing.id, {
-        progress: data.progress,
+        progress: data.progress.toString(),
         timeSpent: (existing.timeSpent || 0) + (data.timeSpent || 0),
         notes: data.notes,
         status: data.progress >= 100 ? "completed" : "in_progress",
@@ -689,7 +689,7 @@ Make it practical, actionable, and focused on interview preparation success.`;
         activityType: data.activityType,
         activityId: data.activityId,
         status: data.progress >= 100 ? "completed" : "in_progress",
-        progress: data.progress,
+        progress: data.progress.toString(),
         timeSpent: data.timeSpent || 0,
         notes: data.notes,
         completedAt: data.progress >= 100 ? new Date() : undefined

@@ -31,7 +31,8 @@
       "Bash(timeout 30 npm test:*)",
       "Bash(npm run:*)",
       "Bash(export SEA_LION_API_KEY=UfGvXGla5zwE2Tiu2wbm1w)",
-      "Bash(export SEA_LION_API_KEY=sk-RAeP4ckOeiPR8eCRNEz7TQ)"
+      "Bash(export SEA_LION_API_KEY=sk-RAeP4ckOeiPR8eCRNEz7TQ)",
+      "WebFetch(domain:3165fae0-9bb6-4899-b61b-35cc2ffdb3b2-00-1imy7y85knmo6.kirk.replit.dev)"
     ],
     "deny": [],
     "ask": []
