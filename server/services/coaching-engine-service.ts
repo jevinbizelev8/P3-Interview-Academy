@@ -160,8 +160,16 @@ export class CoachingEngineService {
         });
       }
       
-      // Save coaching feedback
-      await this.saveCoachingFeedback(sessionId, cleanedFeedback, questionNumber);
+      // Save coaching feedback message with the feedback data embedded
+      await this.saveCoachingMessage(sessionId, {
+        sessionId,
+        messageType: 'coach',
+        content: 'Your response has been analyzed. Here is your feedback:',
+        coachingType: 'feedback',
+        questionNumber,
+        feedback: cleanedFeedback,
+        aiMetadata: { type: 'feedback', questionNumber }
+      });
 
       // Determine if we should continue or complete the session
       const shouldContinue = questionNumber < (session.totalQuestions || 15);
