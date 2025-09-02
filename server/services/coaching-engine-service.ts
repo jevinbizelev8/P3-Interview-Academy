@@ -428,22 +428,39 @@ export class CoachingEngineService {
     starAnalysis: StarAnalysis,
     context: CoachingContext
   ): Promise<any> {
-    const { session } = context;
+    const { session, messages } = context;
+    
+    // Get the current question being answered
+    const currentQuestion = messages
+      .filter(m => m.messageType === 'coach' && m.coachingType === 'question')
+      .pop()?.content || 'the interview question';
 
     const feedbackPrompt = `
-JSON only. No explanations.
+Analyze this interview response and provide specific feedback in JSON format:
+
+QUESTION: ${currentQuestion}
+RESPONSE: ${userResponse}
+POSITION: ${session.jobPosition} at ${session.companyName}
+STAGE: ${session.interviewStage}
+
+Provide feedback with 3-4 improvement points (mix of strengths ✓ and areas ⚠) and a model answer that directly addresses the specific question asked.
 
 {
-  "improvementPoints": ["✓ Good clarity", "⚠ Add numbers"],
-  "modelAnswer": "Managed team. Fixed issues. 20% better results."
+  "improvementPoints": [
+    "✓ Clear situation context",
+    "✓ Good action details", 
+    "⚠ Add specific metrics",
+    "⚠ Stronger result impact"
+  ],
+  "modelAnswer": "At [Company], I led [specific situation]. My task was [clear objective]. I [specific actions with details]. This resulted in [quantified outcome with business impact]."
 }
 
-STRICT: 2 bullets max. 3 words each. Model answer 10 words max. JSON ONLY.`;
+Focus on STAR structure and make the model answer relevant to the specific question. Keep improvement points concise but actionable. JSON only.`;
 
     try {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: feedbackPrompt }],
-        maxTokens: 50,
+        maxTokens: 300,
         temperature: 0.3
       });
       
@@ -454,12 +471,10 @@ STRICT: 2 bullets max. 3 words each. Model answer 10 words max. JSON ONLY.`;
       if (jsonMatch) {
         const feedback = JSON.parse(jsonMatch[0]);
         
-        // Force truncate if still too long
-        const truncatedFeedback = {
-          improvementPoints: (feedback.improvementPoints || []).slice(0, 2).map((point: string) => 
-            point.split(' ').slice(0, 3).join(' ')
-          ),
-          modelAnswer: (feedback.modelAnswer || '').split(' ').slice(0, 10).join(' '),
+        // Keep feedback structured but allow more detail
+        const structuredFeedback = {
+          improvementPoints: (feedback.improvementPoints || []).slice(0, 4), // Allow up to 4 points
+          modelAnswer: feedback.modelAnswer || this.generateDefaultModelAnswer(currentQuestion, session),
           starScores: {
             situation: starAnalysis.situation.score,
             task: starAnalysis.task.score,
@@ -469,7 +484,7 @@ STRICT: 2 bullets max. 3 words each. Model answer 10 words max. JSON ONLY.`;
           }
         };
         
-        return truncatedFeedback;
+        return structuredFeedback;
       }
       
       return this.getDefaultCoachingFeedback(starAnalysis);
@@ -738,10 +753,12 @@ STRICT: 2 bullets max. 3 words each. Model answer 10 words max. JSON ONLY.`;
   private getDefaultCoachingFeedback(starAnalysis: StarAnalysis): any {
     return {
       improvementPoints: [
-        "✓ Clear response",
-        "⚠ Add metrics"
+        '✓ Good structure',
+        '⚠ Add specific metrics',
+        '⚠ Include more context',
+        '⚠ Strengthen results'
       ],
-      modelAnswer: "Led project team. Solved key challenges. Delivered 20% improvement.",
+      modelAnswer: "In my role at [Company], I faced [situation]. I was responsible for [task]. I took these actions: [specific steps]. This delivered [quantified results with business impact].",
       starScores: {
         situation: starAnalysis.situation.score,
         task: starAnalysis.task.score,
@@ -750,6 +767,25 @@ STRICT: 2 bullets max. 3 words each. Model answer 10 words max. JSON ONLY.`;
         overall: Math.round((starAnalysis.situation.score + starAnalysis.task.score + starAnalysis.action.score + starAnalysis.result.score) / 4)
       }
     };
+  }
+
+  private generateDefaultModelAnswer(questionText: string, session: CoachingSession): string {
+    const questionLower = questionText.toLowerCase();
+    
+    if (questionLower.includes('campaign') || questionLower.includes('marketing')) {
+      return `At ${session.companyName || '[Company]'}, I led a marketing campaign that increased brand awareness by 30% and generated $2M in new revenue. I identified our target audience, developed a multi-channel strategy, executed across digital and traditional media, and achieved measurable results that exceeded our goals.`;
+    }
+    
+    if (questionLower.includes('team') || questionLower.includes('leadership')) {
+      return `As ${session.jobPosition || 'team lead'} at ${session.companyName || '[Company]'}, I managed a cross-functional team of 8 people. When we faced project delays, I restructured workflows, implemented daily standups, and prioritized critical tasks. This improved delivery speed by 40% and team satisfaction by 25%.`;
+    }
+    
+    if (questionLower.includes('challenge') || questionLower.includes('problem')) {
+      return `In my role at ${session.companyName || '[Company]'}, I encountered a critical issue that threatened our Q4 targets. I analyzed root causes, developed a comprehensive solution plan, coordinated with stakeholders, and implemented changes that not only resolved the issue but improved efficiency by 35%.`;
+    }
+    
+    // Default template
+    return `In my position as ${session.jobPosition || 'professional'} at ${session.companyName || '[Company]'}, I faced a significant challenge that required strategic thinking. I assessed the situation thoroughly, defined clear objectives, executed a structured plan with measurable milestones, and delivered results that exceeded expectations by 25%.`;
   }
 
   private getDefaultModelAnswer(session: CoachingSession | null): string {
