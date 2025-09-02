@@ -18,7 +18,7 @@ const createCoachingSessionSchema = z.object({
     businessModel: z.string().default(''),
     technicalStack: z.array(z.string()).default([])
   }).default({}),
-  interviewLanguage: z.string().min(2).max(10).default('en')
+  preferredLanguage: z.string().min(2).max(10).optional()
 });
 
 const respondToCoachingSchema = z.object({
@@ -35,18 +35,17 @@ const startCoachingSchema = z.object({
 // Create coaching session
 router.post('/sessions', async (req, res) => {
   try {
-    console.log('Creating coaching session - req.user:', req.user);
     const userId = req.user?.id || 'dev-user-123';
-    console.log('Using userId:', userId);
+    
+    // Parse and validate request data
     const validatedData = createCoachingSessionSchema.parse(req.body);
-
-    const { interviewLanguage, ...restValidatedData } = validatedData;
+    
     const sessionPayload = {
       userId,
-      ...restValidatedData,
-      preferredLanguage: interviewLanguage
+      ...validatedData,
+      // Ensure preferredLanguage defaults to 'en' if not provided
+      preferredLanguage: validatedData.preferredLanguage || 'en'
     };
-    console.log('Session payload:', sessionPayload);
 
     const session = await storage.createCoachingSession(sessionPayload);
 
