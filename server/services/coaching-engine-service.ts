@@ -419,33 +419,27 @@ export class CoachingEngineService {
     const { session } = context;
 
     const feedbackPrompt = `
-Provide ultra-concise feedback for this interview response in JSON format:
+Generate ultra-concise feedback in JSON format:
 
 **Role:** ${session.jobPosition} at ${session.companyName || 'target company'}
 **Response:** "${userResponse}"
-**STAR Scores:** S:${starAnalysis.situation.score} T:${starAnalysis.task.score} A:${starAnalysis.action.score} R:${starAnalysis.result.score}
 
-JSON format:
+Required JSON format:
 {
-  "improvementPoints": [
-    "✓ One thing done well (max 8 words)",
-    "⚠ Key improvement needed (max 8 words)", 
-    "⚠ Another improvement (max 8 words)"
-  ],
-  "modelAnswer": "Concise STAR example showing ideal approach (max 60 words total)"
+  "improvementPoints": ["✓ Good communication clarity", "⚠ Add specific metrics"],
+  "modelAnswer": "Brief 1-2 sentence STAR example (max 30 words)"
 }
 
 Requirements:
-- Max 3 improvement points total
-- Use ✓ for 1 positive, ⚠ for 2 improvements  
-- Extremely brief and actionable
-- Model answer must be under 60 words
-- British English, direct and helpful`;
+- Exactly 2 improvement points: 1 positive (✓), 1 improvement (⚠)
+- Each point maximum 5 words
+- Model answer maximum 30 words total
+- Direct and actionable`;
 
     try {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: feedbackPrompt }],
-        maxTokens: 800,
+        maxTokens: 200,
         temperature: 0.7
       });
       
