@@ -21,7 +21,6 @@ function Router() {
       <Route path="/prepare/*" component={Prepare} />
       <Route path="/practice" component={Practice} />
       <Route path="/practice/*" component={Practice} />
-      <Route path="/coaching/:sessionId" component={Practice} />
       <Route path="/perform" component={Perform} />
       <Route path="/perform/*" component={Perform} />
       {user?.role === 'admin' && (
