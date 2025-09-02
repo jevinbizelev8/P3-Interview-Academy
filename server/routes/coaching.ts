@@ -40,9 +40,11 @@ router.post('/sessions', async (req, res) => {
     console.log('Using userId:', userId);
     const validatedData = createCoachingSessionSchema.parse(req.body);
 
+    const { interviewLanguage, ...restValidatedData } = validatedData;
     const sessionPayload = {
       userId,
-      ...validatedData
+      ...restValidatedData,
+      preferredLanguage: interviewLanguage
     };
     console.log('Session payload:', sessionPayload);
 
