@@ -168,10 +168,10 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
 
   // Initialize conversation if no messages and messages have been loaded
   useEffect(() => {
-    if (sessionId && sessionMessages !== undefined && messages.length === 0 && !startConversationMutation.isPending) {
+    if (sessionId && sessionMessages !== undefined && sessionMessages.length === 0 && !startConversationMutation.isPending) {
       startConversationMutation.mutate();
     }
-  }, [sessionId, sessionMessages, messages.length]);
+  }, [sessionId, sessionMessages]);
 
   // Complete session and get model answers
   const handleCompleteSession = async () => {
