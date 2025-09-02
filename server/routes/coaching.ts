@@ -187,7 +187,8 @@ router.post('/sessions/:sessionId/respond', async (req, res) => {
     
     const response = await coachingEngineService.processCoachingResponse(
       req.params.sessionId,
-      validatedData.response
+      validatedData.response,
+      session.currentQuestion || 1
     );
 
     res.json({

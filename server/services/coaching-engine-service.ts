@@ -117,7 +117,7 @@ export class CoachingEngineService {
   async processCoachingResponse(
     sessionId: string, 
     userResponse: string, 
-    questionNumber: number
+    questionNumber?: number
   ): Promise<CoachingResponse> {
     try {
       const session = await storage.getCoachingSession(sessionId);
@@ -125,6 +125,13 @@ export class CoachingEngineService {
         throw new Error('Coaching session not found');
       }
 
+      // Determine current question number if not provided
+      if (!questionNumber) {
+        const messages = await storage.getCoachingMessages(sessionId);
+        const userResponses = messages.filter(m => m.messageType === 'user').length;
+        questionNumber = userResponses; // This will be the current question number (1-based)
+      }
+      
       console.log(`Processing coaching response for session ${sessionId}, question ${questionNumber}`);
 
       // Save user response
