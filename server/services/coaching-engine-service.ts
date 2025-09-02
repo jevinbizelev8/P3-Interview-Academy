@@ -60,11 +60,15 @@ export class CoachingEngineService {
       // Generate first question based on session configuration
       const firstQuestion = await this.generateContextualQuestion(context, 1);
       
+      // Clean up the responses to remove any internal reasoning
+      const cleanIntroduction = this.cleanAIResponse(introduction);
+      const cleanFirstQuestion = this.cleanAIResponse(firstQuestion);
+
       // Save introduction and first question as messages
       await this.saveCoachingMessage(sessionId, {
         sessionId,
         messageType: 'coach',
-        content: introduction,
+        content: cleanIntroduction,
         coachingType: 'introduction',
         questionNumber: 0,
         industryContext: context.session.industryContext,
@@ -74,7 +78,7 @@ export class CoachingEngineService {
       await this.saveCoachingMessage(sessionId, {
         sessionId,
         messageType: 'coach', 
-        content: firstQuestion,
+        content: cleanFirstQuestion,
         coachingType: 'question',
         questionNumber: 1,
         industryContext: context.session.industryContext,
@@ -87,7 +91,7 @@ export class CoachingEngineService {
       });
 
       return {
-        question: `${introduction}\n\n**Question 1:**\n${firstQuestion}`,
+        question: `${cleanIntroduction}\n\n**Question 1:**\n${cleanFirstQuestion}`,
         conversationComplete: false
       };
 
@@ -611,6 +615,59 @@ export class CoachingEngineService {
   // ================================
   // UTILITY METHODS
   // ================================
+
+  /**
+   * Clean AI response to extract user-facing content only
+   */
+  private cleanAIResponse(response: string): string {
+    // Remove any <think> tags and their content
+    let cleaned = response.replace(/<think>[\s\S]*?<\/think>/g, '');
+    
+    // Remove the specific AI reasoning pattern that appears in our responses
+    cleaned = cleaned.replace(/^[\s\S]*?>\s*\n\n/, '');
+    
+    // Look for quoted content (typical AI response pattern)
+    const quotedMatch = cleaned.match(/"([^"]+(?:\s[^"]*)*?)"/);
+    if (quotedMatch) {
+      return quotedMatch[1].trim();
+    }
+    
+    // Look for content after markdown-style patterns
+    const markdownMatch = cleaned.match(/\*\*Question:\*\*\s*([\s\S]+?)(?:\*\*Context:\*\*|$)/);
+    if (markdownMatch) {
+      return markdownMatch[1].trim();
+    }
+    
+    // Look for content after common AI reasoning patterns
+    const patterns = [
+      /(?:Here's|I'll provide|Let me create|I'll generate)[\s\S]*?[:]\s*(.+)/i,
+      /(?:Response|Answer):\s*(.+)/i,
+      /\*\*Question:\*\*\s*([\s\S]+?)(?:\*\*|$)/,
+      /Context:[\s\S]*?Question[^:]*:\s*(.+)/i
+    ];
+    
+    for (const pattern of patterns) {
+      const match = cleaned.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+    }
+    
+    // Split by double newlines and take the last substantial paragraph
+    const paragraphs = cleaned.split('\n\n').filter(p => p.trim().length > 30);
+    if (paragraphs.length > 0) {
+      return paragraphs[paragraphs.length - 1].trim();
+    }
+    
+    // If no patterns match, return first substantial sentence
+    const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim().length > 20);
+    if (sentences.length > 0) {
+      return sentences[0].trim() + '.';
+    }
+    
+    // Fallback: return cleaned response
+    return cleaned.trim();
+  }
 
   private async saveCoachingMessage(sessionId: string, messageData: InsertCoachingMessage): Promise<CoachingMessage> {
     return await storage.addCoachingMessage(messageData);
