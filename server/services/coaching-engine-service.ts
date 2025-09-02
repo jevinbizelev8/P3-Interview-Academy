@@ -499,7 +499,7 @@ STRICT: 2 bullets max. 3 words each. Model answer 10 words max. JSON ONLY.`;
     try {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: modelAnswerPrompt }],
-        maxTokens: 800,
+        maxTokens: 50,
         temperature: 0.5
       });
       const cleanResponse = response.content.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
@@ -550,26 +550,14 @@ STRICT: 2 bullets max. 3 words each. Model answer 10 words max. JSON ONLY.`;
   }
 
   /**
-   * Generate comprehensive session summary
+   * Generate brief session summary
    */
   private async generateSessionSummary(context: CoachingContext): Promise<string> {
     const { session, messages } = context;
-    
     const userResponses = messages.filter(m => m.messageType === 'user').length;
     
-    const summaryPrompt = `Create coaching session summary for ${session.jobPosition} ${session.interviewStage} interview prep. Completed: ${userResponses} questions. Level: ${session.experienceLevel}. Include: achievements, strengths, improvements needed, next steps, ${session.primaryIndustry} industry advice. British English, positive, actionable.`;
-
-    try {
-      const response = await aiRouter.generateResponse({
-        messages: [{ role: 'user', content: summaryPrompt }],
-        maxTokens: 600,
-        temperature: 0.6
-      });
-      return this.cleanAIResponse(response.content.trim());
-    } catch (error) {
-      console.error('Error generating session summary:', error);
-      return `🎉 **Session Complete!**\n\nYou've successfully completed your ${session.interviewStage.replace('-', ' ')} coaching session! You worked through ${userResponses} questions and demonstrated strong ${session.primaryIndustry} knowledge. Keep practicing the STAR method and focus on quantifying your results. Well done!`;
-    }
+    // Return ultra-brief completion message
+    return `✓ Session complete! Completed ${userResponses} questions for ${session.jobPosition} interview prep.`;
   }
 
   // ================================
