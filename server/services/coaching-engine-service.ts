@@ -254,35 +254,7 @@ export class CoachingEngineService {
   private async generateCoachingIntroduction(context: CoachingContext): Promise<string> {
     const { session } = context;
     
-    const introPrompt = `
-      Create a comprehensive, professional coaching introduction for an interview preparation session that sets the scene and context.
-      
-      Session Details:
-      - Job Position: ${session.jobPosition}
-      - Company: ${session.companyName || 'target company'}
-      - Interview Stage: ${session.interviewStage}
-      - Industry: ${session.primaryIndustry || 'General'}
-      - Experience Level: ${session.experienceLevel}
-      - Specializations: ${JSON.stringify(session.specializations)}
-      - Total Questions: ${session.totalQuestions}
-      - Session Duration: ${session.timeAllocation} minutes
-      
-      Create a detailed introduction that includes:
-      1. Warm welcome addressing the specific role and company
-      2. Clear explanation of the ${session.interviewStage} interview stage and what to expect
-      3. Industry-specific context (if ${session.primaryIndustry} is specified)
-      4. Overview of the STAR method for structuring responses
-      5. Session format: ${session.totalQuestions} questions over ${session.timeAllocation} minutes
-      6. Encouragement tailored to their ${session.experienceLevel} level
-      7. Brief explanation of what this interview stage typically assesses
-      
-      Include specific context about:
-      - What ${session.interviewStage.replace('-', ' ')} interviews typically focus on
-      - How ${session.primaryIndustry || 'this industry'} companies evaluate candidates at this stage
-      - What interviewers are looking for in ${session.experienceLevel} candidates
-      
-      Use British English, be encouraging but professional. Aim for 4-5 sentences that set proper expectations.
-    `;
+    const introPrompt = `Create a professional ${session.interviewStage} interview preparation introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: welcome, stage expectations, STAR method overview, session format (${session.totalQuestions} questions, ${session.timeAllocation}min), and ${session.experienceLevel}-level encouragement. Use British English, 4-5 sentences.`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -321,37 +293,7 @@ export class CoachingEngineService {
       .map(m => `${m.messageType}: ${m.content}`)
       .join('\n');
 
-    const questionPrompt = `
-      Generate a ${session.interviewStage} interview question for coaching session.
-      
-      Context:
-      - Job Position: ${session.jobPosition}
-      - Company: ${session.companyName || 'Not specified'}
-      - Industry: ${session.primaryIndustry}
-      - Experience Level: ${session.experienceLevel}
-      - Specializations: ${JSON.stringify(session.specializations)}
-      - Question Number: ${questionNumber} of ${session.totalQuestions}
-      - Interview Stage: ${session.interviewStage}
-      
-      ${conversationHistory ? `Recent Conversation:\n${conversationHistory}\n` : ''}
-      
-      ${industryKnowledge ? `Industry Context:\n${JSON.stringify(industryKnowledge.keyInsights)}\n` : ''}
-      
-      Requirements:
-      1. Generate a realistic ${session.interviewStage} question
-      2. Make it industry-specific for ${session.primaryIndustry}
-      3. Match ${session.experienceLevel} difficulty level
-      4. Ensure it's different from previous questions
-      5. Include context about why this question matters
-      6. Focus on STAR method applicability
-      
-      Question Format:
-      "[Question text]"
-      
-      Context: [Brief explanation of why this question is asked in ${session.primaryIndustry} ${session.interviewStage} interviews]
-      
-      Use British English and professional tone.
-    `;
+    const questionPrompt = `Generate ${session.interviewStage} interview question #${questionNumber} for ${session.jobPosition} at ${session.companyName || 'company'}. Level: ${session.experienceLevel}. Industry: ${session.primaryIndustry}. Make it unique, STAR-method suitable, professional tone. ${conversationHistory ? `Previous: ${conversationHistory.slice(-200)}` : ''}`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -605,25 +547,7 @@ export class CoachingEngineService {
     
     const userResponses = messages.filter(m => m.messageType === 'user').length;
     
-    const summaryPrompt = `
-      Create a comprehensive coaching session summary for ${session.primaryIndustry} interview preparation.
-      
-      Session Overview:
-      - Questions Completed: ${userResponses}
-      - Interview Stage: ${session.interviewStage}
-      - Industry Focus: ${session.primaryIndustry}
-      - Experience Level: ${session.experienceLevel}
-      
-      Generate an encouraging summary that includes:
-      1. Key achievements in this session
-      2. Overall progress assessment
-      3. Main areas of strength identified
-      4. Priority areas for continued improvement
-      5. Recommended next steps
-      6. Industry-specific advice for ${session.primaryIndustry} interviews
-      
-      Keep it positive, specific, and actionable. Use British English.
-    `;
+    const summaryPrompt = `Create coaching session summary for ${session.jobPosition} ${session.interviewStage} interview prep. Completed: ${userResponses} questions. Level: ${session.experienceLevel}. Include: achievements, strengths, improvements needed, next steps, ${session.primaryIndustry} industry advice. British English, positive, actionable.`;
 
     try {
       const response = await aiRouter.generateResponse({

@@ -6,7 +6,8 @@ import { CoachingChat } from '@/components/CoachingChat';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Settings } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Loader2, ArrowLeft, Settings, Clock, Target, BookOpen, Star } from 'lucide-react';
 
 interface CoachingSession {
   id: string;
@@ -163,6 +164,11 @@ export function CoachingSessionPage() {
         </div>
       )}
 
+      {/* Session Introduction Section */}
+      <SessionIntroduction 
+        session={session}
+      />
+
       {/* Chat Interface */}
       <div className="flex-1 overflow-hidden">
         <CoachingChat 
@@ -175,6 +181,109 @@ export function CoachingSessionPage() {
             experienceLevel: session.experienceLevel
           }}
         />
+      </div>
+    </div>
+  );
+}
+
+// New component for session introduction
+function SessionIntroduction({ session }: { session: CoachingSession }) {
+  const [introductionText, setIntroductionText] = useState<string>('');
+  
+  // Fetch session messages to extract introduction
+  const { data: messages } = useQuery({
+    queryKey: ['coaching-messages', session.id],
+    queryFn: async () => {
+      const response = await apiRequest('GET', `/api/coaching/sessions/${session.id}/messages`);
+      if (!response.ok) throw new Error('Failed to fetch messages');
+      const result = await response.json();
+      return result.data;
+    }
+  });
+
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      // Find the introduction message (first coach message with type 'introduction')
+      const introMessage = messages.find((msg: any) => 
+        msg.messageType === 'coach' && 
+        msg.coachingType === 'introduction'
+      );
+      
+      if (introMessage) {
+        setIntroductionText(introMessage.content);
+      }
+    }
+  }, [messages]);
+
+  if (!introductionText) {
+    return null;
+  }
+
+  const formatInterviewStage = (stage: string) => {
+    return stage.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <Card className="border-0 shadow-sm bg-white/70 backdrop-blur-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <Target className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <CardTitle className="text-xl text-gray-900">
+                  {session.jobPosition} at {session.companyName || 'Your Target Company'}
+                </CardTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  {formatInterviewStage(session.interviewStage)} Stage • {session.experienceLevel} Level
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="pt-0">
+            <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+              <p>{introductionText}</p>
+            </div>
+            
+            <Separator className="my-4" />
+            
+            {/* Session highlights */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <Clock className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{session.timeAllocation} Minutes</p>
+                  <p className="text-xs text-gray-600">Session Duration</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
+                  <BookOpen className="h-4 w-4 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{session.totalQuestions} Questions</p>
+                  <p className="text-xs text-gray-600">Practice Rounds</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
+                  <Star className="h-4 w-4 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">STAR Method</p>
+                  <p className="text-xs text-gray-600">Response Structure</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
