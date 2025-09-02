@@ -57,6 +57,8 @@ interface CoachingChatProps {
     interviewStage: string;
     primaryIndustry?: string;
     experienceLevel: string;
+    totalQuestions?: number;
+    currentQuestion?: number;
   };
 }
 
@@ -508,21 +510,45 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-gray-500">
-                    Press Enter to send • Shift+Enter for new line
-                  </p>
+                  <div className="flex items-center gap-4">
+                    <p className="text-xs text-gray-500">
+                      Press Enter to send • Shift+Enter for new line
+                    </p>
+                    {/* Progress indicator */}
+                    {messages.length > 0 && (
+                      <div className="text-xs text-gray-500">
+                        Question {Math.ceil(messages.length / 2)} of {sessionDetails.totalQuestions || 15}
+                      </div>
+                    )}
+                  </div>
                   
-                  {messages.length > 4 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleCompleteSession}
-                      disabled={isCompleting}
-                      className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
-                    >
-                      {isCompleting ? "Generating Model Answers..." : "Complete Session & Get Model Answers"}
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* End Session Early button - always visible after first question */}
+                    {messages.length > 2 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCompleteSession}
+                        disabled={isCompleting}
+                        className="bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
+                      >
+                        End Session Early
+                      </Button>
+                    )}
+                    
+                    {/* Complete Session button for normal flow */}
+                    {messages.length > 6 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCompleteSession}
+                        disabled={isCompleting}
+                        className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
+                      >
+                        {isCompleting ? "Generating Summary..." : "Complete Session"}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </>
             )}

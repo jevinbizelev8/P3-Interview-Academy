@@ -178,7 +178,9 @@ export function CoachingSessionPage() {
             companyName: session.companyName,
             interviewStage: session.interviewStage,
             primaryIndustry: session.primaryIndustry,
-            experienceLevel: session.experienceLevel
+            experienceLevel: session.experienceLevel,
+            totalQuestions: session.totalQuestions,
+            currentQuestion: session.currentQuestion
           }}
         />
       </div>
@@ -189,6 +191,7 @@ export function CoachingSessionPage() {
 // New component for session introduction
 function SessionIntroduction({ session }: { session: CoachingSession }) {
   const [introductionText, setIntroductionText] = useState<string>('');
+  const [isIntroCollapsed, setIsIntroCollapsed] = useState(false);
   
   // Fetch session messages to extract introduction
   const { data: messages } = useQuery({
@@ -215,74 +218,68 @@ function SessionIntroduction({ session }: { session: CoachingSession }) {
     }
   }, [messages]);
 
-  if (!introductionText) {
-    return null;
-  }
-
   const formatInterviewStage = (stage: string) => {
     return stage.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  if (!introductionText) {
+    return null;
+  }
+
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-7xl mx-auto px-4 py-3">
         <Card className="border-0 shadow-sm bg-white/70 backdrop-blur-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <Target className="h-5 w-5 text-blue-600" />
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Target className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg text-gray-900">
+                    {session.jobPosition} at {session.companyName || 'Your Target Company'}
+                  </CardTitle>
+                  <p className="text-xs text-gray-600">
+                    {formatInterviewStage(session.interviewStage)} • {session.experienceLevel} Level
+                  </p>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-xl text-gray-900">
-                  {session.jobPosition} at {session.companyName || 'Your Target Company'}
-                </CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
-                  {formatInterviewStage(session.interviewStage)} Stage • {session.experienceLevel} Level
-                </p>
-              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsIntroCollapsed(!isIntroCollapsed)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                {isIntroCollapsed ? 'Show Details' : 'Hide Details'}
+              </Button>
             </div>
           </CardHeader>
           
-          <CardContent className="pt-0">
-            <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed">
-              <p>{introductionText}</p>
-            </div>
-            
-            <Separator className="my-4" />
-            
-            {/* Session highlights */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                  <Clock className="h-4 w-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{session.timeAllocation} Minutes</p>
-                  <p className="text-xs text-gray-600">Session Duration</p>
-                </div>
+          {!isIntroCollapsed && (
+            <CardContent className="pt-0 pb-3">
+              <div className="text-sm text-gray-700 leading-relaxed mb-3">
+                <p className="line-clamp-2">{introductionText}</p>
               </div>
               
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 bg-purple-100 rounded-full flex items-center justify-center">
-                  <BookOpen className="h-4 w-4 text-purple-600" />
+              {/* Compact session highlights */}
+              <div className="flex items-center gap-6 text-xs text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <span>{session.timeAllocation}min</span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{session.totalQuestions} Questions</p>
-                  <p className="text-xs text-gray-600">Practice Rounds</p>
+                <div className="flex items-center gap-1">
+                  <BookOpen className="h-3 w-3" />
+                  <span>{session.totalQuestions} questions</span>
                 </div>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 bg-orange-100 rounded-full flex items-center justify-center">
-                  <Star className="h-4 w-4 text-orange-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">STAR Method</p>
-                  <p className="text-xs text-gray-600">Response Structure</p>
+                <div className="flex items-center gap-1">
+                  <Star className="h-3 w-3" />
+                  <span>STAR Method</span>
                 </div>
               </div>
-            </div>
-          </CardContent>
+            </CardContent>
+          )}
         </Card>
       </div>
     </div>
