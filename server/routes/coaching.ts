@@ -2,8 +2,13 @@ import { Router } from 'express';
 import { coachingEngineService } from '../services/coaching-engine-service';
 import { storage } from '../storage';
 import { z } from 'zod';
+import { insertCoachingSessionSchema, coachingSessions } from '@shared/schema';
+import { db } from '../db';
+import { sql } from 'drizzle-orm';
 
 const router = Router();
+
+
 
 // Validation schemas
 const createCoachingSessionSchema = z.object({
@@ -43,9 +48,17 @@ router.post('/sessions', async (req, res) => {
     const sessionPayload = {
       userId,
       ...validatedData,
-      // Ensure preferredLanguage defaults to 'en' if not provided
-      preferredLanguage: validatedData.preferredLanguage || 'en'
+      // Force the language value explicitly if provided
+      ...(req.body.preferredLanguage && { preferredLanguage: req.body.preferredLanguage })
     };
+
+    // Validate required fields manually
+    if (!sessionPayload.jobPosition || !sessionPayload.interviewStage) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields'
+      });
+    }
 
     const session = await storage.createCoachingSession(sessionPayload);
 
