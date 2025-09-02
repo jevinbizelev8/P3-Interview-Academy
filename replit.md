@@ -30,11 +30,26 @@ The server runs on **Node.js** with **Express.js** using **TypeScript** and ES m
 
 **Multi-Language AI**: The AI system now supports generating interview questions and feedback in 10 Southeast Asian languages using SeaLion's specialized regional language models with comprehensive error logging and robust fallback systems. **Full SeaLion functionality confirmed** - all AI responses include culturally appropriate Southeast Asian business contexts, with intelligent persona generation, contextual question flow, and detailed STAR-method assessments. The platform maintains 100% uptime through sophisticated fallback mechanisms while providing authentic SeaLion responses when the API is available.
 
-**Language Switching Fix**: Fixed critical language localization bug where Bahasa Malaysia and other Southeast Asian languages were showing English content. The issue was resolved by:
-- Updating session creation to properly store `preferredLanguage` from form submissions
-- Ensuring language parameter flows correctly from frontend to AI router
-- Confirming SeaLion service selection works for Southeast Asian languages (ms, id, th, vi, fil, my, km, lo, zh-sg)
-- Language routing now properly prioritizes SeaLion for ASEAN languages and OpenAI for English
+**Bilingual UX Implementation**: Successfully implemented a bilingual user experience that solves language consistency issues through a dual-display approach:
+
+**Design Philosophy**: 
+- Primary content in professional English for consistency and reliability
+- ASEAN language translations displayed below English content
+- Users can respond in their native language while receiving standardized feedback
+
+**Technical Implementation**:
+- Created `TranslationService` using SeaLion for accurate ASEAN language translation
+- Enhanced `CoachingResponse` interface to include `questionTranslation` and `feedbackTranslation` fields
+- Frontend displays English content with expandable translation sections
+- Language routing properly selects SeaLion for ASEAN translations and OpenAI for English content generation
+- Speech recognition supports all 10 languages with proper locale mapping
+
+**User Experience Benefits**:
+- Eliminates language consistency issues from pure AI generation
+- Provides professional English content for standardized evaluation
+- Offers native language support for better comprehension
+- Maintains SeaLion integration for authentic ASEAN translations
+- Supports voice input in user's preferred language
 
 **Prepare Module Integration**: The Prepare module is now fully integrated as an embedded iframe at `/prepare`, displaying the external deployment (https://p3-prepare-sealion.replit.app) within the main platform's navigation structure. This provides seamless user experience while maintaining module separation and independent deployments.
 
