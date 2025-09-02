@@ -193,13 +193,13 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
       setCurrentResponse(transcript);
       setIsRecording(false);
     };
 
-    recognition.onerror = (event) => {
+    recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       setIsRecording(false);
     };
@@ -234,10 +234,10 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
   const currentQuestionNumber = messages?.filter(m => m.messageType === 'coach' && m.coachingType === 'question').length || 1;
 
   return (
-    <div className="min-h-screen bg-blue-50">
+    <div className="min-h-screen bg-blue-50 flex flex-col">
 
       {/* Session Info Header */}
-      <div className="bg-white border border-gray-200 rounded-lg mb-4 mx-6 mt-4">
+      <div className="bg-white border border-gray-200 rounded-lg mb-4 mx-6 mt-4 flex-shrink-0">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -276,14 +276,15 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-6 py-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="flex-1 max-w-6xl mx-auto px-6 pb-4 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
           {/* Chat Area */}
-          <div className="lg:col-span-2">
-            <Card className="h-[600px] flex flex-col">
-              <CardContent className="flex-1 p-0">
-                <ScrollArea className="h-full p-4">
-                  <div className="space-y-4">
+          <div className="lg:col-span-2 flex flex-col">
+            <Card className="flex-1 flex flex-col min-h-0">
+              <CardContent className="flex-1 p-0 flex flex-col min-h-0">
+                <div className="flex-1 min-h-0">
+                  <ScrollArea className="h-full">
+                    <div className="p-4 space-y-4">
                     {messages && messages.map((message) => (
                       <div key={message.id} className={`flex gap-3 ${message.messageType === 'user' ? 'justify-end' : 'justify-start'}`}>
                         {message.messageType === 'coach' && (
@@ -335,12 +336,13 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                         </div>
                       </div>
                     )}
-                  </div>
-                  <div ref={messagesEndRef} />
-                </ScrollArea>
+                      <div ref={messagesEndRef} />
+                    </div>
+                  </ScrollArea>
+                </div>
 
                 {/* Input Area */}
-                <div className="border-t p-4">
+                <div className="border-t p-4 flex-shrink-0">
                   <div className="space-y-3">
                     <Textarea
                       value={currentResponse}
