@@ -24,66 +24,99 @@ export class TranslationService {
     }
 
     try {
-      const translationPrompt = `Translate this English interview coaching text to ${this.getLanguageName(targetLanguage)}:
+      // Try SeaLion first for ASEAN languages
+      let translatedContent: string;
+      
+      try {
+        translatedContent = await sealionService.generateResponse({
+          messages: [
+            { 
+              role: 'system', 
+              content: `Translate to ${this.getLanguageName(targetLanguage)}. Return only the translation without any explanations, reasoning, or commentary.` 
+            },
+            { role: 'user', content: content }
+          ],
+          maxTokens: 150,
+          temperature: 0.0,
+          language: targetLanguage
+        });
+        
+        console.log(`✅ SeaLion translation success for ${targetLanguage}`);
+        
+      } catch (sealionError) {
+        console.log(`⚠️ SeaLion failed, falling back to OpenAI for ${targetLanguage}:`, sealionError.message);
+        
+        // Fallback to OpenAI
+        const { aiRouter } = await import('./ai-router');
+        translatedContent = await aiRouter.generateResponse({
+          messages: [
+            { role: 'system', content: `Translate to ${this.getLanguageName(targetLanguage)}. Provide only the translation.` },
+            { role: 'user', content: `Translate: "${content}"` }
+          ],
+          maxTokens: 200,
+          temperature: 0.0,
+          language: 'en' // Force OpenAI to use English routing
+        });
+      }
 
-"${content}"
-
-Requirements:
-- ONLY provide the direct translation
-- NO explanations, reasoning, or commentary
-- Keep professional interview tone
-- Preserve technical terms like "STAR method"
-- Maintain original formatting
-
-${this.getLanguageInstruction(targetLanguage)}`;
-
-      const translatedContent = await sealionService.generateResponse({
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are a professional translator. Provide ONLY direct translations without any explanations, reasoning, or commentary.' 
-          },
-          { role: 'user', content: translationPrompt }
-        ],
-        maxTokens: 500,
-        temperature: 0.1,
-        language: targetLanguage
-      });
-
-      // Clean the translation by extracting only the translated content
+      // Clean the translation to remove any reasoning or explanations
       let cleanTranslation = translatedContent.trim();
       
-      // If the response contains reasoning, try to extract just the translation
-      const patterns = [
-        /(?:translation[:\s]*["']?([^"'\n]+)["']?)/i,
-        /(?:translating[:\s]*["']?([^"'\n]+)["']?)/i,
-        /(?:in bahasa malaysia[:\s]*["']?([^"'\n]+)["']?)/i,
-        /(?:translation is[:\s]*["']?([^"'\n]+)["']?)/i
-      ];
+      // Aggressively remove AI reasoning and commentary
+      cleanTranslation = cleanTranslation
+        .replace(/^.*?(?:but i should check|let me|i need|understanding|translate|translation|requirements).*$/gim, '')
+        .replace(/^.*?(?:start by|carefully|first|original text|maintaining).*$/gim, '')
+        .replace(/^.*?(?:english|professional tone|correct term|job contexts).*$/gim, '')
+        .replace(/^\s*["']?/, '')  // Remove starting quotes
+        .replace(/["']?\s*$/, '')  // Remove ending quotes
+        .replace(/\n\n+/g, '\n')   // Remove extra newlines
+        .trim();
       
-      for (const pattern of patterns) {
-        const match = cleanTranslation.match(pattern);
-        if (match && match[1] && match[1].length > 20) {
-          cleanTranslation = match[1].trim();
+      // Extract only text before reasoning starts (case insensitive)
+      const reasoningMarkers = ['But I should', 'Let me check', 'In Malaysian', 'I should check', 'Baik, saya perlu', 'soalan asalnya'];
+      for (const marker of reasoningMarkers) {
+        const markerIndex = cleanTranslation.toLowerCase().indexOf(marker.toLowerCase());
+        if (markerIndex > 0) {
+          cleanTranslation = cleanTranslation.slice(0, markerIndex).trim();
           break;
         }
       }
       
-      // Fallback: If translation is still full of reasoning, use a shorter approach
-      if (cleanTranslation.includes('requirements') || cleanTranslation.includes('translate') || cleanTranslation.length > content.length * 3) {
-        // Try to find the actual translation content after common phrases
-        const startIndicators = ['selamat datang', 'welcome', content.slice(0, 20).toLowerCase()];
-        for (const indicator of startIndicators) {
-          const startIndex = cleanTranslation.toLowerCase().indexOf(indicator);
-          if (startIndex > 0) {
-            cleanTranslation = cleanTranslation.slice(startIndex);
-            // Find end of sentence or reasonable stopping point
-            const endMatch = cleanTranslation.match(/[.!?]\s|$/);
-            if (endMatch) {
-              cleanTranslation = cleanTranslation.slice(0, endMatch.index + 1);
+      // Remove any remaining quotes at the end
+      cleanTranslation = cleanTranslation.replace(/["']?\s*$/, '').trim();
+      
+      // If translation is still full of reasoning, extract actual Bahasa Malaysia content
+      if (cleanTranslation.includes('user wants') || cleanTranslation.includes('translate') || cleanTranslation.includes('requirements')) {
+        // Find the first occurrence of Bahasa Malaysia words/patterns
+        const malayPatterns = [
+          /selamat datang[^.!?]*[.!?]/i,
+          /terima kasih[^.!?]*[.!?]/i,
+          /anda[^.!?]*[.!?]/i,
+          /untuk[^.!?]*[.!?]/i,
+        ];
+        
+        let extractedTranslation = '';
+        for (const pattern of malayPatterns) {
+          const match = cleanTranslation.match(pattern);
+          if (match) {
+            extractedTranslation = match[0].trim();
+            
+            // Try to extend to get more context
+            const startIndex = cleanTranslation.indexOf(match[0]);
+            const remainingText = cleanTranslation.slice(startIndex);
+            const sentences = remainingText.split(/[.!?]/);
+            if (sentences.length > 1) {
+              extractedTranslation = sentences.slice(0, Math.min(2, sentences.length)).join('.') + '.';
             }
             break;
           }
+        }
+        
+        if (extractedTranslation) {
+          cleanTranslation = extractedTranslation;
+        } else {
+          // Last resort: use original with translation note
+          cleanTranslation = `${content}\n[Terjemahan: Teks dalam Bahasa Malaysia tidak tersedia]`;
         }
       }
 
