@@ -19,6 +19,7 @@ export default function Practice() {
         <Route path="/practice/briefing/:scenarioId" component={PreInterviewBriefing} />
         <Route path="/practice/interview/:sessionId" component={InterviewPractice} />
         <Route path="/practice/assessment/:sessionId" component={PostInterviewAssessment} />
+        <Route path="/coaching/:sessionId" component={InterviewPractice} />
         <Route path="/" component={ScenarioSelection} />
         <Route component={ScenarioSelection} />
       </Switch>
