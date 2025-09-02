@@ -91,15 +91,9 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
       const result = await response.json();
       return result.data;
     },
-    onSuccess: (data) => {
-      const coachMessage: CoachingMessage = {
-        id: Date.now().toString(),
-        role: 'coach',
-        content: data.message,
-        timestamp: new Date(),
-        questionData: data.questionData
-      };
-      setMessages([coachMessage]);
+    onSuccess: () => {
+      // Invalidate and refetch messages to get the updated conversation
+      queryClient.invalidateQueries({ queryKey: ['coaching-messages', sessionId] });
     }
   });
 
@@ -442,6 +436,24 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
             </div>
           ))}
 
+          {/* Loading indicator for conversation startup */}
+          {startConversationMutation.isPending && messages.length === 0 && (
+            <div className="flex justify-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                <Bot className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="bg-gray-100 p-4 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  <span className="text-sm text-gray-600">
+                    Coach is preparing your personalized interview session...
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Loading indicator for response analysis */}
           {isLoading && (
             <div className="flex justify-start gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
