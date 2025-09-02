@@ -39,9 +39,9 @@ export default function PrepareDashboard() {
 
   // Load session data
   const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery<InterviewSession>({
-    queryKey: [`/api/practice/sessions/${sessionId}`],
+    queryKey: [`/api/prepare/sessions/${sessionId}`],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/practice/sessions/${sessionId}`);
+      const response = await apiRequest('GET', `/api/prepare/sessions/${sessionId}`);
       return response.json();
     },
     enabled: !!sessionId,
