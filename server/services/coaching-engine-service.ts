@@ -47,6 +47,26 @@ export class CoachingEngineService {
   // ================================
 
   /**
+   * Get language-specific instruction for AI prompts
+   */
+  private getLanguageInstruction(languageCode: string): string {
+    const languageMap: Record<string, string> = {
+      'en': 'Respond in clear, professional English',
+      'ms': 'Respond in Bahasa Malaysia (Malay language). Use professional and courteous tone appropriate for Malaysian business context',
+      'id': 'Respond in Bahasa Indonesia. Use professional and respectful Indonesian business language',
+      'th': 'Respond in Thai language (ภาษาไทย). Use polite and professional Thai appropriate for business interviews',
+      'vi': 'Respond in Vietnamese language (Tiếng Việt). Use formal and professional Vietnamese suitable for business context',
+      'zh-sg': 'Respond in Simplified Chinese (简体中文). Use professional Chinese appropriate for Singapore business context',
+      'fil': 'Respond in Filipino language. Use professional and respectful Filipino suitable for business interviews',
+      'my': 'Respond in Myanmar language (မြန်မာဘာသာ). Use professional tone appropriate for Myanmar business context',
+      'km': 'Respond in Khmer language (ខ្មែរ). Use respectful and professional Cambodian business language',
+      'lo': 'Respond in Lao language (ລາວ). Use polite and professional Lao appropriate for business context'
+    };
+
+    return languageMap[languageCode] || languageMap['en'];
+  }
+
+  /**
    * Start a new coaching conversation
    */
   async startCoachingConversation(sessionId: string, languageOptions?: LanguageOptions): Promise<CoachingResponse> {
@@ -67,6 +87,7 @@ export class CoachingEngineService {
       }
 
       console.log(`Starting coaching conversation for session ${sessionId} - ${session.interviewStage} stage`);
+      console.log(`🌐 Language: ${languageOptions?.language || (session as any).interviewLanguage || 'en'} | UseSeaLion: ${languageOptions?.useSeaLion || 'auto'}`);
 
       // Build coaching context
       const context = await this.buildCoachingContext(session, languageOptions);
@@ -267,6 +288,8 @@ export class CoachingEngineService {
     // Determine language preference from session or language options
     const language = languageOptions?.language || (session as any).interviewLanguage || 'en';
     const useSeaLion = languageOptions?.useSeaLion;
+    
+    console.log(`🔧 Context built with language: ${language}, useSeaLion: ${useSeaLion}`);
 
     return {
       session,
@@ -288,7 +311,8 @@ export class CoachingEngineService {
   private async generateCoachingIntroduction(context: CoachingContext): Promise<string> {
     const { session } = context;
     
-    const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, British English, encouraging tone for ${session.experienceLevel} level.`;
+    const languageInstruction = this.getLanguageInstruction(context.language || 'en');
+    const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, ${languageInstruction}, encouraging tone for ${session.experienceLevel} level.`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -328,7 +352,8 @@ export class CoachingEngineService {
       .map(m => `${m.messageType}: ${m.content}`)
       .join('\n');
 
-    const questionPrompt = `Generate a concise ${session.interviewStage} interview question for ${session.jobPosition}. Requirements: ${session.experienceLevel} level, STAR-suitable, industry-relevant for ${session.primaryIndustry}. Format: "Question text" followed by "Context: Why this matters (1 sentence)". Keep total under 50 words.`;
+    const languageInstruction = this.getLanguageInstruction(context.language || 'en');
+    const questionPrompt = `Generate a concise ${session.interviewStage} interview question for ${session.jobPosition}. Requirements: ${session.experienceLevel} level, STAR-suitable, industry-relevant for ${session.primaryIndustry}. Format: "Question text" followed by "Context: Why this matters (1 sentence)". Keep total under 50 words. ${languageInstruction}.`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -414,6 +439,8 @@ export class CoachingEngineService {
       1 = Poor (major gaps or unclear)
       
       Focus on ${session.primaryIndustry} industry standards and ${session.interviewStage} expectations.
+      
+      ${this.getLanguageInstruction(context.language || 'en')}
     `;
 
     try {
@@ -472,7 +499,7 @@ Provide feedback with 3-4 improvement points (mix of strengths ✓ and areas ⚠
   "modelAnswer": "At [Company], I led [specific situation]. My task was [clear objective]. I [specific actions with details]. This resulted in [quantified outcome with business impact]."
 }
 
-Focus on STAR structure and make the model answer relevant to the specific question. Keep improvement points concise but actionable. JSON only.`;
+Focus on STAR structure and make the model answer relevant to the specific question. Keep improvement points concise but actionable. ${this.getLanguageInstruction(context.language || 'en')} JSON only.`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -539,6 +566,8 @@ Focus on STAR structure and make the model answer relevant to the specific quest
       }
       
       Make it realistic for ${session.experienceLevel} professional in ${session.primaryIndustry}.
+      
+      ${this.getLanguageInstruction(context.language || 'en')}
     `;
 
     try {
