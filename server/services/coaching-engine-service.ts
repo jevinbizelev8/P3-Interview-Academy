@@ -419,46 +419,58 @@ export class CoachingEngineService {
     const { session } = context;
 
     const feedbackPrompt = `
-      Generate comprehensive coaching feedback based on STAR analysis for ${session.primaryIndustry} interview.
-      
-      User Response: "${userResponse}"
-      
-      STAR Scores:
-      - Situation: ${starAnalysis.situation.score}/5
-      - Task: ${starAnalysis.task.score}/5
-      - Action: ${starAnalysis.action.score}/5
-      - Result: ${starAnalysis.result.score}/5
-      - Overall Flow: ${starAnalysis.overallFlow.score}/5
-      
-      Context:
-      - Industry: ${session.primaryIndustry}
-      - Experience Level: ${session.experienceLevel}
-      - Interview Stage: ${session.interviewStage}
-      
-      Generate detailed feedback with:
-      1. 2-3 specific coaching tips for improvement
-      2. Industry-specific model STAR answer
-      3. 3-4 actionable learning points
-      4. Next steps for skill development
-      
-      Use British English, be constructive and encouraging while being specific about improvements.
-      Focus on ${session.primaryIndustry} industry best practices and ${session.experienceLevel} level expectations.
-    `;
+You are an expert interview coach. Analyze this response and provide concise, actionable feedback in JSON format:
+
+**Question Context:** ${session.jobPosition} at ${session.companyName || 'target company'} (${session.interviewStage} stage)
+**User Response:** "${userResponse}"
+
+STAR Scores: Situation ${starAnalysis.situation.score}/5, Task ${starAnalysis.task.score}/5, Action ${starAnalysis.action.score}/5, Result ${starAnalysis.result.score}/5
+
+Provide feedback in this exact JSON structure:
+{
+  "improvementPoints": [
+    "✓ Brief point about what they did well (max 15 words)",
+    "⚠ Brief improvement needed (max 15 words)", 
+    "⚠ Another specific improvement (max 15 words)",
+    "⚠ Final actionable tip (max 15 words)"
+  ],
+  "modelAnswer": "A complete, well-structured STAR response example (2-3 sentences per component) that demonstrates the ideal way to answer this question for a ${session.jobPosition} role. Keep it realistic and specific to the industry context."
+}
+
+Guidelines:
+- Keep improvement points very brief and actionable
+- Use ✓ for 1 thing they did well, ⚠ for 3 areas to improve
+- Model answer should be complete but concise
+- Focus on most critical improvements for ${session.jobPosition} roles
+- Use British English, be constructive and specific`;
 
     try {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: feedbackPrompt }],
-        maxTokens: 1200,
+        maxTokens: 800,
         temperature: 0.7
       });
       
-      return {
-        tips: this.extractCoachingTips(response.content),
-        modelAnswer: await this.generateModelAnswer(userResponse, context),
-        starAnalysis,
-        learningPoints: this.extractLearningPoints(response.content),
-        nextSteps: this.extractNextSteps(response.content)
-      };
+      // Parse JSON response
+      const cleanResponse = response.content.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
+      
+      if (jsonMatch) {
+        const feedback = JSON.parse(jsonMatch[0]);
+        return {
+          improvementPoints: feedback.improvementPoints || [],
+          modelAnswer: feedback.modelAnswer || '',
+          starScores: {
+            situation: starAnalysis.situation.score,
+            task: starAnalysis.task.score,
+            action: starAnalysis.action.score,
+            result: starAnalysis.result.score,
+            overall: Math.round((starAnalysis.situation.score + starAnalysis.task.score + starAnalysis.action.score + starAnalysis.result.score) / 4)
+          }
+        };
+      }
+      
+      return this.getDefaultCoachingFeedback(starAnalysis);
     } catch (error) {
       console.error('Error generating coaching feedback:', error);
       return this.getDefaultCoachingFeedback(starAnalysis);
