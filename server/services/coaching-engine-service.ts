@@ -1,4 +1,5 @@
 import { sealionService } from './sealion';
+import { aiRouter } from './ai-router';
 import { industryIntelligenceService } from './industry-intelligence-service';
 import { storage } from '../storage';
 import type { 
@@ -225,36 +226,53 @@ export class CoachingEngineService {
     const { session } = context;
     
     const introPrompt = `
-      Create a warm, professional coaching introduction for an interview preparation session.
+      Create a comprehensive, professional coaching introduction for an interview preparation session that sets the scene and context.
       
       Session Details:
       - Job Position: ${session.jobPosition}
-      - Company: ${session.companyName || 'Not specified'}
+      - Company: ${session.companyName || 'target company'}
       - Interview Stage: ${session.interviewStage}
       - Industry: ${session.primaryIndustry || 'General'}
       - Experience Level: ${session.experienceLevel}
       - Specializations: ${JSON.stringify(session.specializations)}
+      - Total Questions: ${session.totalQuestions}
+      - Session Duration: ${session.timeAllocation} minutes
       
-      Create a personalized introduction that:
-      1. Welcomes the candidate warmly
-      2. Explains the coaching process
-      3. Sets expectations for the session
-      4. Mentions the industry-specific focus if applicable
-      5. Encourages confidence and engagement
+      Create a detailed introduction that includes:
+      1. Warm welcome addressing the specific role and company
+      2. Clear explanation of the ${session.interviewStage} interview stage and what to expect
+      3. Industry-specific context (if ${session.primaryIndustry} is specified)
+      4. Overview of the STAR method for structuring responses
+      5. Session format: ${session.totalQuestions} questions over ${session.timeAllocation} minutes
+      6. Encouragement tailored to their ${session.experienceLevel} level
+      7. Brief explanation of what this interview stage typically assesses
       
-      Use British English and keep it concise but encouraging (2-3 sentences max).
+      Include specific context about:
+      - What ${session.interviewStage.replace('-', ' ')} interviews typically focus on
+      - How ${session.primaryIndustry || 'this industry'} companies evaluate candidates at this stage
+      - What interviewers are looking for in ${session.experienceLevel} candidates
+      
+      Use British English, be encouraging but professional. Aim for 4-5 sentences that set proper expectations.
     `;
 
     try {
-      const response = await sealionService.generateResponse({
+      const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: introPrompt }],
         maxTokens: 400,
         temperature: 0.7
       });
-      return response.trim();
+      return response.content.trim();
     } catch (error) {
       console.error('Error generating coaching introduction:', error);
-      return `Welcome to your ${session.interviewStage.replace('-', ' ')} coaching session! I'll be guiding you through ${session.primaryIndustry ? `${session.primaryIndustry} industry-specific` : ''} interview questions to help you prepare. Let's begin with confidence and focus on building your skills!`;
+      const stageDescription = {
+        'phone-screening': 'initial screening to assess basic qualifications and cultural fit',
+        'functional-team': 'technical assessment with team members to evaluate practical skills',
+        'hiring-manager': 'strategic discussion about role expectations and career alignment', 
+        'subject-matter-expertise': 'deep technical evaluation with industry experts',
+        'executive-final': 'final decision-making conversation with senior leadership'
+      }[session.interviewStage] || 'interview assessment';
+
+      return `Welcome to your ${session.interviewStage.replace('-', ' ')} coaching session for the ${session.jobPosition} role at ${session.companyName || 'your target company'}! This stage typically involves ${stageDescription}. I'll be guiding you through ${session.totalQuestions} ${session.primaryIndustry ? `${session.primaryIndustry} industry-specific` : ''} interview questions using the STAR method over ${session.timeAllocation} minutes. As a ${session.experienceLevel} professional, we'll focus on showcasing your expertise and building your confidence for this critical interview stage!`;
     }
   }
 
@@ -307,12 +325,12 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.generateResponse({
+      const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: questionPrompt }],
         maxTokens: 600,
         temperature: 0.8
       });
-      return response.trim();
+      return response.content.trim();
     } catch (error) {
       console.error('Error generating contextual question:', error);
       
@@ -392,12 +410,12 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.generateResponse({
+      const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: analysisPrompt }],
         maxTokens: 1000,
         temperature: 0.3
       });
-      const cleanResponse = response.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      const cleanResponse = response.content.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
       
       if (jsonMatch) {
@@ -449,18 +467,18 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.generateResponse({
+      const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: feedbackPrompt }],
         maxTokens: 1200,
         temperature: 0.7
       });
       
       return {
-        tips: this.extractCoachingTips(response),
+        tips: this.extractCoachingTips(response.content),
         modelAnswer: await this.generateModelAnswer(userResponse, context),
         starAnalysis,
-        learningPoints: this.extractLearningPoints(response),
-        nextSteps: this.extractNextSteps(response)
+        learningPoints: this.extractLearningPoints(response.content),
+        nextSteps: this.extractNextSteps(response.content)
       };
     } catch (error) {
       console.error('Error generating coaching feedback:', error);
@@ -498,12 +516,12 @@ export class CoachingEngineService {
     `;
 
     try {
-      const response = await sealionService.generateResponse({
+      const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: modelAnswerPrompt }],
         maxTokens: 800,
         temperature: 0.5
       });
-      const cleanResponse = response.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
+      const cleanResponse = response.content.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
       const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
       
       if (jsonMatch) {
