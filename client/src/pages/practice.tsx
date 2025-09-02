@@ -1,6 +1,5 @@
 import { Switch, Route } from "wouter";
 import MainNav from "@/components/navigation/main-nav";
-import ModuleSwitcher from "@/components/navigation/module-switcher";
 import ScenarioSelection from "./practice/scenario-selection";
 import PreInterviewBriefing from "./practice/pre-interview-briefing";
 import InterviewPractice from "./practice/interview-practice";
@@ -11,9 +10,8 @@ export default function Practice() {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
       <MainNav currentModule="practice" />
-      <ModuleSwitcher currentModule="practice" />
 
       {/* Routes */}
       <Switch>
