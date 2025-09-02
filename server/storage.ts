@@ -115,7 +115,7 @@ export class DatabaseStorage implements IStorage {
         averageRating: sql<number>`COALESCE(AVG(${interviewSessions.overallScore}), 0)::numeric`,
       })
       .from(interviewScenarios)
-      .leftJoin(interviewSessions, eq(interviewScenarios.id, interviewSessions.scenarioId))
+      .leftJoin(interviewSessions, sql`${interviewScenarios.id}::text = ${interviewSessions.scenarioId}`)
       .groupBy(interviewScenarios.id)
       .orderBy(desc(interviewScenarios.createdAt));
 
