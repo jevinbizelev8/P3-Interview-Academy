@@ -303,6 +303,22 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                                 : 'bg-white border border-gray-200'
                             }`}>
                               <div className="text-sm whitespace-pre-wrap">{message.content}</div>
+                              
+                              {/* Show translation if available and language is not English */}
+                              {message.messageType === 'coach' && selectedLanguage !== 'en' && (message as any).translation && (
+                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Globe className="h-3 w-3 text-gray-400" />
+                                    <span className="text-xs text-gray-500 font-medium">
+                                      {languages.find(l => l.code === selectedLanguage)?.name} Translation
+                                    </span>
+                                  </div>
+                                  <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                                    {(message as any).translation}
+                                  </div>
+                                </div>
+                              )}
+                              
                               <div className={`flex items-center gap-1 mt-2 text-xs ${
                                 message.messageType === 'user' ? 'text-blue-100' : 'text-gray-500'
                               }`}>

@@ -2,6 +2,7 @@ import { sealionService } from './sealion';
 import { aiRouter } from './ai-router';
 import { industryIntelligenceService } from './industry-intelligence-service';
 import { storage } from '../storage';
+import { translationService } from './translation-service';
 import type { 
   CoachingSession,
   CoachingMessage,
@@ -16,6 +17,7 @@ import type {
 
 export interface CoachingResponse {
   question?: string;
+  questionTranslation?: string;
   feedback?: {
     tips: string[];
     modelAnswer: any;
@@ -23,7 +25,13 @@ export interface CoachingResponse {
     learningPoints: string[];
     nextSteps: string[];
   };
+  feedbackTranslation?: {
+    tips: string[];
+    modelAnswer: any;
+    improvementPoints: string[];
+  };
   conversationComplete?: boolean;
+  language?: string;
 }
 
 export interface CoachingContext {
@@ -128,9 +136,20 @@ export class CoachingEngineService {
         currentQuestion: 1
       });
 
+      // Translate content if language is not English
+      let combinedQuestion = `${cleanIntroduction}\n\n**Question 1:**\n${cleanFirstQuestion}`;
+      let questionTranslation: string | undefined;
+      
+      if (context.language && context.language !== 'en') {
+        const translation = await translationService.translateContent(combinedQuestion, context.language);
+        questionTranslation = translation.translated;
+      }
+
       return {
-        question: `${cleanIntroduction}\n\n**Question 1:**\n${cleanFirstQuestion}`,
-        conversationComplete: false
+        question: combinedQuestion,
+        questionTranslation,
+        conversationComplete: false,
+        language: context.language
       };
 
     } catch (error) {
@@ -236,18 +255,83 @@ export class CoachingEngineService {
           overallProgress: progressPercentage
         });
 
+        // Translate feedback and question if language is not English
+        let feedbackTranslation: any = undefined;
+        let questionTranslation: string | undefined;
+        
+        if (context.language && context.language !== 'en') {
+          // Translate feedback components
+          if (cleanedFeedback?.improvementPoints) {
+            const translatedPoints = await translationService.translateBatch(
+              cleanedFeedback.improvementPoints, 
+              context.language
+            );
+            feedbackTranslation = {
+              ...feedbackTranslation,
+              improvementPoints: translatedPoints.map(t => t.translated)
+            };
+          }
+          
+          if (cleanedFeedback?.modelAnswer) {
+            const translatedModel = await translationService.translateContent(
+              cleanedFeedback.modelAnswer, 
+              context.language
+            );
+            feedbackTranslation = {
+              ...feedbackTranslation,
+              modelAnswer: translatedModel.translated
+            };
+          }
+          
+          // Translate next question
+          const translatedQuestion = await translationService.translateContent(cleanNextQuestion, context.language);
+          questionTranslation = translatedQuestion.translated;
+        }
+
         return {
           feedback: cleanedFeedback,
+          feedbackTranslation,
           question: cleanNextQuestion,
-          conversationComplete: false
+          questionTranslation,
+          conversationComplete: false,
+          language: context.language
         };
       } else {
         // Complete the coaching session
         await this.completeCoachingSession(sessionId, context);
         
+        // Translate final feedback if language is not English
+        let feedbackTranslation: any = undefined;
+        
+        if (context.language && context.language !== 'en') {
+          if (cleanedFeedback?.improvementPoints) {
+            const translatedPoints = await translationService.translateBatch(
+              cleanedFeedback.improvementPoints, 
+              context.language
+            );
+            feedbackTranslation = {
+              ...feedbackTranslation,
+              improvementPoints: translatedPoints.map(t => t.translated)
+            };
+          }
+          
+          if (cleanedFeedback?.modelAnswer) {
+            const translatedModel = await translationService.translateContent(
+              cleanedFeedback.modelAnswer, 
+              context.language
+            );
+            feedbackTranslation = {
+              ...feedbackTranslation,
+              modelAnswer: translatedModel.translated
+            };
+          }
+        }
+
         return {
           feedback: cleanedFeedback,
-          conversationComplete: true
+          feedbackTranslation,
+          conversationComplete: true,
+          language: context.language
         };
       }
 
@@ -311,8 +395,7 @@ export class CoachingEngineService {
   private async generateCoachingIntroduction(context: CoachingContext): Promise<string> {
     const { session } = context;
     
-    const languageInstruction = this.getLanguageInstruction(context.language || 'en');
-    const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, ${languageInstruction}, encouraging tone for ${session.experienceLevel} level.`;
+    const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, respond in English, encouraging tone for ${session.experienceLevel} level.`;
 
     try {
       // console.log(`🎤 Generating introduction in language: ${context.language}`);
@@ -353,8 +436,7 @@ export class CoachingEngineService {
       .map(m => `${m.messageType}: ${m.content}`)
       .join('\n');
 
-    const languageInstruction = this.getLanguageInstruction(context.language || 'en');
-    const questionPrompt = `Generate a concise ${session.interviewStage} interview question for ${session.jobPosition}. Requirements: ${session.experienceLevel} level, STAR-suitable, industry-relevant for ${session.primaryIndustry}. Format: "Question text" followed by "Context: Why this matters (1 sentence)". Keep total under 50 words. ${languageInstruction}.`;
+    const questionPrompt = `Generate a concise ${session.interviewStage} interview question for ${session.jobPosition}. Requirements: ${session.experienceLevel} level, STAR-suitable, industry-relevant for ${session.primaryIndustry}. Format: "Question text" followed by "Context: Why this matters (1 sentence)". Keep total under 50 words. Respond in English.`;
 
     try {
       // console.log(`❓ Generating question in language: ${context.language}`);
@@ -442,7 +524,7 @@ export class CoachingEngineService {
       
       Focus on ${session.primaryIndustry} industry standards and ${session.interviewStage} expectations.
       
-      ${this.getLanguageInstruction(context.language || 'en')}
+      Respond in English only.
     `;
 
     try {
@@ -529,7 +611,7 @@ Provide feedback with 3-4 improvement points (mix of strengths ✓ and areas ⚠
   "modelAnswer": "At [Company], I led [specific situation]. My task was [clear objective]. I [specific actions with details]. This resulted in [quantified outcome with business impact]."
 }
 
-Focus on STAR structure and make the model answer relevant to the specific question. Keep improvement points concise but actionable. ${this.getLanguageInstruction(context.language || 'en')} JSON only.`;
+Focus on STAR structure and make the model answer relevant to the specific question. Keep improvement points concise but actionable. Respond in English only with valid JSON.`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -597,7 +679,7 @@ Focus on STAR structure and make the model answer relevant to the specific quest
       
       Make it realistic for ${session.experienceLevel} professional in ${session.primaryIndustry}.
       
-      ${this.getLanguageInstruction(context.language || 'en')}
+      Respond in English only.
     `;
 
     try {
