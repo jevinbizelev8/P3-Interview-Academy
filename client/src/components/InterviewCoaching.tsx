@@ -235,33 +235,10 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
 
   return (
     <div className="min-h-screen bg-blue-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">P³</span>
-              </div>
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900">Interview Academy</h1>
-                <div className="flex items-center gap-4 text-sm text-gray-600">
-                  <Badge variant="outline" className="bg-blue-50">Prepare</Badge>
-                  <span>Practice</span>
-                  <span>Perform</span>
-                </div>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">
-              Home
-            </Button>
-          </div>
-        </div>
-      </div>
 
-      {/* Session Info */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+      {/* Session Info Header */}
+      <div className="bg-white border border-gray-200 rounded-lg mb-4 mx-6 mt-4">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
@@ -276,18 +253,10 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDetails(!showDetails)}
-              >
-                {showDetails ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                {showDetails ? 'Hide Details' : 'Show Details'}
-              </Button>
+            <div className="flex items-center gap-2">
               <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                <SelectTrigger className="w-40">
-                  <Globe className="h-4 w-4 mr-2" />
+                <SelectTrigger className="w-36">
+                  <Globe className="h-4 w-4 mr-1" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -295,7 +264,7 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                     <SelectItem key={lang.code} value={lang.code}>
                       <span className="flex items-center gap-2">
                         <span>{lang.flag}</span>
-                        <span>{lang.name}</span>
+                        <span className="text-xs">{lang.name}</span>
                       </span>
                     </SelectItem>
                   ))}
@@ -303,30 +272,11 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
               </Select>
             </div>
           </div>
-          
-          {showDetails && (
-            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-              <p className="text-sm text-gray-700">
-                Welcome to your interview coaching session for the {sessionDetails.jobPosition} role at {sessionDetails.companyName}. 
-                Remember to use the STAR method—Situation, Task, Action, Result—to structure your responses effectively. 
-                You'll have {sessionDetails.timeAllocation} minutes to tackle {sessionDetails.totalQuestions} questions, 
-                so stay focused and confident as you showcase your skills.
-              </p>
-              <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {sessionDetails.timeAllocation}min
-                </span>
-                <span>{sessionDetails.totalQuestions} questions</span>
-                <span>STAR Method</span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="max-w-6xl mx-auto px-6 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Chat Area */}
           <div className="lg:col-span-2">
