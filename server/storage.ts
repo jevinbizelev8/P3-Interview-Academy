@@ -318,76 +318,92 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserInterviewSessions(userId: string): Promise<InterviewSessionWithScenario[]> {
+    // First get all sessions for the user without JOIN to avoid type conflicts
     const sessions = await db
-      .select({
-        // Session fields
-        id: interviewSessions.id,
-        userId: interviewSessions.userId,
-        scenarioId: interviewSessions.scenarioId,
-        status: interviewSessions.status,
-        currentQuestion: interviewSessions.currentQuestion,
-        totalQuestions: interviewSessions.totalQuestions,
-        startedAt: interviewSessions.startedAt,
-        completedAt: interviewSessions.completedAt,
-        duration: interviewSessions.duration,
-        overallScore: interviewSessions.overallScore,
-        situationScore: interviewSessions.situationScore,
-        taskScore: interviewSessions.taskScore,
-        actionScore: interviewSessions.actionScore,
-        resultScore: interviewSessions.resultScore,
-        flowScore: interviewSessions.flowScore,
-        qualitativeFeedback: interviewSessions.qualitativeFeedback,
-        strengths: interviewSessions.strengths,
-        improvements: interviewSessions.improvements,
-        recommendations: interviewSessions.recommendations,
-        transcript: interviewSessions.transcript,
-        userJobPosition: interviewSessions.userJobPosition,
-        userCompanyName: interviewSessions.userCompanyName,
-        interviewLanguage: interviewSessions.interviewLanguage,
-        autoSavedAt: interviewSessions.autoSavedAt,
-        createdAt: interviewSessions.createdAt,
-        updatedAt: interviewSessions.updatedAt,
-        // Scenario fields
-        scenario: {
-          id: interviewScenarios.id,
-          title: interviewScenarios.title,
-          interviewStage: interviewScenarios.interviewStage,
-          industry: interviewScenarios.industry,
-          jobRole: interviewScenarios.jobRole,
-          companyBackground: interviewScenarios.companyBackground,
-          roleDescription: interviewScenarios.roleDescription,
-          candidateBackground: interviewScenarios.candidateBackground,
-          keyObjectives: interviewScenarios.keyObjectives,
-          interviewerName: interviewScenarios.interviewerName,
-          interviewerTitle: interviewScenarios.interviewerTitle,
-          interviewerStyle: interviewScenarios.interviewerStyle,
-          personalityTraits: interviewScenarios.personalityTraits,
-          status: interviewScenarios.status,
-          createdBy: interviewScenarios.createdBy,
-          createdAt: interviewScenarios.createdAt,
-          updatedAt: interviewScenarios.updatedAt,
-        },
-      })
+      .select()
       .from(interviewSessions)
-      .innerJoin(interviewScenarios, eq(interviewSessions.scenarioId, interviewScenarios.id))
       .where(eq(interviewSessions.userId, userId))
       .orderBy(desc(interviewSessions.createdAt));
 
-    // Add messages to each session
-    const sessionsWithMessages = await Promise.all(
+    // Process each session and add scenario data
+    const sessionsWithScenarios = await Promise.all(
       sessions.map(async (session) => {
-        const messages = await this.getSessionMessages(session.id);
+        let scenario = null;
+        
+        // Handle dynamic scenarios vs UUID scenarios
+        if (session.scenarioId?.startsWith('dynamic-')) {
+          const [, stage] = session.scenarioId.split('-');
+          scenario = {
+            id: session.scenarioId,
+            title: `${stage.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} Interview`,
+            interviewStage: stage,
+            industry: 'Technology',
+            jobRole: session.userJobPosition || 'Software Engineer',
+            companyBackground: session.userCompanyName || 'Technology Company',
+            roleDescription: `${session.userJobPosition} role`,
+            candidateBackground: 'Experienced professional',
+            keyObjectives: `Assess candidate suitability for ${session.userJobPosition} role`,
+            interviewerName: 'AI Interviewer',
+            interviewerTitle: 'Professional Interview Assistant',
+            interviewerStyle: 'Professional and engaging',
+            personalityTraits: 'Thoughtful and supportive',
+            status: 'active',
+            createdBy: 'system',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            sessionCount: 0,
+            averageRating: 0
+          };
+        } else if (session.scenarioId) {
+          // Try to fetch from database for UUID scenarios (only if it looks like a UUID)
+          const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(session.scenarioId);
+          if (isUUID) {
+            try {
+              const [dbScenario] = await db
+                .select()
+                .from(interviewScenarios)
+                .where(eq(interviewScenarios.id, session.scenarioId));
+              scenario = dbScenario;
+            } catch (error) {
+              console.error('Error fetching scenario:', error);
+              // Fallback scenario
+              scenario = {
+                id: session.scenarioId,
+                title: 'Interview',
+                interviewStage: 'general',
+                industry: 'General',
+                jobRole: session.userJobPosition || 'Professional',
+                companyBackground: session.userCompanyName || 'Company',
+                roleDescription: 'Professional role',
+                candidateBackground: 'Experienced professional',
+                keyObjectives: 'Assess candidate suitability',
+                interviewerName: 'AI Interviewer',
+                interviewerTitle: 'Professional Interview Assistant',
+                interviewerStyle: 'Professional and engaging',
+                personalityTraits: 'Thoughtful and supportive',
+                status: 'active',
+                createdBy: 'system',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                sessionCount: 0,
+                averageRating: 0
+              };
+            }
+          }
+        }
+
         return { 
           ...session, 
+          scenario,
           userJobPosition: session.userJobPosition || null,
           userCompanyName: session.userCompanyName || null,
           interviewLanguage: session.interviewLanguage || 'en',
-          messages 
+          messages: [] // Don't load messages for the sessions list to avoid type conflicts
         };
       })
     );
 
-    return sessionsWithMessages;
+    return sessionsWithScenarios;
   }
 
   async autoSaveSession(sessionId: string, data: Partial<InsertInterviewSession>): Promise<void> {

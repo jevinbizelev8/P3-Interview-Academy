@@ -19,7 +19,8 @@ import {
   BookOpen,
   Target,
   Star,
-  Clock
+  Clock,
+  CheckCircle
 } from 'lucide-react';
 
 interface CoachingMessage {
@@ -64,6 +65,9 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
   const [currentResponse, setCurrentResponse] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [completionData, setCompletionData] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -158,6 +162,23 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
       startConversationMutation.mutate();
     }
   }, [sessionId, messages.length]);
+
+  // Complete session and get model answers
+  const handleCompleteSession = async () => {
+    setIsCompleting(true);
+    try {
+      const response = await apiRequest('POST', `/api/coaching/sessions/${sessionId}/complete`);
+      if (response.ok) {
+        const result = await response.json();
+        setCompletionData(result.data);
+        setShowCompletion(true);
+      }
+    } catch (error) {
+      console.error('Error completing session:', error);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   const renderSTARAnalysis = (feedback: CoachingMessage['feedback']) => {
     if (!feedback?.starAnalysis) return null;
@@ -290,26 +311,28 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      {/* Session Header */}
-      <Card className="rounded-none border-x-0 border-t-0">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-50">
+      {/* Simplified Header */}
+      <div className="bg-white border-b border-gray-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+              <Bot className="h-6 w-6 text-white" />
+            </div>
             <div>
-              <CardTitle className="text-lg">Interview Coaching Session</CardTitle>
-              <p className="text-sm text-gray-600 mt-1">
-                {sessionDetails.jobPosition} • {sessionDetails.interviewStage}
+              <h1 className="text-xl font-semibold text-gray-900">AI Interview Coach</h1>
+              <p className="text-sm text-gray-600">
+                {sessionDetails.jobPosition} • {sessionDetails.interviewStage.replace('-', ' ')}
               </p>
             </div>
-            <div className="flex gap-2">
-              {sessionDetails.primaryIndustry && (
-                <Badge variant="secondary">{sessionDetails.primaryIndustry}</Badge>
-              )}
-              <Badge variant="outline">{sessionDetails.experienceLevel}</Badge>
-            </div>
           </div>
-        </CardHeader>
-      </Card>
+          {sessionDetails.primaryIndustry && (
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              {sessionDetails.primaryIndustry}
+            </Badge>
+          )}
+        </div>
+      </div>
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
@@ -356,12 +379,39 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
                 </div>
 
                 {message.role === 'coach' && message.feedback && (
-                  <div className="mt-4">
-                    <StructuredFeedbackCard 
-                      feedback={message.feedback as any}
-                      questionText={message.questionData?.question}
-                      responseText={messages.find(m => m.timestamp < message.timestamp && m.role === 'user')?.content}
-                    />
+                  <div className="mt-4 space-y-3">
+                    {/* Immediate Coaching Tips */}
+                    {message.feedback.tips && message.feedback.tips.length > 0 && (
+                      <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Lightbulb className="h-4 w-4 text-blue-600" />
+                          <span className="font-medium text-blue-800 text-sm">Coach's Guidance</span>
+                        </div>
+                        <ul className="space-y-1 text-sm text-blue-900">
+                          {message.feedback.tips.slice(0, 2).map((tip, index) => (
+                            <li key={index} className="flex items-start gap-2">
+                              <span className="text-blue-500 mt-1">•</span>
+                              <span>{tip}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    
+                    {/* Quick STAR Score if available */}
+                    {message.feedback.starAnalysis && (
+                      <div className="bg-white border border-gray-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Star className="h-4 w-4 text-yellow-500" />
+                            <span className="text-sm font-medium text-gray-700">Response Score</span>
+                          </div>
+                          <span className="text-lg font-bold text-blue-600">
+                            {message.feedback.starAnalysis.overall}/10
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -397,37 +447,89 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
       {/* Input Area */}
       <Card className="rounded-none border-x-0 border-b-0">
         <CardContent className="p-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex gap-3">
-              <Textarea
-                value={currentResponse}
-                onChange={(e) => setCurrentResponse(e.target.value)}
-                onKeyDown={handleKeyPress}
-                placeholder="Type your response here... (Press Enter to send)"
-                className="flex-1 min-h-[60px] resize-none"
-                disabled={isLoading}
-              />
-              <div className="flex flex-col gap-2">
-                <Button
-                  size="icon"
-                  variant={isRecording ? "destructive" : "outline"}
-                  onClick={() => setIsRecording(!isRecording)}
-                  disabled={isLoading}
-                >
-                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </Button>
-                <Button
-                  size="icon"
-                  onClick={handleSendResponse}
-                  disabled={!currentResponse.trim() || isLoading}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
+          <div className="max-w-4xl mx-auto space-y-4">
+            {!showCompletion && (
+              <>
+                <div className="flex gap-3">
+                  <Textarea
+                    value={currentResponse}
+                    onChange={(e) => setCurrentResponse(e.target.value)}
+                    onKeyDown={handleKeyPress}
+                    placeholder="Type your response here... (Press Enter to send)"
+                    className="flex-1 min-h-[60px] resize-none"
+                    disabled={isLoading}
+                  />
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="icon"
+                      variant={isRecording ? "destructive" : "outline"}
+                      onClick={() => setIsRecording(!isRecording)}
+                      disabled={isLoading}
+                    >
+                      {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                    </Button>
+                    <Button
+                      size="icon"
+                      onClick={handleSendResponse}
+                      disabled={!currentResponse.trim() || isLoading}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-gray-500">
+                    Press Enter to send • Shift+Enter for new line
+                  </p>
+                  
+                  {messages.length > 4 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCompleteSession}
+                      disabled={isCompleting}
+                      className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
+                    >
+                      {isCompleting ? "Generating Model Answers..." : "Complete Session & Get Model Answers"}
+                    </Button>
+                  )}
+                </div>
+              </>
+            )}
+            
+            {/* Session Completion View */}
+            {showCompletion && completionData && (
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-6">
+                <div className="text-center mb-4">
+                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <CheckCircle className="h-8 w-8 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-green-900 mb-2">
+                    Session Complete! 🎉
+                  </h3>
+                  <p className="text-green-700 mb-4">
+                    Great work! Here are the model answers for your reference:
+                  </p>
+                </div>
+                
+                <div className="bg-white rounded-lg p-4 border border-green-200">
+                  <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2">
+                    <Target className="h-4 w-4 text-green-600" />
+                    Model Answers & Key Insights
+                  </h4>
+                  <div className="text-sm text-gray-700 whitespace-pre-line">
+                    {completionData.summary || "Your coaching session has been completed successfully. You demonstrated good interview skills and received valuable feedback throughout the session."}
+                  </div>
+                </div>
+                
+                <div className="flex justify-center mt-4">
+                  <Button onClick={() => window.location.href = '/prepare'}>
+                    Start New Session
+                  </Button>
+                </div>
               </div>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Press Enter to send • Shift+Enter for new line
-            </p>
+            )}
           </div>
         </CardContent>
       </Card>

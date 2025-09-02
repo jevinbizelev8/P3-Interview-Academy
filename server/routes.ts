@@ -18,6 +18,7 @@ import {
 import { z } from "zod";
 import { errorLogger, logAPIError } from "./services/error-logger";
 import { coachingRouter } from "./routes/coaching";
+import { coachingEngineService } from "./services/coaching-engine-service";
 
 // Extend Express Request to include user property
 declare global {
@@ -1333,7 +1334,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // COACHING MODULE API ROUTES
   // ================================
   
-  app.use('/api/coaching', addMockUser, coachingRouter);
+
+  // Coaching sessions API routes (inline for better compatibility)
+  app.post('/api/coaching/sessions', addMockUser, async (req, res) => {
+    try {
+      const userId = req.user?.id || 'dev-user-123';
+      const validatedData = z.object({
+        jobPosition: z.string().min(1, 'Job position is required'),
+        companyName: z.string().optional(),
+        interviewStage: z.enum(['phone-screening', 'functional-team', 'hiring-manager', 'subject-matter-expertise', 'executive-final']),
+        primaryIndustry: z.string().optional(),
+        specializations: z.array(z.string()).default([]),
+        experienceLevel: z.enum(['intermediate', 'senior', 'expert']).default('intermediate'),
+        companyContext: z.object({
+          type: z.enum(['startup', 'enterprise', 'consulting', 'agency']).default('enterprise'),
+          businessModel: z.string().default(''),
+          technicalStack: z.array(z.string()).default([])
+        }).default({})
+      }).parse(req.body);
+
+      const session = await storage.createCoachingSession({
+        userId,
+        ...validatedData
+      });
+
+      res.status(201).json({
+        success: true,
+        data: session
+      });
+    } catch (error) {
+      console.error('Error creating coaching session:', error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid session data',
+          errors: error.errors
+        });
+      }
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create coaching session'
+      });
+    }
+  });
+
+  // Start coaching conversation
+  app.post('/api/coaching/sessions/:sessionId/start', addMockUser, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const session = await storage.getCoachingSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Coaching session not found'
+        });
+      }
+
+      // Verify user owns the session
+      if (session.userId !== (req.user?.id || 'dev-user-123')) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+
+      const response = await coachingEngineService.startCoachingConversation(sessionId);
+
+      res.json({
+        success: true,
+        data: response
+      });
+    } catch (error) {
+      console.error('Error starting coaching conversation:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to start coaching conversation'
+      });
+    }
+  });
+
+  // Process user response with immediate AI guidance
+  app.post('/api/coaching/sessions/:sessionId/respond', addMockUser, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const { response } = req.body;
+      
+      if (!response) {
+        return res.status(400).json({
+          success: false,
+          message: 'Response is required'
+        });
+      }
+
+      const session = await storage.getCoachingSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Coaching session not found'
+        });
+      }
+
+      // Verify user owns the session
+      if (session.userId !== (req.user?.id || 'dev-user-123')) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+
+      const coachingResponse = await coachingEngineService.processCoachingResponse(
+        sessionId,
+        response
+      );
+
+      res.json({
+        success: true,
+        data: coachingResponse
+      });
+    } catch (error) {
+      console.error('Error processing coaching response:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to process coaching response'
+      });
+    }
+  });
+
+  // Complete coaching session and get model answers
+  app.post('/api/coaching/sessions/:sessionId/complete', addMockUser, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const session = await storage.getCoachingSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Coaching session not found'
+        });
+      }
+
+      // Verify user owns the session
+      if (session.userId !== (req.user?.id || 'dev-user-123')) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+
+      const completion = await coachingEngineService.completeCoachingSession(sessionId);
+
+      res.json({
+        success: true,
+        data: completion
+      });
+    } catch (error) {
+      console.error('Error completing coaching session:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to complete coaching session'
+      });
+    }
+  });
 
   // ================================
   // ENHANCED QUESTION BANK API ROUTES

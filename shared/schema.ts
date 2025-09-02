@@ -547,48 +547,7 @@ export const starPracticeSessionsRelations = relations(starPracticeSessions, ({ 
   }),
 }));
 
-// Relations for industry-specific coaching system
-export const coachingSessionsRelations = relations(coachingSessions, ({ one, many }) => ({
-  user: one(users, {
-    fields: [coachingSessions.userId],
-    references: [users.id],
-  }),
-  messages: many(coachingMessages),
-  feedback: many(coachingFeedback),
-}));
-
-export const coachingMessagesRelations = relations(coachingMessages, ({ one, many }) => ({
-  session: one(coachingSessions, {
-    fields: [coachingMessages.sessionId],
-    references: [coachingSessions.id],
-  }),
-  feedback: many(coachingFeedback),
-}));
-
-export const industryQuestionsRelations = relations(industryQuestions, ({ one }) => ({
-  createdBy: one(users, {
-    fields: [industryQuestions.createdBy],
-    references: [users.id],
-  }),
-}));
-
-export const industryKnowledgeRelations = relations(industryKnowledge, ({ one }) => ({
-  createdBy: one(users, {
-    fields: [industryKnowledge.createdBy],
-    references: [users.id],
-  }),
-}));
-
-export const coachingFeedbackRelations = relations(coachingFeedback, ({ one }) => ({
-  session: one(coachingSessions, {
-    fields: [coachingFeedback.sessionId],
-    references: [coachingSessions.id],
-  }),
-  message: one(coachingMessages, {
-    fields: [coachingFeedback.messageId],
-    references: [coachingMessages.id],
-  }),
-}));
+// Relations for industry-specific coaching system will be defined after all tables
 
 // Insert schemas for prepare module
 export const insertPreparationSessionSchema = createInsertSchema(preparationSessions).omit({
@@ -637,37 +596,7 @@ export const insertStarPracticeSessionSchema = createInsertSchema(starPracticeSe
   updatedAt: true,
 });
 
-// Insert schemas for industry-specific coaching system
-export const insertCoachingSessionSchema = createInsertSchema(coachingSessions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertCoachingMessageSchema = createInsertSchema(coachingMessages).omit({
-  id: true,
-  timestamp: true,
-  createdAt: true,
-});
-
-export const insertIndustryQuestionSchema = createInsertSchema(industryQuestions).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertIndustryKnowledgeSchema = createInsertSchema(industryKnowledge).omit({
-  id: true,
-  lastUpdated: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertCoachingFeedbackSchema = createInsertSchema(coachingFeedback).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// Insert schemas for industry-specific coaching system will be defined after tables
 
 // Types for prepare module
 export type PreparationSession = typeof preparationSessions.$inferSelect;
@@ -706,29 +635,7 @@ export type PracticeTestWithResults = PracticeTest & {
   attemptCount?: number;
 };
 
-// Types for industry-specific coaching system
-export type CoachingSession = typeof coachingSessions.$inferSelect;
-export type InsertCoachingSession = z.infer<typeof insertCoachingSessionSchema>;
-export type CoachingMessage = typeof coachingMessages.$inferSelect;
-export type InsertCoachingMessage = z.infer<typeof insertCoachingMessageSchema>;
-export type IndustryQuestion = typeof industryQuestions.$inferSelect;
-export type InsertIndustryQuestion = z.infer<typeof insertIndustryQuestionSchema>;
-export type IndustryKnowledge = typeof industryKnowledge.$inferSelect;
-export type InsertIndustryKnowledge = z.infer<typeof insertIndustryKnowledgeSchema>;
-export type CoachingFeedback = typeof coachingFeedback.$inferSelect;
-export type InsertCoachingFeedback = z.infer<typeof insertCoachingFeedbackSchema>;
-
-// Extended types for coaching system API responses
-export type CoachingSessionWithMessages = CoachingSession & {
-  messages: CoachingMessage[];
-  feedback: CoachingFeedback[];
-  industryInsights?: IndustryKnowledge[];
-};
-
-export type CoachingMessageWithFeedback = CoachingMessage & {
-  feedback?: CoachingFeedback[];
-  relatedQuestions?: IndustryQuestion[];
-};
+// Types for industry-specific coaching system will be defined after schemas
 
 export type IndustryQuestionWithContext = IndustryQuestion & {
   industryKnowledge?: IndustryKnowledge;
@@ -859,7 +766,7 @@ export const coachingSessions = pgTable("coaching_sessions", {
 // Coaching conversation messages
 export const coachingMessages = pgTable("coaching_messages", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  sessionId: varchar("session_id").notNull().references(() => coachingSessions.id, { onDelete: "cascade" }),
+  sessionId: uuid("session_id").notNull().references(() => coachingSessions.id, { onDelete: "cascade" }),
   messageType: varchar("message_type", { length: 20 }).notNull(), // coach, user, system
   content: text("content").notNull(),
   
@@ -966,8 +873,8 @@ export const industryKnowledge = pgTable("industry_knowledge", {
 // Structured coaching feedback (tips, model answers, learning paths)
 export const coachingFeedback = pgTable("coaching_feedback", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  sessionId: varchar("session_id").notNull().references(() => coachingSessions.id, { onDelete: "cascade" }),
-  messageId: varchar("message_id").references(() => coachingMessages.id, { onDelete: "cascade" }),
+  sessionId: uuid("session_id").notNull().references(() => coachingSessions.id, { onDelete: "cascade" }),
+  messageId: uuid("message_id").references(() => coachingMessages.id, { onDelete: "cascade" }),
   
   // Feedback classification
   feedbackType: varchar("feedback_type", { length: 30 }).notNull(), // coaching_tip, model_answer, learning_path, improvement_area
@@ -1005,3 +912,102 @@ export const coachingFeedback = pgTable("coaching_feedback", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Relations for industry-specific coaching system
+export const coachingSessionsRelations = relations(coachingSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [coachingSessions.userId],
+    references: [users.id],
+  }),
+  messages: many(coachingMessages),
+  feedback: many(coachingFeedback),
+}));
+
+export const coachingMessagesRelations = relations(coachingMessages, ({ one, many }) => ({
+  session: one(coachingSessions, {
+    fields: [coachingMessages.sessionId],
+    references: [coachingSessions.id],
+  }),
+  feedback: many(coachingFeedback),
+}));
+
+export const industryQuestionsRelations = relations(industryQuestions, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [industryQuestions.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const industryKnowledgeRelations = relations(industryKnowledge, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [industryKnowledge.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const coachingFeedbackRelations = relations(coachingFeedback, ({ one }) => ({
+  session: one(coachingSessions, {
+    fields: [coachingFeedback.sessionId],
+    references: [coachingSessions.id],
+  }),
+  message: one(coachingMessages, {
+    fields: [coachingFeedback.messageId],
+    references: [coachingMessages.id],
+  }),
+}));
+
+// Insert schemas for industry-specific coaching system
+export const insertCoachingSessionSchema = createInsertSchema(coachingSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCoachingMessageSchema = createInsertSchema(coachingMessages).omit({
+  id: true,
+  timestamp: true,
+  createdAt: true,
+});
+
+export const insertIndustryQuestionSchema = createInsertSchema(industryQuestions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIndustryKnowledgeSchema = createInsertSchema(industryKnowledge).omit({
+  id: true,
+  lastUpdated: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCoachingFeedbackSchema = createInsertSchema(coachingFeedback).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for industry-specific coaching system
+export type CoachingSession = typeof coachingSessions.$inferSelect;
+export type InsertCoachingSession = z.infer<typeof insertCoachingSessionSchema>;
+export type CoachingMessage = typeof coachingMessages.$inferSelect;
+export type InsertCoachingMessage = z.infer<typeof insertCoachingMessageSchema>;
+export type IndustryQuestion = typeof industryQuestions.$inferSelect;
+export type InsertIndustryQuestion = z.infer<typeof insertIndustryQuestionSchema>;
+export type IndustryKnowledge = typeof industryKnowledge.$inferSelect;
+export type InsertIndustryKnowledge = z.infer<typeof insertIndustryKnowledgeSchema>;
+export type CoachingFeedback = typeof coachingFeedback.$inferSelect;
+export type InsertCoachingFeedback = z.infer<typeof insertCoachingFeedbackSchema>;
+
+// Extended types for coaching system API responses
+export type CoachingSessionWithMessages = CoachingSession & {
+  messages: CoachingMessage[];
+  feedback: CoachingFeedback[];
+  industryInsights?: IndustryKnowledge[];
+};
+
+export type CoachingMessageWithFeedback = CoachingMessage & {
+  feedback?: CoachingFeedback[];
+  relatedQuestions?: IndustryQuestion[];
+};
