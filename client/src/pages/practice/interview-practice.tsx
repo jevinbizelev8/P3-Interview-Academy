@@ -26,11 +26,8 @@ export default function InterviewPractice() {
   const [autoSaveInterval, setAutoSaveInterval] = useState<NodeJS.Timeout | null>(null);
   const [lastUserResponse, setLastUserResponse] = useState("");
 
-  // Check if this is a coaching session (coaching URLs use different API)
-  const isCoachingSession = window.location.pathname.includes('/coaching/');
-  
   const { data: session, isLoading, error } = useQuery({
-    queryKey: isCoachingSession ? ["/api/coaching/sessions", sessionId] : ["/api/practice/sessions", sessionId],
+    queryKey: ["/api/practice/sessions", sessionId],
     refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
   });
 
