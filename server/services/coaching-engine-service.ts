@@ -172,7 +172,10 @@ export class CoachingEngineService {
       });
 
       // Determine if we should continue or complete the session
-      const shouldContinue = questionNumber < (session.totalQuestions || 15);
+      const totalQuestions = session.totalQuestions || 15;
+      const shouldContinue = questionNumber < totalQuestions;
+      
+      console.log(`Session progress: ${questionNumber}/${totalQuestions}, shouldContinue: ${shouldContinue}`);
       
       if (shouldContinue) {
         // Generate next question
@@ -191,8 +194,10 @@ export class CoachingEngineService {
         });
 
         // Update session progress
+        const progressPercentage = ((questionNumber + 1) / totalQuestions * 100).toFixed(2);
         await storage.updateCoachingSession(sessionId, {
-          currentQuestion: questionNumber + 1
+          currentQuestion: questionNumber + 1,
+          overallProgress: progressPercentage
         });
 
         return {
