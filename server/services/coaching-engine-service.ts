@@ -82,7 +82,7 @@ export class CoachingEngineService {
         coachingType: 'introduction',
         questionNumber: 0,
         industryContext: context.session.industryContext,
-        aiMetadata: { type: 'introduction', generated: true }
+        aiMetadata: { type: 'introduction', generated: true } as any
       });
 
       await this.saveCoachingMessage(sessionId, {
@@ -92,7 +92,7 @@ export class CoachingEngineService {
         coachingType: 'question',
         questionNumber: 1,
         industryContext: context.session.industryContext,
-        aiMetadata: { type: 'question', questionNumber: 1 }
+        aiMetadata: { type: 'question', questionNumber: 1 } as any
       });
 
       // Update session progress
@@ -168,7 +168,7 @@ export class CoachingEngineService {
         coachingType: 'feedback',
         questionNumber,
         feedback: cleanedFeedback,
-        aiMetadata: { type: 'feedback', questionNumber }
+        aiMetadata: { type: 'feedback', questionNumber } as any
       });
 
       // Determine if we should continue or complete the session
@@ -239,7 +239,7 @@ export class CoachingEngineService {
       questionBank = await storage.getIndustryQuestions({
         industry: session.primaryIndustry,
         interviewStage: session.interviewStage,
-        experienceLevel: session.experienceLevel,
+        difficultyLevel: session.experienceLevel as any,
         limit: 50
       });
     }
@@ -262,7 +262,7 @@ export class CoachingEngineService {
   private async generateCoachingIntroduction(context: CoachingContext): Promise<string> {
     const { session } = context;
     
-    const introPrompt = `Create a professional ${session.interviewStage} interview preparation introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: welcome, stage expectations, STAR method overview, session format (${session.totalQuestions} questions, ${session.timeAllocation}min), and ${session.experienceLevel}-level encouragement. Use British English, 4-5 sentences.`;
+    const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, British English, encouraging tone for ${session.experienceLevel} level.`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -301,7 +301,7 @@ export class CoachingEngineService {
       .map(m => `${m.messageType}: ${m.content}`)
       .join('\n');
 
-    const questionPrompt = `Generate ${session.interviewStage} interview question #${questionNumber} for ${session.jobPosition} at ${session.companyName || 'company'}. Level: ${session.experienceLevel}. Industry: ${session.primaryIndustry}. Make it unique, STAR-method suitable, professional tone. ${conversationHistory ? `Previous: ${conversationHistory.slice(-200)}` : ''}`;
+    const questionPrompt = `Generate a concise ${session.interviewStage} interview question for ${session.jobPosition}. Requirements: ${session.experienceLevel} level, STAR-suitable, industry-relevant for ${session.primaryIndustry}. Format: "Question text" followed by "Context: Why this matters (1 sentence)". Keep total under 50 words.`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -314,7 +314,7 @@ export class CoachingEngineService {
       console.error('Error generating contextual question:', error);
       
       // Fallback to question bank if available
-      if (questionBank.length > 0) {
+      if (questionBank && questionBank.length > 0) {
         const randomQuestion = questionBank[Math.floor(Math.random() * questionBank.length)];
         return `${randomQuestion.questionText}\n\nContext: This question evaluates your ${session.primaryIndustry} experience and problem-solving approach.`;
       }
@@ -419,30 +419,28 @@ export class CoachingEngineService {
     const { session } = context;
 
     const feedbackPrompt = `
-You are an expert interview coach. Analyze this response and provide concise, actionable feedback in JSON format:
+Provide ultra-concise feedback for this interview response in JSON format:
 
-**Question Context:** ${session.jobPosition} at ${session.companyName || 'target company'} (${session.interviewStage} stage)
-**User Response:** "${userResponse}"
+**Role:** ${session.jobPosition} at ${session.companyName || 'target company'}
+**Response:** "${userResponse}"
+**STAR Scores:** S:${starAnalysis.situation.score} T:${starAnalysis.task.score} A:${starAnalysis.action.score} R:${starAnalysis.result.score}
 
-STAR Scores: Situation ${starAnalysis.situation.score}/5, Task ${starAnalysis.task.score}/5, Action ${starAnalysis.action.score}/5, Result ${starAnalysis.result.score}/5
-
-Provide feedback in this exact JSON structure:
+JSON format:
 {
   "improvementPoints": [
-    "✓ Brief point about what they did well (max 15 words)",
-    "⚠ Brief improvement needed (max 15 words)", 
-    "⚠ Another specific improvement (max 15 words)",
-    "⚠ Final actionable tip (max 15 words)"
+    "✓ One thing done well (max 8 words)",
+    "⚠ Key improvement needed (max 8 words)", 
+    "⚠ Another improvement (max 8 words)"
   ],
-  "modelAnswer": "A complete, well-structured STAR response example (2-3 sentences per component) that demonstrates the ideal way to answer this question for a ${session.jobPosition} role. Keep it realistic and specific to the industry context."
+  "modelAnswer": "Concise STAR example showing ideal approach (max 60 words total)"
 }
 
-Guidelines:
-- Keep improvement points very brief and actionable
-- Use ✓ for 1 thing they did well, ⚠ for 3 areas to improve
-- Model answer should be complete but concise
-- Focus on most critical improvements for ${session.jobPosition} roles
-- Use British English, be constructive and specific`;
+Requirements:
+- Max 3 improvement points total
+- Use ✓ for 1 positive, ⚠ for 2 improvements  
+- Extremely brief and actionable
+- Model answer must be under 60 words
+- British English, direct and helpful`;
 
     try {
       const response = await aiRouter.generateResponse({
@@ -747,23 +745,25 @@ Guidelines:
 
   private getDefaultCoachingFeedback(starAnalysis: StarAnalysis): any {
     return {
-      tips: ['Focus on specific examples', 'Include measurable results', 'Use the STAR method structure'],
-      modelAnswer: this.getDefaultModelAnswer(null),
-      starAnalysis,
-      learningPoints: ['Practice quantifying achievements', 'Prepare industry-specific examples'],
-      nextSteps: ['Practice more STAR examples', 'Research industry best practices']
+      improvementPoints: [
+        '✓ Response provided context and situation',
+        '⚠ Add more specific measurable results',
+        '⚠ Include detailed actions taken',
+        '⚠ Structure response using STAR method'
+      ],
+      modelAnswer: 'In my role at [Company], I faced [specific challenge] (Situation). My task was to [objective] (Task). I implemented [specific actions] including [details] (Action). This resulted in [quantified outcome] such as [specific metrics] (Result).',
+      starScores: {
+        situation: starAnalysis.situation.score,
+        task: starAnalysis.task.score,
+        action: starAnalysis.action.score,
+        result: starAnalysis.result.score,
+        overall: Math.round((starAnalysis.situation.score + starAnalysis.task.score + starAnalysis.action.score + starAnalysis.result.score) / 4)
+      }
     };
   }
 
-  private getDefaultModelAnswer(session: CoachingSession | null): any {
-    return {
-      situation: 'In my role as [position] at [company], we faced [specific challenge]...',
-      task: 'My responsibility was to [specific objective]...',
-      action: 'I took the following approach: [specific steps]...',
-      result: 'This resulted in [quantified outcome] and [business impact]...',
-      industryInsights: 'This approach works well because it demonstrates systematic problem-solving.',
-      alternativeApproaches: ['Alternative approach 1', 'Alternative approach 2']
-    };
+  private getDefaultModelAnswer(session: CoachingSession | null): string {
+    return 'In my role at [Company], I faced [specific challenge] (Situation). My task was to [objective] (Task). I implemented [specific actions] including [details] (Action). This resulted in [quantified outcome] such as [specific metrics] (Result).';
   }
 }
 

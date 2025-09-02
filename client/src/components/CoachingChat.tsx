@@ -16,9 +16,14 @@ import {
   Star, 
   Lightbulb, 
   Target, 
-  BookOpen 
+  BookOpen,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { FeedbackCard } from './FeedbackCard';
+import { STARScoreBar } from './STARScoreBar';
+import { QuestionCard } from './QuestionCard';
 
 interface CoachingMessage {
   id: string;
@@ -56,10 +61,13 @@ interface CoachingChatProps {
 
 const cleanMessageContent = (content: string): string => {
   return content
+    .replace(/\*\*Question:\*\*/g, '') // Remove question prefix
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.*?)\*/g, '<em>$1</em>')
     .replace(/^\s*[-*]\s+/gm, '• ')
-    .replace(/\n/g, '<br>');
+    .replace(/\n/g, '<br>')
+    .replace(/^Question \d+:\s*/gm, '') // Remove question numbering
+    .trim();
 };
 
 export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
@@ -69,6 +77,7 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
   const [showCompletion, setShowCompletion] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [completionData, setCompletionData] = useState(null);
+  const [showReferencePanel, setShowReferencePanel] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
@@ -160,212 +169,164 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
     }
   };
 
-  const renderSTARScores = (feedback: CoachingMessage['feedback']) => {
-    if (!feedback?.starScores) return null;
 
-    const getScoreColor = (score: number) => {
-      if (score >= 4) return 'bg-green-100 text-green-800 border-green-200';
-      if (score >= 3) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      return 'bg-red-100 text-red-800 border-red-200';
-    };
+  // Get current question and latest feedback
+  const currentQuestionMsg = messages
+    .filter(m => m.messageType === 'coach' && m.coachingType === 'question')
+    .pop();
+  
+  const latestFeedbackMsg = messages
+    .filter(m => m.messageType === 'coach' && m.coachingType === 'feedback')
+    .pop();
 
-    return (
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className={`p-3 rounded-lg border ${getScoreColor(feedback.starScores.situation)}`}>
-          <div className="text-xs font-medium mb-1">Situation</div>
-          <div className="text-lg font-bold">{feedback.starScores.situation}/5</div>
-        </div>
-        <div className={`p-3 rounded-lg border ${getScoreColor(feedback.starScores.task)}`}>
-          <div className="text-xs font-medium mb-1">Task</div>
-          <div className="text-lg font-bold">{feedback.starScores.task}/5</div>
-        </div>
-        <div className={`p-3 rounded-lg border ${getScoreColor(feedback.starScores.action)}`}>
-          <div className="text-xs font-medium mb-1">Action</div>
-          <div className="text-lg font-bold">{feedback.starScores.action}/5</div>
-        </div>
-        <div className={`p-3 rounded-lg border ${getScoreColor(feedback.starScores.result)}`}>
-          <div className="text-xs font-medium mb-1">Result</div>
-          <div className="text-lg font-bold">{feedback.starScores.result}/5</div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderFeedback = (feedback: CoachingMessage['feedback']) => {
-    if (!feedback) return null;
-
-    return (
-      <div className="space-y-4 mt-4">
-        {/* STAR Scores */}
-        {renderSTARScores(feedback)}
-
-        {/* Improvement Points */}
-        {feedback.improvementPoints && feedback.improvementPoints.length > 0 && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Lightbulb className="h-4 w-4 text-green-600" />
-              <span className="font-medium text-green-900 text-sm">Improvement Points</span>
-            </div>
-            <div className="space-y-2">
-              {feedback.improvementPoints.map((point, index) => (
-                <div key={index} className="flex items-start gap-2 text-sm">
-                  <span className={`flex-shrink-0 ${point.startsWith('✓') ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {point.startsWith('✓') ? '✓' : '⚠'}
-                  </span>
-                  <span className="text-gray-700">{point.substring(2)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Model Answer */}
-        {feedback.modelAnswer && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Target className="h-4 w-4 text-blue-600" />
-              <span className="font-medium text-blue-900 text-sm">Model Answer</span>
-            </div>
-            <div className="text-sm text-gray-700 leading-relaxed">
-              {feedback.modelAnswer}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
+  const currentQuestionNumber = currentQuestionMsg?.questionNumber || 1;
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-blue-50 to-indigo-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Compact Header */}
+      <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <Bot className="h-6 w-6 text-white" />
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+              <Bot className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-gray-900">AI Interview Coach</h1>
-              <p className="text-sm text-gray-600">
-                {sessionDetails.jobPosition} • {sessionDetails.interviewStage.replace('-', ' ')}
+              <h1 className="text-lg font-semibold text-gray-900">Interview Coach</h1>
+              <p className="text-xs text-gray-600">
+                {sessionDetails.jobPosition} • Question {currentQuestionNumber}/{sessionDetails.totalQuestions || 15}
               </p>
             </div>
           </div>
-          {sessionDetails.primaryIndustry && (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-              {sessionDetails.primaryIndustry}
-            </Badge>
-          )}
+          
+          <div className="flex items-center gap-2">
+            {sessionDetails.primaryIndustry && (
+              <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
+                {sessionDetails.primaryIndustry}
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowReferencePanel(!showReferencePanel)}
+              className="lg:hidden"
+            >
+              {showReferencePanel ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1 p-4">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {messages && messages.map((message) => {
-            const cleanedContent = cleanMessageContent(message.content);
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Chat Area */}
+        <div className={`flex-1 flex flex-col ${
+          showReferencePanel ? 'lg:mr-96' : ''
+        } transition-all duration-300`}>
+          <ScrollArea className="flex-1 p-4">
+            <div className="max-w-3xl mx-auto space-y-4">
+              {messages && messages.map((message) => {
+                // Skip feedback messages in chat - they're shown in reference panel
+                if (message.messageType === 'coach' && message.coachingType === 'feedback') {
+                  return null;
+                }
 
-            return (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${message.messageType === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                {message.messageType === 'coach' && (
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <Bot className="h-5 w-5 text-blue-600" />
+                const cleanedContent = cleanMessageContent(message.content);
+
+                return (
+                  <div
+                    key={message.id}
+                    className={`flex gap-3 ${
+                      message.messageType === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {message.messageType === 'coach' && (
+                      <div className="flex-shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Bot className="h-4 w-4 text-blue-600" />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className={`max-w-lg ${
+                      message.messageType === 'user' ? 'order-first' : ''
+                    }`}>
+                      <div
+                        className={`px-4 py-3 rounded-lg ${
+                          message.messageType === 'user'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-gray-900 border border-gray-200'
+                        }`}
+                      >
+                        <div 
+                          className="whitespace-pre-wrap text-sm leading-relaxed"
+                          dangerouslySetInnerHTML={{ __html: cleanedContent }}
+                        />
+                        
+                        <div className={`flex items-center gap-2 mt-2 text-xs ${
+                          message.messageType === 'user' ? 'text-blue-100' : 'text-gray-500'
+                        }`}>
+                          <Clock className="h-3 w-3" />
+                          {new Date(message.timestamp).toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {message.messageType === 'user' && (
+                      <div className="flex-shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                          <User className="h-4 w-4 text-blue-600" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {startConversationMutation.isPending && (!messages || messages.length === 0) && (
+                <div className="flex justify-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Bot className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span className="text-sm text-gray-600">
+                        Preparing your interview session...
+                      </span>
                     </div>
                   </div>
-                )}
-
-                <div className={`max-w-2xl ${message.messageType === 'user' ? 'order-first' : ''}`}>
-                  {message.messageType === 'coach' && message.coachingType === 'feedback' && message.feedback ? (
-                    <div className="space-y-3">
-                      <div className="text-sm text-gray-600 mb-4 p-3 bg-blue-50 rounded-lg border-l-4 border-l-blue-500">
-                        <Bot className="h-4 w-4 inline mr-2 text-blue-600" />
-                        Your response has been analyzed. Here is your detailed feedback:
-                      </div>
-                      {renderFeedback(message.feedback)}
-                    </div>
-                  ) : (
-                    <div
-                      className={`p-4 rounded-lg ${
-                        message.messageType === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <div 
-                        className="whitespace-pre-wrap prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: cleanedContent }}
-                      />
-                      
-                      <div className="flex items-center gap-2 mt-2 text-xs opacity-70">
-                        <Clock className="h-3 w-3" />
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </div>
-                    </div>
-                  )}
                 </div>
+              )}
 
-                {message.messageType === 'user' && (
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <User className="h-5 w-5 text-blue-600" />
+              {isLoading && (
+                <div className="flex justify-start gap-3">
+                  <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Bot className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span className="text-sm text-gray-600">Analyzing your response...</span>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-
-          {startConversationMutation.isPending && (!messages || messages.length === 0) && (
-            <div className="flex justify-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <Bot className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="bg-gray-100 p-4 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm text-gray-600">
-                    Coach is preparing your personalized interview session...
-                  </span>
                 </div>
-              </div>
+              )}
+
+              <div ref={messagesEndRef} />
             </div>
-          )}
+          </ScrollArea>
 
-          {isLoading && (
-            <div className="flex justify-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                <Bot className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="bg-gray-100 p-4 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                  <span className="text-sm text-gray-600">Coach is analyzing your response...</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div ref={messagesEndRef} />
-        </div>
-      </ScrollArea>
-
-      {/* Input Area */}
-      <Card className="rounded-none border-x-0 border-b-0">
-        <CardContent className="p-4">
-          <div className="max-w-4xl mx-auto space-y-4">
+          {/* Input Area */}
+          <div className="border-t border-gray-200 bg-white p-4">
             {!showCompletion && (
-              <>
+              <div className="max-w-3xl mx-auto space-y-3">
                 <div className="flex gap-3">
                   <Textarea
                     value={currentResponse}
                     onChange={(e) => setCurrentResponse(e.target.value)}
                     onKeyDown={handleKeyPress}
-                    placeholder="Type your response here... (Press Enter to send)"
-                    className="flex-1 min-h-[60px] resize-none"
+                    placeholder="Type your STAR response here... (Press Enter to send)"
+                    className="flex-1 min-h-[80px] resize-none"
                     disabled={isLoading}
                   />
                   <div className="flex flex-col gap-2">
@@ -388,48 +349,68 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
                 </div>
                 
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <p className="text-xs text-gray-500">
-                      Press Enter to send • Shift+Enter for new line
-                    </p>
-                    {messages.length > 0 && (
-                      <div className="text-xs text-gray-500">
-                        Question {Math.ceil(messages.length / 2)} of {sessionDetails.totalQuestions || 15}
-                      </div>
-                    )}
-                  </div>
+                  <p className="text-xs text-gray-500">
+                    Use STAR method • Enter to send • Shift+Enter for new line
+                  </p>
                   
                   <div className="flex items-center gap-2">
-                    {messages.length > 2 && (
+                    {messages.length > 4 && (
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleCompleteSession}
                         disabled={isCompleting}
-                        className="bg-red-50 text-red-700 border-red-300 hover:bg-red-100"
+                        className="text-green-700 border-green-300 hover:bg-green-50"
                       >
-                        End Session Early
-                      </Button>
-                    )}
-                    
-                    {messages.length > 6 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCompleteSession}
-                        disabled={isCompleting}
-                        className="bg-green-50 text-green-700 border-green-300 hover:bg-green-100"
-                      >
-                        {isCompleting ? "Generating Summary..." : "Complete Session"}
+                        {isCompleting ? "Completing..." : "Complete Session"}
                       </Button>
                     )}
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        {/* Reference Panel - Right Side */}
+        {showReferencePanel && (
+          <div className="hidden lg:flex lg:w-96 lg:fixed lg:right-0 lg:top-16 lg:bottom-0 bg-white border-l border-gray-200 overflow-hidden">
+            <div className="flex-1 flex flex-col">
+              <div className="p-4 border-b border-gray-100">
+                <h3 className="font-semibold text-gray-900">Session Reference</h3>
+              </div>
+              
+              <ScrollArea className="flex-1 p-4 space-y-4">
+                {/* Current Question Card */}
+                {currentQuestionMsg && (
+                  <QuestionCard
+                    question={currentQuestionMsg.content}
+                    questionNumber={currentQuestionNumber}
+                    totalQuestions={sessionDetails.totalQuestions}
+                    sessionDetails={sessionDetails}
+                    isActive={true}
+                  />
+                )}
+
+                {/* STAR Scores */}
+                {latestFeedbackMsg?.feedback?.starScores && (
+                  <STARScoreBar 
+                    scores={latestFeedbackMsg.feedback.starScores}
+                    questionNumber={latestFeedbackMsg.questionNumber}
+                  />
+                )}
+
+                {/* Latest Feedback */}
+                {latestFeedbackMsg?.feedback && (
+                  <FeedbackCard 
+                    feedback={latestFeedbackMsg.feedback}
+                    questionNumber={latestFeedbackMsg.questionNumber}
+                  />
+                )}
+              </ScrollArea>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
