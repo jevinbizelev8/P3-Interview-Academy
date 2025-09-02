@@ -26,7 +26,7 @@ export function FeedbackCard({ feedback, questionNumber }: FeedbackCardProps) {
           <div className="flex items-center gap-2">
             <Bot className="h-4 w-4 text-blue-600" />
             <span className="font-medium text-blue-900 text-sm">
-              AI Preceptor - Interview Coach
+              Interview Coach
             </span>
             <span className="bg-blue-800 text-white px-2 py-0.5 rounded text-xs font-medium">
               Professional

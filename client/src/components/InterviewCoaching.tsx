@@ -294,7 +294,7 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                         
                         <div className={`max-w-lg ${message.messageType === 'user' ? 'order-first' : ''}`}>
                           {message.messageType === 'coach' && message.coachingType === 'feedback' && message.feedback ? (
-                            <FeedbackCard feedback={message.feedback} />
+                            <FeedbackCard feedback={typeof message.feedback === 'string' ? JSON.parse(message.feedback) : message.feedback} />
                           ) : (
                             <div className={`p-3 rounded-lg ${
                               message.messageType === 'user' 
