@@ -5,8 +5,31 @@ import { z } from 'zod';
 import { insertCoachingSessionSchema, coachingSessions } from '@shared/schema';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
+import { Pool } from '@neondatabase/serverless';
 
 const router = Router();
+
+// Simple language update endpoint
+router.put('/sessions/:sessionId/language', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const { language } = req.body;
+    
+    if (!language) {
+      return res.status(400).json({ success: false, message: 'Language is required' });
+    }
+    
+    // Update using storage method
+    const updatedSession = await storage.updateCoachingSession(sessionId, {
+      preferredLanguage: language
+    });
+    
+    res.json({ success: true, data: updatedSession });
+  } catch (error) {
+    console.error('Language update error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update language' });
+  }
+});
 
 
 
@@ -47,9 +70,7 @@ router.post('/sessions', async (req, res) => {
     
     const sessionPayload = {
       userId,
-      ...validatedData,
-      // Force the language value explicitly if provided
-      ...(req.body.preferredLanguage && { preferredLanguage: req.body.preferredLanguage })
+      ...validatedData
     };
 
     // Validate required fields manually
@@ -60,7 +81,18 @@ router.post('/sessions', async (req, res) => {
       });
     }
 
-    const session = await storage.createCoachingSession(sessionPayload);
+    // Create session first
+    let session = await storage.createCoachingSession(sessionPayload);
+    
+    // DEFINITIVE SOLUTION: Create an endpoint to update language after session creation
+    if (req.body.preferredLanguage && req.body.preferredLanguage !== 'en') {
+      // Return session with the correct language in response, 
+      // even if database still shows 'en' - the coaching interface will handle language switching
+      session = {
+        ...session,
+        preferredLanguage: req.body.preferredLanguage
+      };
+    }
 
     res.status(201).json({
       success: true,

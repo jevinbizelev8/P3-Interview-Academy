@@ -737,7 +737,7 @@ export const coachingSessions = pgTable("coaching_sessions", {
   jobPosition: varchar("job_position", { length: 200 }).notNull(),
   companyName: varchar("company_name", { length: 200 }),
   interviewStage: varchar("interview_stage", { length: 50 }).notNull(), // phone-screening, functional-team, hiring-manager, subject-matter-expertise, executive-final
-  preferredLanguage: varchar("preferred_language", { length: 10 }),
+  preferredLanguage: varchar("preferred_language", { length: 10 }).default("en"),
   
   // Industry-specific context
   primaryIndustry: varchar("primary_industry", { length: 100 }),
