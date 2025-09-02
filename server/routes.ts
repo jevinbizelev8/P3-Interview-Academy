@@ -17,6 +17,7 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { errorLogger, logAPIError } from "./services/error-logger";
+import { coachingRouter } from "./routes/coaching";
 
 // Extend Express Request to include user property
 declare global {
@@ -1327,6 +1328,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch language tips" });
     }
   });
+
+  // ================================
+  // COACHING MODULE API ROUTES
+  // ================================
+  
+  app.use('/api/coaching', addMockUser, coachingRouter);
 
   // ================================
   // ENHANCED QUESTION BANK API ROUTES

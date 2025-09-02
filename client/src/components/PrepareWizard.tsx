@@ -52,6 +52,8 @@ interface WizardStep {
 export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
+  const [industryDetecting, setIndustryDetecting] = useState(false);
+  const [showIndustryContext, setShowIndustryContext] = useState(false);
   const [formData, setFormData] = useState({
     jobPosition: '',
     companyName: '',
@@ -63,8 +65,81 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
     questionsPerSession: 15,
     dailyTimeCommitment: 60,
     focusAreas: [] as string[],
-    notes: ''
+    notes: '',
+    
+    // Stage 4 Industry-Specific Fields
+    primaryIndustry: '',
+    detectedIndustry: '',
+    industryConfidence: 0,
+    specializations: [] as string[],
+    experienceLevel: 'intermediate' as 'intermediate' | 'senior' | 'expert',
+    technicalDepth: '',
+    companyContext: {
+      type: 'enterprise' as 'startup' | 'enterprise' | 'consulting' | 'agency',
+      businessModel: '',
+      technicalStack: [] as string[],
+      regulatoryEnvironment: ''
+    },
+    industryInsights: null as any
   });
+
+  // Industry Detection Effect - Triggers when job position or company changes
+  useEffect(() => {
+    const detectIndustryContext = async () => {
+      if (formData.jobPosition.trim().length > 3) {
+        setIndustryDetecting(true);
+        
+        try {
+          const response = await apiRequest('POST', '/api/coaching/detect-industry', {
+            jobPosition: formData.jobPosition,
+            companyName: formData.companyName || undefined,
+            experienceLevel: formData.experienceLevel
+          });
+          
+          const result = await response.json();
+          if (result.success) {
+            const industryContext = result.data;
+            
+            setFormData((prev: any) => ({
+              ...prev,
+              primaryIndustry: industryContext.primaryIndustry,
+              detectedIndustry: industryContext.primaryIndustry,
+              industryConfidence: industryContext.confidenceScore || 0.8,
+              specializations: industryContext.specializations,
+              technicalDepth: industryContext.technicalDepth,
+              companyContext: {
+                ...prev.companyContext,
+                ...industryContext.companyContext
+              },
+              industryInsights: industryContext.industryInsights
+            }));
+            
+            // Show industry context panel if Stage 4 is selected
+            if (formData.interviewStage === 'subject-matter-expertise') {
+              setShowIndustryContext(true);
+            }
+          }
+        } catch (error) {
+          console.error('Error detecting industry context:', error);
+        } finally {
+          setIndustryDetecting(false);
+        }
+      }
+    };
+
+    // Debounce the API call to avoid too many requests
+    const timeoutId = setTimeout(detectIndustryContext, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [formData.jobPosition, formData.companyName, formData.experienceLevel]);
+
+  // Show/hide industry context based on interview stage
+  useEffect(() => {
+    if (formData.interviewStage === 'subject-matter-expertise' && formData.primaryIndustry) {
+      setShowIndustryContext(true);
+    } else {
+      setShowIndustryContext(false);
+    }
+  }, [formData.interviewStage, formData.primaryIndustry]);
 
   const steps: WizardStep[] = [
     {
@@ -111,27 +186,50 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
     }
   ];
 
-  const createPreparationSessionMutation = useMutation({
+  const createCoachingSessionMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/prepare/sessions', data);
+      const response = await apiRequest('POST', '/api/coaching/sessions', {
+        jobPosition: data.jobPosition,
+        companyName: data.companyName,
+        interviewStage: data.interviewStage,
+        preferredLanguage: data.preferredLanguage,
+        
+        // Stage 4 Industry-Specific Data
+        primaryIndustry: data.primaryIndustry,
+        specializations: data.specializations,
+        experienceLevel: data.experienceLevel,
+        technicalDepth: data.technicalDepth,
+        industryContext: data.industryContext,
+        
+        // Coaching goals based on focus areas
+        coachingGoals: data.coachingGoals,
+        
+        // Session configuration
+        totalQuestions: data.questionsPerSession,
+        timeAllocation: data.dailyTimeCommitment
+      });
       return response.json();
     },
-    onSuccess: (session) => {
+    onSuccess: (result) => {
+      const sessionId = result.data?.id || result.id;
       toast({
-        title: "Preparation Session Created!",
-        description: "Your personalized preparation journey is ready to begin."
+        title: "🎯 Coaching Session Created!",
+        description: formData.interviewStage === 'subject-matter-expertise' 
+          ? `Industry-specific ${formData.primaryIndustry} coaching session is ready!`
+          : "Your personalized coaching session is ready to begin."
       });
       
       if (onComplete) {
-        onComplete(session.id);
+        onComplete(sessionId);
       } else {
-        setLocation(`/prepare/dashboard?sessionId=${session.id}`);
+        setLocation(`/prepare/coaching/${sessionId}`);
       }
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error creating coaching session:', error);
       toast({
         title: "Setup Failed",
-        description: "Failed to create your preparation session. Please try again.",
+        description: "Failed to create your coaching session. Please try again.",
         variant: "destructive"
       });
     }
@@ -158,13 +256,41 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
       jobPosition: formData.jobPosition,
       companyName: formData.companyName || null,
       interviewStage: formData.interviewStage,
-      targetInterviewDate: formData.targetDate ? new Date(formData.targetDate) : null,
       preferredLanguage: formData.preferredLanguage,
-      status: 'active',
-      overallProgress: 0
+      
+      // Stage 4 Industry-Specific Data
+      primaryIndustry: formData.primaryIndustry,
+      specializations: formData.specializations,
+      experienceLevel: formData.experienceLevel,
+      technicalDepth: formData.technicalDepth,
+      
+      // Industry context
+      industryContext: {
+        primaryIndustry: formData.primaryIndustry,
+        specializations: formData.specializations,
+        experienceLevel: formData.experienceLevel,
+        technicalDepth: formData.technicalDepth,
+        companyContext: formData.companyContext
+      },
+      
+      // Coaching goals based on focus areas and interview stage
+      coachingGoals: {
+        starMethodImprovement: formData.focusAreas.includes('star-method'),
+        industryKnowledge: formData.interviewStage === 'subject-matter-expertise',
+        technicalDepth: formData.primaryIndustry === 'technology',
+        communicationSkills: formData.focusAreas.includes('communication'),
+        confidenceBuilding: formData.focusAreas.includes('confidence'),
+        customGoals: formData.focusAreas.filter((area: string) => 
+          !['star-method', 'communication', 'confidence'].includes(area)
+        )
+      },
+      
+      // Session configuration
+      questionsPerSession: formData.questionsPerSession,
+      dailyTimeCommitment: formData.dailyTimeCommitment
     };
 
-    createPreparationSessionMutation.mutate(sessionData);
+    createCoachingSessionMutation.mutate(sessionData);
   };
 
   const isStepValid = () => {
@@ -291,10 +417,10 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
         ) : (
           <Button
             onClick={handleComplete}
-            disabled={!isStepValid() || createPreparationSessionMutation.isPending}
+            disabled={!isStepValid() || createCoachingSessionMutation.isPending}
             className="bg-green-600 hover:bg-green-700"
           >
-            {createPreparationSessionMutation.isPending ? (
+            {createCoachingSessionMutation.isPending ? (
               "Creating..."
             ) : (
               <>
@@ -408,6 +534,194 @@ function InterviewDetailsStep({ formData, setFormData }: { formData: any; setFor
           </SelectContent>
         </Select>
       </div>
+
+      {/* Stage 4 Industry-Specific Enhancements */}
+      {formData.interviewStage === 'subject-matter-expertise' && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="mb-4">
+            <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
+              Subject-Matter Expertise Configuration
+            </h4>
+            <p className="text-sm text-gray-600 mt-1">
+              Enhanced preparation for technical and industry-specific interviews
+            </p>
+          </div>
+
+          {/* Industry Detection Results */}
+          {formData.detectedIndustry && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h5 className="font-medium text-blue-900">
+                    🔍 Detected Industry: {formData.detectedIndustry.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                  </h5>
+                  <p className="text-sm text-blue-700">
+                    Confidence: {Math.round(formData.industryConfidence * 100)}% 
+                    {industryDetecting && <span className="ml-2 text-blue-600">• Analyzing...</span>}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFormData((prev: any) => ({ ...prev, primaryIndustry: formData.detectedIndustry }))}
+                  className="text-blue-700 hover:text-blue-900"
+                >
+                  Use This Industry
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Manual Industry Selection */}
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="primaryIndustry">Primary Industry *</Label>
+            <Select
+              value={formData.primaryIndustry}
+              onValueChange={(value) => setFormData((prev: any) => ({ ...prev, primaryIndustry: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select your industry" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="technology">Technology & Software</SelectItem>
+                <SelectItem value="finance">Finance & Banking</SelectItem>
+                <SelectItem value="healthcare">Healthcare & Life Sciences</SelectItem>
+                <SelectItem value="consulting">Consulting & Advisory</SelectItem>
+                <SelectItem value="marketing">Marketing & Communications</SelectItem>
+                <SelectItem value="manufacturing">Manufacturing & Engineering</SelectItem>
+                <SelectItem value="retail">Retail & E-commerce</SelectItem>
+                <SelectItem value="education">Education & Training</SelectItem>
+                <SelectItem value="government">Government & Public Sector</SelectItem>
+                <SelectItem value="nonprofit">Non-Profit & Social Impact</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Experience Level */}
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="experienceLevel">Experience Level *</Label>
+            <Select
+              value={formData.experienceLevel}
+              onValueChange={(value: 'intermediate' | 'senior' | 'expert') => 
+                setFormData((prev: any) => ({ ...prev, experienceLevel: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="intermediate">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Intermediate</span>
+                    <span className="text-xs text-gray-500">2-5 years experience</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="senior">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Senior</span>
+                    <span className="text-xs text-gray-500">5-10 years experience</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="expert">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Expert</span>
+                    <span className="text-xs text-gray-500">10+ years experience</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Specializations */}
+          {formData.specializations.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <Label>Detected Specializations</Label>
+              <div className="flex flex-wrap gap-2">
+                {formData.specializations.map((spec: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
+                    {spec.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                  </Badge>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600">
+                These specializations will be used to generate industry-specific questions
+              </p>
+            </div>
+          )}
+
+          {/* Company Context */}
+          <div className="space-y-3 mb-4">
+            <Label>Company Context</Label>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="companyType" className="text-sm">Company Type</Label>
+                <Select
+                  value={formData.companyContext.type}
+                  onValueChange={(value: 'startup' | 'enterprise' | 'consulting' | 'agency') => 
+                    setFormData((prev: any) => ({ 
+                      ...prev, 
+                      companyContext: { ...prev.companyContext, type: value }
+                    }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="startup">Startup (1-50 employees)</SelectItem>
+                    <SelectItem value="enterprise">Enterprise (500+ employees)</SelectItem>
+                    <SelectItem value="consulting">Consulting Firm</SelectItem>
+                    <SelectItem value="agency">Agency/Service Provider</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="businessModel" className="text-sm">Business Model</Label>
+                <Input
+                  id="businessModel"
+                  placeholder="e.g., SaaS, E-commerce, Consulting"
+                  value={formData.companyContext.businessModel}
+                  onChange={(e) => setFormData((prev: any) => ({ 
+                    ...prev, 
+                    companyContext: { ...prev.companyContext, businessModel: e.target.value }
+                  }))}
+                />
+              </div>
+            </div>
+
+            {/* Technical Stack (for technology roles) */}
+            {formData.primaryIndustry === 'technology' && formData.companyContext.technicalStack.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Detected Technical Stack</Label>
+                <div className="flex flex-wrap gap-2">
+                  {formData.companyContext.technicalStack.map((tech: string, index: number) => (
+                    <Badge key={index} variant="outline" className="bg-purple-50 text-purple-700">
+                      {tech}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Industry Insights Preview */}
+          {formData.industryInsights && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <h5 className="font-medium text-emerald-900 mb-2">
+                💡 Industry-Specific Interview Insights
+              </h5>
+              <ul className="text-sm text-emerald-800 space-y-1">
+                <li>• Questions will focus on {formData.primaryIndustry} best practices</li>
+                <li>• {formData.specializations.length} specialized areas identified</li>
+                <li>• {formData.experienceLevel}-level depth expected</li>
+                <li>• Tailored for {formData.companyContext.type} environment</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

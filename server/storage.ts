@@ -12,6 +12,12 @@ import {
   practiceTestResults,
   companyResearch,
   starPracticeSessions,
+  // New coaching system tables
+  coachingSessions,
+  coachingMessages,
+  industryQuestions,
+  industryKnowledge,
+  coachingFeedback,
   type User,
   type UpsertUser,
   type InsertInterviewScenario,
@@ -40,6 +46,18 @@ import {
   type InsertCompanyResearch,
   type StarPracticeSession,
   type InsertStarPracticeSession,
+  // New coaching system types
+  type CoachingSession,
+  type InsertCoachingSession,
+  type CoachingMessage,
+  type InsertCoachingMessage,
+  type IndustryQuestion,
+  type InsertIndustryQuestion,
+  type IndustryKnowledge,
+  type InsertIndustryKnowledge,
+  type CoachingFeedback,
+  type InsertCoachingFeedback,
+  type CoachingSessionWithMessages,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, avg, sql } from "drizzle-orm";
@@ -66,6 +84,42 @@ export interface IStorage {
   // Interview message operations
   addInterviewMessage(message: InsertInterviewMessage): Promise<InterviewMessage>;
   getSessionMessages(sessionId: string): Promise<InterviewMessage[]>;
+
+  // Industry-specific coaching system operations
+  // Coaching sessions
+  createCoachingSession(session: InsertCoachingSession): Promise<CoachingSession>;
+  getCoachingSession(id: string): Promise<CoachingSessionWithMessages | undefined>;
+  updateCoachingSession(id: string, updates: Partial<InsertCoachingSession>): Promise<CoachingSession>;
+  getUserCoachingSessions(userId: string): Promise<CoachingSession[]>;
+  
+  // Coaching messages
+  addCoachingMessage(message: InsertCoachingMessage): Promise<CoachingMessage>;
+  getCoachingMessages(sessionId: string): Promise<CoachingMessage[]>;
+  updateCoachingMessage(id: string, updates: Partial<InsertCoachingMessage>): Promise<CoachingMessage>;
+  
+  // Industry questions
+  createIndustryQuestion(question: InsertIndustryQuestion): Promise<IndustryQuestion>;
+  getIndustryQuestions(filters: {
+    industry?: string;
+    subfield?: string;
+    specialization?: string;
+    interviewStage?: string;
+    difficultyLevel?: string;
+    limit?: number;
+  }): Promise<IndustryQuestion[]>;
+  getIndustryQuestion(id: string): Promise<IndustryQuestion | undefined>;
+  updateIndustryQuestion(id: string, updates: Partial<InsertIndustryQuestion>): Promise<IndustryQuestion>;
+  
+  // Industry knowledge base
+  createIndustryKnowledge(knowledge: InsertIndustryKnowledge): Promise<IndustryKnowledge>;
+  getIndustryKnowledge(knowledgeType: string, entityName: string): Promise<IndustryKnowledge | undefined>;
+  getIndustryKnowledgeByIndustry(industry: string): Promise<IndustryKnowledge[]>;
+  updateIndustryKnowledge(id: string, updates: Partial<InsertIndustryKnowledge>): Promise<IndustryKnowledge>;
+  
+  // Coaching feedback
+  createCoachingFeedback(feedback: InsertCoachingFeedback): Promise<CoachingFeedback>;
+  getCoachingFeedback(sessionId: string, messageId?: string): Promise<CoachingFeedback[]>;
+  updateCoachingFeedback(id: string, updates: Partial<InsertCoachingFeedback>): Promise<CoachingFeedback>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -672,6 +726,222 @@ export class DatabaseStorage implements IStorage {
     }
 
     return await query.orderBy(desc(starPracticeSessions.createdAt));
+  }
+
+  // ================================
+  // INDUSTRY-SPECIFIC COACHING SYSTEM METHODS
+  // ================================
+
+  // Coaching sessions operations
+  async createCoachingSession(sessionData: InsertCoachingSession): Promise<CoachingSession> {
+    const [session] = await db
+      .insert(coachingSessions)
+      .values(sessionData)
+      .returning();
+    return session;
+  }
+
+  async getCoachingSession(id: string): Promise<CoachingSessionWithMessages | undefined> {
+    const [session] = await db
+      .select()
+      .from(coachingSessions)
+      .where(eq(coachingSessions.id, id));
+
+    if (!session) return undefined;
+
+    // Get related messages and feedback
+    const messages = await this.getCoachingMessages(id);
+    const feedback = await this.getCoachingFeedback(id);
+
+    return {
+      ...session,
+      messages,
+      feedback,
+      industryInsights: [] // TODO: Add industry insights fetching
+    };
+  }
+
+  async updateCoachingSession(id: string, updates: Partial<InsertCoachingSession>): Promise<CoachingSession> {
+    const [session] = await db
+      .update(coachingSessions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(coachingSessions.id, id))
+      .returning();
+    return session;
+  }
+
+  async getUserCoachingSessions(userId: string): Promise<CoachingSession[]> {
+    return await db
+      .select()
+      .from(coachingSessions)
+      .where(eq(coachingSessions.userId, userId))
+      .orderBy(desc(coachingSessions.createdAt));
+  }
+
+  // Coaching messages operations
+  async addCoachingMessage(messageData: InsertCoachingMessage): Promise<CoachingMessage> {
+    const [message] = await db
+      .insert(coachingMessages)
+      .values(messageData)
+      .returning();
+    return message;
+  }
+
+  async getCoachingMessages(sessionId: string): Promise<CoachingMessage[]> {
+    return await db
+      .select()
+      .from(coachingMessages)
+      .where(eq(coachingMessages.sessionId, sessionId))
+      .orderBy(coachingMessages.timestamp);
+  }
+
+  async updateCoachingMessage(id: string, updates: Partial<InsertCoachingMessage>): Promise<CoachingMessage> {
+    const [message] = await db
+      .update(coachingMessages)
+      .set(updates)
+      .where(eq(coachingMessages.id, id))
+      .returning();
+    return message;
+  }
+
+  // Industry questions operations
+  async createIndustryQuestion(questionData: InsertIndustryQuestion): Promise<IndustryQuestion> {
+    const [question] = await db
+      .insert(industryQuestions)
+      .values(questionData)
+      .returning();
+    return question;
+  }
+
+  async getIndustryQuestions(filters: {
+    industry?: string;
+    subfield?: string;
+    specialization?: string;
+    interviewStage?: string;
+    difficultyLevel?: string;
+    limit?: number;
+  }): Promise<IndustryQuestion[]> {
+    let query = db
+      .select()
+      .from(industryQuestions)
+      .where(eq(industryQuestions.isActive, true));
+
+    // Apply filters
+    if (filters.industry) {
+      query = query.where(eq(industryQuestions.industry, filters.industry));
+    }
+    if (filters.subfield) {
+      query = query.where(eq(industryQuestions.subfield, filters.subfield));
+    }
+    if (filters.specialization) {
+      query = query.where(eq(industryQuestions.specialization, filters.specialization));
+    }
+    if (filters.interviewStage) {
+      query = query.where(eq(industryQuestions.interviewStage, filters.interviewStage));
+    }
+    if (filters.difficultyLevel) {
+      query = query.where(eq(industryQuestions.difficultyLevel, filters.difficultyLevel));
+    }
+
+    // Apply limit
+    if (filters.limit) {
+      query = query.limit(filters.limit);
+    }
+
+    return await query.orderBy(desc(industryQuestions.popularity), desc(industryQuestions.createdAt));
+  }
+
+  async getIndustryQuestion(id: string): Promise<IndustryQuestion | undefined> {
+    const [question] = await db
+      .select()
+      .from(industryQuestions)
+      .where(eq(industryQuestions.id, id));
+    return question;
+  }
+
+  async updateIndustryQuestion(id: string, updates: Partial<InsertIndustryQuestion>): Promise<IndustryQuestion> {
+    const [question] = await db
+      .update(industryQuestions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(industryQuestions.id, id))
+      .returning();
+    return question;
+  }
+
+  // Industry knowledge base operations
+  async createIndustryKnowledge(knowledgeData: InsertIndustryKnowledge): Promise<IndustryKnowledge> {
+    const [knowledge] = await db
+      .insert(industryKnowledge)
+      .values(knowledgeData)
+      .returning();
+    return knowledge;
+  }
+
+  async getIndustryKnowledge(knowledgeType: string, entityName: string): Promise<IndustryKnowledge | undefined> {
+    const [knowledge] = await db
+      .select()
+      .from(industryKnowledge)
+      .where(
+        and(
+          eq(industryKnowledge.knowledgeType, knowledgeType),
+          eq(industryKnowledge.entityName, entityName),
+          eq(industryKnowledge.isActive, true)
+        )
+      );
+    return knowledge;
+  }
+
+  async getIndustryKnowledgeByIndustry(industry: string): Promise<IndustryKnowledge[]> {
+    return await db
+      .select()
+      .from(industryKnowledge)
+      .where(
+        and(
+          eq(industryKnowledge.primaryIndustry, industry),
+          eq(industryKnowledge.isActive, true)
+        )
+      )
+      .orderBy(desc(industryKnowledge.confidenceScore), desc(industryKnowledge.createdAt));
+  }
+
+  async updateIndustryKnowledge(id: string, updates: Partial<InsertIndustryKnowledge>): Promise<IndustryKnowledge> {
+    const [knowledge] = await db
+      .update(industryKnowledge)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(industryKnowledge.id, id))
+      .returning();
+    return knowledge;
+  }
+
+  // Coaching feedback operations
+  async createCoachingFeedback(feedbackData: InsertCoachingFeedback): Promise<CoachingFeedback> {
+    const [feedback] = await db
+      .insert(coachingFeedback)
+      .values(feedbackData)
+      .returning();
+    return feedback;
+  }
+
+  async getCoachingFeedback(sessionId: string, messageId?: string): Promise<CoachingFeedback[]> {
+    let query = db
+      .select()
+      .from(coachingFeedback)
+      .where(eq(coachingFeedback.sessionId, sessionId));
+
+    if (messageId) {
+      query = query.where(eq(coachingFeedback.messageId, messageId));
+    }
+
+    return await query.orderBy(desc(coachingFeedback.createdAt));
+  }
+
+  async updateCoachingFeedback(id: string, updates: Partial<InsertCoachingFeedback>): Promise<CoachingFeedback> {
+    const [feedback] = await db
+      .update(coachingFeedback)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(coachingFeedback.id, id))
+      .returning();
+    return feedback;
   }
 }
 
