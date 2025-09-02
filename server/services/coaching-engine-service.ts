@@ -81,7 +81,7 @@ export class CoachingEngineService {
         content: cleanIntroduction,
         coachingType: 'introduction',
         questionNumber: 0,
-        industryContext: context.session.industryContext,
+        industryContext: context.session.industryContext as any,
         aiMetadata: { type: 'introduction', generated: true } as any
       });
 
@@ -91,7 +91,7 @@ export class CoachingEngineService {
         content: cleanFirstQuestion,
         coachingType: 'question',
         questionNumber: 1,
-        industryContext: context.session.industryContext,
+        industryContext: context.session.industryContext as any,
         aiMetadata: { type: 'question', questionNumber: 1 } as any
       });
 
@@ -196,8 +196,8 @@ export class CoachingEngineService {
           content: cleanNextQuestion,
           coachingType: 'question',
           questionNumber: questionNumber + 1,
-          industryContext: context.session.industryContext,
-          aiMetadata: { type: 'question', questionNumber: questionNumber + 1 }
+          industryContext: context.session.industryContext as any,
+          aiMetadata: { type: 'question', questionNumber: questionNumber + 1 } as any
         });
 
         // Update session progress

@@ -35,7 +35,8 @@
       "WebFetch(domain:3165fae0-9bb6-4899-b61b-35cc2ffdb3b2-00-1imy7y85knmo6.kirk.replit.dev)",
       "Bash(git commit:*)",
       "Bash(git push:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(fuser:*)"
     ],
     "deny": [],
     "ask": []
