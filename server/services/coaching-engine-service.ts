@@ -51,16 +51,16 @@ export class CoachingEngineService {
    */
   private getLanguageInstruction(languageCode: string): string {
     const languageMap: Record<string, string> = {
-      'en': 'Respond in clear, professional English',
-      'ms': 'Respond in Bahasa Malaysia (Malay language). Use professional and courteous tone appropriate for Malaysian business context',
-      'id': 'Respond in Bahasa Indonesia. Use professional and respectful Indonesian business language',
-      'th': 'Respond in Thai language (ภาษาไทย). Use polite and professional Thai appropriate for business interviews',
-      'vi': 'Respond in Vietnamese language (Tiếng Việt). Use formal and professional Vietnamese suitable for business context',
-      'zh-sg': 'Respond in Simplified Chinese (简体中文). Use professional Chinese appropriate for Singapore business context',
-      'fil': 'Respond in Filipino language. Use professional and respectful Filipino suitable for business interviews',
-      'my': 'Respond in Myanmar language (မြန်မာဘာသာ). Use professional tone appropriate for Myanmar business context',
-      'km': 'Respond in Khmer language (ខ្មែរ). Use respectful and professional Cambodian business language',
-      'lo': 'Respond in Lao language (ລາວ). Use polite and professional Lao appropriate for business context'
+      'en': 'Respond in clear, professional English with valid JSON format.',
+      'ms': 'WAJIB: Berikan SEMUA respons dalam Bahasa Malaysia sahaja. Gunakan format JSON yang betul. Jangan campurkan bahasa Inggeris langsung.',
+      'id': 'WAJIB: Berikan SEMUA respons dalam Bahasa Indonesia saja. Gunakan format JSON yang benar. Jangan campur bahasa Inggris sama sekali.',
+      'th': 'บังคับ: ตอบทุกอย่างเป็นภาษาไทยเท่านั้น ใช้รูปแบบ JSON ที่ถูกต้อง ห้ามผสมภาษาอังกฤษเด็ดขาด',
+      'vi': 'BẮT BUỘC: Trả lời hoàn toàn bằng tiếng Việt với định dạng JSON hợp lệ. Tuyệt đối không trộn tiếng Anh.',
+      'zh-sg': '必须：完全用简体中文回答，使用有效的JSON格式。绝对不要混合英语。',
+      'fil': 'KINAKAILANGAN: Tumugon nang buo sa Filipino gamit ang valid na JSON format. Huwag paghaluin ng Ingles.',
+      'my': 'မဖြစ်မနေ: မြန်မာဘာသာတစ်ခုတည်းဖြင့် မှန်ကန်သော JSON format ဖြင့် ဖြေကြားပါ။ အင်္ဂလိပ်ဘာသာလုံးဝမရောမပါရှိပါနှင့်။',
+      'km': 'ចាំបាច់: ឆ្លើយតែជាភាសាខ្មែរប៉ុណ្ណោះជាមួយទម្រង់ JSON ត្រឹមត្រូវ។ មិនត្រូវលាយជាមួយភាសាអង់គ្លេសដាច់ខាត។',
+      'lo': 'ຈຳເປັນ: ຕອບດ້ວຍພາສາລາວເທົ່ານັ້ນດ້ວຍຮູບແບບ JSON ທີ່ຖືກຕ້ອງ. ຫ້າມປົນພາສາອັງກິດເດັດຂາດ.',
     };
 
     return languageMap[languageCode] || languageMap['en'];
@@ -452,12 +452,40 @@ export class CoachingEngineService {
         temperature: 0.3,
         language: context.language
       });
-      const cleanResponse = response.content.trim().replace(/```json\s*/g, '').replace(/```\s*/g, '');
-      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
+      const cleanResponse = response.content.trim()
+        .replace(/```json\s*/g, '')
+        .replace(/```\s*/g, '')
+        .replace(/```/g, '');
       
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+      // Try to extract JSON from the response
+      let jsonStart = cleanResponse.indexOf('{');
+      let jsonEnd = cleanResponse.lastIndexOf('}');
+      
+      if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        try {
+          const jsonStr = cleanResponse.substring(jsonStart, jsonEnd + 1);
+          // Fix common JSON issues more aggressively
+          const fixedJson = jsonStr
+            .replace(/,\s*}/g, '}')        // Remove trailing commas
+            .replace(/,\s*]/g, ']')         // Remove trailing commas in arrays
+            .replace(/'/g, '"')             // Replace single quotes with double quotes
+            .replace(/[\u0000-\u0019]+/g, '') // Remove control characters
+            .replace(/\n/g, ' ')            // Replace newlines with spaces
+            .replace(/\r/g, ' ')            // Replace carriage returns
+            .replace(/\t/g, ' ')            // Replace tabs
+            .replace(/\\/g, '\\\\')         // Escape backslashes
+            .replace(/"/g, '\\"')           // Escape quotes (and then fix structure)
+            .replace(/\\"/g, '"')           // Restore proper quotes
+            .replace(/\s+/g, ' ')           // Normalize whitespace
+            .trim();
+          
+          return JSON.parse(fixedJson);
+        } catch (parseError) {
+          console.error('JSON parsing failed with content:', jsonStr.substring(0, 200), 'Error:', parseError.message);
+          return this.getDefaultStarAnalysis();
+        }
       } else {
+        console.warn('No valid JSON structure found in response, using fallback');
         return this.getDefaultStarAnalysis();
       }
     } catch (error) {

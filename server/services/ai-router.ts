@@ -217,13 +217,14 @@ export class AIRouter {
         options.timeout || this.DEFAULT_TIMEOUT_MS
       );
     } else {
-      // Call SeaLion service
+      // Call SeaLion service with explicit language parameter
       return await this.callWithTimeout(
         () => sealionService.generateResponse({
           messages: options.messages,
           maxTokens: options.maxTokens,
           temperature: options.temperature,
-          model: options.model
+          model: options.model,
+          language: options.language || 'en' // Pass language to SeaLion service
         }),
         options.timeout || this.DEFAULT_TIMEOUT_MS
       );

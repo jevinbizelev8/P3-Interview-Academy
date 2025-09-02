@@ -67,7 +67,7 @@ export class SeaLionService {
       en: "Respond in professional English suitable for a job interview context.",
       id: "Berikan respons dalam Bahasa Indonesia yang profesional dan sesuai untuk konteks wawancara kerja.",
       ms: "Berikan respons dalam Bahasa Melayu yang profesional dan sesuai untuk konteks wawancara kerja.",
-      th: "ตอบกลับในภาษาไทยที่เป็นทางการและเหมาะสมสำหรับบริบทการสัมภาษณ์งาน",
+      th: "บังคับ: ตอบทุกอย่างเป็นภาษาไทยเท่านั้น ใช้คำไทยที่เป็นทางการและเหมาะสมสำหรับการสัมภาษณ์งาน ห้ามผสมภาษาอังกฤษเด็ดขาด ไม่ต้องใส่ชื่อผู้สัมภาษณ์เป็นภาษาอังกฤษ",
       vi: "Trả lời bằng tiếng Việt chuyên nghiệp và phù hợp với bối cảnh phỏng vấn việc làm.",
       fil: "Tumugon sa wikang Filipino na propesyonal at angkop para sa konteksto ng panayam sa trabaho.",
       my: "အလုပ်သွားရောက်မေးမြန်းခြင်းအခြေအနေအတွက် သင့်တော်သော ပရော်ဖက်ရှင်နယ်မြန်မာဘာသာဖြင့် ပြန်လည်ဖြေကြားပါ။",
@@ -584,12 +584,24 @@ export class SeaLionService {
     maxTokens?: number;
     temperature?: number;
     model?: string;
+    language?: string;
   }): Promise<string> {
     try {
+      // Enhance messages with language instruction if specified
+      const enhancedMessages = options.language && options.language !== 'en' 
+        ? [
+            { 
+              role: 'system' as const, 
+              content: this.getLanguageInstructions(options.language) 
+            },
+            ...options.messages
+          ]
+        : options.messages;
+
       // Use direct HTTP call to SeaLion API
       const response = await axios.post('https://api.sea-lion.ai/v1/chat/completions', {
         model: options.model || this.config.reasoningModel,
-        messages: options.messages,
+        messages: enhancedMessages,
         max_tokens: options.maxTokens || 1000,
         temperature: options.temperature || 0.7,
         top_p: 0.9,
