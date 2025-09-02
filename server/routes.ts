@@ -1402,6 +1402,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get coaching session by ID
+  app.get('/api/coaching/sessions/:sessionId', addMockUser, async (req, res) => {
+    try {
+      const { sessionId } = req.params;
+      const session = await storage.getCoachingSession(sessionId);
+      
+      if (!session) {
+        return res.status(404).json({
+          success: false,
+          message: 'Coaching session not found'
+        });
+      }
+
+      // Verify user owns the session
+      if (session.userId !== (req.user?.id || 'dev-user-123')) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: session
+      });
+    } catch (error) {
+      console.error('Error fetching coaching session:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch coaching session'
+      });
+    }
+  });
+
   // Start coaching conversation
   app.post('/api/coaching/sessions/:sessionId/start', addMockUser, async (req, res) => {
     try {
