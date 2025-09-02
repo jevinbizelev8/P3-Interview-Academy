@@ -44,6 +44,16 @@ export class CoachingEngineService {
    */
   async startCoachingConversation(sessionId: string): Promise<CoachingResponse> {
     try {
+      // Check if conversation already started
+      const existingMessages = await storage.getCoachingMessages(sessionId);
+      if (existingMessages.length > 0) {
+        console.log(`Conversation already exists for session ${sessionId}, skipping start`);
+        return {
+          question: existingMessages.map(msg => msg.content).join('\n\n'),
+          conversationComplete: false
+        };
+      }
+
       const session = await storage.getCoachingSession(sessionId);
       if (!session) {
         throw new Error('Coaching session not found');
@@ -625,6 +635,12 @@ export class CoachingEngineService {
     
     // Remove the specific AI reasoning pattern that appears in our responses
     cleaned = cleaned.replace(/^[\s\S]*?>\s*\n\n/, '');
+    
+    // Handle [Question text: ...] format specifically
+    const questionTextMatch = cleaned.match(/\[Question text:\s*([\s\S]+?)\]/);
+    if (questionTextMatch) {
+      return questionTextMatch[1].trim();
+    }
     
     // Look for quoted content (typical AI response pattern)
     const quotedMatch = cleaned.match(/"([^"]+(?:\s[^"]*)*?)"/);
