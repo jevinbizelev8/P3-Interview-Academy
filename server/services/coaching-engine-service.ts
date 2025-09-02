@@ -419,28 +419,27 @@ export class CoachingEngineService {
     const { session } = context;
 
     const feedbackPrompt = `
-Generate ultra-concise feedback in JSON format:
+Create brief feedback in JSON format:
 
-**Role:** ${session.jobPosition} at ${session.companyName || 'target company'}
-**Response:** "${userResponse}"
+Response: "${userResponse.substring(0, 150)}..."
 
-Required JSON format:
+JSON format (strict limits):
 {
-  "improvementPoints": ["✓ Good communication clarity", "⚠ Add specific metrics"],
-  "modelAnswer": "Brief 1-2 sentence STAR example (max 30 words)"
+  "improvementPoints": ["✓ Clear communication", "⚠ Add metrics"],
+  "modelAnswer": "Led team migration. Resolved issues with engineers. 15% performance boost."
 }
 
-Requirements:
-- Exactly 2 improvement points: 1 positive (✓), 1 improvement (⚠)
-- Each point maximum 5 words
-- Model answer maximum 30 words total
-- Direct and actionable`;
+Rules:
+- 2 points only: 1 ✓ strength, 1 ⚠ improvement
+- Max 3 words per point
+- Model answer: max 15 words, STAR format
+- No extra text`;
 
     try {
       const response = await aiRouter.generateResponse({
         messages: [{ role: 'user', content: feedbackPrompt }],
-        maxTokens: 200,
-        temperature: 0.7
+        maxTokens: 100,
+        temperature: 0.3
       });
       
       // Parse JSON response
@@ -740,12 +739,10 @@ Requirements:
   private getDefaultCoachingFeedback(starAnalysis: StarAnalysis): any {
     return {
       improvementPoints: [
-        '✓ Response provided context and situation',
-        '⚠ Add more specific measurable results',
-        '⚠ Include detailed actions taken',
-        '⚠ Structure response using STAR method'
+        "✓ Clear response",
+        "⚠ Add metrics"
       ],
-      modelAnswer: 'In my role at [Company], I faced [specific challenge] (Situation). My task was to [objective] (Task). I implemented [specific actions] including [details] (Action). This resulted in [quantified outcome] such as [specific metrics] (Result).',
+      modelAnswer: "Led project team. Solved key challenges. Delivered 20% improvement.",
       starScores: {
         situation: starAnalysis.situation.score,
         task: starAnalysis.task.score,
