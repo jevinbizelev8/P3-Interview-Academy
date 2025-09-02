@@ -151,17 +151,33 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
     }
   };
 
+  // Sync fetched messages with local state
+  useEffect(() => {
+    if (sessionMessages && Array.isArray(sessionMessages)) {
+      // Transform backend messages to frontend format
+      const transformedMessages: CoachingMessage[] = sessionMessages.map((msg: any) => ({
+        id: msg.id,
+        role: msg.messageType === 'coach' ? 'coach' : 'user',
+        content: msg.content,
+        timestamp: new Date(msg.createdAt),
+        questionData: msg.questionData,
+        feedback: msg.feedback
+      }));
+      setMessages(transformedMessages);
+    }
+  }, [sessionMessages]);
+
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Initialize conversation if no messages
+  // Initialize conversation if no messages and messages have been loaded
   useEffect(() => {
-    if (sessionId && messages.length === 0 && !startConversationMutation.isPending) {
+    if (sessionId && sessionMessages !== undefined && messages.length === 0 && !startConversationMutation.isPending) {
       startConversationMutation.mutate();
     }
-  }, [sessionId, messages.length]);
+  }, [sessionId, sessionMessages, messages.length]);
 
   // Complete session and get model answers
   const handleCompleteSession = async () => {

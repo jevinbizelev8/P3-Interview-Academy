@@ -10,20 +10,28 @@ import { Loader2, ArrowLeft, Settings } from 'lucide-react';
 
 interface CoachingSession {
   id: string;
+  userId: string;
   jobPosition: string;
   companyName?: string;
   interviewStage: string;
+  preferredLanguage: string;
   primaryIndustry?: string;
+  specializations: string[];
   experienceLevel: string;
+  technicalDepth?: string;
+  industryContext?: any;
+  coachingGoals?: any;
   status: 'active' | 'completed' | 'paused';
+  totalQuestions: number;
+  currentQuestion: number;
+  timeAllocation: number;
+  overallProgress: string;
+  coachingScore?: string;
   createdAt: string;
-  sessionSettings: {
-    questionCount: number;
-    timePerQuestion: number;
-    enableTranslation: boolean;
-    targetLanguage: string;
-    difficultyLevel: string;
-  };
+  updatedAt: string;
+  messages: any[];
+  feedback: any[];
+  industryInsights: any[];
 }
 
 export function CoachingSessionPage() {
@@ -136,19 +144,19 @@ export function CoachingSessionPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="text-gray-600">Questions:</span>
-                <span className="ml-2 font-medium">{session.sessionSettings.questionCount}</span>
+                <span className="ml-2 font-medium">{session.totalQuestions}</span>
               </div>
               <div>
-                <span className="text-gray-600">Time per question:</span>
-                <span className="ml-2 font-medium">{Math.floor(session.sessionSettings.timePerQuestion / 60)}m</span>
+                <span className="text-gray-600">Time allocation:</span>
+                <span className="ml-2 font-medium">{session.timeAllocation}m</span>
               </div>
               <div>
-                <span className="text-gray-600">Difficulty:</span>
-                <span className="ml-2 font-medium capitalize">{session.sessionSettings.difficultyLevel}</span>
+                <span className="text-gray-600">Experience:</span>
+                <span className="ml-2 font-medium capitalize">{session.experienceLevel}</span>
               </div>
               <div>
                 <span className="text-gray-600">Language:</span>
-                <span className="ml-2 font-medium">{session.sessionSettings.targetLanguage.toUpperCase()}</span>
+                <span className="ml-2 font-medium">{session.preferredLanguage.toUpperCase()}</span>
               </div>
             </div>
           </div>
