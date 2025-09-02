@@ -547,6 +547,49 @@ export const starPracticeSessionsRelations = relations(starPracticeSessions, ({ 
   }),
 }));
 
+// Relations for industry-specific coaching system
+export const coachingSessionsRelations = relations(coachingSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [coachingSessions.userId],
+    references: [users.id],
+  }),
+  messages: many(coachingMessages),
+  feedback: many(coachingFeedback),
+}));
+
+export const coachingMessagesRelations = relations(coachingMessages, ({ one, many }) => ({
+  session: one(coachingSessions, {
+    fields: [coachingMessages.sessionId],
+    references: [coachingSessions.id],
+  }),
+  feedback: many(coachingFeedback),
+}));
+
+export const industryQuestionsRelations = relations(industryQuestions, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [industryQuestions.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const industryKnowledgeRelations = relations(industryKnowledge, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [industryKnowledge.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const coachingFeedbackRelations = relations(coachingFeedback, ({ one }) => ({
+  session: one(coachingSessions, {
+    fields: [coachingFeedback.sessionId],
+    references: [coachingSessions.id],
+  }),
+  message: one(coachingMessages, {
+    fields: [coachingFeedback.messageId],
+    references: [coachingMessages.id],
+  }),
+}));
+
 // Insert schemas for prepare module
 export const insertPreparationSessionSchema = createInsertSchema(preparationSessions).omit({
   id: true,
@@ -594,6 +637,38 @@ export const insertStarPracticeSessionSchema = createInsertSchema(starPracticeSe
   updatedAt: true,
 });
 
+// Insert schemas for industry-specific coaching system
+export const insertCoachingSessionSchema = createInsertSchema(coachingSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCoachingMessageSchema = createInsertSchema(coachingMessages).omit({
+  id: true,
+  timestamp: true,
+  createdAt: true,
+});
+
+export const insertIndustryQuestionSchema = createInsertSchema(industryQuestions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertIndustryKnowledgeSchema = createInsertSchema(industryKnowledge).omit({
+  id: true,
+  lastUpdated: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCoachingFeedbackSchema = createInsertSchema(coachingFeedback).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types for prepare module
 export type PreparationSession = typeof preparationSessions.$inferSelect;
 export type InsertPreparationSession = z.infer<typeof insertPreparationSessionSchema>;
@@ -630,3 +705,303 @@ export type PracticeTestWithResults = PracticeTest & {
   averageScore?: number;
   attemptCount?: number;
 };
+
+// Types for industry-specific coaching system
+export type CoachingSession = typeof coachingSessions.$inferSelect;
+export type InsertCoachingSession = z.infer<typeof insertCoachingSessionSchema>;
+export type CoachingMessage = typeof coachingMessages.$inferSelect;
+export type InsertCoachingMessage = z.infer<typeof insertCoachingMessageSchema>;
+export type IndustryQuestion = typeof industryQuestions.$inferSelect;
+export type InsertIndustryQuestion = z.infer<typeof insertIndustryQuestionSchema>;
+export type IndustryKnowledge = typeof industryKnowledge.$inferSelect;
+export type InsertIndustryKnowledge = z.infer<typeof insertIndustryKnowledgeSchema>;
+export type CoachingFeedback = typeof coachingFeedback.$inferSelect;
+export type InsertCoachingFeedback = z.infer<typeof insertCoachingFeedbackSchema>;
+
+// Extended types for coaching system API responses
+export type CoachingSessionWithMessages = CoachingSession & {
+  messages: CoachingMessage[];
+  feedback: CoachingFeedback[];
+  industryInsights?: IndustryKnowledge[];
+};
+
+export type CoachingMessageWithFeedback = CoachingMessage & {
+  feedback?: CoachingFeedback[];
+  relatedQuestions?: IndustryQuestion[];
+};
+
+export type IndustryQuestionWithContext = IndustryQuestion & {
+  industryKnowledge?: IndustryKnowledge;
+  relatedQuestions?: IndustryQuestion[];
+};
+
+// Industry context interfaces for type safety
+export interface IndustryContext {
+  primaryIndustry: string;
+  specializations: string[];
+  experienceLevel: 'intermediate' | 'senior' | 'expert';
+  technicalDepth: string;
+  companyContext: {
+    type: 'startup' | 'enterprise' | 'consulting' | 'agency';
+    businessModel: string;
+    technicalStack?: string[];
+    regulatoryEnvironment?: string;
+  };
+}
+
+export interface CoachingGoals {
+  starMethodImprovement: boolean;
+  industryKnowledge: boolean;
+  technicalDepth: boolean;
+  communicationSkills: boolean;
+  confidenceBuilding: boolean;
+  customGoals: string[];
+}
+
+export interface StarAnalysis {
+  situation: {
+    score: number;
+    feedback: string;
+    improvementAreas: string[];
+  };
+  task: {
+    score: number;
+    feedback: string;
+    improvementAreas: string[];
+  };
+  action: {
+    score: number;
+    feedback: string;
+    improvementAreas: string[];
+  };
+  result: {
+    score: number;
+    feedback: string;
+    improvementAreas: string[];
+  };
+  overallFlow: {
+    score: number;
+    feedback: string;
+    improvementAreas: string[];
+  };
+}
+
+// Industry classification constants
+export const INDUSTRY_CATEGORIES = {
+  technology: {
+    name: 'Technology',
+    subfields: ['software-engineering', 'data-science', 'cybersecurity', 'ai-ml', 'devops', 'mobile-development', 'web-development', 'cloud-computing'],
+    questionTypes: ['system-design', 'coding-concepts', 'architecture', 'troubleshooting', 'scalability', 'performance-optimization']
+  },
+  finance: {
+    name: 'Finance & Banking',
+    subfields: ['investment-banking', 'risk-management', 'fintech', 'trading', 'compliance', 'wealth-management', 'corporate-finance'],
+    questionTypes: ['market-analysis', 'regulatory-knowledge', 'quantitative-methods', 'risk-assessment', 'financial-modeling']
+  },
+  healthcare: {
+    name: 'Healthcare & Life Sciences',
+    subfields: ['clinical', 'pharmaceutical', 'medical-devices', 'health-tech', 'biotechnology', 'nursing', 'healthcare-administration'],
+    questionTypes: ['patient-care', 'regulatory-compliance', 'clinical-protocols', 'safety-procedures', 'ethical-considerations']
+  },
+  consulting: {
+    name: 'Consulting',
+    subfields: ['strategy', 'management', 'technology', 'operations', 'financial-advisory', 'hr-consulting'],
+    questionTypes: ['case-studies', 'problem-solving', 'client-management', 'analytical-thinking', 'presentation-skills']
+  },
+  marketing: {
+    name: 'Marketing & Communications',
+    subfields: ['digital-marketing', 'brand-management', 'content-marketing', 'social-media', 'advertising', 'public-relations'],
+    questionTypes: ['campaign-strategy', 'brand-positioning', 'customer-insights', 'creative-thinking', 'data-analysis']
+  }
+} as const;
+
+export type IndustryCategory = keyof typeof INDUSTRY_CATEGORIES;
+export type IndustrySubfield = typeof INDUSTRY_CATEGORIES[IndustryCategory]['subfields'][number];
+export type QuestionType = typeof INDUSTRY_CATEGORIES[IndustryCategory]['questionTypes'][number];
+
+// ===========================================
+// INDUSTRY-SPECIFIC COACHING SYSTEM
+// ===========================================
+
+// Enhanced coaching sessions with industry intelligence
+export const coachingSessions = pgTable("coaching_sessions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  jobPosition: varchar("job_position", { length: 200 }).notNull(),
+  companyName: varchar("company_name", { length: 200 }),
+  interviewStage: varchar("interview_stage", { length: 50 }).notNull(), // phone-screening, functional-team, hiring-manager, subject-matter-expertise, executive-final
+  preferredLanguage: varchar("preferred_language", { length: 10 }).default("en"),
+  
+  // Industry-specific context
+  primaryIndustry: varchar("primary_industry", { length: 100 }),
+  specializations: jsonb("specializations"), // Array of technical specializations
+  experienceLevel: varchar("experience_level", { length: 20 }), // intermediate, senior, expert
+  technicalDepth: varchar("technical_depth", { length: 20 }),
+  
+  // Company and industry context
+  industryContext: jsonb("industry_context"), // Company type, tech stack, business model, regulations
+  coachingGoals: jsonb("coaching_goals"), // Array of specific coaching objectives
+  
+  // Session management
+  status: varchar("status", { length: 20 }).default("active"), // active, completed, paused
+  totalQuestions: integer("total_questions").default(15),
+  currentQuestion: integer("current_question").default(0),
+  timeAllocation: integer("time_allocation").default(60), // minutes
+  
+  // Progress tracking
+  overallProgress: numeric("overall_progress", { precision: 5, scale: 2 }).default("0"), // 0-100%
+  coachingScore: numeric("coaching_score", { precision: 3, scale: 2 }), // Overall coaching effectiveness score
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Coaching conversation messages
+export const coachingMessages = pgTable("coaching_messages", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => coachingSessions.id, { onDelete: "cascade" }),
+  messageType: varchar("message_type", { length: 20 }).notNull(), // coach, user, system
+  content: text("content").notNull(),
+  
+  // Message context
+  questionNumber: integer("question_number"),
+  industryContext: jsonb("industry_context"), // Industry-specific metadata
+  technicalTags: jsonb("technical_tags"), // Specialization tags
+  coachingType: varchar("coaching_type", { length: 30 }), // question, response, tip, model_answer, learning, feedback
+  
+  // Multi-language support
+  originalLanguage: varchar("original_language", { length: 10 }).default("en"),
+  translatedContent: jsonb("translated_content"), // Translations in other languages
+  
+  // AI metadata
+  aiMetadata: jsonb("ai_metadata"), // AI generation parameters and confidence scores
+  feedback: text("feedback"), // Real-time coaching feedback
+  
+  timestamp: timestamp("timestamp").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Industry-specific question bank (750+ questions across 50+ industries)
+export const industryQuestions = pgTable("industry_questions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Industry classification
+  industry: varchar("industry", { length: 100 }).notNull(), // technology, finance, healthcare, etc.
+  subfield: varchar("subfield", { length: 100 }), // software-engineering, data-science, cybersecurity, etc.
+  specialization: varchar("specialization", { length: 100 }), // machine-learning, backend-development, etc.
+  
+  // Question details
+  questionText: text("question_text").notNull(),
+  interviewStage: varchar("interview_stage", { length: 50 }).notNull(),
+  difficultyLevel: varchar("difficulty_level", { length: 20 }).notNull(), // beginner, intermediate, advanced
+  technicalDepth: varchar("technical_depth", { length: 20 }), // intermediate, senior, expert
+  
+  // Question metadata
+  contextRequirements: jsonb("context_requirements"), // Required context for the question
+  questionType: varchar("question_type", { length: 50 }), // behavioral, situational, technical, scenario-based
+  estimatedTime: integer("estimated_time").default(5), // minutes to answer
+  
+  // Model answer and evaluation
+  modelAnswerStar: jsonb("model_answer_star"), // STAR-structured industry-specific answer
+  evaluationCriteria: jsonb("evaluation_criteria"), // Industry-specific evaluation points
+  commonFollowups: jsonb("common_followups"), // Follow-up questions
+  industryInsights: text("industry_insights"), // Why this question matters in this industry
+  
+  // Content management
+  tags: jsonb("tags"), // Array of tags for filtering
+  isActive: boolean("is_active").default(true),
+  aiGenerated: boolean("ai_generated").default(false),
+  popularity: integer("popularity").default(0),
+  
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Industry knowledge base for context-aware coaching
+export const industryKnowledge = pgTable("industry_knowledge", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Knowledge classification
+  knowledgeType: varchar("knowledge_type", { length: 30 }).notNull(), // company, industry, role, trend
+  entityName: varchar("entity_name", { length: 200 }).notNull(), // Company/Industry/Role name
+  
+  // Industry context
+  primaryIndustry: varchar("primary_industry", { length: 100 }),
+  relatedIndustries: jsonb("related_industries"), // Array of related industries
+  
+  // Knowledge content
+  overview: text("overview"),
+  keyInsights: jsonb("key_insights"), // Array of key insights
+  currentTrends: jsonb("current_trends"), // Recent trends and developments
+  challenges: jsonb("challenges"), // Current industry/company challenges
+  opportunities: jsonb("opportunities"), // Growth opportunities
+  
+  // Interview-specific information
+  interviewFocus: jsonb("interview_focus"), // What interviewers prioritize
+  commonScenarios: jsonb("common_scenarios"), // Typical interview scenarios
+  keyTerminology: jsonb("key_terminology"), // Industry-specific terms and definitions
+  culturalNorms: text("cultural_norms"), // Interview culture and expectations
+  
+  // Company-specific data (when applicable)
+  companySize: varchar("company_size", { length: 50 }), // startup, small, medium, large, enterprise
+  headquarters: varchar("headquarters", { length: 100 }),
+  businessModel: varchar("business_model", { length: 100 }),
+  technicalStack: jsonb("technical_stack"), // For tech companies
+  recentNews: jsonb("recent_news"), // Recent company/industry news
+  leadership: jsonb("leadership"), // Key leaders and their backgrounds
+  competitors: jsonb("competitors"), // Main competitors
+  
+  // Content metadata
+  confidenceScore: numeric("confidence_score", { precision: 3, scale: 2 }), // AI confidence in the information
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  sources: jsonb("sources"), // Information sources
+  isActive: boolean("is_active").default(true),
+  
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Structured coaching feedback (tips, model answers, learning paths)
+export const coachingFeedback = pgTable("coaching_feedback", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => coachingSessions.id, { onDelete: "cascade" }),
+  messageId: varchar("message_id").references(() => coachingMessages.id, { onDelete: "cascade" }),
+  
+  // Feedback classification
+  feedbackType: varchar("feedback_type", { length: 30 }).notNull(), // coaching_tip, model_answer, learning_path, improvement_area
+  category: varchar("category", { length: 50 }), // star_method, technical_depth, industry_knowledge, communication
+  
+  // Content
+  title: varchar("title", { length: 200 }),
+  content: text("content").notNull(),
+  
+  // Industry-specific context
+  industryContext: varchar("industry_context", { length: 100 }),
+  specialization: varchar("specialization", { length: 100 }),
+  technicalLevel: varchar("technical_level", { length: 20 }),
+  
+  // Structured feedback data
+  starAnalysis: jsonb("star_analysis"), // STAR method analysis
+  improvementAreas: jsonb("improvement_areas"), // Specific areas for improvement
+  strengths: jsonb("strengths"), // Identified strengths
+  actionableSteps: jsonb("actionable_steps"), // Specific next steps
+  resources: jsonb("resources"), // Recommended learning resources
+  
+  // Model answer data (when applicable)
+  modelAnswerStar: jsonb("model_answer_star"), // Complete STAR-structured example
+  alternativeApproaches: jsonb("alternative_approaches"), // Other valid approaches
+  industryBestPractices: jsonb("industry_best_practices"), // Industry-specific best practices
+  
+  // Multi-language support
+  language: varchar("language", { length: 10 }).default("en"),
+  translations: jsonb("translations"), // Feedback in other languages
+  
+  // Effectiveness tracking
+  helpfulnessScore: numeric("helpfulness_score", { precision: 3, scale: 2 }), // User-rated helpfulness
+  relevanceScore: numeric("relevance_score", { precision: 3, scale: 2 }), // AI-calculated relevance
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});

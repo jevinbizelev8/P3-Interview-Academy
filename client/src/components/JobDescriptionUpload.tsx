@@ -227,7 +227,7 @@ export default function JobDescriptionUpload({
                       {jd.fileName}
                     </p>
                     <p className="text-xs text-gray-500">
-                      {formatFileSize(jd.fileSize || 0)} • Uploaded {jd.uploadedAt ? formatDate(jd.uploadedAt) : 'Unknown'}
+                      {formatFileSize(jd.fileSize || 0)} • Uploaded {jd.uploadedAt ? formatDate(jd.uploadedAt.toISOString()) : 'Unknown'}
                     </p>
                   </div>
                 </div>

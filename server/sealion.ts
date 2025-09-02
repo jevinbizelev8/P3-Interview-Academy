@@ -1,5 +1,41 @@
 import axios from 'axios';
 
+// Helper function to repair JSON strings by handling control characters
+function repairJSON(jsonStr: string): string {
+  // Replace problematic characters within string values only
+  let inString = false;
+  let escaped = false;
+  let result = '';
+  
+  for (let i = 0; i < jsonStr.length; i++) {
+    const char = jsonStr[i];
+    const prevChar = jsonStr[i - 1];
+    
+    if (char === '"' && !escaped) {
+      inString = !inString;
+    }
+    
+    if (inString && !escaped) {
+      // Replace control characters within strings
+      if (char === '\n') {
+        result += ' '; // Replace newlines with spaces
+      } else if (char === '\r') {
+        result += ' '; // Replace carriage returns with spaces
+      } else if (char === '\t') {
+        result += ' '; // Replace tabs with spaces
+      } else {
+        result += char;
+      }
+    } else {
+      result += char;
+    }
+    
+    escaped = (char === '\\' && !escaped);
+  }
+  
+  return result;
+}
+
 // Sea Lion AI Configuration
 const SEA_LION_BASE_URL = 'https://api.sea-lion.ai/v1/chat/completions';
 const SEA_LION_MODEL = 'aisingapore/Llama-SEA-LION-v3.5-8B-R';
@@ -166,40 +202,6 @@ Provide constructive, actionable feedback using British English.`;
     }
     
     // Fix JSON by properly handling strings with newlines and control characters
-    function repairJSON(jsonStr: string): string {
-      // Replace problematic characters within string values only
-      let inString = false;
-      let escaped = false;
-      let result = '';
-      
-      for (let i = 0; i < jsonStr.length; i++) {
-        const char = jsonStr[i];
-        const prevChar = jsonStr[i - 1];
-        
-        if (char === '"' && !escaped) {
-          inString = !inString;
-        }
-        
-        if (inString && !escaped) {
-          // Replace control characters within strings
-          if (char === '\n') {
-            result += ' '; // Replace newlines with spaces
-          } else if (char === '\r') {
-            result += ' '; // Replace carriage returns with spaces
-          } else if (char === '\t') {
-            result += ' '; // Replace tabs with spaces
-          } else {
-            result += char;
-          }
-        } else {
-          result += char;
-        }
-        
-        escaped = (char === '\\' && !escaped);
-      }
-      
-      return result;
-    }
 
     cleanResponse = repairJSON(cleanResponse);
     console.log('Repaired Sea Lion response for parsing:', cleanResponse.substring(0, 300) + '...');

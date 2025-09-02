@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, ArrowRight, CheckCircle, Clock, Save } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import QuestionInterface from "@/components/QuestionInterface";
+import EnhancedQuestionInterface from "@/components/EnhancedQuestionInterface";
 import ResponseInterface from "@/components/ResponseInterface";
 import { SessionProvider } from "@/contexts/SessionContext";
 import type { InterviewSession, Question, Response } from "@shared/schema";
@@ -47,15 +47,20 @@ export default function PrepareDashboard() {
     enabled: !!sessionId,
   });
 
-  // Load session questions
-  const { data: questions = [], isLoading: questionsLoading } = useQuery<Question[]>({
-    queryKey: [`/api/practice/sessions/${sessionId}/questions`],
+  // Load session questions from enhanced question bank
+  const { data: questionsData, isLoading: questionsLoading } = useQuery({
+    queryKey: [`/api/prepare/questions/session/${sessionId}`, session?.interviewStage],
     queryFn: async () => {
-      const response = await apiRequest('GET', `/api/practice/sessions/${sessionId}/questions`);
-      return response.json();
+      const stage = session?.interviewStage || 'phone-screening';
+      const language = session?.interviewLanguage || 'en';
+      const response = await apiRequest('GET', `/api/prepare/questions/stage/${stage}?count=15&language=${language}`);
+      const result = await response.json();
+      return result.data;
     },
-    enabled: !!sessionId,
+    enabled: !!sessionId && !!session,
   });
+
+  const questions = questionsData?.questions || [];
 
   // Load session responses
   const { data: responses = [] } = useQuery<Response[]>({
@@ -217,13 +222,17 @@ export default function PrepareDashboard() {
         {/* Main Content */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="space-y-6">
-            {/* Question Interface */}
+            {/* Enhanced Question Interface */}
             {currentQuestion && (
-              <QuestionInterface
+              <EnhancedQuestionInterface
                 question={currentQuestion}
                 currentIndex={currentQuestionIndex + 1}
                 totalQuestions={questions.length}
                 selectedLanguage={session.interviewLanguage}
+                onPrevious={handlePreviousQuestion}
+                onNext={handleNextQuestion}
+                sessionProgress={progress}
+                timeSpent={session.duration || 0}
               />
             )}
 
@@ -236,59 +245,76 @@ export default function PrepareDashboard() {
               />
             )}
 
-            {/* Navigation */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={handlePreviousQuestion}
-                    disabled={currentQuestionIndex === 0}
-                  >
-                    <ArrowLeft className="w-4 h-4 mr-2" />
-                    Previous
-                  </Button>
-
-                  <div className="text-sm text-gray-600">
-                    {isLastQuestion ? (
-                      <span className="text-green-600 font-medium">Ready to complete session</span>
-                    ) : (
-                      <span>Continue to next question</span>
-                    )}
+            {/* Enhanced Session Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-white" />
                   </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Session Time</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {Math.floor((session.duration || 0) / 60)}m {(session.duration || 0) % 60}s
+                    </p>
+                  </div>
+                </div>
+              </Card>
 
-                  {isLastQuestion ? (
+              <Card className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                    <CheckCircle className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Questions Answered</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {responses.length} / {questions.length}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Save className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">Interview Stage</p>
+                    <p className="text-lg font-semibold text-gray-900 capitalize">
+                      {session.interviewStage?.replace('-', ' ') || 'General'}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Completion Action */}
+            {isLastQuestion && (
+              <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-green-900 mb-2">
+                      Ready to Complete Session
+                    </h3>
+                    <p className="text-green-700 mb-6">
+                      You've reached the final question. Complete your preparation session to receive detailed feedback and recommendations.
+                    </p>
                     <Button
                       onClick={handleCompleteSession}
                       disabled={completeSessionMutation.isPending}
+                      className="bg-green-600 hover:bg-green-700"
+                      size="lg"
                     >
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      Complete Session
+                      <CheckCircle className="w-5 h-5 mr-2" />
+                      Complete Preparation Session
                     </Button>
-                  ) : (
-                    <Button onClick={handleNextQuestion}>
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Session Info */}
-            <Card className="bg-blue-50 border-blue-200">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center text-blue-800">
-                    <Save className="w-4 h-4 mr-2" />
-                    Auto-save enabled
                   </div>
-                  <div className="text-blue-600">
-                    Session ID: {sessionId.slice(0, 8)}...
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

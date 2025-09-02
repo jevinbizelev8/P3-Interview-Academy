@@ -21,7 +21,8 @@ import {
   Sparkles,
   Zap,
   BookOpen,
-  Trophy
+  Trophy,
+  Lightbulb
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -30,6 +31,14 @@ import LanguageSelector from "@/components/LanguageSelector";
 
 interface PrepareWizardProps {
   onComplete?: (sessionId: string) => void;
+}
+
+interface QuestionPreview {
+  id: string;
+  question: string;
+  category: string;
+  difficulty: string;
+  expectedAnswerTime: number;
 }
 
 interface WizardStep {
@@ -43,16 +52,94 @@ interface WizardStep {
 export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
   const [, setLocation] = useLocation();
   const [currentStep, setCurrentStep] = useState(0);
+  const [industryDetecting, setIndustryDetecting] = useState(false);
+  const [showIndustryContext, setShowIndustryContext] = useState(false);
   const [formData, setFormData] = useState({
     jobPosition: '',
     companyName: '',
     interviewStage: '',
     targetDate: '',
     preferredLanguage: 'en',
+    questionDifficulty: 'mixed' as 'beginner' | 'intermediate' | 'advanced' | 'mixed',
+    questionCategories: [] as string[],
+    questionsPerSession: 15,
     dailyTimeCommitment: 60,
     focusAreas: [] as string[],
-    notes: ''
+    notes: '',
+    
+    // Stage 4 Industry-Specific Fields
+    primaryIndustry: '',
+    detectedIndustry: '',
+    industryConfidence: 0,
+    specializations: [] as string[],
+    experienceLevel: 'intermediate' as 'intermediate' | 'senior' | 'expert',
+    technicalDepth: '',
+    companyContext: {
+      type: 'enterprise' as 'startup' | 'enterprise' | 'consulting' | 'agency',
+      businessModel: '',
+      technicalStack: [] as string[],
+      regulatoryEnvironment: ''
+    },
+    industryInsights: null as any
   });
+
+  // Industry Detection Effect - Triggers when job position or company changes
+  useEffect(() => {
+    const detectIndustryContext = async () => {
+      if (formData.jobPosition.trim().length > 3) {
+        setIndustryDetecting(true);
+        
+        try {
+          const response = await apiRequest('POST', '/api/coaching/detect-industry', {
+            jobPosition: formData.jobPosition,
+            companyName: formData.companyName || undefined,
+            experienceLevel: formData.experienceLevel
+          });
+          
+          const result = await response.json();
+          if (result.success) {
+            const industryContext = result.data;
+            
+            setFormData((prev: any) => ({
+              ...prev,
+              primaryIndustry: industryContext.primaryIndustry,
+              detectedIndustry: industryContext.primaryIndustry,
+              industryConfidence: industryContext.confidenceScore || 0.8,
+              specializations: industryContext.specializations,
+              technicalDepth: industryContext.technicalDepth,
+              companyContext: {
+                ...prev.companyContext,
+                ...industryContext.companyContext
+              },
+              industryInsights: industryContext.industryInsights
+            }));
+            
+            // Show industry context panel if Stage 4 is selected
+            if (formData.interviewStage === 'subject-matter-expertise') {
+              setShowIndustryContext(true);
+            }
+          }
+        } catch (error) {
+          console.error('Error detecting industry context:', error);
+        } finally {
+          setIndustryDetecting(false);
+        }
+      }
+    };
+
+    // Debounce the API call to avoid too many requests
+    const timeoutId = setTimeout(detectIndustryContext, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [formData.jobPosition, formData.companyName, formData.experienceLevel]);
+
+  // Show/hide industry context based on interview stage
+  useEffect(() => {
+    if (formData.interviewStage === 'subject-matter-expertise' && formData.primaryIndustry) {
+      setShowIndustryContext(true);
+    } else {
+      setShowIndustryContext(false);
+    }
+  }, [formData.interviewStage, formData.primaryIndustry]);
 
   const steps: WizardStep[] = [
     {
@@ -70,11 +157,18 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
       component: InterviewDetailsStep
     },
     {
-      id: 'preferences',
-      title: 'Preparation Preferences',
-      description: 'Customize your learning experience',
+      id: 'language-preferences',
+      title: 'Language Preferences',
+      description: 'Choose your preferred interview language',
       icon: Globe,
-      component: PreferencesStep
+      component: LanguagePreferencesStep
+    },
+    {
+      id: 'question-preferences',
+      title: 'Question Preferences',
+      description: 'Customize your question settings',
+      icon: BookOpen,
+      component: QuestionPreferencesStep
     },
     {
       id: 'focus-areas',
@@ -92,27 +186,50 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
     }
   ];
 
-  const createPreparationSessionMutation = useMutation({
+  const createCoachingSessionMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/prepare/sessions', data);
+      const response = await apiRequest('POST', '/api/coaching/sessions', {
+        jobPosition: data.jobPosition,
+        companyName: data.companyName,
+        interviewStage: data.interviewStage,
+        preferredLanguage: data.preferredLanguage,
+        
+        // Stage 4 Industry-Specific Data
+        primaryIndustry: data.primaryIndustry,
+        specializations: data.specializations,
+        experienceLevel: data.experienceLevel,
+        technicalDepth: data.technicalDepth,
+        industryContext: data.industryContext,
+        
+        // Coaching goals based on focus areas
+        coachingGoals: data.coachingGoals,
+        
+        // Session configuration
+        totalQuestions: data.questionsPerSession,
+        timeAllocation: data.dailyTimeCommitment
+      });
       return response.json();
     },
-    onSuccess: (session) => {
+    onSuccess: (result) => {
+      const sessionId = result.data?.id || result.id;
       toast({
-        title: "Preparation Session Created!",
-        description: "Your personalized preparation journey is ready to begin."
+        title: "🎯 Coaching Session Created!",
+        description: formData.interviewStage === 'subject-matter-expertise' 
+          ? `Industry-specific ${formData.primaryIndustry} coaching session is ready!`
+          : "Your personalized coaching session is ready to begin."
       });
       
       if (onComplete) {
-        onComplete(session.id);
+        onComplete(sessionId);
       } else {
-        setLocation(`/prepare/dashboard?sessionId=${session.id}`);
+        setLocation(`/prepare/coaching/${sessionId}`);
       }
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error creating coaching session:', error);
       toast({
         title: "Setup Failed",
-        description: "Failed to create your preparation session. Please try again.",
+        description: "Failed to create your coaching session. Please try again.",
         variant: "destructive"
       });
     }
@@ -139,13 +256,41 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
       jobPosition: formData.jobPosition,
       companyName: formData.companyName || null,
       interviewStage: formData.interviewStage,
-      targetInterviewDate: formData.targetDate ? new Date(formData.targetDate) : null,
       preferredLanguage: formData.preferredLanguage,
-      status: 'active',
-      overallProgress: 0
+      
+      // Stage 4 Industry-Specific Data
+      primaryIndustry: formData.primaryIndustry,
+      specializations: formData.specializations,
+      experienceLevel: formData.experienceLevel,
+      technicalDepth: formData.technicalDepth,
+      
+      // Industry context
+      industryContext: {
+        primaryIndustry: formData.primaryIndustry,
+        specializations: formData.specializations,
+        experienceLevel: formData.experienceLevel,
+        technicalDepth: formData.technicalDepth,
+        companyContext: formData.companyContext
+      },
+      
+      // Coaching goals based on focus areas and interview stage
+      coachingGoals: {
+        starMethodImprovement: formData.focusAreas.includes('star-method'),
+        industryKnowledge: formData.interviewStage === 'subject-matter-expertise',
+        technicalDepth: formData.primaryIndustry === 'technology',
+        communicationSkills: formData.focusAreas.includes('communication'),
+        confidenceBuilding: formData.focusAreas.includes('confidence'),
+        customGoals: formData.focusAreas.filter((area: string) => 
+          !['star-method', 'communication', 'confidence'].includes(area)
+        )
+      },
+      
+      // Session configuration
+      questionsPerSession: formData.questionsPerSession,
+      dailyTimeCommitment: formData.dailyTimeCommitment
     };
 
-    createPreparationSessionMutation.mutate(sessionData);
+    createCoachingSessionMutation.mutate(sessionData);
   };
 
   const isStepValid = () => {
@@ -154,11 +299,13 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
         return formData.jobPosition.trim().length > 0;
       case 1: // Interview Details
         return formData.interviewStage.length > 0;
-      case 2: // Preferences
+      case 2: // Language Preferences
         return formData.preferredLanguage.length > 0;
-      case 3: // Focus Areas
+      case 3: // Question Preferences
+        return formData.questionsPerSession >= 10 && formData.questionsPerSession <= 25;
+      case 4: // Focus Areas
         return formData.focusAreas.length > 0;
-      case 4: // Review
+      case 5: // Review
         return true;
       default:
         return true;
@@ -270,10 +417,10 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
         ) : (
           <Button
             onClick={handleComplete}
-            disabled={!isStepValid() || createPreparationSessionMutation.isPending}
+            disabled={!isStepValid() || createCoachingSessionMutation.isPending}
             className="bg-green-600 hover:bg-green-700"
           >
-            {createPreparationSessionMutation.isPending ? (
+            {createCoachingSessionMutation.isPending ? (
               "Creating..."
             ) : (
               <>
@@ -289,7 +436,7 @@ export default function PrepareWizard({ onComplete }: PrepareWizardProps) {
 }
 
 // Step Components
-function BasicInfoStep({ formData, setFormData }: any) {
+function BasicInfoStep({ formData, setFormData }: { formData: any; setFormData: React.Dispatch<React.SetStateAction<any>> }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -299,7 +446,7 @@ function BasicInfoStep({ formData, setFormData }: any) {
             id="jobPosition"
             placeholder="e.g., Senior Software Engineer"
             value={formData.jobPosition}
-            onChange={(e) => setFormData(prev => ({ ...prev, jobPosition: e.target.value }))}
+            onChange={(e) => setFormData((prev: any) => ({ ...prev, jobPosition: e.target.value }))}
           />
         </div>
         <div className="space-y-2">
@@ -308,7 +455,7 @@ function BasicInfoStep({ formData, setFormData }: any) {
             id="companyName"
             placeholder="e.g., Google (optional)"
             value={formData.companyName}
-            onChange={(e) => setFormData(prev => ({ ...prev, companyName: e.target.value }))}
+            onChange={(e) => setFormData((prev: any) => ({ ...prev, companyName: e.target.value }))}
           />
         </div>
       </div>
@@ -320,14 +467,14 @@ function BasicInfoStep({ formData, setFormData }: any) {
           placeholder="Any specific requirements, concerns, or goals for your preparation?"
           rows={3}
           value={formData.notes}
-          onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+          onChange={(e) => setFormData((prev: any) => ({ ...prev, notes: e.target.value }))}
         />
       </div>
     </div>
   );
 }
 
-function InterviewDetailsStep({ formData, setFormData }: any) {
+function InterviewDetailsStep({ formData, setFormData }: { formData: any; setFormData: React.Dispatch<React.SetStateAction<any>> }) {
   const interviewStages = [
     { value: 'phone-screening', label: 'Phone/Initial Screening' },
     { value: 'functional-team', label: 'Functional/Team Interview' },
@@ -342,7 +489,7 @@ function InterviewDetailsStep({ formData, setFormData }: any) {
         <Label htmlFor="interviewStage">Interview Stage *</Label>
         <Select
           value={formData.interviewStage}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, interviewStage: value }))}
+          onValueChange={(value) => setFormData((prev: any) => ({ ...prev, interviewStage: value }))}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select interview stage" />
@@ -365,7 +512,7 @@ function InterviewDetailsStep({ formData, setFormData }: any) {
             id="targetDate"
             type="date"
             value={formData.targetDate}
-            onChange={(e) => setFormData(prev => ({ ...prev, targetDate: e.target.value }))}
+            onChange={(e) => setFormData((prev: any) => ({ ...prev, targetDate: e.target.value }))}
           />
         </div>
       </div>
@@ -374,7 +521,7 @@ function InterviewDetailsStep({ formData, setFormData }: any) {
         <Label htmlFor="dailyTime">Daily Time Commitment (minutes)</Label>
         <Select
           value={formData.dailyTimeCommitment.toString()}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, dailyTimeCommitment: parseInt(value) }))}
+          onValueChange={(value) => setFormData((prev: any) => ({ ...prev, dailyTimeCommitment: parseInt(value) }))}
         >
           <SelectTrigger>
             <SelectValue />
@@ -387,39 +534,428 @@ function InterviewDetailsStep({ formData, setFormData }: any) {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Stage 4 Industry-Specific Enhancements */}
+      {formData.interviewStage === 'subject-matter-expertise' && (
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <div className="mb-4">
+            <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+              <Sparkles className="w-5 h-5 mr-2 text-purple-600" />
+              Subject-Matter Expertise Configuration
+            </h4>
+            <p className="text-sm text-gray-600 mt-1">
+              Enhanced preparation for technical and industry-specific interviews
+            </p>
+          </div>
+
+          {/* Industry Detection Results */}
+          {formData.detectedIndustry && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h5 className="font-medium text-blue-900">
+                    🔍 Detected Industry: {formData.detectedIndustry.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                  </h5>
+                  <p className="text-sm text-blue-700">
+                    Confidence: {Math.round(formData.industryConfidence * 100)}% 
+                    {industryDetecting && <span className="ml-2 text-blue-600">• Analyzing...</span>}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFormData((prev: any) => ({ ...prev, primaryIndustry: formData.detectedIndustry }))}
+                  className="text-blue-700 hover:text-blue-900"
+                >
+                  Use This Industry
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Manual Industry Selection */}
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="primaryIndustry">Primary Industry *</Label>
+            <Select
+              value={formData.primaryIndustry}
+              onValueChange={(value) => setFormData((prev: any) => ({ ...prev, primaryIndustry: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select your industry" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="technology">Technology & Software</SelectItem>
+                <SelectItem value="finance">Finance & Banking</SelectItem>
+                <SelectItem value="healthcare">Healthcare & Life Sciences</SelectItem>
+                <SelectItem value="consulting">Consulting & Advisory</SelectItem>
+                <SelectItem value="marketing">Marketing & Communications</SelectItem>
+                <SelectItem value="manufacturing">Manufacturing & Engineering</SelectItem>
+                <SelectItem value="retail">Retail & E-commerce</SelectItem>
+                <SelectItem value="education">Education & Training</SelectItem>
+                <SelectItem value="government">Government & Public Sector</SelectItem>
+                <SelectItem value="nonprofit">Non-Profit & Social Impact</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Experience Level */}
+          <div className="space-y-2 mb-4">
+            <Label htmlFor="experienceLevel">Experience Level *</Label>
+            <Select
+              value={formData.experienceLevel}
+              onValueChange={(value: 'intermediate' | 'senior' | 'expert') => 
+                setFormData((prev: any) => ({ ...prev, experienceLevel: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="intermediate">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Intermediate</span>
+                    <span className="text-xs text-gray-500">2-5 years experience</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="senior">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Senior</span>
+                    <span className="text-xs text-gray-500">5-10 years experience</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="expert">
+                  <div className="flex flex-col">
+                    <span className="font-medium">Expert</span>
+                    <span className="text-xs text-gray-500">10+ years experience</span>
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Specializations */}
+          {formData.specializations.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <Label>Detected Specializations</Label>
+              <div className="flex flex-wrap gap-2">
+                {formData.specializations.map((spec: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="bg-green-100 text-green-800">
+                    {spec.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                  </Badge>
+                ))}
+              </div>
+              <p className="text-xs text-gray-600">
+                These specializations will be used to generate industry-specific questions
+              </p>
+            </div>
+          )}
+
+          {/* Company Context */}
+          <div className="space-y-3 mb-4">
+            <Label>Company Context</Label>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="companyType" className="text-sm">Company Type</Label>
+                <Select
+                  value={formData.companyContext.type}
+                  onValueChange={(value: 'startup' | 'enterprise' | 'consulting' | 'agency') => 
+                    setFormData((prev: any) => ({ 
+                      ...prev, 
+                      companyContext: { ...prev.companyContext, type: value }
+                    }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="startup">Startup (1-50 employees)</SelectItem>
+                    <SelectItem value="enterprise">Enterprise (500+ employees)</SelectItem>
+                    <SelectItem value="consulting">Consulting Firm</SelectItem>
+                    <SelectItem value="agency">Agency/Service Provider</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="businessModel" className="text-sm">Business Model</Label>
+                <Input
+                  id="businessModel"
+                  placeholder="e.g., SaaS, E-commerce, Consulting"
+                  value={formData.companyContext.businessModel}
+                  onChange={(e) => setFormData((prev: any) => ({ 
+                    ...prev, 
+                    companyContext: { ...prev.companyContext, businessModel: e.target.value }
+                  }))}
+                />
+              </div>
+            </div>
+
+            {/* Technical Stack (for technology roles) */}
+            {formData.primaryIndustry === 'technology' && formData.companyContext.technicalStack.length > 0 && (
+              <div className="space-y-2">
+                <Label className="text-sm">Detected Technical Stack</Label>
+                <div className="flex flex-wrap gap-2">
+                  {formData.companyContext.technicalStack.map((tech: string, index: number) => (
+                    <Badge key={index} variant="outline" className="bg-purple-50 text-purple-700">
+                      {tech}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Industry Insights Preview */}
+          {formData.industryInsights && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <h5 className="font-medium text-emerald-900 mb-2">
+                💡 Industry-Specific Interview Insights
+              </h5>
+              <ul className="text-sm text-emerald-800 space-y-1">
+                <li>• Questions will focus on {formData.primaryIndustry} best practices</li>
+                <li>• {formData.specializations.length} specialized areas identified</li>
+                <li>• {formData.experienceLevel}-level depth expected</li>
+                <li>• Tailored for {formData.companyContext.type} environment</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-function PreferencesStep({ formData, setFormData }: any) {
+function LanguagePreferencesStep({ formData, setFormData }: { formData: any; setFormData: React.Dispatch<React.SetStateAction<any>> }) {
+  const [questionPreview, setQuestionPreview] = useState<QuestionPreview | null>(null);
+  
+  // Fetch sample question when language changes
+  useEffect(() => {
+    const fetchPreview = async () => {
+      try {
+        const response = await apiRequest('GET', `/api/prepare/questions/stage/phone-screening?count=1&language=${formData.preferredLanguage}`);
+        const result = await response.json();
+        if (result.success && result.data.questions.length > 0) {
+          setQuestionPreview(result.data.questions[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching question preview:', error);
+      }
+    };
+
+    if (formData.preferredLanguage !== 'en') {
+      fetchPreview();
+    }
+  }, [formData.preferredLanguage]);
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Label>Preferred Language *</Label>
+        <Label>Preferred Interview Language *</Label>
         <LanguageSelector
           value={formData.preferredLanguage}
-          onValueChange={(value) => setFormData(prev => ({ ...prev, preferredLanguage: value }))}
+          onValueChange={(value: string) => setFormData((prev: any) => ({ ...prev, preferredLanguage: value }))}
         />
         <p className="text-sm text-gray-600">
-          AI-generated content and feedback will be provided in both English and your selected language
+          Questions and feedback will be provided in both English and your selected language
         </p>
       </div>
 
+      {/* Language Preview */}
+      {questionPreview && formData.preferredLanguage !== 'en' && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+          <h4 className="font-semibold text-emerald-900 mb-3">✨ Sample Question Preview</h4>
+          <div className="space-y-3">
+            <div className="bg-white rounded-lg p-3 border border-emerald-200">
+              <p className="text-sm font-medium text-gray-600 mb-1">English</p>
+              <p className="text-gray-900">{questionPreview.question}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3 border border-emerald-200">
+              <p className="text-sm font-medium text-gray-600 mb-1">
+                {formData.preferredLanguage.toUpperCase()}
+              </p>
+              <p className="text-gray-500 italic">Translation will be provided during the session</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">✨ AI-Powered Features</h3>
+        <h3 className="font-semibold text-blue-900 mb-2">🌏 Multilingual Interview Features</h3>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Personalized study plans generated by AI</li>
-          <li>• Dynamic company research with cultural insights</li>
-          <li>• STAR method training with intelligent feedback</li>
-          <li>• Multi-language support for 9 Southeast Asian languages</li>
-          <li>• Adaptive resource recommendations</li>
+          <li>• Questions displayed in both English and your preferred language</li>
+          <li>• Cultural context and tips for Southeast Asian interviews</li>
+          <li>• AI feedback considers language-specific nuances</li>
+          <li>• Professional translations by SeaLion AI</li>
+          <li>• Practice with 9 supported ASEAN languages</li>
         </ul>
       </div>
     </div>
   );
 }
 
-function FocusAreasStep({ formData, setFormData }: any) {
+function QuestionPreferencesStep({ formData, setFormData }: { formData: any; setFormData: React.Dispatch<React.SetStateAction<any>> }) {
+  const [availableQuestions, setAvailableQuestions] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchQuestionStats = async () => {
+      try {
+        const response = await apiRequest('GET', '/api/prepare/questions/statistics');
+        const result = await response.json();
+        if (result.success) {
+          setAvailableQuestions(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching question statistics:', error);
+      }
+    };
+
+    fetchQuestionStats();
+  }, []);
+
+  const handleCategoryToggle = (category: string) => {
+    const current = formData.questionCategories || [];
+    const updated = current.includes(category)
+      ? current.filter((c: string) => c !== category)
+      : [...current, category];
+    setFormData((prev: any) => ({ ...prev, questionCategories: updated }));
+  };
+
+  const categories = [
+    { id: 'behavioral', name: 'Behavioral', description: 'Past experiences and situations', icon: Target },
+    { id: 'situational', name: 'Situational', description: 'Hypothetical scenarios', icon: Lightbulb },
+    { id: 'technical', name: 'Technical', description: 'Job-specific expertise', icon: BookOpen },
+    { id: 'company-specific', name: 'Company-Specific', description: 'About the company and role', icon: Building2 },
+    { id: 'general', name: 'General', description: 'Standard interview questions', icon: Globe }
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Question Count */}
+      <div className="space-y-3">
+        <Label htmlFor="questionsPerSession">Number of Questions per Session *</Label>
+        <Select
+          value={formData.questionsPerSession.toString()}
+          onValueChange={(value: string) => setFormData((prev: any) => ({ ...prev, questionsPerSession: parseInt(value) }))}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="10">10 questions (Quick session)</SelectItem>
+            <SelectItem value="15">15 questions (Standard)</SelectItem>
+            <SelectItem value="20">20 questions (Extended)</SelectItem>
+            <SelectItem value="25">25 questions (Comprehensive)</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-sm text-gray-600">
+          Recommended: 15 questions for a balanced preparation session
+        </p>
+      </div>
+
+      {/* Question Difficulty */}
+      <div className="space-y-3">
+        <Label>Question Difficulty</Label>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { value: 'beginner', label: 'Beginner', desc: 'Entry-level questions', color: 'green' },
+            { value: 'intermediate', label: 'Intermediate', desc: 'Mid-level questions', color: 'yellow' },
+            { value: 'advanced', label: 'Advanced', desc: 'Senior-level questions', color: 'red' },
+            { value: 'mixed', label: 'Mixed', desc: 'All difficulty levels', color: 'blue' }
+          ].map((option) => (
+            <Card
+              key={option.value}
+              className={`cursor-pointer transition-all hover:shadow-md ${
+                formData.questionDifficulty === option.value ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+              }`}
+              onClick={() => setFormData((prev: any) => ({ ...prev, questionDifficulty: option.value }))}
+            >
+              <CardContent className="p-3 text-center">
+                <div className={`w-8 h-8 rounded-full mx-auto mb-2 ${
+                  option.color === 'green' ? 'bg-green-100' :
+                  option.color === 'yellow' ? 'bg-yellow-100' :
+                  option.color === 'red' ? 'bg-red-100' : 'bg-blue-100'
+                }`} />
+                <p className="font-semibold text-sm">{option.label}</p>
+                <p className="text-xs text-gray-600">{option.desc}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      {/* Question Categories */}
+      <div className="space-y-3">
+        <Label>Question Categories (Optional)</Label>
+        <p className="text-sm text-gray-600 mb-3">
+          Select specific types of questions to focus on, or leave empty for all categories
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {categories.map((category) => {
+            const Icon = category.icon;
+            const isSelected = formData.questionCategories.includes(category.id);
+            
+            return (
+              <Card
+                key={category.id}
+                className={`cursor-pointer transition-all hover:shadow-md ${
+                  isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+                }`}
+                onClick={() => handleCategoryToggle(category.id)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start space-x-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900 mb-1">{category.name}</h3>
+                      <p className="text-sm text-gray-600">{category.description}</p>
+                    </div>
+                    {isSelected && (
+                      <CheckCircle className="w-5 h-5 text-blue-500" />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Question Bank Statistics */}
+      {availableQuestions && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <h4 className="font-semibold text-gray-900 mb-3">📊 Available Questions</h4>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-600">{availableQuestions.totalQuestions}</p>
+              <p className="text-gray-600">Total Questions</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-emerald-600">
+                {Object.keys(availableQuestions.questionsByStage).length}
+              </p>
+              <p className="text-gray-600">Interview Stages</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-purple-600">
+                {Object.keys(availableQuestions.questionsByCategory).length}
+              </p>
+              <p className="text-gray-600">Categories</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function FocusAreasStep({ formData, setFormData }: { formData: any; setFormData: React.Dispatch<React.SetStateAction<any>> }) {
   const focusOptions = [
     { id: 'star-method', label: 'STAR Method Mastery', description: 'Perfect your behavioral responses', icon: Star },
     { id: 'company-research', label: 'Company Research', description: 'Deep dive into company culture and values', icon: Building2 },
@@ -430,10 +966,10 @@ function FocusAreasStep({ formData, setFormData }: any) {
   ];
 
   const toggleFocusArea = (areaId: string) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       focusAreas: prev.focusAreas.includes(areaId)
-        ? prev.focusAreas.filter(id => id !== areaId)
+        ? prev.focusAreas.filter((id: any) => id !== areaId)
         : [...prev.focusAreas, areaId]
     }));
   };
@@ -482,58 +1018,139 @@ function FocusAreasStep({ formData, setFormData }: any) {
 }
 
 function ReviewStep({ formData }: any) {
+  const getLanguageName = (code: string) => {
+    const languageMap: Record<string, string> = {
+      'en': 'English',
+      'ms': 'Bahasa Malaysia',
+      'id': 'Bahasa Indonesia',
+      'th': 'Thai',
+      'vi': 'Vietnamese',
+      'tl': 'Filipino',
+      'my': 'Myanmar',
+      'km': 'Khmer',
+      'zh-sg': 'Chinese (Singapore)'
+    };
+    return languageMap[code] || code.toUpperCase();
+  };
+
+  const getDifficultyLabel = (difficulty: string) => {
+    const labels = {
+      'beginner': 'Beginner Level',
+      'intermediate': 'Intermediate Level',
+      'advanced': 'Advanced Level',
+      'mixed': 'Mixed Difficulty'
+    };
+    return labels[difficulty as keyof typeof labels] || difficulty;
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-green-50 border border-green-200 rounded-lg p-6">
         <h3 className="font-semibold text-green-900 mb-4 flex items-center">
           <Trophy className="w-5 h-5 mr-2" />
-          Your Preparation Setup
+          Your Enhanced Preparation Setup
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <h4 className="font-medium text-gray-900 mb-2">Interview Details</h4>
             <ul className="text-sm text-gray-700 space-y-1">
               <li><strong>Position:</strong> {formData.jobPosition}</li>
               {formData.companyName && <li><strong>Company:</strong> {formData.companyName}</li>}
-              <li><strong>Stage:</strong> {formData.interviewStage.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}</li>
+              <li><strong>Stage:</strong> {formData.interviewStage.replace('-', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}</li>
               {formData.targetDate && <li><strong>Target Date:</strong> {new Date(formData.targetDate).toLocaleDateString()}</li>}
             </ul>
           </div>
           
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">Preferences</h4>
+            <h4 className="font-medium text-gray-900 mb-2">Language & Questions</h4>
             <ul className="text-sm text-gray-700 space-y-1">
-              <li><strong>Language:</strong> {formData.preferredLanguage === 'en' ? 'English' : formData.preferredLanguage}</li>
+              <li><strong>Language:</strong> {getLanguageName(formData.preferredLanguage)}</li>
+              <li><strong>Questions:</strong> {formData.questionsPerSession} per session</li>
+              <li><strong>Difficulty:</strong> {getDifficultyLabel(formData.questionDifficulty)}</li>
+              {formData.questionCategories.length > 0 && (
+                <li><strong>Categories:</strong> {formData.questionCategories.length} selected</li>
+              )}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-medium text-gray-900 mb-2">Learning Preferences</h4>
+            <ul className="text-sm text-gray-700 space-y-1">
               <li><strong>Daily Time:</strong> {formData.dailyTimeCommitment} minutes</li>
               <li><strong>Focus Areas:</strong> {formData.focusAreas.length} selected</li>
+              {formData.notes && <li><strong>Notes:</strong> Added</li>}
             </ul>
           </div>
         </div>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-3">🚀 What happens next?</h3>
-        <ul className="text-sm text-blue-800 space-y-2">
+      {/* Enhanced Features Summary */}
+      <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-6">
+        <h3 className="font-semibold text-blue-900 mb-3">✨ Enhanced Features Enabled</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <ul className="text-sm text-blue-800 space-y-2">
+            <li className="flex items-start">
+              <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
+              <span><strong>77+ Professional Questions</strong> across all interview stages</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
+              <span><strong>Multilingual Support</strong> with cultural context</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
+              <span><strong>Question Categorization</strong> and difficulty levels</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
+              <span><strong>STAR Method Integration</strong> with expert guidance</span>
+            </li>
+          </ul>
+          
+          <ul className="text-sm text-blue-800 space-y-2">
+            <li className="flex items-start">
+              <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
+              <span><strong>Dynamic Question Generation</strong> using SeaLion AI</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
+              <span><strong>Cultural Tips & Context</strong> for ASEAN interviews</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
+              <span><strong>Enhanced Progress Tracking</strong> with detailed analytics</span>
+            </li>
+            <li className="flex items-start">
+              <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
+              <span><strong>Personalized Study Plans</strong> based on your goals</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6">
+        <h3 className="font-semibold text-emerald-900 mb-3">🚀 What happens next?</h3>
+        <ul className="text-sm text-emerald-800 space-y-2">
           <li className="flex items-start">
-            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
-            Your personalized preparation session will be created
+            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-emerald-600" />
+            Your enhanced preparation session with {formData.questionsPerSession} questions will be created
           </li>
           <li className="flex items-start">
-            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
-            AI will generate a custom study plan based on your timeline
+            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-emerald-600" />
+            Questions will be displayed in both English and {getLanguageName(formData.preferredLanguage)}
           </li>
           <li className="flex items-start">
-            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
-            Company research will be prepared (if company specified)
+            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-emerald-600" />
+            Cultural context and tips will be provided for each question
           </li>
           <li className="flex items-start">
-            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
-            Interactive training tools will be available instantly
+            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-emerald-600" />
+            Progress tracking will monitor your preparation journey with detailed insights
           </li>
           <li className="flex items-start">
-            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-blue-600" />
-            Progress tracking will monitor your preparation journey
+            <CheckCircle className="w-4 h-4 mr-2 mt-0.5 text-emerald-600" />
+            AI-powered feedback will help you improve using the STAR method
           </li>
         </ul>
       </div>
