@@ -1339,6 +1339,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/coaching/sessions', addMockUser, async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
+      // Log the request body for debugging
+      console.log('Coaching session request body:', JSON.stringify(req.body, null, 2));
+      
+      // Preprocess request body to handle null values
+      const processedBody = {
+        ...req.body,
+        jobPosition: req.body.jobPosition === null || req.body.jobPosition === undefined || req.body.jobPosition === '' ? 'Professional' : req.body.jobPosition,
+        companyName: req.body.companyName === null || req.body.companyName === undefined ? undefined : req.body.companyName,
+        primaryIndustry: req.body.primaryIndustry === null || req.body.primaryIndustry === undefined ? undefined : req.body.primaryIndustry,
+        specializations: Array.isArray(req.body.specializations) ? req.body.specializations : [],
+        experienceLevel: req.body.experienceLevel || 'intermediate'
+      };
+      
+      console.log('Processed body:', JSON.stringify(processedBody, null, 2));
+
       const validatedData = z.object({
         jobPosition: z.string().min(1, 'Job position is required'),
         companyName: z.string().optional(),
@@ -1351,11 +1366,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           businessModel: z.string().default(''),
           technicalStack: z.array(z.string()).default([])
         }).default({})
-      }).parse(req.body);
+      }).safeParse(processedBody);
+
+      if (!validatedData.success) {
+        console.log('Validation failed:', validatedData.error.issues);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid session data',
+          errors: validatedData.error.errors
+        });
+      }
 
       const session = await storage.createCoachingSession({
         userId,
-        ...validatedData
+        ...validatedData.data
       });
 
       res.status(201).json({
