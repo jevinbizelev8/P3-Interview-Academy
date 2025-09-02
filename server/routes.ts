@@ -1340,7 +1340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user?.id || 'dev-user-123';
       // Log the request body for debugging
-      console.log('Coaching session request body:', JSON.stringify(req.body, null, 2));
+      // console.log('Coaching session request body:', JSON.stringify(req.body, null, 2));
       
       // Preprocess request body to handle null values
       const processedBody = {
@@ -1352,8 +1352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         experienceLevel: req.body.experienceLevel || 'intermediate'
       };
       
-      console.log('Processed body:', JSON.stringify(processedBody, null, 2));
-
+      // console.log('Processed body:', JSON.stringify(processedBody, null, 2));
       const validatedData = z.object({
         jobPosition: z.string().min(1, 'Job position is required'),
         companyName: z.string().optional(),
@@ -1365,7 +1364,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: z.enum(['startup', 'enterprise', 'consulting', 'agency']).default('enterprise'),
           businessModel: z.string().default(''),
           technicalStack: z.array(z.string()).default([])
-        }).default({})
+        }).default({}),
+        interviewLanguage: z.string().min(2).max(10).default('en')
       }).safeParse(processedBody);
 
       if (!validatedData.success) {
@@ -1377,10 +1377,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const session = await storage.createCoachingSession({
+      const { interviewLanguage, ...sessionData } = validatedData.data;
+      const sessionPayload = {
         userId,
-        ...validatedData.data
-      });
+        ...sessionData,
+        preferredLanguage: interviewLanguage
+      };
+      const session = await storage.createCoachingSession(sessionPayload);
 
       res.status(201).json({
         success: true,
@@ -1493,7 +1496,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const response = await coachingEngineService.startCoachingConversation(sessionId);
+      // Parse language parameters from request body
+      const languageOptions = {
+        language: req.body.language,
+        useSeaLion: req.body.useSeaLion
+      };
+      // console.log('Starting coaching with language options:', languageOptions);
+      
+      const response = await coachingEngineService.startCoachingConversation(sessionId, languageOptions);
 
       res.json({
         success: true,
@@ -1538,9 +1548,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Parse language parameters from request body
+      const languageOptions = {
+        language: req.body.language,
+        useSeaLion: req.body.useSeaLion
+      };
+      // console.log('Processing response with language options:', languageOptions);
+      
       const coachingResponse = await coachingEngineService.processCoachingResponse(
         sessionId,
-        response
+        response,
+        undefined, // questionNumber
+        languageOptions
       );
 
       res.json({
