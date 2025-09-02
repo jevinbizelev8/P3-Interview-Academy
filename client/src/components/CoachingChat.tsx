@@ -23,7 +23,6 @@ import {
 import { apiRequest } from '@/lib/queryClient';
 import { FeedbackCard } from './FeedbackCard';
 import { STARScoreBar } from './STARScoreBar';
-import { QuestionCard } from './QuestionCard';
 
 interface CoachingMessage {
   id: string;
