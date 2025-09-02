@@ -4,6 +4,14 @@ import {
   interviewSessions,
   interviewMessages,
   aiEvaluationResults,
+  preparationSessions,
+  studyPlans,
+  preparationResources,
+  preparationProgress,
+  practiceTests,
+  practiceTestResults,
+  companyResearch,
+  starPracticeSessions,
   type User,
   type UpsertUser,
   type InsertInterviewScenario,
@@ -16,6 +24,22 @@ import {
   type AiEvaluationResult,
   type InterviewSessionWithScenario,
   type InterviewScenarioWithStats,
+  type PreparationSession,
+  type InsertPreparationSession,
+  type StudyPlan,
+  type InsertStudyPlan,
+  type PreparationResource,
+  type InsertPreparationResource,
+  type PreparationProgress,
+  type InsertPreparationProgress,
+  type PracticeTest,
+  type InsertPracticeTest,
+  type PracticeTestResult,
+  type InsertPracticeTestResult,
+  type CompanyResearch,
+  type InsertCompanyResearch,
+  type StarPracticeSession,
+  type InsertStarPracticeSession,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, avg, sql } from "drizzle-orm";
@@ -362,6 +386,281 @@ export class DatabaseStorage implements IStorage {
       .from(aiEvaluationResults)
       .where(eq(aiEvaluationResults.sessionId, sessionId));
     return evaluation;
+  }
+
+  // ================================
+  // PREPARE MODULE STORAGE METHODS
+  // ================================
+
+  // Preparation Sessions
+  async createPreparationSession(userId: string, data: InsertPreparationSession): Promise<PreparationSession> {
+    const [session] = await db
+      .insert(preparationSessions)
+      .values({ ...data, userId })
+      .returning();
+    return session;
+  }
+
+  async getPreparationSession(sessionId: string): Promise<PreparationSession | null> {
+    const [session] = await db
+      .select()
+      .from(preparationSessions)
+      .where(eq(preparationSessions.id, sessionId));
+    return session || null;
+  }
+
+  async getUserPreparationSessions(userId: string): Promise<PreparationSession[]> {
+    return await db
+      .select()
+      .from(preparationSessions)
+      .where(eq(preparationSessions.userId, userId))
+      .orderBy(desc(preparationSessions.createdAt));
+  }
+
+  async updatePreparationSession(sessionId: string, updates: Partial<PreparationSession>): Promise<PreparationSession> {
+    const [session] = await db
+      .update(preparationSessions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(preparationSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  // Study Plans
+  async createStudyPlan(data: InsertStudyPlan): Promise<StudyPlan> {
+    const [plan] = await db
+      .insert(studyPlans)
+      .values(data)
+      .returning();
+    return plan;
+  }
+
+  async getStudyPlan(planId: string): Promise<StudyPlan | null> {
+    const [plan] = await db
+      .select()
+      .from(studyPlans)
+      .where(eq(studyPlans.id, planId));
+    return plan || null;
+  }
+
+  async updateStudyPlan(planId: string, updates: Partial<StudyPlan>): Promise<StudyPlan> {
+    const [plan] = await db
+      .update(studyPlans)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(studyPlans.id, planId))
+      .returning();
+    return plan;
+  }
+
+  // Preparation Resources
+  async createPreparationResource(data: InsertPreparationResource): Promise<PreparationResource> {
+    const [resource] = await db
+      .insert(preparationResources)
+      .values(data)
+      .returning();
+    return resource;
+  }
+
+  async getPreparationResources(filters: {
+    category?: string;
+    interviewStage?: string;
+    industry?: string;
+    difficulty?: string;
+    language?: string;
+  }): Promise<PreparationResource[]> {
+    let query = db.select().from(preparationResources).where(eq(preparationResources.isActive, true));
+
+    if (filters.category) {
+      query = query.where(eq(preparationResources.category, filters.category));
+    }
+    if (filters.interviewStage) {
+      query = query.where(eq(preparationResources.interviewStage, filters.interviewStage));
+    }
+    if (filters.industry) {
+      query = query.where(eq(preparationResources.industry, filters.industry));
+    }
+    if (filters.difficulty) {
+      query = query.where(eq(preparationResources.difficulty, filters.difficulty));
+    }
+    if (filters.language) {
+      query = query.where(eq(preparationResources.language, filters.language));
+    }
+
+    return await query.orderBy(desc(preparationResources.popularity), desc(preparationResources.createdAt));
+  }
+
+  // Preparation Progress
+  async createPreparationProgress(data: InsertPreparationProgress): Promise<PreparationProgress> {
+    const [progress] = await db
+      .insert(preparationProgress)
+      .values(data)
+      .returning();
+    return progress;
+  }
+
+  async getPreparationProgress(userId: string, preparationSessionId: string, activityType: string, activityId?: string): Promise<PreparationProgress | null> {
+    let query = db
+      .select()
+      .from(preparationProgress)
+      .where(
+        and(
+          eq(preparationProgress.userId, userId),
+          eq(preparationProgress.preparationSessionId, preparationSessionId),
+          eq(preparationProgress.activityType, activityType)
+        )
+      );
+
+    if (activityId) {
+      query = query.where(eq(preparationProgress.activityId, activityId));
+    }
+
+    const [progress] = await query;
+    return progress || null;
+  }
+
+  async updatePreparationProgress(progressId: string, updates: Partial<PreparationProgress>): Promise<PreparationProgress> {
+    const [progress] = await db
+      .update(preparationProgress)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(preparationProgress.id, progressId))
+      .returning();
+    return progress;
+  }
+
+  async getSessionProgress(preparationSessionId: string): Promise<PreparationProgress[]> {
+    return await db
+      .select()
+      .from(preparationProgress)
+      .where(eq(preparationProgress.preparationSessionId, preparationSessionId))
+      .orderBy(desc(preparationProgress.createdAt));
+  }
+
+  // Practice Tests
+  async createPracticeTest(data: InsertPracticeTest): Promise<PracticeTest> {
+    const [test] = await db
+      .insert(practiceTests)
+      .values(data)
+      .returning();
+    return test;
+  }
+
+  async getPracticeTest(testId: string): Promise<PracticeTest | null> {
+    const [test] = await db
+      .select()
+      .from(practiceTests)
+      .where(eq(practiceTests.id, testId));
+    return test || null;
+  }
+
+  async getPracticeTests(filters: {
+    testType?: string;
+    interviewStage?: string;
+    industry?: string;
+    difficulty?: string;
+  }): Promise<PracticeTest[]> {
+    let query = db.select().from(practiceTests).where(eq(practiceTests.isActive, true));
+
+    if (filters.testType) {
+      query = query.where(eq(practiceTests.testType, filters.testType));
+    }
+    if (filters.interviewStage) {
+      query = query.where(eq(practiceTests.interviewStage, filters.interviewStage));
+    }
+    if (filters.industry) {
+      query = query.where(eq(practiceTests.industry, filters.industry));
+    }
+    if (filters.difficulty) {
+      query = query.where(eq(practiceTests.difficulty, filters.difficulty));
+    }
+
+    return await query.orderBy(desc(practiceTests.createdAt));
+  }
+
+  // Practice Test Results
+  async createPracticeTestResult(data: InsertPracticeTestResult): Promise<PracticeTestResult> {
+    const [result] = await db
+      .insert(practiceTestResults)
+      .values(data)
+      .returning();
+    return result;
+  }
+
+  async getUserPracticeTestResults(userId: string, testId?: string): Promise<PracticeTestResult[]> {
+    let query = db.select().from(practiceTestResults).where(eq(practiceTestResults.userId, userId));
+    
+    if (testId) {
+      query = query.where(eq(practiceTestResults.practiceTestId, testId));
+    }
+
+    return await query.orderBy(desc(practiceTestResults.completedAt));
+  }
+
+  // Company Research
+  async createCompanyResearch(data: InsertCompanyResearch): Promise<CompanyResearch> {
+    const [research] = await db
+      .insert(companyResearch)
+      .values(data)
+      .returning();
+    return research;
+  }
+
+  async getCompanyResearch(userId: string, companyName: string): Promise<CompanyResearch | null> {
+    const [research] = await db
+      .select()
+      .from(companyResearch)
+      .where(
+        and(
+          eq(companyResearch.userId, userId),
+          eq(companyResearch.companyName, companyName)
+        )
+      )
+      .orderBy(desc(companyResearch.lastUpdated));
+    return research || null;
+  }
+
+  async updateCompanyResearch(researchId: string, updates: Partial<CompanyResearch>): Promise<CompanyResearch> {
+    const [research] = await db
+      .update(companyResearch)
+      .set({ ...updates, lastUpdated: new Date() })
+      .where(eq(companyResearch.id, researchId))
+      .returning();
+    return research;
+  }
+
+  // STAR Practice Sessions
+  async createStarPracticeSession(data: InsertStarPracticeSession): Promise<StarPracticeSession> {
+    const [session] = await db
+      .insert(starPracticeSessions)
+      .values(data)
+      .returning();
+    return session;
+  }
+
+  async getStarPracticeSession(sessionId: string): Promise<StarPracticeSession | null> {
+    const [session] = await db
+      .select()
+      .from(starPracticeSessions)
+      .where(eq(starPracticeSessions.id, sessionId));
+    return session || null;
+  }
+
+  async updateStarPracticeSession(sessionId: string, updates: Partial<StarPracticeSession>): Promise<StarPracticeSession> {
+    const [session] = await db
+      .update(starPracticeSessions)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(starPracticeSessions.id, sessionId))
+      .returning();
+    return session;
+  }
+
+  async getUserStarPracticeSessions(userId: string, preparationSessionId?: string): Promise<StarPracticeSession[]> {
+    let query = db.select().from(starPracticeSessions).where(eq(starPracticeSessions.userId, userId));
+    
+    if (preparationSessionId) {
+      query = query.where(eq(starPracticeSessions.preparationSessionId, preparationSessionId));
+    }
+
+    return await query.orderBy(desc(starPracticeSessions.createdAt));
   }
 }
 

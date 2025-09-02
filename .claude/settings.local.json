@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(npm run check:*)",
+      "Bash(git remote add:*)",
+      "Bash(git pull:*)",
+      "Bash(git remote remove:*)",
+      "Bash(git fetch:*)",
+      "Bash(git config:*)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(npm install:*)",
+      "Bash(grep:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run test:run:*)",
+      "Bash(pkill:*)",
+      "Bash(npm run test:prepare:*)",
+      "Bash(npm run dev:*)",
+      "Read(/home/runner/**)",
+      "Read(/home/runner/**)",
+      "Read(/home/runner/.claude/**)",
+      "Read(/home/runner/.claude/**)",
+      "Bash(PORT=3001 npm run dev)",
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node:*)",
+      "Bash(npm test:*)",
+      "Bash(timeout 30 npm test:*)",
+      "Bash(npm run:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

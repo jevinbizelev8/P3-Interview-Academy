@@ -1,7 +1,5 @@
-// Footer Component for P³ Prepare Module
-// Copy this into your prepare module project
-
 import { ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 
 export function FooterNavigation() {
@@ -27,19 +25,19 @@ export function FooterNavigation() {
             <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2">
               <li>
-                <a href="https://YOUR_MAIN_PROJECT_URL.replit.app" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/" className="text-gray-400 hover:text-white transition-colors">
                   Home
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="https://YOUR_MAIN_PROJECT_URL.replit.app/practice" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/practice" className="text-gray-400 hover:text-white transition-colors">
                   Practice Module
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="https://YOUR_MAIN_PROJECT_URL.replit.app/perform" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/perform" className="text-gray-400 hover:text-white transition-colors">
                   Perform Module
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -50,12 +48,12 @@ export function FooterNavigation() {
             <p className="text-gray-400 mb-4">
               Start your interview preparation journey with AI-powered coaching.
             </p>
-            <a href="https://YOUR_MAIN_PROJECT_URL.replit.app/practice">
+            <Link href="/practice">
               <Button className="w-full">
                 Start Practice
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
-            </a>
+            </Link>
           </div>
         </div>
 
@@ -68,6 +66,3 @@ export function FooterNavigation() {
     </footer>
   );
 }
-
-// Usage: Add this at the bottom of your prepare module pages
-// <FooterNavigation />

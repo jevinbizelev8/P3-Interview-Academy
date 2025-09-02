@@ -1,0 +1,79 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run TypeScript check
+      run: npm run check
+
+    - name: Run tests
+      run: npm run test:run
+
+    - name: Run prepare module specific tests
+      run: npm run test:prepare
+
+    - name: Run integration tests
+      run: npm run test:integration
+
+    - name: Run API tests
+      run: npm run test:api
+
+    - name: Generate test coverage
+      run: npm run test:coverage
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage/lcov.info
+        fail_ci_if_error: false
+
+    - name: Build application
+      run: npm run build
+
+  test-prepare-module:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Test prepare module functionality
+      run: npm run test:prepare
+
+    - name: Test prepare module integration
+      run: npm run test:integration
+
+    - name: Verify prepare module builds correctly
+      run: npm run build

@@ -18,6 +18,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Landing} />
       <Route path="/prepare" component={Prepare} />
+      <Route path="/prepare/*" component={Prepare} />
       <Route path="/practice" component={Practice} />
       <Route path="/practice/*" component={Practice} />
       <Route path="/perform" component={Perform} />
