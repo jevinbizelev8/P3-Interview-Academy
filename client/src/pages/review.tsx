@@ -55,7 +55,7 @@ export default function Review() {
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <ProgressTracker 
-          currentStage="review" 
+          currentStage="evaluation" 
           currentStep={3}
           totalSteps={4}
         />

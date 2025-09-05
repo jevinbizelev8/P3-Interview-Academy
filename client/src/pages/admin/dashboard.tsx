@@ -111,14 +111,17 @@ function AdminOverview({
   });
 
   // Calculate stats
-  const totalScenarios = scenarios?.length || 0;
-  const activeSessions = sessions?.filter(s => s.status === 'in_progress').length || 0;
-  const completedSessions = sessions?.filter(s => s.status === 'completed').length || 0;
+  const scenarioArray = Array.isArray(scenarios) ? scenarios : [];
+  const sessionArray = Array.isArray(sessions) ? sessions : [];
+  
+  const totalScenarios = scenarioArray.length;
+  const activeSessions = sessionArray.filter(s => s.status === 'in_progress').length;
+  const completedSessions = sessionArray.filter(s => s.status === 'completed').length;
   
   const averageRating = completedSessions > 0 
-    ? sessions
-        ?.filter(s => s.status === 'completed' && s.overallScore)
-        ?.reduce((sum, s) => sum + parseFloat(s.overallScore || '0'), 0) / completedSessions
+    ? sessionArray
+        .filter(s => s.status === 'completed' && s.overallScore)
+        .reduce((sum, s) => sum + parseFloat(s.overallScore || '0'), 0) / completedSessions
     : 0;
 
   return (
@@ -227,7 +230,7 @@ function AdminOverview({
         </CardHeader>
         <CardContent className="p-0">
           <ScenarioTable 
-            scenarios={scenarios || []}
+            scenarios={scenarioArray}
             searchTerm={searchTerm}
             stageFilter={stageFilter}
             isLoading={scenariosLoading}

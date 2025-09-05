@@ -10,7 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import EnhancedQuestionInterface from "@/components/EnhancedQuestionInterface";
 import ResponseInterface from "@/components/ResponseInterface";
 import { SessionProvider } from "@/contexts/SessionContext";
-import type { InterviewSession, Question, Response } from "@shared/schema";
+import type { InterviewSession, PreparationSession, Question, Response } from "@shared/schema";
 
 export default function PrepareDashboard() {
   const [, setLocation] = useLocation();
@@ -38,7 +38,7 @@ export default function PrepareDashboard() {
   }, [sessionId, setLocation]);
 
   // Load session data
-  const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery<InterviewSession>({
+  const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery<PreparationSession>({
     queryKey: [`/api/prepare/sessions/${sessionId}`],
     queryFn: async () => {
       const response = await apiRequest('GET', `/api/prepare/sessions/${sessionId}`);
@@ -52,7 +52,7 @@ export default function PrepareDashboard() {
     queryKey: [`/api/prepare/questions/session/${sessionId}`, session?.interviewStage],
     queryFn: async () => {
       const stage = session?.interviewStage || 'phone-screening';
-      const language = session?.interviewLanguage || 'en';
+      const language = session?.preferredLanguage || 'en';
       const response = await apiRequest('GET', `/api/prepare/questions/stage/${stage}?count=15&language=${language}`);
       const result = await response.json();
       return result.data;
@@ -187,8 +187,8 @@ export default function PrepareDashboard() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Preparation Session</h1>
                 <p className="text-sm text-gray-600">
-                  {session.userJobPosition && session.userCompanyName 
-                    ? `${session.userJobPosition} at ${session.userCompanyName}`
+                  {session.jobPosition && session.companyName 
+                    ? `${session.jobPosition} at ${session.companyName}`
                     : 'Interview Preparation'}
                 </p>
               </div>
@@ -228,11 +228,11 @@ export default function PrepareDashboard() {
                 question={currentQuestion}
                 currentIndex={currentQuestionIndex + 1}
                 totalQuestions={questions.length}
-                selectedLanguage={session.interviewLanguage}
+                selectedLanguage={session.preferredLanguage}
                 onPrevious={handlePreviousQuestion}
                 onNext={handleNextQuestion}
                 sessionProgress={progress}
-                timeSpent={session.duration || 0}
+                timeSpent={0}
               />
             )}
 
@@ -255,7 +255,7 @@ export default function PrepareDashboard() {
                   <div>
                     <p className="text-sm font-medium text-gray-600">Session Time</p>
                     <p className="text-2xl font-bold text-gray-900">
-                      {Math.floor((session.duration || 0) / 60)}m {(session.duration || 0) % 60}s
+                      0m 0s
                     </p>
                   </div>
                 </div>

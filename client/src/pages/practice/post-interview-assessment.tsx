@@ -269,7 +269,7 @@ export default function PostInterviewAssessment() {
                     Strengths
                   </h4>
                   <ul className="space-y-2 text-gray-700">
-                    {session.strengths.map((strength: string, index: number) => (
+                    {session.strengths.map((strength: any, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0"></div>
                         <span>{String(strength)}</span>
@@ -287,7 +287,7 @@ export default function PostInterviewAssessment() {
                     Areas for Improvement
                   </h4>
                   <ul className="space-y-2 text-gray-700">
-                    {session.improvements.map((improvement: string, index: number) => (
+                    {session.improvements.map((improvement: any, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 mr-2 flex-shrink-0"></div>
                         <span>{String(improvement)}</span>
@@ -360,19 +360,27 @@ export default function PostInterviewAssessment() {
                   Download Transcript
                 </Button>
                 <Button
+                  onClick={() => setLocation(`/perform/evaluation/${sessionId}`)}
+                  className="w-full justify-start bg-purple-600 hover:bg-purple-700"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  View Detailed Report
+                </Button>
+                <Button
                   onClick={handlePracticeAgain}
-                  className="w-full justify-start bg-green-600 hover:bg-green-700"
+                  variant="outline"
+                  className="w-full justify-start"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Practice Again
                 </Button>
                 <Button
-                  onClick={handleViewHistory}
+                  onClick={() => setLocation("/perform")}
                   variant="outline"
                   className="w-full justify-start"
                 >
                   <History className="w-4 h-4 mr-2" />
-                  View Session History
+                  View Analytics Dashboard
                 </Button>
                 <Button
                   onClick={handleShareResults}
