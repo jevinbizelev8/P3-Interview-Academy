@@ -18,7 +18,7 @@ export interface VertexAIClient {
 }
 
 export class VertexAIService {
-  private auth: GoogleAuth;
+  private auth: GoogleAuth | null = null;
   private config: VertexAIConfig;
   private client: OpenAI | null = null;
   private lastTokenRefresh: number = 0;
@@ -45,7 +45,13 @@ export class VertexAIService {
 
     // Initialize Google Auth based on available credentials
     try {
-      if (this.config.apiKey) {
+      if (this.config.credentialsPath) {
+        console.log('Using service account credentials file:', this.config.credentialsPath);
+        this.auth = new GoogleAuth({
+          scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          keyFilename: this.config.credentialsPath
+        });
+      } else if (this.config.apiKey) {
         console.log('Using Google API Key authentication');
         // We'll handle this in initializeClient() - no GoogleAuth needed for API key
       } else if (this.config.oauthAccessToken) {

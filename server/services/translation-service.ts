@@ -24,67 +24,49 @@ export class TranslationService {
     }
 
     try {
-      const translationPrompt = `Translate this English interview coaching text to ${this.getLanguageName(targetLanguage)}:
-
-"${content}"
-
-Requirements:
-- ONLY provide the direct translation
-- NO explanations, reasoning, or commentary
-- Keep professional interview tone
-- Preserve technical terms like "STAR method"
-- Maintain original formatting
-
-${this.getLanguageInstruction(targetLanguage)}`;
+      // Use a very simple and direct translation prompt
+      const simplePrompt = `Translate to ${this.getLanguageName(targetLanguage)}: "${content}"`;
 
       const translatedContent = await sealionService.generateResponse({
         messages: [
           { 
             role: 'system', 
-            content: 'You are a professional translator. Provide ONLY direct translations without any explanations, reasoning, or commentary.' 
+            content: 'You are a translator. Only output the translation, nothing else.' 
           },
-          { role: 'user', content: translationPrompt }
+          { role: 'user', content: simplePrompt }
         ],
-        maxTokens: 500,
-        temperature: 0.1,
+        maxTokens: 300,
+        temperature: 0,
         language: targetLanguage
       });
 
-      // Clean the translation by extracting only the translated content
+      // Simple cleaning - just trim and remove common prefixes
       let cleanTranslation = translatedContent.trim();
       
-      // If the response contains reasoning, try to extract just the translation
-      const patterns = [
-        /(?:translation[:\s]*["']?([^"'\n]+)["']?)/i,
-        /(?:translating[:\s]*["']?([^"'\n]+)["']?)/i,
-        /(?:in bahasa malaysia[:\s]*["']?([^"'\n]+)["']?)/i,
-        /(?:translation is[:\s]*["']?([^"'\n]+)["']?)/i
+      // Remove common AI prefixes if they exist
+      const prefixesToRemove = [
+        'Translation:',
+        'Translated:',
+        'In Bahasa Malaysia:',
+        'Bahasa Malaysia translation:',
+        'Here is the translation:',
+        'Translation is:',
+        'The translation is:',
+        'Terjemahan:',
+        'Here\'s the translation:'
       ];
       
-      for (const pattern of patterns) {
-        const match = cleanTranslation.match(pattern);
-        if (match && match[1] && match[1].length > 20) {
-          cleanTranslation = match[1].trim();
+      for (const prefix of prefixesToRemove) {
+        if (cleanTranslation.toLowerCase().startsWith(prefix.toLowerCase())) {
+          cleanTranslation = cleanTranslation.substring(prefix.length).trim();
           break;
         }
       }
       
-      // Fallback: If translation is still full of reasoning, use a shorter approach
-      if (cleanTranslation.includes('requirements') || cleanTranslation.includes('translate') || cleanTranslation.length > content.length * 3) {
-        // Try to find the actual translation content after common phrases
-        const startIndicators = ['selamat datang', 'welcome', content.slice(0, 20).toLowerCase()];
-        for (const indicator of startIndicators) {
-          const startIndex = cleanTranslation.toLowerCase().indexOf(indicator);
-          if (startIndex > 0) {
-            cleanTranslation = cleanTranslation.slice(startIndex);
-            // Find end of sentence or reasonable stopping point
-            const endMatch = cleanTranslation.match(/[.!?]\s|$/);
-            if (endMatch) {
-              cleanTranslation = cleanTranslation.slice(0, endMatch.index + 1);
-            }
-            break;
-          }
-        }
+      // Remove quotes if the entire response is wrapped in them
+      if ((cleanTranslation.startsWith('"') && cleanTranslation.endsWith('"')) ||
+          (cleanTranslation.startsWith("'") && cleanTranslation.endsWith("'"))) {
+        cleanTranslation = cleanTranslation.slice(1, -1).trim();
       }
 
       return {

@@ -306,14 +306,14 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
                               
                               {/* Show translation if available and language is not English */}
                               {message.messageType === 'coach' && selectedLanguage !== 'en' && (message as any).aiMetadata?.translation && (
-                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
                                   <div className="flex items-center gap-2 mb-2">
-                                    <Globe className="h-3 w-3 text-gray-400" />
-                                    <span className="text-xs text-gray-500 font-medium">
-                                      {languages.find(l => l.code === selectedLanguage)?.name} Translation
+                                    <Globe className="h-3 w-3 text-blue-500" />
+                                    <span className="text-xs text-blue-600 font-medium">
+                                      {languages.find(l => l.code === selectedLanguage)?.name}
                                     </span>
                                   </div>
-                                  <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                                  <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                                     {(message as any).aiMetadata?.translation}
                                   </div>
                                 </div>
