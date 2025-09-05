@@ -34,7 +34,8 @@ export class AIRouter {
   private readonly MAX_CACHE_SIZE = 100;
 
   constructor() {
-    console.log('🔀 AI Router initialized with OpenAI (primary) + SeaLion (fallback)');
+    console.log('🔀 AI Router initialized with SeaLion via Vertex AI (primary) + OpenAI (fallback)');
+    console.log('🚀 All languages now use Vertex AI SeaLion for enhanced performance and reliability');
     
     // Clean expired cache entries every 5 minutes
     setInterval(() => this.cleanExpiredCache(), 5 * 60 * 1000);
@@ -67,10 +68,10 @@ export class AIRouter {
 
     // console.log(`🗺️ Language routing: '${options.language || 'en'}' → Primary: ${primaryService}, Fallback: ${fallbackService}`);
 
-    // Try primary service first
+    // Try primary service first  
     if (this.isServiceAvailable(primaryService)) {
       try {
-        console.log(`🤖 Using ${primaryService} (primary for ${options.language || 'en'})...`);
+        console.log(`🤖 Using ${primaryService} ${primaryService === 'sealion' ? 'via Vertex AI' : ''} (primary)...`);
         
         const content = await this.callService(primaryService, options);
         
@@ -100,7 +101,7 @@ export class AIRouter {
     // Fallback to secondary service
     if (this.isServiceAvailable(fallbackService)) {
       try {
-        console.log(`🤖 Using ${fallbackService} fallback...`);
+        console.log(`🤖 Using ${fallbackService} ${fallbackService === 'sealion' ? 'via Vertex AI' : ''} (fallback)...`);
         
         const content = await this.callService(fallbackService, options);
         
@@ -184,17 +185,13 @@ export class AIRouter {
 
   /**
    * Determine service priority based on language
+   * Updated: SeaLion (via Vertex AI) is now PRIMARY for ALL languages
    */
   private determineServicePriority(language?: string): { primaryService: 'sealion' | 'openai'; fallbackService: 'sealion' | 'openai' } {
-    const seaLionOptimalLanguages = ['ms', 'id', 'th', 'vi', 'tl', 'fil', 'my', 'km', 'lo', 'zh-sg'];
-    
-    if (language && seaLionOptimalLanguages.includes(language)) {
-      // For Southeast Asian languages, prefer SeaLion
-      return { primaryService: 'sealion', fallbackService: 'openai' };
-    } else {
-      // For English and other languages, prefer OpenAI
-      return { primaryService: 'openai', fallbackService: 'sealion' };
-    }
+    // SeaLion (via Vertex AI) is now the primary AI for all languages
+    // This leverages Google Cloud infrastructure for better performance and reliability
+    // OpenAI serves as the fallback for any failures
+    return { primaryService: 'sealion', fallbackService: 'openai' };
   }
 
   /**

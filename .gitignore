@@ -4,3 +4,14 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+
+# Google Cloud service account credentials
+vt-svc-key.json
+gcp-credentials.json
+*-service-account.json
