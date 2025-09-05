@@ -735,13 +735,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserStarPracticeSessions(userId: string, preparationSessionId?: string): Promise<StarPracticeSession[]> {
-    let query = db.select().from(starPracticeSessions).where(eq(starPracticeSessions.userId, userId));
+    const conditions = [eq(starPracticeSessions.userId, userId)];
     
     if (preparationSessionId) {
-      query = query.where(eq(starPracticeSessions.preparationSessionId, preparationSessionId));
+      conditions.push(eq(starPracticeSessions.preparationSessionId, preparationSessionId));
     }
 
-    return await query.orderBy(desc(starPracticeSessions.createdAt));
+    return await db.select()
+      .from(starPracticeSessions)
+      .where(and(...conditions))
+      .orderBy(desc(starPracticeSessions.createdAt));
   }
 
   // ================================
@@ -837,34 +840,37 @@ export class DatabaseStorage implements IStorage {
     difficultyLevel?: string;
     limit?: number;
   }): Promise<IndustryQuestion[]> {
-    let query = db
-      .select()
-      .from(industryQuestions)
-      .where(eq(industryQuestions.isActive, true));
+    const conditions = [eq(industryQuestions.isActive, true)];
 
     // Apply filters
     if (filters.industry) {
-      query = query.where(eq(industryQuestions.industry, filters.industry));
+      conditions.push(eq(industryQuestions.industry, filters.industry));
     }
     if (filters.subfield) {
-      query = query.where(eq(industryQuestions.subfield, filters.subfield));
+      conditions.push(eq(industryQuestions.subfield, filters.subfield));
     }
     if (filters.specialization) {
-      query = query.where(eq(industryQuestions.specialization, filters.specialization));
+      conditions.push(eq(industryQuestions.specialization, filters.specialization));
     }
     if (filters.interviewStage) {
-      query = query.where(eq(industryQuestions.interviewStage, filters.interviewStage));
+      conditions.push(eq(industryQuestions.interviewStage, filters.interviewStage));
     }
     if (filters.difficultyLevel) {
-      query = query.where(eq(industryQuestions.difficultyLevel, filters.difficultyLevel));
+      conditions.push(eq(industryQuestions.difficultyLevel, filters.difficultyLevel));
     }
+
+    let query = db
+      .select()
+      .from(industryQuestions)
+      .where(and(...conditions))
+      .orderBy(desc(industryQuestions.popularity), desc(industryQuestions.createdAt));
 
     // Apply limit
     if (filters.limit) {
       query = query.limit(filters.limit);
     }
 
-    return await query.orderBy(desc(industryQuestions.popularity), desc(industryQuestions.createdAt));
+    return await query;
   }
 
   async getIndustryQuestion(id: string): Promise<IndustryQuestion | undefined> {
@@ -939,16 +945,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCoachingFeedback(sessionId: string, messageId?: string): Promise<CoachingFeedback[]> {
-    let query = db
-      .select()
-      .from(coachingFeedback)
-      .where(eq(coachingFeedback.sessionId, sessionId));
+    const conditions = [eq(coachingFeedback.sessionId, sessionId)];
 
     if (messageId) {
-      query = query.where(eq(coachingFeedback.messageId, messageId));
+      conditions.push(eq(coachingFeedback.messageId, messageId));
     }
 
-    return await query.orderBy(desc(coachingFeedback.createdAt));
+    return await db
+      .select()
+      .from(coachingFeedback)
+      .where(and(...conditions))
+      .orderBy(desc(coachingFeedback.createdAt));
   }
 
   async updateCoachingFeedback(id: string, updates: Partial<InsertCoachingFeedback>): Promise<CoachingFeedback> {

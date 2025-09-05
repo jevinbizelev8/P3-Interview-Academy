@@ -1,7 +1,6 @@
 import { Switch, Route } from "wouter";
 import MainNav from "@/components/navigation/main-nav";
-import PerformSetup from "./perform/perform-setup";
-import PerformInterview from "./perform/perform-interview";
+import Dashboard from "./perform/dashboard";
 import PerformEvaluation from "./perform/perform-evaluation";
 
 export default function Perform() {
@@ -11,10 +10,9 @@ export default function Perform() {
 
       {/* Routes */}
       <Switch>
-        <Route path="/perform" component={PerformSetup} />
-        <Route path="/perform/interview/:sessionId" component={PerformInterview} />
+        <Route path="/perform" component={Dashboard} />
         <Route path="/perform/evaluation/:sessionId" component={PerformEvaluation} />
-        <Route component={PerformSetup} />
+        <Route component={Dashboard} />
       </Switch>
     </div>
   );

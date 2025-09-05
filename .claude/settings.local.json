@@ -37,7 +37,11 @@
       "Bash(git push:*)",
       "Bash(psql:*)",
       "Bash(fuser:*)",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "Bash(timeout 30s npm run dev)",
+      "WebFetch(domain:docs.sea-lion.ai)",
+      "WebFetch(domain:localhost)",
+      "Bash(time curl:*)"
     ],
     "deny": [],
     "ask": []

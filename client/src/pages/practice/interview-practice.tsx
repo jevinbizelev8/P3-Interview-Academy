@@ -1,13 +1,15 @@
-import { useEffect, useState, useCallback } from "react";
-import { useParams, useLocation } from "wouter";
+import { useState, useEffect, useRef } from "react";
+import { useParams } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import ChatInterface from "@/components/practice/chat-interface";
-import FeedbackPanel from "@/components/practice/feedback-panel";
-import { Undo, Pause, Phone, Users, Bus, ServerCog, Crown } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Send, Mic, MicOff, User, Bot, Award, Clock, CheckCircle, Phone, Users, Bus, ServerCog, Crown } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/auth-utils";
+import type { InterviewSessionWithScenario, InterviewMessage } from "@shared/schema";
 
 const STAGE_ICONS = {
   'phone-screening': Phone,
@@ -17,86 +19,78 @@ const STAGE_ICONS = {
   'executive-final': Crown,
 };
 
+interface ChatMessage {
+  id: string;
+  messageType: "ai" | "user";
+  content: string;
+  timestamp: Date;
+  questionNumber?: number;
+}
+
 export default function InterviewPractice() {
-  const { sessionId } = useParams<{ sessionId: string }>();
-  const [, setLocation] = useLocation();
+  const { sessionId } = useParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const [autoSaveInterval, setAutoSaveInterval] = useState<NodeJS.Timeout | null>(null);
-  const [lastUserResponse, setLastUserResponse] = useState("");
+  const [message, setMessage] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [currentQuestionNumber, setCurrentQuestionNumber] = useState(1);
+  const [isCompleted, setIsCompleted] = useState(false);
 
-  const { data: session, isLoading, error } = useQuery({
-    queryKey: ["/api/practice/sessions", sessionId],
-    refetchInterval: 5000, // Refresh every 5 seconds for real-time updates
+  // Fetch session data
+  const { data: session, isLoading: sessionLoading } = useQuery<InterviewSessionWithScenario>({
+    queryKey: [`/api/practice/sessions/${sessionId}`],
+    enabled: !!sessionId,
   });
 
-  // Auto-save mutation
-  const autoSaveMutation = useMutation({
-    mutationFn: async (data: any) => {
-      const response = await fetch(`/api/practice/sessions/${sessionId}/auto-save`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(data),
-      });
-      
-      if (!response.ok) {
-        throw new Error("Auto-save failed");
-      }
-      
-      return response.json();
-    },
-  });
+  // Fetch messages - using the existing API that returns messages in session.messages
+  const messages = session?.messages || [];
 
-  // User response mutation
-  const userResponseMutation = useMutation({
-    mutationFn: async ({ content, questionContext }: { content: string; questionContext: string }) => {
+  // Send message mutation (adapted to work with existing Practice API)
+  const sendMessageMutation = useMutation({
+    mutationFn: async (content: string) => {
       const response = await fetch(`/api/practice/sessions/${sessionId}/user-response`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ content, questionContext }),
+        body: JSON.stringify({ 
+          content,
+          questionContext: messages.filter(m => m.messageType === 'ai').slice(-1)[0]?.content || ""
+        }),
       });
       
       if (!response.ok) {
-        throw new Error("Failed to process response");
+        throw new Error("Failed to send message");
       }
       
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/practice/sessions", sessionId] });
+      setMessage("");
+      queryClient.invalidateQueries({ queryKey: [`/api/practice/sessions/${sessionId}`] });
+      // Trigger AI response
+      setTimeout(() => {
+        generateAiResponseMutation.mutate();
+      }, 500);
     },
-    onError: (error: any) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to send response. Please try again.",
+        description: "Failed to send message. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  // AI question mutation
-  const aiQuestionMutation = useMutation({
-    mutationFn: async (userResponse?: string) => {
+  // Generate AI response mutation (using existing Practice API)
+  const generateAiResponseMutation = useMutation({
+    mutationFn: async () => {
       const response = await fetch(`/api/practice/sessions/${sessionId}/ai-question`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ userResponse }),
+        body: JSON.stringify({ userResponse: message }),
       });
       
       if (!response.ok) {
@@ -105,20 +99,32 @@ export default function InterviewPractice() {
       
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/practice/sessions", sessionId] });
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/practice/sessions/${sessionId}`] });
+      if (data.isCompleted || (session?.currentQuestion || 1) >= 15) {
+        setIsCompleted(true);
+        toast({
+          title: "Interview Completed!",
+          description: "Your AI evaluation is being generated. You'll be redirected shortly.",
+        });
+        // Redirect to assessment after a short delay
+        setTimeout(() => {
+          window.location.href = `/practice/assessment/${sessionId}`;
+        }, 2000);
+      } else {
+        setCurrentQuestionNumber(prev => prev + 1);
+      }
     },
-    onError: (error: any) => {
-      console.error("AI question error:", error);
+    onError: () => {
       toast({
         title: "Error",
-        description: "Failed to get interviewer response. Please try again.",
+        description: "Failed to get AI response. Please try again.",
         variant: "destructive",
       });
     },
   });
 
-  // Complete interview mutation
+  // Complete interview mutation (using existing Practice API)
   const completeInterviewMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch(`/api/practice/sessions/${sessionId}/complete`, {
@@ -134,9 +140,16 @@ export default function InterviewPractice() {
       return response.json();
     },
     onSuccess: () => {
-      setLocation(`/practice/assessment/${sessionId}`);
+      setIsCompleted(true);
+      toast({
+        title: "Interview Completed!",
+        description: "Generating your comprehensive AI evaluation...",
+      });
+      setTimeout(() => {
+        window.location.href = `/practice/assessment/${sessionId}`;
+      }, 2000);
     },
-    onError: (error: any) => {
+    onError: () => {
       toast({
         title: "Error",
         description: "Failed to complete interview. Please try again.",
@@ -145,231 +158,257 @@ export default function InterviewPractice() {
     },
   });
 
-  // Handle unauthorized errors
-  useEffect(() => {
-    if (error && isUnauthorizedError(error as Error)) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-    }
-  }, [error, toast]);
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!message.trim() || sendMessageMutation.isPending) return;
+    sendMessageMutation.mutate(message.trim());
+  };
 
-  // Start auto-save interval
-  useEffect(() => {
-    if (session && session.status === 'in_progress') {
-      const interval = setInterval(() => {
-        autoSaveMutation.mutate({
-          currentQuestion: session.currentQuestion,
-          status: 'in_progress',
-        });
-      }, 10000); // Auto-save every 10 seconds
-      
-      setAutoSaveInterval(interval);
-      
-      return () => {
-        if (interval) clearInterval(interval);
-      };
-    }
-  }, [session?.id]);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(scrollToBottom, [messages]);
 
   // Generate initial AI question if no messages exist
   useEffect(() => {
-    if (session && session.messages.length === 0) {
-      aiQuestionMutation.mutate();
+    if (session && messages.length === 0) {
+      generateAiResponseMutation.mutate();
     }
-  }, [session?.id]);
+  }, [session?.id, messages.length]);
 
-  const handleSendResponse = useCallback(async (content: string) => {
-    if (!session || !content.trim()) return;
-    
-    setLastUserResponse(content);
-    
-    // Get the last AI message for context
-    const lastAiMessage = session.messages
-      .filter(m => m.messageType === 'ai')
-      .slice(-1)[0];
-    
-    const questionContext = lastAiMessage?.content || "";
-    
-    // Send user response first
-    await userResponseMutation.mutateAsync({ content, questionContext });
-    
-    // Then get AI response if we haven't reached the end
-    if ((session.currentQuestion || 1) <= 15) {
-      await aiQuestionMutation.mutateAsync(content);
-    }
-  }, [session, userResponseMutation, aiQuestionMutation]);
-
-  const handleTryAgain = useCallback(() => {
-    if (!session || session.messages.length === 0) return;
-    
-    // Find the last AI message and generate a new response
-    const lastAiMessage = session.messages
-      .filter(m => m.messageType === 'ai')
-      .slice(-1)[0];
-    
-    if (lastAiMessage) {
-      aiQuestionMutation.mutate(lastUserResponse);
-    }
-  }, [session, lastUserResponse, aiQuestionMutation]);
-
-  const handleEndInterview = useCallback(() => {
-    completeInterviewMutation.mutate();
-  }, [completeInterviewMutation]);
-
-  // Clean up auto-save on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSaveInterval) {
-        clearInterval(autoSaveInterval);
-      }
-    };
-  }, [autoSaveInterval]);
-
-  if (isLoading) {
+  if (sessionLoading) {
     return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="animate-pulse space-y-6">
-          <div className="bg-white rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-200 rounded-lg mr-3"></div>
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-32"></div>
-                  <div className="h-3 bg-gray-200 rounded w-24"></div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-                <div className="flex space-x-2">
-                  <div className="w-20 h-8 bg-gray-200 rounded"></div>
-                  <div className="w-20 h-8 bg-gray-200 rounded"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="grid lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-3">
-              <div className="bg-white rounded-lg h-96">
-                <div className="p-6 space-y-4">
-                  <div className="h-4 bg-gray-200 rounded"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg p-4">
-                <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                <div className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded"></div>
-                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your interview session...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !session) {
+  if (!session) {
     return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Session Not Found</h2>
-            <p className="text-gray-600 mb-6">
-              The interview session you're looking for doesn't exist or has expired.
-            </p>
-            <Button onClick={() => setLocation("/practice")}>
-              Back to Scenarios
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-gray-600">Session not found.</p>
+        </div>
       </div>
     );
   }
 
-  const progress = ((session.currentQuestion || 1) / 15) * 100;
-  const StageIcon = STAGE_ICONS[session.scenario.interviewStage as keyof typeof STAGE_ICONS] || Phone;
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      {/* Progress Header */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      {/* Header */}
+      <Card className="mb-6 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+        <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mr-3">
-                <StageIcon className="w-5 h-5 text-primary" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-gray-900">
-                  {session.scenario.interviewStage.replace('-', ' ')}
-                </h2>
-                <p className="text-sm text-gray-600">{session.scenario.title}</p>
+            <div>
+              <CardTitle className="text-xl font-bold text-gray-900 mb-2">
+                AI Interview Practice in Progress
+              </CardTitle>
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <span className="flex items-center">
+                  <Award className="w-4 h-4 mr-1" />
+                  {session?.userJobPosition || 'Interview Practice'} {session?.userCompanyName && `at ${session.userCompanyName}`}
+                </span>
+                <Badge variant="outline" className="bg-white">
+                  Question {session?.currentQuestion || currentQuestionNumber}
+                </Badge>
+                {session?.interviewLanguage && (
+                  <Badge variant="outline" className="bg-white">
+                    {session.interviewLanguage.toUpperCase()}
+                  </Badge>
+                )}
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">
-                  Question {session.currentQuestion || 1} of 15
-                </p>
-                <div className="w-32 bg-gray-200 rounded-full h-2 mt-1">
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleTryAgain}
-                  disabled={aiQuestionMutation.isPending || session.messages.length === 0}
-                >
-                  <Undo className="w-4 h-4 mr-1" />
-                  Try Again
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleEndInterview}
-                  disabled={completeInterviewMutation.isPending}
-                >
-                  <Pause className="w-4 h-4 mr-1" />
-                  End Interview
-                </Button>
+            <div className="text-right">
+              <Button
+                variant="outline"
+                onClick={() => completeInterviewMutation.mutate()}
+                disabled={completeInterviewMutation.isPending || isCompleted}
+                className="mb-2"
+              >
+                {isCompleted ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Completed
+                  </>
+                ) : (
+                  "Complete Interview"
+                )}
+              </Button>
+              <div className="text-sm text-gray-500">
+                <Clock className="w-4 h-4 inline mr-1" />
+                {formatTime(Math.floor((Date.now() - new Date(session?.startedAt || Date.now()).getTime()) / 1000))}
               </div>
             </div>
           </div>
-        </CardContent>
+        </CardHeader>
       </Card>
 
+      {/* Chat Interface */}
       <div className="grid lg:grid-cols-4 gap-6">
-        {/* Chat Interface */}
         <div className="lg:col-span-3">
-          <ChatInterface
-            session={session}
-            onSendResponse={handleSendResponse}
-            isLoading={userResponseMutation.isPending || aiQuestionMutation.isPending}
-            autoSaveStatus={autoSaveMutation.isPending ? 'saving' : 'saved'}
-          />
+          <Card className="h-[600px] flex flex-col">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Interview Conversation</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex flex-col p-0">
+              <ScrollArea className="flex-1 px-6">
+                <div className="space-y-4 pb-4">
+                  {messages.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      <Bot className="w-12 h-12 mx-auto mb-4 text-purple-400" />
+                      <p className="text-lg font-medium mb-2">Welcome to your AI Interview Practice!</p>
+                      <p>Your AI interviewer will begin shortly with questions tailored to your scenario.</p>
+                    </div>
+                  )}
+                  
+                  {messages.map((msg: InterviewMessage) => (
+                    <div
+                      key={msg.id}
+                      className={`flex ${msg.messageType === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[70%] rounded-lg px-4 py-3 ${
+                          msg.messageType === "user"
+                            ? "bg-purple-600 text-white"
+                            : "bg-gray-100 text-gray-900"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-2 mb-1">
+                          {msg.messageType === "user" ? (
+                            <User className="w-4 h-4" />
+                          ) : (
+                            <Bot className="w-4 h-4" />
+                          )}
+                          <span className="text-xs opacity-75">
+                            {msg.messageType === "user" ? "You" : "AI Interviewer"}
+                          </span>
+                          {msg.questionNumber && (
+                            <Badge variant="outline" className="text-xs">
+                              Q{msg.questionNumber}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {(sendMessageMutation.isPending || generateAiResponseMutation.isPending) && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-100 rounded-lg px-4 py-3">
+                        <div className="flex items-center space-x-2">
+                          <Bot className="w-4 h-4" />
+                          <div className="flex space-x-1">
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+              
+              {/* Message Input */}
+              <div className="border-t p-4">
+                <form onSubmit={handleSendMessage} className="flex space-x-2">
+                  <Input
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your response here..."
+                    disabled={sendMessageMutation.isPending || isCompleted}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setIsRecording(!isRecording)}
+                    disabled={isCompleted}
+                    className={isRecording ? "bg-red-100 border-red-300" : ""}
+                  >
+                    {isRecording ? (
+                      <MicOff className="w-4 h-4 text-red-600" />
+                    ) : (
+                      <Mic className="w-4 h-4" />
+                    )}
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={!message.trim() || sendMessageMutation.isPending || isCompleted}
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </form>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <FeedbackPanel session={session} />
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Interview Context</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <span className="font-medium text-gray-600">Scenario:</span>
+                <p>{session?.scenario?.title || 'Interview Practice'}</p>
+              </div>
+              {session?.scenario?.interviewStage && (
+                <div>
+                  <span className="font-medium text-gray-600">Stage:</span>
+                  <p>{session.scenario.interviewStage.replace('-', ' ')}</p>
+                </div>
+              )}
+              {session?.userJobPosition && (
+                <div>
+                  <span className="font-medium text-gray-600">Position:</span>
+                  <p>{session.userJobPosition}</p>
+                </div>
+              )}
+              {session?.userCompanyName && (
+                <div>
+                  <span className="font-medium text-gray-600">Company:</span>
+                  <p>{session.userCompanyName}</p>
+                </div>
+              )}
+              {session?.interviewLanguage && (
+                <div>
+                  <span className="font-medium text-gray-600">Language:</span>
+                  <p>{session.interviewLanguage.toUpperCase()}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Tips</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-gray-600">
+              <p>• Use the STAR method for behavioral questions</p>
+              <p>• Be specific with examples and metrics</p>
+              <p>• Ask clarifying questions when needed</p>
+              <p>• The AI will provide real-time coaching</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

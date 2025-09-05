@@ -26,15 +26,61 @@ export default function PerformEvaluation() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Fetch evaluation results
+  // Fetch evaluation results - try Practice API first, then Perform API as fallback
   const { data: evaluation, isLoading } = useQuery({
-    queryKey: [`/api/perform/sessions/${sessionId}/evaluation`],
+    queryKey: [`/api/evaluation/${sessionId}`],
+    queryFn: async () => {
+      try {
+        // Try Practice API first
+        const response = await fetch(`/api/practice/sessions/${sessionId}/evaluation`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          return await response.json();
+        }
+        
+        // Fallback to Perform API
+        const fallbackResponse = await fetch(`/api/perform/sessions/${sessionId}/evaluation`, {
+          credentials: 'include'
+        });
+        if (fallbackResponse.ok) {
+          return await fallbackResponse.json();
+        }
+        
+        throw new Error('Evaluation not found');
+      } catch (error) {
+        throw new Error('Failed to fetch evaluation');
+      }
+    },
     enabled: !!sessionId,
   });
 
-  // Fetch session data for context
+  // Fetch session data for context - try Practice API first, then Perform API
   const { data: session } = useQuery({
-    queryKey: [`/api/perform/sessions/${sessionId}`],
+    queryKey: [`/api/session/${sessionId}`],
+    queryFn: async () => {
+      try {
+        // Try Practice API first
+        const response = await fetch(`/api/practice/sessions/${sessionId}`, {
+          credentials: 'include'
+        });
+        if (response.ok) {
+          return await response.json();
+        }
+        
+        // Fallback to Perform API
+        const fallbackResponse = await fetch(`/api/perform/sessions/${sessionId}`, {
+          credentials: 'include'
+        });
+        if (fallbackResponse.ok) {
+          return await fallbackResponse.json();
+        }
+        
+        throw new Error('Session not found');
+      } catch (error) {
+        throw new Error('Failed to fetch session');
+      }
+    },
     enabled: !!sessionId,
   });
 
@@ -92,7 +138,12 @@ export default function PerformEvaluation() {
             <Link href="/perform">
               <Button variant="outline">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                New Interview
+                Back to Dashboard
+              </Button>
+            </Link>
+            <Link href="/practice">
+              <Button>
+                Start New Practice
               </Button>
             </Link>
             <Button variant="outline">
@@ -375,7 +426,7 @@ export default function PerformEvaluation() {
           <Share className="w-4 h-4 mr-2" />
           Share Progress
         </Button>
-        <Link href="/perform">
+        <Link href="/practice">
           <Button>
             <RefreshCcw className="w-4 h-4 mr-2" />
             Practice Again

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getVertexAIService } from './services/vertex-ai-config';
 
 // Helper function to repair JSON strings by handling control characters
 function repairJSON(jsonStr: string): string {
@@ -43,21 +44,32 @@ const SEA_LION_MODEL = 'aisingapore/Llama-SEA-LION-v3.5-8B-R';
 // Initialize Sea Lion client with error handling
 let seaLionClient: any = null;
 let initializationError: string | null = null;
+let vertexAIService: any = null;
+let useVertexAI: boolean = false;
 
 try {
-  const seaLionApiKey = process.env.SEA_LION_API_KEY;
-  if (!seaLionApiKey) {
-    throw new Error('SEA_LION_API_KEY environment variable is required');
+  // Try to initialize Vertex AI first
+  vertexAIService = getVertexAIService();
+  useVertexAI = vertexAIService.isAvailable();
+  
+  if (useVertexAI) {
+    console.log('Sea Lion helper service initialized with Vertex AI');
+  } else {
+    // Fall back to direct API
+    const seaLionApiKey = process.env.SEA_LION_API_KEY || process.env.SEALION_API_KEY;
+    if (!seaLionApiKey) {
+      throw new Error('SEA_LION_API_KEY environment variable is required when Vertex AI is not available');
+    }
+    
+    seaLionClient = {
+      apiKey: seaLionApiKey,
+      baseURL: SEA_LION_BASE_URL,
+      model: SEA_LION_MODEL
+    };
+    
+    console.log('Sea Lion helper service initialized with direct API');
+    console.log('Using Sea Lion model:', SEA_LION_MODEL);
   }
-  
-  seaLionClient = {
-    apiKey: seaLionApiKey,
-    baseURL: SEA_LION_BASE_URL,
-    model: SEA_LION_MODEL
-  };
-  
-  console.log('Sea Lion AI client initialized successfully');
-  console.log('Using Sea Lion model:', SEA_LION_MODEL);
 } catch (error) {
   initializationError = error instanceof Error ? error.message : 'Unknown error';
   console.error('Sea Lion AI initialization failed:', initializationError);
@@ -79,59 +91,89 @@ async function rateLimitedRequest() {
   lastRequestTime = Date.now();
 }
 
-// Sea Lion AI API call function
+// Sea Lion AI API call function with Vertex AI support
 async function callSeaLionAPI(prompt: string, maxTokens: number = 1000): Promise<string> {
-  if (!seaLionClient || initializationError) {
+  if (initializationError && !useVertexAI) {
     throw new Error(`Sea Lion client not available: ${initializationError}`);
   }
 
   await rateLimitedRequest();
 
-  try {
-    console.log('Using Sea Lion API endpoint:', SEA_LION_BASE_URL);
-    const response = await axios.post(SEA_LION_BASE_URL, {
-      model: SEA_LION_MODEL,
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      max_tokens: maxTokens,
-      temperature: 0.7,
-      top_p: 0.9,
-      stream: false
-    }, {
-      headers: {
-        'Authorization': `Bearer ${seaLionClient.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000 // 30 second timeout
-    });
-
-    if (response.data?.choices?.[0]?.message?.content) {
-      return response.data.choices[0].message.content;
-    } else {
-      throw new Error('Invalid response structure from Sea Lion API');
-    }
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const message = error.response?.data?.error || error.message;
+  // Try Vertex AI first if available
+  if (useVertexAI && vertexAIService) {
+    try {
+      console.log('Using Vertex AI endpoint');
+      const response = await vertexAIService.generateResponse({
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        maxTokens,
+        temperature: 0.7
+      });
+      return response;
+    } catch (error) {
+      console.warn('Vertex AI call failed, falling back to direct API:', error instanceof Error ? error.message : 'Unknown error');
       
-      if (status === 429) {
-        throw new Error('Sea Lion API rate limit exceeded. Please wait and try again.');
-      } else if (status === 401) {
-        throw new Error('Sea Lion API authentication failed. Please check your API key.');
-      } else if (status === 400) {
-        throw new Error(`Sea Lion API request error: ${message}`);
-      } else {
-        throw new Error(`Sea Lion API error (${status}): ${message}`);
+      // If Vertex AI fails and we don't have direct API, throw error
+      if (!seaLionClient) {
+        throw new Error('Both Vertex AI and direct API are unavailable');
       }
-    } else {
-      throw new Error(`Sea Lion API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  // Use direct API (either as primary or fallback)
+  if (seaLionClient) {
+    try {
+      console.log('Using Sea Lion API endpoint:', SEA_LION_BASE_URL);
+      const response = await axios.post(SEA_LION_BASE_URL, {
+        model: SEA_LION_MODEL,
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: maxTokens,
+        temperature: 0.7,
+        top_p: 0.9,
+        stream: false
+      }, {
+        headers: {
+          'Authorization': `Bearer ${seaLionClient.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 second timeout
+      });
+
+      if (response.data?.choices?.[0]?.message?.content) {
+        return response.data.choices[0].message.content;
+      } else {
+        throw new Error('Invalid response structure from Sea Lion API');
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        const message = error.response?.data?.error || error.message;
+        
+        if (status === 429) {
+          throw new Error('Sea Lion API rate limit exceeded. Please wait and try again.');
+        } else if (status === 401) {
+          throw new Error('Sea Lion API authentication failed. Please check your API key.');
+        } else if (status === 400) {
+          throw new Error(`Sea Lion API request error: ${message}`);
+        } else {
+          throw new Error(`Sea Lion API error (${status}): ${message}`);
+        }
+      } else {
+        throw new Error(`Sea Lion API request failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+  }
+
+  throw new Error('No available API client');
 }
 
 // Generate interview feedback using Sea Lion AI
@@ -411,31 +453,48 @@ This approach ensures deliverables meet professional standards and requirements.
   };
 }
 
-// Test Sea Lion API connectivity
-export async function testSeaLionConnection(): Promise<{ success: boolean; message: string; model?: string }> {
+// Test Sea Lion API connectivity (Vertex AI and/or direct API)
+export async function testSeaLionConnection(): Promise<{ success: boolean; message: string; model?: string; endpoint?: string }> {
   try {
-    if (!seaLionClient || initializationError) {
-      return {
-        success: false,
-        message: `Sea Lion client not initialized: ${initializationError}`
-      };
+    // Test Vertex AI first if available
+    if (useVertexAI && vertexAIService) {
+      const vertexResult = await vertexAIService.testConnection();
+      if (vertexResult.success) {
+        return {
+          success: true,
+          message: "Sea Lion AI via Vertex AI is working correctly",
+          model: "SeaLion on Vertex AI",
+          endpoint: vertexResult.endpoint
+        };
+      } else {
+        console.warn('Vertex AI test failed:', vertexResult.message);
+      }
     }
 
-    const testPrompt = "Hello! Please respond with a brief confirmation that you are working correctly.";
-    const response = await callSeaLionAPI(testPrompt, 100);
-    
-    if (response && response.length > 0) {
-      return {
-        success: true,
-        message: "Sea Lion AI is working correctly",
-        model: SEA_LION_MODEL
-      };
-    } else {
-      return {
-        success: false,
-        message: "Sea Lion API returned empty response"
-      };
+    // Test direct API if available
+    if (seaLionClient && !initializationError) {
+      const testPrompt = "Hello! Please respond with a brief confirmation that you are working correctly.";
+      const response = await callSeaLionAPI(testPrompt, 100);
+      
+      if (response && response.length > 0) {
+        return {
+          success: true,
+          message: useVertexAI ? "Sea Lion AI direct API working (Vertex AI failed)" : "Sea Lion AI direct API is working correctly",
+          model: SEA_LION_MODEL,
+          endpoint: SEA_LION_BASE_URL
+        };
+      } else {
+        return {
+          success: false,
+          message: "Sea Lion API returned empty response"
+        };
+      }
     }
+
+    return {
+      success: false,
+      message: `No Sea Lion client available: ${initializationError || 'Unknown error'}`
+    };
   } catch (error) {
     return {
       success: false,
@@ -624,35 +683,58 @@ export async function generateResponse(options: {
   maxTokens?: number;
   temperature?: number;
 }): Promise<string> {
-  if (!seaLionClient || initializationError) {
+  if (initializationError && !useVertexAI) {
     throw new Error(`Sea Lion client not available: ${initializationError}`);
   }
 
   await rateLimitedRequest();
 
-  try {
-    const response = await axios.post(SEA_LION_BASE_URL, {
-      model: SEA_LION_MODEL,
-      messages: options.messages,
-      max_tokens: options.maxTokens || 1000,
-      temperature: options.temperature || 0.7,
-      top_p: 0.9,
-      stream: false
-    }, {
-      headers: {
-        'Authorization': `Bearer ${seaLionClient.apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 30000
-    });
-
-    if (response.data?.choices?.[0]?.message?.content) {
-      return response.data.choices[0].message.content;
-    } else {
-      throw new Error('Invalid response structure from Sea Lion API');
+  // Try Vertex AI first if available
+  if (useVertexAI && vertexAIService) {
+    try {
+      return await vertexAIService.generateResponse({
+        messages: options.messages,
+        maxTokens: options.maxTokens || 1000,
+        temperature: options.temperature || 0.7
+      });
+    } catch (error) {
+      console.warn('Vertex AI call failed, falling back to direct API:', error instanceof Error ? error.message : 'Unknown error');
+      
+      // If Vertex AI fails and we don't have direct API, throw error
+      if (!seaLionClient) {
+        throw new Error('Both Vertex AI and direct API are unavailable');
+      }
     }
-  } catch (error) {
-    console.error('Sea Lion API error:', error);
-    throw error;
   }
+
+  // Use direct API (either as primary or fallback)
+  if (seaLionClient) {
+    try {
+      const response = await axios.post(SEA_LION_BASE_URL, {
+        model: SEA_LION_MODEL,
+        messages: options.messages,
+        max_tokens: options.maxTokens || 1000,
+        temperature: options.temperature || 0.7,
+        top_p: 0.9,
+        stream: false
+      }, {
+        headers: {
+          'Authorization': `Bearer ${seaLionClient.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000
+      });
+
+      if (response.data?.choices?.[0]?.message?.content) {
+        return response.data.choices[0].message.content;
+      } else {
+        throw new Error('Invalid response structure from Sea Lion API');
+      }
+    } catch (error) {
+      console.error('Sea Lion API error:', error);
+      throw error;
+    }
+  }
+
+  throw new Error('No available API client');
 }

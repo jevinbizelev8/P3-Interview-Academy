@@ -148,7 +148,7 @@ export default function ScenarioSelection() {
                     <Globe className="w-4 h-4 inline mr-1" />
                     Interview Language
                   </label>
-                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                  <Select value={selectedLanguage} onValueChange={(value) => setSelectedLanguage(value as keyof typeof SUPPORTED_LANGUAGES)}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select language" />
                     </SelectTrigger>

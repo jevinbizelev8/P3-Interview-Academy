@@ -1,6 +1,7 @@
 import { OpenAI } from 'openai';
 import axios from 'axios';
 import { logSeaLionError, errorLogger } from './error-logger';
+import { getVertexAIService, VertexAIService } from './vertex-ai-config';
 
 // Define types locally since @shared/types may not exist
 interface InterviewContext {
@@ -44,21 +45,81 @@ const DEFAULT_CONFIG: Omit<SeaLionConfig, 'apiKey'> = {
 export class SeaLionService {
   private client: OpenAI;
   private config: SeaLionConfig;
+  private vertexAI: VertexAIService;
+  private useVertexAI: boolean = false;
 
   constructor(apiKey?: string) {
     this.config = {
       ...DEFAULT_CONFIG,
-      apiKey: apiKey || process.env.SEALION_API_KEY || ''
+      apiKey: apiKey || process.env.SEALION_API_KEY || process.env.SEA_LION_API_KEY || ''
     };
 
-    if (!this.config.apiKey) {
-      throw new Error('SeaLion API key is required. Set SEALION_API_KEY environment variable.');
+    // Initialize Vertex AI service
+    this.vertexAI = getVertexAIService();
+    this.useVertexAI = this.vertexAI.isAvailable();
+
+    if (this.useVertexAI) {
+      console.log('SeaLion service initialized with Vertex AI');
+    } else if (!this.config.apiKey) {
+      throw new Error('SeaLion API key is required when Vertex AI is not available. Set SEALION_API_KEY or SEA_LION_API_KEY environment variable.');
+    } else {
+      console.log('SeaLion service initialized with direct API');
+      this.client = new OpenAI({
+        apiKey: this.config.apiKey,
+        baseURL: this.config.baseUrl
+      });
+    }
+  }
+
+  // Private method to handle API calls with Vertex AI fallback
+  private async makeAPICall(options: {
+    messages: Array<{ role: string; content: string }>;
+    maxTokens?: number;
+    temperature?: number;
+    model?: string;
+  }): Promise<string> {
+    const { messages, maxTokens = 1000, temperature = 0.7, model } = options;
+
+    // Try Vertex AI first if available
+    if (this.useVertexAI) {
+      try {
+        const response = await this.vertexAI.generateResponse({
+          messages,
+          maxTokens,
+          temperature
+        });
+        return response;
+      } catch (error) {
+        console.warn('Vertex AI call failed, falling back to direct API:', error instanceof Error ? error.message : 'Unknown error');
+        
+        // If Vertex AI fails and we don't have direct API key, throw error
+        if (!this.config.apiKey) {
+          throw new Error('Both Vertex AI and direct API are unavailable');
+        }
+        
+        // Initialize direct client if not already done
+        if (!this.client) {
+          this.client = new OpenAI({
+            apiKey: this.config.apiKey,
+            baseURL: this.config.baseUrl
+          });
+        }
+      }
     }
 
-    this.client = new OpenAI({
-      apiKey: this.config.apiKey,
-      baseURL: this.config.baseUrl
-    });
+    // Use direct API (either as primary or fallback)
+    if (this.client) {
+      const completion = await this.client.chat.completions.create({
+        model: model || this.config.defaultModel,
+        messages: messages as any,
+        max_tokens: maxTokens,
+        temperature
+      });
+
+      return completion.choices[0].message.content || '';
+    }
+
+    throw new Error('No available API client');
   }
 
   // Get language-specific instructions for SeaLion
@@ -101,8 +162,7 @@ export class SeaLionService {
     Make this persona culturally appropriate for Southeast Asian business contexts and specific to the role and company.`;
 
     try {
-      const completion = await this.client.chat.completions.create({
-        model: this.config.defaultModel,
+      const content = await this.makeAPICall({
         messages: [
           { role: 'system', content: systemPrompt },
           { 
@@ -110,11 +170,10 @@ export class SeaLionService {
             content: `Create an interviewer persona for ${context.userJobPosition || context.jobRole} at ${context.userCompanyName || context.company}` 
           }
         ],
-        max_tokens: 500,
-        temperature: 0.7
+        maxTokens: 500,
+        temperature: 0.7,
+        model: this.config.defaultModel
       });
-
-      const content = completion.choices[0].message.content || '';
       
       // Try to parse JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -160,8 +219,7 @@ export class SeaLionService {
       Start the interview for a ${context.userJobPosition || context.jobRole} position at ${context.userCompanyName || context.company} with a professional greeting and introduction request.`;
 
     try {
-      const completion = await this.client.chat.completions.create({
-        model: this.config.defaultModel,
+      const content = await this.makeAPICall({
         messages: [
           { role: 'system', content: systemPrompt },
           { 
@@ -169,11 +227,10 @@ export class SeaLionService {
             content: 'Begin the interview with an appropriate opening question.' 
           }
         ],
-        max_tokens: 300,
-        temperature: 0.8
+        maxTokens: 300,
+        temperature: 0.8,
+        model: this.config.defaultModel
       });
-
-      const content = completion.choices[0].message.content || '';
       
       return {
         content,
@@ -236,18 +293,16 @@ export class SeaLionService {
     }));
 
     try {
-      const completion = await this.client.chat.completions.create({
-        model: this.config.reasoningModel, // Use reasoning model for better follow-up questions
+      const content = await this.makeAPICall({
         messages: [
-          { role: 'system' as const, content: systemPrompt },
+          { role: 'system', content: systemPrompt },
           ...messages,
-          { role: 'user' as const, content: 'Generate the next appropriate interview question.' }
+          { role: 'user', content: 'Generate the next appropriate interview question.' }
         ],
-        max_tokens: 400,
-        temperature: 0.8
+        maxTokens: 400,
+        temperature: 0.8,
+        model: this.config.reasoningModel // Use reasoning model for better follow-up questions
       });
-
-      const content = completion.choices[0].message.content || '';
       
       return {
         content,
@@ -313,18 +368,16 @@ export class SeaLionService {
     }));
 
     try {
-      const completion = await this.client.chat.completions.create({
-        model: this.config.reasoningModel, // Use reasoning model for comprehensive analysis
+      const content = await this.makeAPICall({
         messages: [
-          { role: 'system' as const, content: systemPrompt },
+          { role: 'system', content: systemPrompt },
           ...messages,
-          { role: 'user' as const, content: 'Provide a comprehensive STAR-based evaluation of this interview.' }
+          { role: 'user', content: 'Provide a comprehensive STAR-based evaluation of this interview.' }
         ],
-        max_tokens: 1500,
-        temperature: 0.3 // Lower temperature for more consistent evaluation
+        maxTokens: 1500,
+        temperature: 0.3, // Lower temperature for more consistent evaluation
+        model: this.config.reasoningModel // Use reasoning model for comprehensive analysis
       });
-
-      const content = completion.choices[0].message.content || '';
       
       // Try to parse JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -344,19 +397,18 @@ export class SeaLionService {
   // Content safety check using SeaLion Guard
   async checkContentSafety(content: string): Promise<{ safe: boolean; reason?: string }> {
     try {
-      const completion = await this.client.chat.completions.create({
-        model: this.config.guardModel,
+      const result = await this.makeAPICall({
         messages: [
           { role: 'user', content }
         ],
-        stream: false
+        model: this.config.guardModel
       });
 
-      const result = completion.choices[0].message.content?.trim().toLowerCase() || '';
+      const resultLower = result.trim().toLowerCase();
       
       return {
-        safe: result === 'safe',
-        reason: result === 'unsafe' ? 'Content flagged as potentially harmful' : undefined
+        safe: resultLower === 'safe',
+        reason: resultLower === 'unsafe' ? 'Content flagged as potentially harmful' : undefined
       };
       
     } catch (error) {
@@ -578,7 +630,7 @@ export class SeaLionService {
     return evaluations[language as keyof typeof evaluations] || evaluations.en;
   }
 
-  // Generic method for AI text generation with SeaLion using direct HTTP
+  // Generic method for AI text generation with SeaLion using Vertex AI or direct API
   async generateResponse(options: {
     messages: Array<{ role: string; content: string }>;
     maxTokens?: number;
@@ -591,52 +643,22 @@ export class SeaLionService {
       const enhancedMessages = options.language && options.language !== 'en' 
         ? [
             { 
-              role: 'system' as const, 
+              role: 'system', 
               content: this.getLanguageInstructions(options.language) 
             },
             ...options.messages
           ]
         : options.messages;
 
-      // Use direct HTTP call to SeaLion API
-      const response = await axios.post('https://api.sea-lion.ai/v1/chat/completions', {
-        model: options.model || this.config.reasoningModel,
+      return await this.makeAPICall({
         messages: enhancedMessages,
-        max_tokens: options.maxTokens || 1000,
+        maxTokens: options.maxTokens || 1000,
         temperature: options.temperature || 0.7,
-        top_p: 0.9,
-        stream: false
-      }, {
-        headers: {
-          'Authorization': `Bearer ${this.config.apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000 // 30 second timeout
+        model: options.model || this.config.reasoningModel
       });
 
-      if (response.data?.choices?.[0]?.message?.content) {
-        return response.data.choices[0].message.content.trim();
-      } else {
-        throw new Error('Invalid response structure from SeaLion API');
-      }
     } catch (error) {
       console.error('SeaLion generateResponse error:', error);
-      
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const message = error.response?.data?.error || error.message;
-        
-        if (status === 429) {
-          throw new Error('SeaLion API rate limit exceeded. Please wait and try again.');
-        } else if (status === 401) {
-          throw new Error('SeaLion API authentication failed. Please check your API key.');
-        } else if (status === 400) {
-          throw new Error(`SeaLion API request error: ${message}`);
-        } else {
-          throw new Error(`SeaLion API error (${status}): ${message}`);
-        }
-      }
-      
       throw new Error(`SeaLion API generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
