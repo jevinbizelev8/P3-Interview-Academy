@@ -196,28 +196,93 @@ export class AIService {
     const language = session.interviewLanguage || 'en';
 
     try {
-      // Generate comprehensive assessment using SeaLion
+      // Generate comprehensive assessment using SeaLion with new 9-criteria rubric
       const assessment = await sealionService.generateSTARAssessment(
         conversationHistory,
         context,
         language
       );
 
-      // Parse and structure the SeaLion assessment for our 10-feature evaluation
-      const overallScore = (assessment.overallScore || 75) / 10; // Convert to 0-10 scale
+      // Extract rubric scores from SeaLion assessment
+      const rubricScores = assessment.rubricScores || {};
+      const weightedScore = assessment.weightedOverallScore || 3.5;
+      const overallRating = assessment.overallRating || (
+        weightedScore >= 3.5 ? "Pass" : 
+        weightedScore >= 3.0 ? "Borderline" : "Fail"
+      );
+      
+      // Calculate weighted overall score based on the 9-criteria weightings
+      const calculateWeightedScore = (scores: any) => {
+        const weights = {
+          relevance: 0.15,
+          starStructure: 0.15,
+          specificEvidence: 0.15,
+          roleAlignment: 0.15,
+          outcomeOriented: 0.15,
+          communication: 0.10,
+          problemSolving: 0.10,
+          culturalFit: 0.05,
+          learningAgility: 0.05
+        };
+        
+        const weightedSum = 
+          (scores.relevanceScore || 3) * weights.relevance +
+          (scores.starStructureScore || 3) * weights.starStructure +
+          (scores.specificEvidenceScore || 3) * weights.specificEvidence +
+          (scores.roleAlignmentScore || 3) * weights.roleAlignment +
+          (scores.outcomeOrientedScore || 3) * weights.outcomeOriented +
+          (scores.communicationScore || 3) * weights.communication +
+          (scores.problemSolvingScore || 3) * weights.problemSolving +
+          (scores.culturalFitScore || 3) * weights.culturalFit +
+          (scores.learningAgilityScore || 3) * weights.learningAgility;
+          
+        return Number(weightedSum.toFixed(2));
+      };
+      
+      const calculatedWeightedScore = calculateWeightedScore(rubricScores);
       
       return {
-        overallScore: overallScore.toString(),
-        overallRating: overallScore >= 8 ? "Excellent Performance" : 
-                      overallScore >= 7 ? "Good Performance" : 
-                      overallScore >= 6 ? "Satisfactory Performance" : "Needs Improvement",
-        communicationScore: (assessment.starAnalysis?.situation?.score || 7.5).toString(),
-        empathyScore: (assessment.starAnalysis?.task?.score || 7.5).toString(),
-        problemSolvingScore: (assessment.starAnalysis?.action?.score || 7.5).toString(),
-        culturalAlignmentScore: (assessment.culturalFit?.score || assessment.starAnalysis?.result?.score || 7.5).toString(),
-        qualitativeObservations: assessment.summary || assessment.qualitativeFeedback || "Candidate demonstrated solid understanding of the role requirements.",
-        actionableInsights: Array.isArray(assessment.recommendations) ? assessment.recommendations : 
-                          typeof assessment.recommendations === 'string' ? [assessment.recommendations] : [
+        // New 9-criteria rubric scores (1-5 scale)
+        relevanceScore: (rubricScores.relevanceScore || 3).toString(),
+        relevanceFeedback: rubricScores.relevanceFeedback || "Response addresses the question appropriately.",
+        
+        starStructureScore: (rubricScores.starStructureScore || 3).toString(),
+        starStructureFeedback: rubricScores.starStructureFeedback || "Responses follow logical structure.",
+        
+        specificEvidenceScore: (rubricScores.specificEvidenceScore || 3).toString(),
+        specificEvidenceFeedback: rubricScores.specificEvidenceFeedback || "Provides adequate examples and evidence.",
+        
+        roleAlignmentScore: (rubricScores.roleAlignmentScore || 3).toString(),
+        roleAlignmentFeedback: rubricScores.roleAlignmentFeedback || "Experience aligns well with role requirements.",
+        
+        outcomeOrientedScore: (rubricScores.outcomeOrientedScore || 3).toString(),
+        outcomeOrientedFeedback: rubricScores.outcomeOrientedFeedback || "Demonstrates focus on measurable outcomes.",
+        
+        communicationScore: (rubricScores.communicationScore || 3).toString(),
+        communicationFeedback: rubricScores.communicationFeedback || "Clear and professional communication style.",
+        
+        problemSolvingScore: (rubricScores.problemSolvingScore || 3).toString(),
+        problemSolvingFeedback: rubricScores.problemSolvingFeedback || "Shows good analytical thinking.",
+        
+        culturalFitScore: (rubricScores.culturalFitScore || 3).toString(),
+        culturalFitFeedback: rubricScores.culturalFitFeedback || "Demonstrates good cultural alignment.",
+        
+        learningAgilityScore: (rubricScores.learningAgilityScore || 3).toString(),
+        learningAgilityFeedback: rubricScores.learningAgilityFeedback || "Shows adaptability and learning mindset.",
+        
+        // Calculated weighted scores
+        weightedOverallScore: calculatedWeightedScore.toString(),
+        overallRating: calculatedWeightedScore >= 3.5 ? "Pass" : 
+                      calculatedWeightedScore >= 3.0 ? "Borderline" : "Fail",
+        
+        // Legacy fields for backwards compatibility (derived from new rubric)
+        empathyScore: (rubricScores.culturalFitScore || 3).toString(),
+        culturalAlignmentScore: (rubricScores.culturalFitScore || 3).toString(),
+        overallScore: (calculatedWeightedScore * 2).toString(), // Convert 1-5 to 1-10 scale for legacy display
+        
+        // Existing evaluation features
+        qualitativeObservations: assessment.summary || "Comprehensive evaluation based on 9-criteria interview rubric.",
+        actionableInsights: assessment.actionableInsights || [
           `Focus on demonstrating specific examples relevant to ${session.userJobPosition}`,
           `Research ${session.userCompanyName}'s recent initiatives and values`,
           "Practice articulating your problem-solving approach using the STAR method"
@@ -233,16 +298,16 @@ export class AIService {
           "What specific value would you bring to this role that others might not?",
           "How do you plan to grow in this position over the next 2 years?"
         ],
-        badgeEarned: overallScore >= 8 ? "Interview Excellence" : 
-                     overallScore >= 7 ? "Strong Candidate" : 
-                     "Interview Participant",
-        pointsEarned: Math.floor(overallScore * 10),
-        strengths: assessment.keyStrengths || assessment.strengths || [
+        badgeEarned: calculatedWeightedScore >= 4.0 ? "Interview Excellence" : 
+                     calculatedWeightedScore >= 3.5 ? "Strong Candidate" : 
+                     calculatedWeightedScore >= 3.0 ? "Interview Participant" : "Needs Practice",
+        pointsEarned: Math.floor(calculatedWeightedScore * 20), // Scale to 0-100 points
+        strengths: assessment.keyStrengths || [
           "Clear communication style",
           "Relevant experience",
           "Professional demeanor"
         ],
-        improvementAreas: assessment.areasForImprovement || assessment.improvements || [
+        improvementAreas: assessment.areasForImprovement || [
           "Provide more specific examples",
           "Ask more insightful questions",
           "Connect experience to company needs"
@@ -250,19 +315,37 @@ export class AIService {
       };
     } catch (error) {
       console.error('Error generating comprehensive evaluation:', error);
+      // Fallback evaluation with default rubric scores
       return {
-        overallScore: "7.0",
-        overallRating: "Good",
-        communicationScore: "7.0",
-        empathyScore: "7.0",
-        problemSolvingScore: "7.0",
-        culturalAlignmentScore: "7.0",
+        relevanceScore: "3.0",
+        relevanceFeedback: "Response addresses basic question requirements.",
+        starStructureScore: "3.0", 
+        starStructureFeedback: "Adequate structure in responses.",
+        specificEvidenceScore: "3.0",
+        specificEvidenceFeedback: "Some examples provided.",
+        roleAlignmentScore: "3.0",
+        roleAlignmentFeedback: "Experience shows potential for the role.",
+        outcomeOrientedScore: "3.0",
+        outcomeOrientedFeedback: "Some focus on outcomes demonstrated.",
+        communicationScore: "3.0",
+        communicationFeedback: "Clear and understandable communication.",
+        problemSolvingScore: "3.0", 
+        problemSolvingFeedback: "Basic problem-solving approach shown.",
+        culturalFitScore: "3.0",
+        culturalFitFeedback: "Adequate cultural alignment.",
+        learningAgilityScore: "3.0",
+        learningAgilityFeedback: "Shows willingness to learn.",
+        weightedOverallScore: "3.0",
+        overallRating: "Borderline",
+        overallScore: "6.0",
+        empathyScore: "3.0",
+        culturalAlignmentScore: "3.0",
         qualitativeObservations: "Interview completed successfully. Detailed evaluation processing encountered an issue.",
         actionableInsights: ["Continue practicing interview skills", "Research company-specific information"],
         personalizedDrills: ["Practice behavioral questions", "Prepare technical examples"],
         reflectionPrompts: ["How did you feel about this interview?", "What would you do differently?"],
         badgeEarned: "Interview Participant",
-        pointsEarned: 70,
+        pointsEarned: 60,
         strengths: ["Engaged in the conversation", "Completed the interview"],
         improvementAreas: ["Continue practicing", "Prepare more examples"]
       };

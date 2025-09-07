@@ -329,7 +329,7 @@ export class SeaLionService {
     }
   }
 
-  // Generate comprehensive evaluation using SeaLion reasoning model
+  // Generate comprehensive evaluation using SeaLion reasoning model with new 9-criteria rubric
   async generateSTARAssessment(
     conversationHistory: Array<{ role: string; content: string; timestamp: Date }>,
     context: InterviewContext,
@@ -341,24 +341,54 @@ export class SeaLionService {
 
     ${languageInstructions}
     
-    Analyze this interview for a ${context.userJobPosition || context.jobRole} position at ${context.userCompanyName || context.company} using the STAR method (Situation, Task, Action, Result).
+    Analyze this interview for a ${context.userJobPosition || context.jobRole} position at ${context.userCompanyName || context.company} using the new 9-criteria interview rubric.
     
-    Provide a comprehensive evaluation in JSON format with:
+    Provide a comprehensive evaluation in JSON format with scores on a 1-5 scale (1=Poor, 3=Average, 5=Great):
     
     {
-      "overallScore": (1-100),
-      "starAnalysis": {
-        "situation": { "score": (1-10), "feedback": "detailed analysis" },
-        "task": { "score": (1-10), "feedback": "detailed analysis" },
-        "action": { "score": (1-10), "feedback": "detailed analysis" },
-        "result": { "score": (1-10), "feedback": "detailed analysis" }
+      "rubricScores": {
+        "relevanceScore": (1-5),
+        "relevanceFeedback": "detailed analysis of response relevance and focus",
+        "starStructureScore": (1-5),
+        "starStructureFeedback": "analysis of logical flow and STAR method usage",
+        "specificEvidenceScore": (1-5),
+        "specificEvidenceFeedback": "analysis of concrete examples and evidence provided",
+        "roleAlignmentScore": (1-5),
+        "roleAlignmentFeedback": "analysis of how experience aligns with the role requirements",
+        "outcomeOrientedScore": (1-5),
+        "outcomeOrientedFeedback": "analysis of measurable results and business impact focus",
+        "communicationScore": (1-5),
+        "communicationFeedback": "analysis of clarity, confidence, and articulation",
+        "problemSolvingScore": (1-5),
+        "problemSolvingFeedback": "analysis of analytical thinking and solution approaches",
+        "culturalFitScore": (1-5),
+        "culturalFitFeedback": "analysis of alignment with company values and teamwork",
+        "learningAgilityScore": (1-5),
+        "learningAgilityFeedback": "analysis of adaptability and learning mindset"
       },
+      "weightedOverallScore": (calculated weighted average based on 15%,15%,15%,15%,15%,10%,10%,5%,5%),
+      "overallRating": "Pass/Borderline/Fail based on score thresholds",
       "keyStrengths": ["strength1", "strength2", "strength3"],
       "areasForImprovement": ["area1", "area2", "area3"],
-      "culturalFit": { "score": (1-10), "analysis": "cultural fit analysis for SEA context" },
-      "recommendations": "specific advice for improvement",
-      "summary": "overall interview summary"
+      "actionableInsights": ["specific improvement recommendation 1", "specific improvement recommendation 2"],
+      "summary": "comprehensive interview evaluation summary"
     }
+    
+    Scoring Thresholds:
+    - Pass: ≥ 3.5/5
+    - Borderline: 3.0 – 3.4/5 
+    - Fail: < 3.0/5
+    
+    Weighting:
+    - Relevance of Response: 15%
+    - STAR Structure: 15%
+    - Specific Evidence: 15%
+    - Role Alignment: 15%
+    - Outcome-Oriented: 15%
+    - Communication: 10%
+    - Problem-Solving: 10%
+    - Cultural Fit: 5%
+    - Learning Agility: 5%
     
     Consider Southeast Asian workplace cultures and ${context.userCompanyName || context.company} specific requirements.`;
 

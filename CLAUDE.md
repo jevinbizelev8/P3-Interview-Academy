@@ -91,3 +91,4 @@ Built with Shadcn/ui component library:
 - **Southeast Asian language support** for AI-generated content
 - **Cultural adaptation** for interview scenarios and evaluation criteria
 - **Language-aware AI responses** using SeaLion's specialized models
+- Always refer to @interview_scoring_rubrics.md to score the AI simulation sessions.

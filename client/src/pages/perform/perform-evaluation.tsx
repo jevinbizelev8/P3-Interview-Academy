@@ -19,6 +19,8 @@ import {
   ArrowLeft
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import InterviewScoreCharts from "@/components/InterviewScoreCharts";
+import DetailedFeedbackCards from "@/components/DetailedFeedbackCards";
 import type { AiEvaluationResult } from "@shared/schema";
 
 export default function PerformEvaluation() {
@@ -119,7 +121,9 @@ export default function PerformEvaluation() {
     );
   }
 
-  const overallScorePercentage = evaluation.overallScore ? Number(evaluation.overallScore) * 10 : 0;
+  // Use weighted overall score from new rubric system
+  const weightedScore = Number(evaluation.weightedOverallScore) || Number(evaluation.overallScore) / 2 || 3.5;
+  const overallScorePercentage = (weightedScore / 5) * 100;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -163,7 +167,7 @@ export default function PerformEvaluation() {
                 <div className="flex items-center space-x-4 mt-4">
                   <div className="flex items-center space-x-2">
                     <Trophy className="w-5 h-5" />
-                    <span>Score: {evaluation.overallScore}/10</span>
+                    <span>Score: {weightedScore.toFixed(1)}/5.0</span>
                   </div>
                   {evaluation.badgeEarned && (
                     <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
@@ -180,8 +184,11 @@ export default function PerformEvaluation() {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-4xl font-bold mb-2">{overallScorePercentage}%</div>
+                <div className="text-4xl font-bold mb-2">{overallScorePercentage.toFixed(0)}%</div>
                 <Progress value={overallScorePercentage} className="w-32 bg-white/20" />
+                <div className="text-sm text-purple-200 mt-1">
+                  Pass: ≥70% • Borderline: 60-69%
+                </div>
               </div>
             </div>
           </CardContent>
@@ -192,8 +199,8 @@ export default function PerformEvaluation() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="kpis">KPIs</TabsTrigger>
-          <TabsTrigger value="insights">Insights</TabsTrigger>
+          <TabsTrigger value="kpis">Analytics</TabsTrigger>
+          <TabsTrigger value="insights">Detailed Feedback</TabsTrigger>
           <TabsTrigger value="drills">Practice</TabsTrigger>
           <TabsTrigger value="reflection">Reflect</TabsTrigger>
         </TabsList>
@@ -260,65 +267,15 @@ export default function PerformEvaluation() {
           </Card>
         </TabsContent>
 
-        {/* KPIs Tab */}
+        {/* Performance Analytics Tab */}
         <TabsContent value="kpis" className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Communication Clarity</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Score</span>
-                  <span className="font-semibold">{evaluation.communicationScore || 0}/10</span>
-                </div>
-                <Progress value={(Number(evaluation.communicationScore) || 0) * 10} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Empathy & Emotional Intelligence</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Score</span>
-                  <span className="font-semibold">{evaluation.empathyScore || 0}/10</span>
-                </div>
-                <Progress value={(Number(evaluation.empathyScore) || 0) * 10} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Problem-Solving Approach</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Score</span>
-                  <span className="font-semibold">{evaluation.problemSolvingScore || 0}/10</span>
-                </div>
-                <Progress value={(Number(evaluation.problemSolvingScore) || 0) * 10} />
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Cultural Alignment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-gray-600">Score</span>
-                  <span className="font-semibold">{evaluation.culturalAlignmentScore || 0}/10</span>
-                </div>
-                <Progress value={(Number(evaluation.culturalAlignmentScore) || 0) * 10} />
-              </CardContent>
-            </Card>
-          </div>
+          <InterviewScoreCharts evaluation={evaluation} />
         </TabsContent>
 
-        {/* Insights Tab */}
+        {/* Detailed Feedback Tab */}
         <TabsContent value="insights" className="space-y-6">
+          <DetailedFeedbackCards evaluation={evaluation} />
+          
           <Card>
             <CardHeader>
               <CardTitle>Actionable Insights</CardTitle>
