@@ -18,11 +18,13 @@ export function getSession() {
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    name: 'connect.sid',
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false, // Set to false for development (localhost)
       maxAge: sessionTtl,
       sameSite: 'lax',
+      domain: undefined, // Don't set domain for localhost
     },
   });
 }
@@ -109,6 +111,9 @@ export async function setupSimpleAuth(app: Express) {
       }
 
       // Create session
+      console.log("Login successful, creating session for user:", user.id);
+      console.log("Session ID before save:", req.sessionID);
+      
       (req.session as any).userId = user.id;
       (req.session as any).userEmail = user.email;
       
@@ -117,6 +122,9 @@ export async function setupSimpleAuth(app: Express) {
           console.error("Session save error:", err);
           return res.status(500).json({ message: "Login failed" });
         }
+        
+        console.log("Session saved successfully, ID:", req.sessionID);
+        console.log("Session data after save:", req.session);
         
         res.json({ 
           success: true, 
@@ -137,8 +145,13 @@ export async function setupSimpleAuth(app: Express) {
   // Get current user
   app.get("/api/auth/user", async (req, res) => {
     try {
+      console.log("Auth check - Session ID:", req.sessionID);
+      console.log("Auth check - Session data:", req.session);
+      console.log("Auth check - Headers:", req.headers);
+      
       const session = req.session as any;
       if (!session.userId) {
+        console.log("No userId in session");
         return res.status(401).json({ message: "Unauthorized" });
       }
 
