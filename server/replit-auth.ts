@@ -77,17 +77,27 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const claims = tokens.claims();
-    const user = {
-      id: claims["sub"],
-      email: claims["email"],
-      firstName: claims["first_name"],
-      lastName: claims["last_name"],
-      role: "user" as const
-    };
-    updateUserSession(user, tokens);
-    await upsertUser(claims);
-    verified(null, user);
+    try {
+      const claims = tokens.claims();
+      if (!claims) {
+        return verified(new Error("No claims found in token"));
+      }
+      
+      const user = {
+        id: String(claims["sub"] || ""),
+        email: String(claims["email"] || ""),
+        firstName: String(claims["first_name"] || ""),
+        lastName: String(claims["last_name"] || ""),
+        role: "user" as const
+      };
+      
+      updateUserSession(user as any, tokens);
+      await upsertUser(claims);
+      verified(null, user);
+    } catch (error) {
+      console.error("Auth verification error:", error);
+      verified(error);
+    }
   };
 
   for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
@@ -107,17 +117,31 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    console.log("Login attempt:", {
+      sessionID: req.sessionID,
+      user: req.user,
+      isAuthenticated: req.isAuthenticated?.()
+    });
+    
     // Use the first available domain strategy
     const domains = process.env.REPLIT_DOMAINS!.split(",");
     const strategyName = `replitauth:${domains[0]}`;
     
+    console.log("Using auth strategy:", strategyName);
+    
     passport.authenticate(strategyName, {
-      prompt: "login consent",
+      prompt: "login consent", 
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
+    console.log("OAuth callback received:", {
+      query: req.query,
+      headers: req.headers,
+      sessionID: req.sessionID
+    });
+    
     // Use the first available domain strategy
     const domains = process.env.REPLIT_DOMAINS!.split(",");
     const strategyName = `replitauth:${domains[0]}`;
@@ -125,7 +149,13 @@ export async function setupAuth(app: Express) {
     passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/dashboard",
       failureRedirect: "/?error=auth_failed",
-    })(req, res, next);
+    })(req, res, (err) => {
+      if (err) {
+        console.error("Authentication callback error:", err);
+        return res.redirect("/?error=auth_failed");
+      }
+      next();
+    });
   });
 
   app.get("/api/logout", (req, res) => {
