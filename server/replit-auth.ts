@@ -98,26 +98,14 @@ export async function setupAuth(app: Express) {
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
-  app.get("/api/login", (req, res, next) => {
-    // Use the first available domain strategy or fallback
-    const domains = process.env.REPLIT_DOMAINS!.split(",");
-    const strategyName = `replitauth:${domains[0]}`;
-    
-    passport.authenticate(strategyName, {
-      prompt: "login consent",
-      scope: ["openid", "email", "profile", "offline_access"],
-    })(req, res, next);
+  // Disabled old Replit Auth - redirect to simple auth
+  app.get("/api/login", (req, res) => {
+    res.redirect("/");
   });
 
-  app.get("/api/callback", (req, res, next) => {
-    // Use the first available domain strategy or fallback
-    const domains = process.env.REPLIT_DOMAINS!.split(",");
-    const strategyName = `replitauth:${domains[0]}`;
-    
-    passport.authenticate(strategyName, {
-      successReturnToOrRedirect: "/dashboard",
-      failureRedirect: "/",
-    })(req, res, next);
+  // Disabled old Replit Auth callback - redirect to simple auth
+  app.get("/api/callback", (req, res) => {
+    res.redirect("/");
   });
 
   app.get("/api/logout", (req, res) => {

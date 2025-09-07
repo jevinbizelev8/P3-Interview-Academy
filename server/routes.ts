@@ -56,6 +56,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Simple auth routes for development
   app.get('/api/auth/user', async (req: any, res) => {
     try {
+      console.log("Auth check - Session ID:", req.sessionID);
+      console.log("Auth check - Session data:", req.session);
+      
       // Check if user is in session
       if (req.session && req.session.userId) {
         let user = await storage.getUser(req.session.userId);
@@ -69,10 +72,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             role: "user"
           });
         }
+        console.log("User found/created:", user.id);
         return res.json(user);
       }
       
       // Return 401 if not authenticated
+      console.log("No session found - returning 401");
       res.status(401).json({ message: "Unauthorized" });
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -85,13 +90,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, firstName, lastName } = req.body;
       
-      // Create session
+      // Create session data
       req.session.userId = `user-${Date.now()}`;
       req.session.userEmail = email || "user@example.com";
       req.session.userFirstName = firstName || "User";
       req.session.userLastName = lastName || "";
       
-      res.json({ success: true, redirectTo: "/dashboard" });
+      // Explicitly save the session
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Login failed - session error" });
+        }
+        
+        console.log("Session saved successfully for user:", req.session.userId);
+        res.json({ success: true, redirectTo: "/dashboard" });
+      });
     } catch (error) {
       console.error("Login error:", error);
       res.status(500).json({ message: "Login failed" });
