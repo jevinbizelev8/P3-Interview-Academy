@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { SeaLionLogo } from "@/components/ui/sealion-logo";
 import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCircle, LogIn, UserPlus, Shield, TrendingUp, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import AuthenticatedLanding from "@/components/AuthenticatedLanding";
+import SimpleLoginForm from "@/components/SimpleLoginForm";
 import professionalInterviewImage from "@assets/generated_images/Professional_interview_scene_0e52b9e3.png";
 import aiCoachingImage from "@assets/generated_images/AI_coaching_dashboard_732a8dd4.png";
 import careerSuccessImage from "@assets/generated_images/Career_success_celebration_559e261d.png";
@@ -89,6 +91,12 @@ const TESTIMONIALS = [
 
 export default function Landing() {
   const { user, isLoading, isAuthenticated } = useAuth();
+  const [showLoginForm, setShowLoginForm] = useState(false);
+
+  // Show login form when user clicks login
+  if (showLoginForm) {
+    return <SimpleLoginForm onSuccess={() => setShowLoginForm(false)} />;
+  }
 
   // Always show login/signup landing page first
   // Users will access authenticated features through protected routes
@@ -114,11 +122,11 @@ export default function Landing() {
                 <div className="animate-pulse bg-gray-200 h-9 w-20 rounded"></div>
               ) : (
                 <>
-                  <Button variant="outline" onClick={() => window.location.href = '/api/login'}>
+                  <Button variant="outline" onClick={() => setShowLoginForm(true)}>
                     <LogIn className="w-4 h-4 mr-2" />
                     Login
                   </Button>
-                  <Button onClick={() => window.location.href = '/api/login'}>
+                  <Button onClick={() => setShowLoginForm(true)}>
                     <UserPlus className="w-4 h-4 mr-2" />
                     Get Started
                   </Button>
@@ -154,12 +162,12 @@ export default function Landing() {
               and detailed performance analytics using the proven P³ framework: Prepare, Practice, Perform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-lg px-8 py-3" onClick={() => window.location.href = '/api/login'}>
+              <Button size="lg" className="text-lg px-8 py-3" onClick={() => setShowLoginForm(true)}>
                 <UserPlus className="mr-2 w-5 h-5" />
                 Create Free Account
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3" onClick={() => window.location.href = '/api/login'}>
+              <Button variant="outline" size="lg" className="text-lg px-8 py-3" onClick={() => setShowLoginForm(true)}>
                 <LogIn className="mr-2 w-5 h-5" />
                 Login to Continue
               </Button>

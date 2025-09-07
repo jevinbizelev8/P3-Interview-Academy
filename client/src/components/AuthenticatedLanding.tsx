@@ -104,13 +104,14 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => {
+                  onClick={async () => {
                     try {
-                      window.location.href = '/api/logout';
+                      await apiRequest("POST", "/api/auth/logout");
+                      window.location.href = '/';
                     } catch (error) {
                       console.error('Logout error:', error);
-                      // Fallback: reload the page to clear session
-                      window.location.reload();
+                      // Fallback: go to home page
+                      window.location.href = '/';
                     }
                   }}
                 >
