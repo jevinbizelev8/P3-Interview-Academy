@@ -26,13 +26,25 @@ interface AuthenticatedLandingProps {
 }
 
 export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps) {
-  // Fetch user's recent activity and progress
-  const { data: dashboard } = useQuery({
+  // Fetch user's recent activity and progress (with error handling)
+  const { data: dashboard, isError } = useQuery({
     queryKey: ["/api/perform/dashboard"],
     queryFn: async () => {
-      const response = await apiRequest("GET", "/api/perform/dashboard");
-      return await response.json();
+      try {
+        const response = await apiRequest("GET", "/api/perform/dashboard");
+        if (!response.ok) {
+          // If API fails, return null instead of throwing
+          console.warn('Dashboard API failed, showing default data');
+          return null;
+        }
+        return await response.json();
+      } catch (error) {
+        console.warn('Dashboard API error:', error);
+        return null;
+      }
     },
+    retry: false, // Don't retry failed requests
+    refetchOnWindowFocus: false, // Don't refetch on window focus
   });
 
   const getInitials = (firstName?: string, lastName?: string, email?: string) => {
@@ -83,7 +95,7 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={user.profileImageUrl || undefined} />
                   <AvatarFallback className="text-xs">
-                    {getInitials(user.firstName, user.lastName, user.email)}
+                    {getInitials(user.firstName || undefined, user.lastName || undefined, user.email || undefined)}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium text-gray-700">
@@ -115,7 +127,7 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
           </div>
 
           {/* Quick Stats */}
-          {dashboard && (
+          {dashboard ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
               <Card>
                 <CardContent className="p-4 text-center">
@@ -146,6 +158,33 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
                   <div className="text-2xl font-bold text-orange-600 mb-1">
                     {Math.round(((dashboard.completedSessions || 0) / (dashboard.totalSessions || 1)) * 100)}%
                   </div>
+                  <div className="text-sm text-gray-600">Completion Rate</div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600 mb-1">0</div>
+                  <div className="text-sm text-gray-600">Total Sessions</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600 mb-1">0</div>
+                  <div className="text-sm text-gray-600">Completed</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-purple-600 mb-1">0.0</div>
+                  <div className="text-sm text-gray-600">Average Score</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl font-bold text-orange-600 mb-1">0%</div>
                   <div className="text-sm text-gray-600">Completion Rate</div>
                 </CardContent>
               </Card>
