@@ -68,24 +68,27 @@ const MODULES = [
   }
 ];
 
-const TESTIMONIALS = [
+const TARGET_AUDIENCES = [
   {
-    name: "Sarah Chen",
-    role: "Software Engineer at Meta",
-    content: "The AI coaching helped me land my dream job. The questions were incredibly realistic and the feedback was spot-on.",
-    rating: 5
+    title: "Fresh Graduates",
+    description: "Starting your career journey",
+    benefits: ["Build confidence for first job interviews", "Learn professional interview etiquette", "Practice common entry-level questions", "Develop the STAR method for storytelling"],
+    icon: "🎓",
+    audience: "Recent university graduates entering the job market"
   },
   {
-    name: "Ahmad Rahman",
-    role: "Data Scientist at Grab",
-    content: "Being able to practice in Bahasa Malaysia made such a difference. The platform understands local context perfectly.",
-    rating: 5
+    title: "Career Switchers", 
+    description: "Transitioning to new industries",
+    benefits: ["Practice explaining career transitions", "Learn industry-specific terminology", "Address skill gaps confidently", "Prepare for career change questions"],
+    icon: "🔄",
+    audience: "Mid-career professionals exploring new opportunities"
   },
   {
-    name: "Maria Santos",
-    role: "Product Manager at Shopee",
-    content: "The STAR method evaluation transformed how I structure my responses. Highly recommended!",
-    rating: 5
+    title: "Southeast Asian Professionals",
+    description: "Practicing in your native language",
+    benefits: ["Interview preparation in 10 local languages", "Culturally relevant business contexts", "Regional company-specific scenarios", "Local market insights and expectations"],
+    icon: "🌏",
+    audience: "Professionals across Malaysia, Singapore, Thailand, Indonesia, and more"
   }
 ];
 
@@ -112,7 +115,7 @@ export default function Landing() {
             <div className="hidden md:flex items-center space-x-8">
               <a href="#modules" className="text-gray-600 hover:text-gray-900 transition-colors">Modules</a>
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
-              <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">Reviews</a>
+              <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">Who Uses P³</a>
               {isLoading ? (
                 <div className="animate-pulse bg-gray-200 h-9 w-20 rounded"></div>
               ) : (
@@ -342,28 +345,34 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
+      {/* Target Audiences Section */}
       <section id="testimonials" className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Success Stories</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Who Benefits from P³ Interview Academy?</h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Join thousands of professionals who've transformed their interview skills with P³ Interview Academy.
+              Designed for professionals at every career stage who want to master their interview skills and land their dream jobs.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
-            {TESTIMONIALS.map((testimonial, index) => (
-              <Card key={index} className="border-0 shadow-lg">
+            {TARGET_AUDIENCES.map((audience, index) => (
+              <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6">
-                  <div className="flex mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                  <div className="text-center mb-6">
+                    <div className="text-4xl mb-3">{audience.icon}</div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{audience.title}</h3>
+                    <p className="text-sm text-gray-600 font-medium">{audience.description}</p>
+                  </div>
+                  <div className="space-y-3">
+                    {audience.benefits.map((benefit, benefitIndex) => (
+                      <div key={benefitIndex} className="flex items-start">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2 mt-1 flex-shrink-0" />
+                        <span className="text-sm text-gray-700">{benefit}</span>
+                      </div>
                     ))}
                   </div>
-                  <p className="text-gray-600 mb-4 italic">"{testimonial.content}"</p>
-                  <div>
-                    <p className="font-semibold text-gray-900">{testimonial.name}</p>
-                    <p className="text-sm text-gray-500">{testimonial.role}</p>
+                  <div className="mt-6 pt-4 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 italic">{audience.audience}</p>
                   </div>
                 </CardContent>
               </Card>
