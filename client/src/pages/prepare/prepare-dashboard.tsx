@@ -228,7 +228,7 @@ export default function PrepareDashboard() {
                 question={currentQuestion}
                 currentIndex={currentQuestionIndex + 1}
                 totalQuestions={questions.length}
-                selectedLanguage={session.preferredLanguage}
+                selectedLanguage={session.preferredLanguage || 'en'}
                 onPrevious={handlePreviousQuestion}
                 onNext={handleNextQuestion}
                 sessionProgress={progress}

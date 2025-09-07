@@ -21,6 +21,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import InterviewScoreCharts from "@/components/InterviewScoreCharts";
 import DetailedFeedbackCards from "@/components/DetailedFeedbackCards";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import type { AiEvaluationResult } from "@shared/schema";
 
 export default function PerformEvaluation() {
@@ -126,7 +127,8 @@ export default function PerformEvaluation() {
   const overallScorePercentage = (weightedScore / 5) * 100;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <ProtectedRoute>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
@@ -390,6 +392,7 @@ export default function PerformEvaluation() {
           </Button>
         </Link>
       </div>
-    </div>
+      </div>
+    </ProtectedRoute>
   );
 }

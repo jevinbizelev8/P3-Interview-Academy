@@ -120,6 +120,11 @@ export interface IStorage {
   createCoachingFeedback(feedback: InsertCoachingFeedback): Promise<CoachingFeedback>;
   getCoachingFeedback(sessionId: string, messageId?: string): Promise<CoachingFeedback[]>;
   updateCoachingFeedback(id: string, updates: Partial<InsertCoachingFeedback>): Promise<CoachingFeedback>;
+
+  // Session lifecycle management
+  cleanupAbandonedSessions(cutoffTime: Date): Promise<number>;
+  archiveOldCompletedSessions(olderThanDate: Date): Promise<number>;
+  getSessionOwner(sessionId: string): Promise<string | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -965,6 +970,66 @@ export class DatabaseStorage implements IStorage {
       .where(eq(coachingFeedback.id, id))
       .returning();
     return feedback;
+  }
+
+  // ================================
+  // SESSION LIFECYCLE MANAGEMENT METHODS
+  // ================================
+
+  async cleanupAbandonedSessions(cutoffTime: Date): Promise<number> {
+    try {
+      // Delete abandoned sessions that are not completed and haven't been updated since cutoff
+      const result = await db
+        .delete(interviewSessions)
+        .where(
+          and(
+            sql`${interviewSessions.status} != 'completed'`,
+            sql`COALESCE(${interviewSessions.autoSavedAt}, ${interviewSessions.createdAt}) < ${cutoffTime}`
+          )
+        )
+        .returning({ id: interviewSessions.id });
+
+      console.log(`🧹 Cleaned up ${result.length} abandoned sessions older than ${cutoffTime.toISOString()}`);
+      return result.length;
+    } catch (error) {
+      console.error('Error in cleanupAbandonedSessions:', error);
+      return 0;
+    }
+  }
+
+  async archiveOldCompletedSessions(olderThanDate: Date): Promise<number> {
+    try {
+      // For now, we'll just delete old completed sessions
+      // In a real production system, you might want to move them to an archive table
+      const result = await db
+        .delete(interviewSessions)
+        .where(
+          and(
+            eq(interviewSessions.status, 'completed'),
+            sql`${interviewSessions.completedAt} < ${olderThanDate}`
+          )
+        )
+        .returning({ id: interviewSessions.id });
+
+      console.log(`📦 Archived ${result.length} completed sessions older than ${olderThanDate.toISOString()}`);
+      return result.length;
+    } catch (error) {
+      console.error('Error in archiveOldCompletedSessions:', error);
+      return 0;
+    }
+  }
+
+  async getSessionOwner(sessionId: string): Promise<string | undefined> {
+    try {
+      const [session] = await db
+        .select({ userId: interviewSessions.userId })
+        .from(interviewSessions)
+        .where(eq(interviewSessions.id, sessionId));
+      return session?.userId;
+    } catch (error) {
+      console.error('Error getting session owner:', error);
+      return undefined;
+    }
   }
 }
 
