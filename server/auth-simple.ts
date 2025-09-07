@@ -21,7 +21,7 @@ export function getSession() {
     name: 'connect.sid',
     cookie: {
       httpOnly: true,
-      secure: true, // Always use secure cookies in production
+      secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
       maxAge: sessionTtl,
       sameSite: 'lax',
       domain: undefined, // Let browser handle domain
@@ -96,41 +96,66 @@ export async function setupSimpleAuth(app: Express) {
 
   // Login endpoint
   app.post("/api/auth/login", async (req, res) => {
+    console.log("🔐 LOGIN ATTEMPT:", {
+      email: req.body?.email,
+      hasPassword: !!req.body?.password,
+      userAgent: req.get('User-Agent'),
+      origin: req.get('Origin'),
+      sessionID: req.sessionID
+    });
+    
     try {
       const { email, password } = req.body;
       
       if (!email || !password) {
+        console.log("❌ LOGIN FAILED: Missing credentials");
         return res.status(400).json({ message: "Email and password are required" });
       }
 
       // Find user
       const user = await storage.getUserByEmail(email);
       if (!user || !user.passwordHash) {
+        console.log("❌ LOGIN FAILED: User not found or no password hash:", { email, userExists: !!user, hasPasswordHash: !!user?.passwordHash });
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
       // Verify password
       const passwordValid = await bcrypt.compare(password, user.passwordHash);
       if (!passwordValid) {
+        console.log("❌ LOGIN FAILED: Invalid password for user:", user.id);
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
       // Create session
-      console.log("Login successful, creating session for user:", user.id);
-      console.log("Session ID before save:", req.sessionID);
+      console.log("✅ LOGIN SUCCESS: Creating session for user:", {
+        userId: user.id,
+        email: user.email,
+        sessionID: req.sessionID,
+        cookieSettings: {
+          secure: process.env.NODE_ENV === 'production',
+          httpOnly: true,
+          sameSite: 'lax'
+        }
+      });
       
       (req.session as any).userId = user.id;
       (req.session as any).userEmail = user.email;
       
       req.session.save((err) => {
         if (err) {
-          console.error("Session save error:", err);
+          console.error("❌ SESSION SAVE ERROR:", err);
           return res.status(500).json({ message: "Login failed" });
         }
         
-        console.log("Session saved successfully, ID:", req.sessionID);
-        console.log("Session data after save:", req.session);
-        console.log("Response headers will include Set-Cookie");
+        console.log("✅ SESSION SAVED:", {
+          sessionID: req.sessionID,
+          userId: (req.session as any).userId,
+          cookieWillBeSet: true,
+          sessionData: {
+            userId: (req.session as any).userId,
+            userEmail: (req.session as any).userEmail
+          }
+        });
         
         res.json({ 
           success: true, 
@@ -143,28 +168,48 @@ export async function setupSimpleAuth(app: Express) {
         });
       });
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("❌ LOGIN ERROR:", error);
       res.status(500).json({ message: "Login failed" });
     }
   });
 
   // Get current user
   app.get("/api/auth/user", async (req, res) => {
+    console.log("🔍 AUTH CHECK:", {
+      sessionID: req.sessionID,
+      cookies: req.headers.cookie,
+      userAgent: req.get('User-Agent'),
+      origin: req.get('Origin'),
+      referer: req.get('Referer')
+    });
+    
     try {
-      console.log("Auth check - Session ID:", req.sessionID);
-      console.log("Auth check - Session data:", req.session);
-      console.log("Auth check - Headers:", req.headers);
-      
       const session = req.session as any;
+      
+      console.log("📋 SESSION STATE:", {
+        exists: !!req.session,
+        sessionID: req.sessionID,
+        userId: session?.userId,
+        userEmail: session?.userEmail,
+        sessionKeys: session ? Object.keys(session) : 'no session'
+      });
+      
       if (!session.userId) {
-        console.log("No userId in session");
+        console.log("❌ AUTH FAILED: No userId in session");
         return res.status(401).json({ message: "Unauthorized" });
       }
 
       const user = await storage.getUser(session.userId);
       if (!user) {
+        console.log("❌ AUTH FAILED: User not found in database:", session.userId);
         return res.status(401).json({ message: "User not found" });
       }
+
+      console.log("✅ AUTH SUCCESS: User authenticated:", {
+        userId: user.id,
+        email: user.email,
+        sessionID: req.sessionID
+      });
 
       res.json({
         id: user.id,
@@ -174,7 +219,7 @@ export async function setupSimpleAuth(app: Express) {
         role: user.role
       });
     } catch (error) {
-      console.error("Get user error:", error);
+      console.error("❌ AUTH ERROR:", error);
       res.status(500).json({ message: "Failed to get user" });
     }
   });

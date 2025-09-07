@@ -42,7 +42,10 @@
       "WebFetch(domain:docs.sea-lion.ai)",
       "WebFetch(domain:localhost)",
       "Bash(time curl:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Read(//home/runner/**)",
+      "Read(//etc/**)",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []
