@@ -10,9 +10,10 @@ import { apiRequest } from "@/lib/queryClient";
 interface LoginFormProps {
   onSuccess: () => void;
   onSwitchToSignup: () => void;
+  onSwitchToReset: () => void;
 }
 
-export default function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProps) {
+export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
@@ -94,16 +95,29 @@ export default function LoginForm({ onSuccess, onSwitchToSignup }: LoginFormProp
           </Button>
         </form>
 
-        <div className="text-center text-sm">
-          <span className="text-gray-600">Don't have an account? </span>
-          <button 
-            onClick={onSwitchToSignup}
-            className="text-blue-600 hover:text-blue-500 font-medium"
-            disabled={isLoading}
-            data-testid="link-signup"
-          >
-            Create one here
-          </button>
+        <div className="text-center text-sm space-y-2">
+          <div>
+            <button 
+              type="button"
+              onClick={onSwitchToReset}
+              className="text-blue-600 hover:text-blue-500 font-medium text-sm"
+              disabled={isLoading}
+              data-testid="link-forgot-password"
+            >
+              Forgot your password?
+            </button>
+          </div>
+          <div>
+            <span className="text-gray-600">Don't have an account? </span>
+            <button 
+              onClick={onSwitchToSignup}
+              className="text-blue-600 hover:text-blue-500 font-medium"
+              disabled={isLoading}
+              data-testid="link-signup"
+            >
+              Create one here
+            </button>
+          </div>
         </div>
       </CardContent>
     </Card>
