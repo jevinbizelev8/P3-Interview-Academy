@@ -114,10 +114,15 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
+      // Build proper redirect URI with port if needed
+      const baseUrl = req.get('host')?.includes('localhost') 
+        ? `${req.protocol}://${req.get('host')}`
+        : `${req.protocol}://${req.hostname}`;
+      
       res.redirect(
         client.buildEndSessionUrl(config, {
           client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          post_logout_redirect_uri: baseUrl,
         }).href
       );
     });

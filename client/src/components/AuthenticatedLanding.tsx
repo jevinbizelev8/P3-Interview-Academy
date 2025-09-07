@@ -104,7 +104,15 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => window.location.href = '/api/logout'}
+                  onClick={() => {
+                    try {
+                      window.location.href = '/api/logout';
+                    } catch (error) {
+                      console.error('Logout error:', error);
+                      // Fallback: reload the page to clear session
+                      window.location.reload();
+                    }
+                  }}
                 >
                   <LogOut className="w-4 h-4" />
                 </Button>
