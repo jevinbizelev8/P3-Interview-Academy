@@ -90,10 +90,9 @@ const TESTIMONIALS = [
 export default function Landing() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
-  // If authenticated, show personalized dashboard
-  if (isAuthenticated && user) {
-    return <AuthenticatedLanding user={user} />;
-  }
+  // Always show login/signup landing page first
+  // Users will access authenticated features through protected routes
+  // This ensures the landing page always prompts for authentication
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -123,6 +122,14 @@ export default function Landing() {
                     <UserPlus className="w-4 h-4 mr-2" />
                     Get Started
                   </Button>
+                  {isAuthenticated && (
+                    <Link href="/dashboard">
+                      <Button variant="secondary">
+                        <TrendingUp className="w-4 h-4 mr-2" />
+                        My Dashboard
+                      </Button>
+                    </Link>
+                  )}
                 </>
               )}
             </div>
