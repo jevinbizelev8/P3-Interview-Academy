@@ -101,12 +101,19 @@ export async function setupAuth(app: Express) {
   };
 
   for (const domain of process.env.REPLIT_DOMAINS!.split(",")) {
+    const callbackURL = `https://${domain}/api/callback`;
+    console.log("Registering OAuth strategy:", {
+      domain,
+      callbackURL,
+      clientId: process.env.REPL_ID
+    });
+    
     const strategy = new Strategy(
       {
         name: `replitauth:${domain}`,
         config,
         scope: "openid email profile offline_access",
-        callbackURL: `https://${domain}/api/callback`,
+        callbackURL,
       },
       verify,
     );
