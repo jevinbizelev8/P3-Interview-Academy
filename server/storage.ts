@@ -284,7 +284,8 @@ export class DatabaseStorage implements IStorage {
           .where(eq(interviewScenarios.id, session.scenarioId));
         scenario = dbScenario;
       } catch (error) {
-        console.error('Error fetching scenario:', error);
+        // Silently handle UUID mismatch - this is expected for string scenario IDs
+        // console.error('Error fetching scenario:', error);
         // Fallback to dynamic scenario structure
         scenario = {
           id: session.scenarioId,
@@ -405,7 +406,7 @@ export class DatabaseStorage implements IStorage {
 
         return { 
           ...session, 
-          scenario,
+          scenario: scenario as any, // Type assertion to handle dynamic scenario creation
           userJobPosition: session.userJobPosition || null,
           userCompanyName: session.userCompanyName || null,
           interviewLanguage: session.interviewLanguage || 'en',
@@ -876,10 +877,8 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(industryQuestions.popularity), desc(industryQuestions.createdAt));
 
-    // Apply limit
-    if (filters.limit) {
-      query = query.limit(filters.limit);
-    }
+    // Apply limit with default fallback
+    query = query.limit(filters.limit || 50);
 
     return await query;
   }

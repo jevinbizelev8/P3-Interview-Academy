@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   TrendingUp, 
   Target, 
@@ -19,10 +20,14 @@ import {
   ArrowUp,
   ArrowDown,
   Activity,
-  CheckCircle
+  CheckCircle,
+  Database,
+  Trash2,
+  AlertCircle
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { useState } from "react";
 
 interface DashboardStats {
   totalSessions: number;
@@ -52,6 +57,11 @@ interface DashboardStats {
 }
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const [demoMessage, setDemoMessage] = useState("");
+  const [demoError, setDemoError] = useState("");
+
   // Fetch dashboard analytics data
   const { data: stats, isLoading } = useQuery({
     queryKey: ["/api/perform/dashboard"],
@@ -60,6 +70,56 @@ export default function Dashboard() {
       return await response.json();
     },
   });
+
+  // Generate demo data
+  const handleGenerateDemoData = async () => {
+    setIsDemoLoading(true);
+    setDemoMessage("");
+    setDemoError("");
+
+    try {
+      const response = await apiRequest("POST", "/api/perform/generate-demo-data");
+      const result = await response.json();
+      
+      setDemoMessage(`✅ ${result.message}`);
+      
+      // Refetch dashboard data to show new demo data
+      queryClient.invalidateQueries({ queryKey: ["/api/perform/dashboard"] });
+      
+      // Clear message after 5 seconds
+      setTimeout(() => setDemoMessage(""), 5000);
+    } catch (error: any) {
+      setDemoError(`❌ Failed to generate demo data: ${error.message}`);
+      setTimeout(() => setDemoError(""), 5000);
+    } finally {
+      setIsDemoLoading(false);
+    }
+  };
+
+  // Clear demo data
+  const handleClearDemoData = async () => {
+    setIsDemoLoading(true);
+    setDemoMessage("");
+    setDemoError("");
+
+    try {
+      const response = await apiRequest("POST", "/api/perform/clear-demo-data");
+      const result = await response.json();
+      
+      setDemoMessage(`✅ ${result.message}`);
+      
+      // Refetch dashboard data to reflect cleared data
+      queryClient.invalidateQueries({ queryKey: ["/api/perform/dashboard"] });
+      
+      // Clear message after 5 seconds
+      setTimeout(() => setDemoMessage(""), 5000);
+    } catch (error: any) {
+      setDemoError(`❌ Failed to clear demo data: ${error.message}`);
+      setTimeout(() => setDemoError(""), 5000);
+    } finally {
+      setIsDemoLoading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -103,6 +163,83 @@ export default function Dashboard() {
           Track your interview progress, identify strengths, and discover areas for improvement
         </p>
       </div>
+
+      {/* Demo Data Controls */}
+      <Card className="mb-8 border-dashed border-2 border-gray-300 bg-gray-50">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center">
+            <Database className="w-5 h-5 mr-2 text-blue-600" />
+            Demo Data Controls
+          </CardTitle>
+          <CardDescription>
+            Generate realistic demo data to see how analytics and scoring metrics are displayed
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4 mb-4">
+            <Button 
+              onClick={handleGenerateDemoData}
+              disabled={isDemoLoading}
+              className="flex items-center"
+              variant="outline"
+            >
+              {isDemoLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Database className="w-4 h-4 mr-2" />
+                  Generate Demo Data
+                </>
+              )}
+            </Button>
+            
+            <Button 
+              onClick={handleClearDemoData}
+              disabled={isDemoLoading}
+              variant="outline"
+              className="flex items-center text-red-600 border-red-300 hover:bg-red-50"
+            >
+              {isDemoLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
+                  Clearing...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Clear Demo Data
+                </>
+              )}
+            </Button>
+          </div>
+
+          {demoMessage && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                {demoMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {demoError && (
+            <Alert className="border-red-200 bg-red-50" variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {demoError}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          <div className="text-xs text-gray-500 mt-4">
+            <p><strong>Generate Demo Data:</strong> Creates 8-12 realistic interview sessions with scores, evaluations, and analytics over the last 3 months</p>
+            <p><strong>Clear Demo Data:</strong> Removes all demo sessions (identifies them by scenario ID prefix "demo-")</p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Key Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
