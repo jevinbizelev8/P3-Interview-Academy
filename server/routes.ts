@@ -46,21 +46,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Auth routes (development mode - will add proper auth later)
-  app.get('/api/auth/user', async (req: any, res) => {
+  // Auth routes - check actual authentication status
+  app.get('/api/auth/user', requireAuth, ensureUser, async (req: any, res) => {
     try {
-      // For development, create/return a mock user
-      let user = await storage.getUser("dev-user-123");
-      if (!user) {
-        user = await storage.upsertUser({
-          id: "dev-user-123",
-          email: "dev@example.com",
-          firstName: "Dev",
-          lastName: "User",
-          role: "user"
-        });
-      }
-      res.json(user);
+      // Return the authenticated user from middleware
+      res.json(req.user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
