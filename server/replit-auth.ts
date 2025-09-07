@@ -37,7 +37,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       maxAge: sessionTtl,
     },
   });
@@ -99,16 +99,24 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
+    // Use the first available domain strategy or fallback
+    const domains = process.env.REPLIT_DOMAINS!.split(",");
+    const strategyName = `replitauth:${domains[0]}`;
+    
+    passport.authenticate(strategyName, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
     })(req, res, next);
   });
 
   app.get("/api/callback", (req, res, next) => {
-    passport.authenticate(`replitauth:${req.hostname}`, {
-      successReturnToOrRedirect: "/",
-      failureRedirect: "/api/login",
+    // Use the first available domain strategy or fallback
+    const domains = process.env.REPLIT_DOMAINS!.split(",");
+    const strategyName = `replitauth:${domains[0]}`;
+    
+    passport.authenticate(strategyName, {
+      successReturnToOrRedirect: "/dashboard",
+      failureRedirect: "/",
     })(req, res, next);
   });
 
