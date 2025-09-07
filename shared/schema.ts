@@ -119,37 +119,86 @@ export const interviewMessages = pgTable("interview_messages", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// AI Evaluation Results table for the 10 features
+// AI Evaluation Results table with new 9-criteria rubric scoring
 export const aiEvaluationResults = pgTable("ai_evaluation_results", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: varchar("session_id").notNull(),
-  // Feature 1: Overall Performance Score
-  overallScore: numeric("overall_score", { precision: 3, scale: 2 }),
-  overallRating: varchar("overall_rating", { length: 50 }), // "Competent", "Needs Practice", etc.
-  // Feature 2: Key Performance Indicators
+  
+  // New 9-Criteria Interview Scoring Rubric (1-5 scale)
+  // 1. Relevance of Response (15%)
+  relevanceScore: numeric("relevance_score", { precision: 3, scale: 2 }),
+  relevanceFeedback: text("relevance_feedback"),
+  
+  // 2. Structured using STAR Method (15%)
+  starStructureScore: numeric("star_structure_score", { precision: 3, scale: 2 }),
+  starStructureFeedback: text("star_structure_feedback"),
+  
+  // 3. Specific Evidence Usage (15%)
+  specificEvidenceScore: numeric("specific_evidence_score", { precision: 3, scale: 2 }),
+  specificEvidenceFeedback: text("specific_evidence_feedback"),
+  
+  // 4. Aligned with Role (15%)
+  roleAlignmentScore: numeric("role_alignment_score", { precision: 3, scale: 2 }),
+  roleAlignmentFeedback: text("role_alignment_feedback"),
+  
+  // 5. Outcome-Oriented (15%)
+  outcomeOrientedScore: numeric("outcome_oriented_score", { precision: 3, scale: 2 }),
+  outcomeOrientedFeedback: text("outcome_oriented_feedback"),
+  
+  // 6. Communication Skills (10%)
   communicationScore: numeric("communication_score", { precision: 3, scale: 2 }),
-  empathyScore: numeric("empathy_score", { precision: 3, scale: 2 }),
+  communicationFeedback: text("communication_feedback"),
+  
+  // 7. Problem-Solving / Critical Thinking (10%)
   problemSolvingScore: numeric("problem_solving_score", { precision: 3, scale: 2 }),
+  problemSolvingFeedback: text("problem_solving_feedback"),
+  
+  // 8. Cultural Fit / Values Alignment (5%)
+  culturalFitScore: numeric("cultural_fit_score", { precision: 3, scale: 2 }),
+  culturalFitFeedback: text("cultural_fit_feedback"),
+  
+  // 9. Learning Agility / Adaptability (5%)
+  learningAgilityScore: numeric("learning_agility_score", { precision: 3, scale: 2 }),
+  learningAgilityFeedback: text("learning_agility_feedback"),
+  
+  // Calculated weighted overall score (1-5 scale)
+  weightedOverallScore: numeric("weighted_overall_score", { precision: 3, scale: 2 }),
+  overallRating: varchar("overall_rating", { length: 50 }), // "Pass", "Borderline", "Fail"
+  
+  // Legacy fields for backwards compatibility (now derived from new rubric)
+  empathyScore: numeric("empathy_score", { precision: 3, scale: 2 }),
   culturalAlignmentScore: numeric("cultural_alignment_score", { precision: 3, scale: 2 }),
+  
+  // Feature 1: Overall Performance Score (derived from weighted scores)
+  overallScore: numeric("overall_score", { precision: 3, scale: 2 }),
+  
   // Feature 3: Qualitative Observations
   qualitativeObservations: text("qualitative_observations"),
   strengths: jsonb("strengths"), // array of strings
   improvementAreas: jsonb("improvement_areas"), // array of strings
+  
   // Feature 4: Actionable Insights
   actionableInsights: jsonb("actionable_insights"), // array of specific recommendations
+  
   // Feature 5: Personalized Drills
   personalizedDrills: jsonb("personalized_drills"), // array of drill recommendations
+  
   // Feature 6: Self-Reflection Prompts
   reflectionPrompts: jsonb("reflection_prompts"), // array of open-ended questions
+  
   // Feature 7: AI Coach reflection summary (will be updated when user reflects)
   coachReflectionSummary: text("coach_reflection_summary"),
+  
   // Feature 8: Share Progress data
   shareableData: jsonb("shareable_data"), // anonymized performance summary
+  
   // Feature 9: Performance Badge
   badgeEarned: varchar("badge_earned", { length: 100 }),
+  
   // Feature 10: Gamification rewards
   pointsEarned: integer("points_earned").default(0),
   rewardsUnlocked: jsonb("rewards_unlocked"), // array of rewards
+  
   // Metadata
   evaluationLanguage: varchar("evaluation_language", { length: 10 }).default("en"),
   culturalContext: varchar("cultural_context", { length: 50 }), // SEA cultural adaptation
