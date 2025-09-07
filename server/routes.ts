@@ -90,11 +90,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { email, firstName, lastName } = req.body;
       
+      console.log("Login attempt with:", { email, firstName, lastName });
+      console.log("Session before login:", req.session);
+      console.log("Session ID before login:", req.sessionID);
+      
       // Create session data
       req.session.userId = `user-${Date.now()}`;
       req.session.userEmail = email || "user@example.com";
       req.session.userFirstName = firstName || "User";
       req.session.userLastName = lastName || "";
+      
+      console.log("Session after setting data:", req.session);
       
       // Explicitly save the session
       req.session.save((err) => {
@@ -103,7 +109,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(500).json({ message: "Login failed - session error" });
         }
         
-        console.log("Session saved successfully for user:", req.session.userId);
+        console.log("Session saved successfully!");
+        console.log("Final session data:", req.session);
+        console.log("Final session ID:", req.sessionID);
         res.json({ success: true, redirectTo: "/dashboard" });
       });
     } catch (error) {

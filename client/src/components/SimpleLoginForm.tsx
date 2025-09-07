@@ -26,7 +26,10 @@ export default function SimpleLoginForm({ onSuccess }: SimpleLoginFormProps) {
       const response = await apiRequest("POST", "/api/auth/simple-login", formData);
       if (response.ok) {
         onSuccess();
-        window.location.href = '/dashboard';
+        // Give a small delay to ensure session is saved
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 100);
       }
     } catch (error) {
       console.error('Login failed:', error);
@@ -45,7 +48,10 @@ export default function SimpleLoginForm({ onSuccess }: SimpleLoginFormProps) {
       });
       if (response.ok) {
         onSuccess();
-        window.location.href = '/dashboard';
+        // Give a small delay to ensure session is saved
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 100);
       }
     } catch (error) {
       console.error('Quick login failed:', error);
