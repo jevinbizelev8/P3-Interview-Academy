@@ -41,7 +41,8 @@
       "Bash(timeout 30s npm run dev)",
       "WebFetch(domain:docs.sea-lion.ai)",
       "WebFetch(domain:localhost)",
-      "Bash(time curl:*)"
+      "Bash(time curl:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

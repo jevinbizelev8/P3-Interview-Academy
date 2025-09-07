@@ -558,7 +558,6 @@ function InterviewDetailsStep({ formData, setFormData }: { formData: any; setFor
                   </h5>
                   <p className="text-sm text-blue-700">
                     Confidence: {Math.round(formData.industryConfidence * 100)}% 
-                    {industryDetecting && <span className="ml-2 text-blue-600">• Analyzing...</span>}
                   </p>
                 </div>
                 <Button

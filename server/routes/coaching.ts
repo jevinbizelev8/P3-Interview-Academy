@@ -63,7 +63,7 @@ const startCoachingSchema = z.object({
 // Create coaching session
 router.post('/sessions', async (req, res) => {
   try {
-    const userId = req.user?.id || 'dev-user-123';
+    const userId = req.user!.id;
     
     // Parse and validate request data
     const validatedData = createCoachingSessionSchema.parse(req.body);
@@ -127,7 +127,7 @@ router.get('/sessions/:sessionId', async (req, res) => {
     }
 
     // Verify user owns the session
-    if (session.userId !== (req.user?.id || 'dev-user-123')) {
+    if (session.userId !== (req.user!.id)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -160,7 +160,7 @@ router.get('/sessions/:sessionId/messages', async (req, res) => {
     }
 
     // Verify user owns the session
-    if (session.userId !== (req.user?.id || 'dev-user-123')) {
+    if (session.userId !== (req.user!.id)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -195,7 +195,7 @@ router.post('/sessions/:sessionId/start', async (req, res) => {
     }
 
     // Verify user owns the session
-    if (session.userId !== (req.user?.id || 'dev-user-123')) {
+    if (session.userId !== (req.user!.id)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -246,7 +246,7 @@ router.post('/sessions/:sessionId/respond', async (req, res) => {
     }
 
     // Verify user owns the session
-    if (session.userId !== (req.user?.id || 'dev-user-123')) {
+    if (session.userId !== (req.user!.id)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -306,7 +306,7 @@ router.post('/sessions/:sessionId/complete', async (req, res) => {
     }
 
     // Verify user owns the session
-    if (session.userId !== (req.user?.id || 'dev-user-123')) {
+    if (session.userId !== (req.user!.id)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -331,7 +331,7 @@ router.post('/sessions/:sessionId/complete', async (req, res) => {
 // Get user coaching sessions
 router.get('/sessions', async (req, res) => {
   try {
-    const userId = req.user?.id || 'dev-user-123';
+    const userId = req.user!.id;
     const sessions = await storage.getUserCoachingSessions(userId);
 
     res.json({

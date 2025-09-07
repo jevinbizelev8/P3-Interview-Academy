@@ -257,7 +257,7 @@ export default function PostInterviewAssessment() {
               {/* Qualitative Summary */}
               {session?.qualitativeFeedback && (
                 <div className="mb-6">
-                  <p className="text-gray-700">{String(session.qualitativeFeedback)}</p>
+                  <p className="text-gray-700">{session.qualitativeFeedback as string}</p>
                 </div>
               )}
 
@@ -272,7 +272,7 @@ export default function PostInterviewAssessment() {
                     {session.strengths.map((strength: any, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0"></div>
-                        <span>{String(strength)}</span>
+                        <span>{strength as string}</span>
                       </li>
                     ))}
                   </ul>
@@ -290,7 +290,7 @@ export default function PostInterviewAssessment() {
                     {session.improvements.map((improvement: any, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 mr-2 flex-shrink-0"></div>
-                        <span>{String(improvement)}</span>
+                        <span>{improvement as string}</span>
                       </li>
                     ))}
                   </ul>
@@ -308,7 +308,7 @@ export default function PostInterviewAssessment() {
                     {session.recommendations.map((recommendation: string, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-primary rounded-full mt-2 mr-2 flex-shrink-0"></div>
-                        <span>{String(recommendation)}</span>
+                        <span>{recommendation as string}</span>
                       </li>
                     ))}
                   </ul>
