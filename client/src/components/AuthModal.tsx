@@ -28,7 +28,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0 border-0">
+      <DialogContent className="sm:max-w-md p-0 border-0" aria-describedby={undefined}>
         <DialogHeader>
           <VisuallyHidden>
             <DialogTitle>{getDialogTitle()}</DialogTitle>
