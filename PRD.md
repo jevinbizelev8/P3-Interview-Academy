@@ -166,7 +166,7 @@ Session Start → Question Display → Response Input → Real-time Feedback →
 
 #### User Journey
 ```
-Response Submission → AI Analysis → STAR Evaluation → Detailed Feedback → Improvement Recommendations
+Response Submission → AI Analysis → 9-Criteria Evaluation → Detailed Feedback → Improvement Recommendations
 ```
 
 **Detailed Steps:**
@@ -176,36 +176,43 @@ Response Submission → AI Analysis → STAR Evaluation → Detailed Feedback �
    - **Context Matching:** Relevance to job position and company
    - **Language Quality:** Grammar and professional communication
 
-2. **STAR Method Evaluation**
-   - **Situation (25%):** Context setting and scenario understanding
-   - **Task (25%):** Responsibility clarity and role definition
-   - **Action (25%):** Specific steps and decision-making process
-   - **Result (25%):** Quantified outcomes and impact measurement
-   - **Overall Flow:** Narrative coherence and logical progression
+2. **9-Criteria Interview Scoring Rubric (1-5 Scale)**
+   - **Relevance & Context Understanding (15%):** Answer alignment to question and job context
+   - **STAR Structure Adherence (15%):** Proper use of Situation-Task-Action-Result framework
+   - **Specific Evidence & Examples (15%):** Concrete details and quantifiable examples
+   - **Role-Specific Alignment (15%):** Answer relevance to target position
+   - **Outcome-Oriented Responses (15%):** Clear results and impact statements
+   - **Communication Clarity (10%):** Professional articulation and structure
+   - **Problem-Solving Approach (10%):** Analytical thinking and methodology
+   - **Cultural Fit & Soft Skills (5%):** Interpersonal and cultural awareness
+   - **Learning Agility & Growth (5%):** Adaptability and continuous improvement mindset
 
-3. **Detailed Feedback Generation**
-   - **Strengths Identification:** What was done well
-   - **Improvement Areas:** Specific gaps and opportunities
+3. **Weighted Scoring System**
+   - **Pass Threshold:** ≥3.5/5.0 overall weighted score
+   - **Borderline:** 3.0-3.4 overall weighted score
+   - **Needs Improvement:** <3.0 overall weighted score
+   - **Performance Categories:** Excellent (4.5-5.0), Good (3.5-4.4), Fair (2.5-3.4), Poor (<2.5)
+
+4. **Detailed Feedback Generation**
+   - **Criteria-Specific Analysis:** Individual scores and feedback for all 9 criteria
+   - **Strengths Identification:** Top-performing areas with specific examples
+   - **Improvement Areas:** Detailed gaps with actionable suggestions
+   - **Visual Analytics:** Radar charts, bar graphs, and progress indicators
    - **Professional English:** Primary feedback for consistency
    - **ASEAN Translation:** Secondary display for comprehension
-   - **Actionable Recommendations:** Concrete next steps
 
-4. **Scoring and Progress Tracking**
-   - **Numerical Scores:** 1-5 scale for each STAR component
-   - **Visual Progress:** Charts and improvement trends
-   - **Comparative Analysis:** Performance vs. target role expectations
-   - **Historical Tracking:** Session-over-session improvement
-
-5. **Improvement Pathway**
-   - **Personalized Recommendations:** Based on specific weaknesses
-   - **Practice Suggestions:** Targeted skill development
-   - **Resource Links:** Additional preparation materials
-   - **Next Session Planning:** Optimized focus areas
+5. **Performance Dashboard Integration**
+   - **Historical Tracking:** Session-over-session improvement across all criteria
+   - **Skill Breakdown:** Visual representation of strengths and weaknesses
+   - **Trend Analysis:** Performance patterns and improvement trajectories
+   - **Personalized Insights:** AI-powered recommendations based on performance data
+   - **Practice Drills:** Targeted exercises for specific improvement areas
 
 **Success Metrics:**
 - Feedback relevance rating > 4.0/5
 - User action on recommendations > 60%
 - Score improvement over multiple sessions > 15%
+- 9-criteria scoring accuracy > 90%
 
 ### 5. Progress Tracking and Performance Analytics Flow
 
@@ -222,34 +229,37 @@ Dashboard → Performance Overview → Detailed Analytics → Trend Analysis →
 
 **Detailed Steps:**
 1. **Performance Dashboard**
-   - **Session Summary:** Total interviews completed
-   - **Score Trends:** Visual improvement over time
-   - **Skill Assessment:** STAR component breakdown
+   - **Session Summary:** Total interviews completed with completion rates
+   - **Score Trends:** Visual improvement over time using 9-criteria rubric
+   - **Skill Assessment:** Detailed breakdown of all 9 evaluation criteria
    - **Achievement Badges:** Milestones and accomplishments
+   - **User-Specific Analytics:** Secure, personalized performance data
 
 2. **Detailed Analytics View**
-   - **Individual Session Analysis:** Question-by-question breakdown
-   - **Comparative Performance:** Against role benchmarks
-   - **Language Usage:** Response language preferences
-   - **Time Efficiency:** Response speed and session duration
+   - **Individual Session Analysis:** Question-by-question breakdown with criteria scoring
+   - **Comparative Performance:** Against role benchmarks and industry standards
+   - **Language Usage:** Response language preferences and effectiveness
+   - **Time Efficiency:** Response speed and session duration optimization
+   - **Authentication-Protected Access:** Session ownership validation
 
 3. **Trend Analysis and Insights**
-   - **Improvement Patterns:** Areas of consistent growth
-   - **Challenge Identification:** Persistent difficulty areas
-   - **Skill Development:** Recommendations for targeted practice
+   - **Improvement Patterns:** Areas of consistent growth across 9 criteria
+   - **Challenge Identification:** Persistent difficulty areas with targeted recommendations
+   - **Skill Development:** Recommendations for targeted practice based on performance gaps
    - **Cultural Adaptation:** ASEAN-specific business context learning
+   - **Performance Visualization:** Interactive charts and progress indicators
 
 4. **Goal Setting and Planning**
-   - **Target Role Preparation:** Specific job interview readiness
-   - **Skill Milestones:** STAR component improvement goals
-   - **Session Scheduling:** Regular practice reminders
-   - **Certification Tracking:** Interview readiness assessment
+   - **Target Role Preparation:** Specific job interview readiness assessment
+   - **Criteria-Specific Goals:** Individual improvement targets for each evaluation criterion
+   - **Session Scheduling:** Regular practice reminders with progress tracking
+   - **Certification Tracking:** Interview readiness assessment with pass/fail thresholds
 
 5. **Export and Sharing**
-   - **Performance Reports:** PDF summaries for recruiters
-   - **Progress Certificates:** Achievement validation
-   - **Social Sharing:** Success story highlights
-   - **Portfolio Integration:** Professional profile enhancement
+   - **Performance Reports:** PDF summaries with 9-criteria breakdown for recruiters
+   - **Progress Certificates:** Achievement validation with detailed scoring
+   - **Secure Data Export:** User-controlled data portability
+   - **Portfolio Integration:** Professional profile enhancement with verified results
 
 **Success Metrics:**
 - Dashboard engagement rate > 70%
@@ -282,6 +292,9 @@ Dashboard → Performance Overview → Detailed Analytics → Trend Analysis →
 - **GDPR Compliance:** EU data protection regulation adherence
 - **Data Encryption:** End-to-end security for all user data
 - **Session Security:** Secure authentication and session management
+- **User Authentication:** Replit Auth integration with session ownership validation
+- **Session Control:** Comprehensive session lifecycle management with automatic cleanup
+- **Data Isolation:** User-specific data access with ownership verification
 - **Export Controls:** User data ownership and portability
 
 ---
@@ -289,11 +302,12 @@ Dashboard → Performance Overview → Detailed Analytics → Trend Analysis →
 ## Integration Requirements
 
 ### External Service Dependencies
-- **Replit Authentication:** User account and session management
-- **SeaLion AI API:** ASEAN language processing and translation
-- **OpenAI API:** English content generation and analysis
-- **AWS Bedrock:** Advanced AI capabilities and fallback systems
-- **PostgreSQL Database:** Data persistence and session storage
+- **Replit Authentication:** User account and session management with OpenID Connect
+- **SeaLion AI via Vertex AI:** ASEAN language processing and translation (primary)
+- **OpenAI API:** English content generation and analysis (fallback)
+- **Google Cloud Vertex AI:** Enhanced AI model performance and reliability
+- **PostgreSQL Database:** Data persistence with user-specific data isolation
+- **Session Management Service:** Automatic cleanup and lifecycle management
 
 ### Module Integration
 - **P³ Prepare Module:** Embedded preparation resources (iframe integration)
@@ -322,6 +336,8 @@ Dashboard → Performance Overview → Detailed Analytics → Trend Analysis →
 - **Error Rate:** <1% of user actions result in errors
 - **Response Time:** <3 seconds average for AI interactions
 - **Concurrent Users:** Support for 100+ simultaneous sessions
+- **Authentication Response:** <1 second for user verification
+- **Session Security:** 100% user data isolation and access control
 
 ### Business Metrics
 - **User Acquisition:** 50% growth month-over-month

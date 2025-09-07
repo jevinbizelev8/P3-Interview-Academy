@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SeaLionLogo } from "@/components/ui/sealion-logo";
-import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCircle } from "lucide-react";
+import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCircle, LogIn, UserPlus, Shield, TrendingUp, Clock } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import AuthenticatedLanding from "@/components/AuthenticatedLanding";
 import professionalInterviewImage from "@assets/generated_images/Professional_interview_scene_0e52b9e3.png";
 import aiCoachingImage from "@assets/generated_images/AI_coaching_dashboard_732a8dd4.png";
 import careerSuccessImage from "@assets/generated_images/Career_success_celebration_559e261d.png";
@@ -86,6 +88,13 @@ const TESTIMONIALS = [
 ];
 
 export default function Landing() {
+  const { user, isLoading, isAuthenticated } = useAuth();
+
+  // If authenticated, show personalized dashboard
+  if (isAuthenticated && user) {
+    return <AuthenticatedLanding user={user} />;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navigation */}
@@ -102,15 +111,20 @@ export default function Landing() {
               <a href="#modules" className="text-gray-600 hover:text-gray-900 transition-colors">Modules</a>
               <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">Features</a>
               <a href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">Reviews</a>
-              <Link href="/prepare" className="text-gray-600 hover:text-blue-600 transition-colors font-medium">
-                Prepare
-              </Link>
-              <Link href="/perform" className="text-gray-600 hover:text-purple-600 transition-colors font-medium">
-                Perform
-              </Link>
-              <Link href="/practice">
-                <Button>Start Practice</Button>
-              </Link>
+              {isLoading ? (
+                <div className="animate-pulse bg-gray-200 h-9 w-20 rounded"></div>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => window.location.href = '/api/login'}>
+                    <LogIn className="w-4 h-4 mr-2" />
+                    Login
+                  </Button>
+                  <Button onClick={() => window.location.href = '/api/login'}>
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Get Started
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -121,31 +135,31 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-4xl mx-auto">
             <Badge className="mb-6 bg-blue-100 text-blue-800 border-blue-200">
-              Now Supporting 10 Southeast Asian Languages
+              <Shield className="w-4 h-4 mr-2" />
+              Secure • Personal • Progress Tracking
             </Badge>
             <h1 className="text-5xl sm:text-6xl font-bold text-gray-900 mb-6 leading-tight">
               Master Your Next
               <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"> Interview</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              Transform your interview skills with AI-powered coaching, dynamic question generation, 
-              and comprehensive feedback using the proven P³ framework: Prepare, Practice, Perform.
+              Transform your interview skills with personalized AI-powered coaching, comprehensive progress tracking, 
+              and detailed performance analytics using the proven P³ framework: Prepare, Practice, Perform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/practice">
-                <Button size="lg" className="text-lg px-8 py-3">
-                  Start Free Practice
-                  <ArrowRight className="ml-2 w-5 h-5" />
-                </Button>
-              </Link>
-              <Link href="/prepare">
-                <Button variant="outline" size="lg" className="text-lg px-8 py-3">
-                  Explore Features
-                </Button>
-              </Link>
+              <Button size="lg" className="text-lg px-8 py-3" onClick={() => window.location.href = '/api/login'}>
+                <UserPlus className="mr-2 w-5 h-5" />
+                Create Free Account
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+              <Button variant="outline" size="lg" className="text-lg px-8 py-3" onClick={() => window.location.href = '/api/login'}>
+                <LogIn className="mr-2 w-5 h-5" />
+                Login to Continue
+              </Button>
             </div>
             <p className="text-sm text-gray-500 mt-4">
-              No signup required • Instant feedback • Multi-language support
+              <Shield className="inline w-4 h-4 mr-1" />
+              Secure login • Personal progress tracking • 10 Southeast Asian languages
             </p>
           </div>
         </div>
