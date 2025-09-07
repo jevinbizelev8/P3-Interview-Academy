@@ -44,19 +44,11 @@ declare global {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
+  // Setup simple authentication instead of broken OAuth
+  const { setupSimpleAuth } = await import("./auth-simple");
+  await setupSimpleAuth(app);
 
-  // Auth routes - check actual authentication status via Replit Auth
-  app.get('/api/auth/user', requireAuth, ensureUser, async (req: any, res) => {
-    try {
-      // Return the authenticated user from middleware
-      res.json(req.user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
-    }
-  });
+  // Auth routes are now handled by simple auth system
 
   // Note: Authentication middleware now imported from ./middleware/auth-middleware
 
