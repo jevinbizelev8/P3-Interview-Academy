@@ -30,21 +30,15 @@ import { coachingEngineService } from "./services/coaching-engine-service";
 // Extend Express Request to include user property
 declare global {
   namespace Express {
+    interface User {
+      id: string;
+      role: string;
+      email?: string;
+      firstName?: string;
+      lastName?: string;
+    }
     interface Request {
-      user?: {
-        id: string;
-        role: string;
-        email?: string;
-        firstName?: string;
-        lastName?: string;
-      };
-      session: {
-        userId?: string;
-        userEmail?: string;
-        userFirstName?: string;
-        userLastName?: string;
-        destroy: (callback: () => void) => void;
-      } & Express.Session;
+      user?: User;
     }
   }
 }
