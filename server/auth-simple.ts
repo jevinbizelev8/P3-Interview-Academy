@@ -21,17 +21,20 @@ export function getSession() {
     name: 'connect.sid',
     cookie: {
       httpOnly: true,
-      secure: false, // Set to false for development (localhost)
+      secure: true, // Always use secure cookies in production
       maxAge: sessionTtl,
       sameSite: 'lax',
-      domain: undefined, // Don't set domain for localhost
+      domain: undefined, // Let browser handle domain
     },
   });
 }
 
 export async function setupSimpleAuth(app: Express) {
   app.set("trust proxy", 1);
-  app.use(getSession());
+  
+  // Add session middleware
+  const sessionMiddleware = getSession();
+  app.use(sessionMiddleware);
 
   // Signup endpoint
   app.post("/api/auth/signup", async (req, res) => {
@@ -72,6 +75,8 @@ export async function setupSimpleAuth(app: Express) {
           console.error("Session save error:", err);
           return res.status(500).json({ message: "Registration failed" });
         }
+        
+        console.log("Signup session saved successfully, ID:", req.sessionID);
         
         res.json({ 
           success: true, 
@@ -125,6 +130,7 @@ export async function setupSimpleAuth(app: Express) {
         
         console.log("Session saved successfully, ID:", req.sessionID);
         console.log("Session data after save:", req.session);
+        console.log("Response headers will include Set-Cookie");
         
         res.json({ 
           success: true, 
