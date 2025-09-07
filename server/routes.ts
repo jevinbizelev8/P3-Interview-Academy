@@ -7,10 +7,6 @@ import { prepareService } from "./services/prepare-service";
 import { questionBankService } from "./services/question-bank-service";
 import { setupAuth, isAuthenticated } from "./replit-auth";
 import { 
-  requireAuth, 
-  validateSessionOwnership, 
-  validateEvaluationAccess, 
-  ensureUser, 
   requireAdmin 
 } from "./middleware/auth-middleware";
 import { 
@@ -45,12 +41,12 @@ declare global {
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup simple authentication instead of broken OAuth
-  const { setupSimpleAuth } = await import("./auth-simple");
+  const { setupSimpleAuth, requireAuth } = await import("./auth-simple");
   await setupSimpleAuth(app);
 
   // Auth routes are now handled by simple auth system
 
-  // Note: Authentication middleware now imported from ./middleware/auth-middleware
+  // Use the requireAuth middleware from simple auth
 
   // Interview Scenarios API
   app.get("/api/practice/scenarios", async (req, res) => {
@@ -190,7 +186,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Interview Sessions API
-  app.post("/api/practice/sessions", requireAuth, ensureUser, async (req, res) => {
+  app.post("/api/practice/sessions", requireAuth, async (req, res) => {
     try {
       console.log("Creating session with body:", req.body);
       console.log("User:", req.user);
@@ -223,7 +219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/practice/sessions/:id", requireAuth, validateSessionOwnership, async (req, res) => {
+  app.get("/api/practice/sessions/:id", requireAuth, async (req, res) => {
     try {
       // Session is already validated and available in req.session
       res.json(req.session);
@@ -233,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/practice/sessions", requireAuth, ensureUser, async (req, res) => {
+  app.get("/api/practice/sessions", requireAuth, async (req, res) => {
     try {
       const sessions = await storage.getUserInterviewSessions(req.user!.id);
       res.json(sessions);
@@ -243,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/practice/sessions/:id", requireAuth, validateSessionOwnership, async (req, res) => {
+  app.put("/api/practice/sessions/:id", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -266,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/practice/sessions/:id/auto-save", requireAuth, ensureUser, async (req, res) => {
+  app.post("/api/practice/sessions/:id/auto-save", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -287,7 +283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Interview API
-  app.post("/api/practice/sessions/:id/ai-question", requireAuth, ensureUser, async (req, res) => {
+  app.post("/api/practice/sessions/:id/ai-question", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -364,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/practice/sessions/:id/user-response", requireAuth, ensureUser, async (req, res) => {
+  app.post("/api/practice/sessions/:id/user-response", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -405,7 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/practice/sessions/:id/complete", requireAuth, ensureUser, async (req, res) => {
+  app.post("/api/practice/sessions/:id/complete", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -508,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced Practice API endpoints (compatible with new frontend)
   
   // Get messages for Practice session (separate endpoint)
-  app.get("/api/practice/sessions/:id/messages", requireAuth, ensureUser, async (req, res) => {
+  app.get("/api/practice/sessions/:id/messages", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -528,7 +524,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Add message to Practice session (separate endpoint)
-  app.post("/api/practice/sessions/:id/messages", requireAuth, ensureUser, async (req, res) => {
+  app.post("/api/practice/sessions/:id/messages", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -555,7 +551,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get evaluation results for Practice session
-  app.get("/api/practice/sessions/:id/evaluation", requireAuth, validateEvaluationAccess, async (req, res) => {
+  app.get("/api/practice/sessions/:id/evaluation", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -579,7 +575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Response generation for Practice (enhanced version) 
-  app.post("/api/practice/sessions/:id/ai-response", requireAuth, ensureUser, async (req, res) => {
+  app.post("/api/practice/sessions/:id/ai-response", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       const messages = await storage.getSessionMessages(req.params.id);
@@ -783,7 +779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get session questions
-  app.get("/api/practice/sessions/:id/questions", requireAuth, ensureUser, async (req, res) => {
+  app.get("/api/practice/sessions/:id/questions", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -832,7 +828,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get session responses
-  app.get("/api/practice/sessions/:id/responses", requireAuth, ensureUser, async (req, res) => {
+  app.get("/api/practice/sessions/:id/responses", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -864,7 +860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create or update response
-  app.post("/api/responses", requireAuth, ensureUser, async (req, res) => {
+  app.post("/api/responses", requireAuth, async (req, res) => {
     try {
       const { sessionId, questionId, responseText, responseType = 'text' } = req.body;
       
@@ -900,7 +896,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update response
-  app.patch("/api/responses/:id", requireAuth, ensureUser, async (req, res) => {
+  app.patch("/api/responses/:id", requireAuth, async (req, res) => {
     try {
       const { responseText } = req.body;
       
@@ -923,7 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Session transcript download
-  app.get("/api/practice/sessions/:id/transcript", requireAuth, ensureUser, async (req, res) => {
+  app.get("/api/practice/sessions/:id/transcript", requireAuth, async (req, res) => {
     try {
       const session = await storage.getInterviewSession(req.params.id);
       if (!session) {
@@ -952,7 +948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Perform Module API Routes - Analytics Dashboard
   
   // Get dashboard analytics data
-  app.get('/api/perform/dashboard', requireAuth, ensureUser, async (req, res) => {
+  app.get('/api/perform/dashboard', requireAuth, async (req, res) => {
     try {
       const userId = req.user!.id;
       
@@ -1057,7 +1053,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get evaluation results (for backward compatibility and dashboard access)
-  app.get('/api/perform/sessions/:sessionId/evaluation', requireAuth, validateEvaluationAccess, async (req, res) => {
+  app.get('/api/perform/sessions/:sessionId/evaluation', requireAuth, async (req, res) => {
     try {
       const evaluation = await storage.getEvaluationResult(req.params.sessionId);
       if (!evaluation) {
@@ -1071,7 +1067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get session data (for backward compatibility with evaluation page)
-  app.get('/api/perform/sessions/:sessionId', requireAuth, validateSessionOwnership, async (req, res) => {
+  app.get('/api/perform/sessions/:sessionId', requireAuth, async (req, res) => {
     try {
       // Session is already validated and available in req.session
       res.json(req.session);
@@ -1082,7 +1078,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Share progress (anonymized)
-  app.post('/api/perform/sessions/:sessionId/share', requireAuth, validateSessionOwnership, async (req, res) => {
+  app.post('/api/perform/sessions/:sessionId/share', requireAuth, async (req, res) => {
     try {
       // For now, just return success - in real app would share anonymized data
       // Future: Generate anonymized progress report for sharing
@@ -1123,7 +1119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ================================
 
   // Preparation Sessions
-  app.post('/api/prepare/sessions', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/prepare/sessions', requireAuth, async (req, res) => {
     try {
       // Simple validation for preparation sessions - avoid complex schema validation for now
       const sessionData = {
@@ -1145,7 +1141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/prepare/sessions', requireAuth, ensureUser, async (req, res) => {
+  app.get('/api/prepare/sessions', requireAuth, async (req, res) => {
     try {
       const sessions = await prepareService.getUserPreparationSessions(req.user!.id);
       res.json(sessions);
@@ -1155,7 +1151,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/prepare/sessions/:id', requireAuth, ensureUser, async (req, res) => {
+  app.get('/api/prepare/sessions/:id', requireAuth, async (req, res) => {
     try {
       const session = await prepareService.getPreparationSession(req.params.id);
       if (!session) {
@@ -1168,7 +1164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/prepare/sessions/:id', requireAuth, ensureUser, async (req, res) => {
+  app.put('/api/prepare/sessions/:id', requireAuth, async (req, res) => {
     try {
       const updates = req.body;
       const session = await prepareService.updatePreparationSession(req.params.id, updates);
@@ -1180,7 +1176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Study Plans
-  app.post('/api/prepare/sessions/:id/study-plan', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/prepare/sessions/:id/study-plan', requireAuth, async (req, res) => {
     try {
       const { jobPosition, companyName, interviewDate, timeAvailable, focusAreas, language } = req.body;
       
@@ -1200,7 +1196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/prepare/study-plans/:id', requireAuth, ensureUser, async (req, res) => {
+  app.get('/api/prepare/study-plans/:id', requireAuth, async (req, res) => {
     try {
       const studyPlan = await storage.getStudyPlan(req.params.id);
       if (!studyPlan) {
@@ -1214,7 +1210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Company Research
-  app.post('/api/prepare/company-research', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/prepare/company-research', requireAuth, async (req, res) => {
     try {
       const { companyName, jobPosition } = req.body;
       
@@ -1230,7 +1226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/prepare/company-research', requireAuth, ensureUser, async (req, res) => {
+  app.get('/api/prepare/company-research', requireAuth, async (req, res) => {
     try {
       const { companyName } = req.query;
       
@@ -1251,7 +1247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // STAR Practice Sessions
-  app.post('/api/prepare/star-practice', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/prepare/star-practice', requireAuth, async (req, res) => {
     try {
       const { preparationSessionId, scenario, language } = req.body;
       
@@ -1268,7 +1264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/prepare/star-practice/:id/submit', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/prepare/star-practice/:id/submit', requireAuth, async (req, res) => {
     try {
       const { situation, task, action, result } = req.body;
       
@@ -1286,7 +1282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/prepare/star-practice', requireAuth, ensureUser, async (req, res) => {
+  app.get('/api/prepare/star-practice', requireAuth, async (req, res) => {
     try {
       const { preparationSessionId } = req.query;
       
@@ -1322,7 +1318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/prepare/resources/generate', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/prepare/resources/generate', requireAuth, async (req, res) => {
     try {
       const { topic, resourceType, interviewStage, language } = req.body;
       
@@ -1363,7 +1359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/prepare/practice-tests/:id/results', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/prepare/practice-tests/:id/results', requireAuth, async (req, res) => {
     try {
       const { answers, timeSpent } = req.body;
       
@@ -1400,7 +1396,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Progress Tracking
-  app.post('/api/prepare/sessions/:id/progress', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/prepare/sessions/:id/progress', requireAuth, async (req, res) => {
     try {
       const { activityType, activityId, progress, timeSpent, notes } = req.body;
       
@@ -1484,7 +1480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   // Coaching sessions API routes (inline for better compatibility)
-  app.post('/api/coaching/sessions', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/coaching/sessions', requireAuth, async (req, res) => {
     try {
       const userId = req.user?.id || 'dev-user-123';
       // Log the request body for debugging
@@ -1554,7 +1550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get coaching session by ID
-  app.get('/api/coaching/sessions/:sessionId', requireAuth, ensureUser, async (req, res) => {
+  app.get('/api/coaching/sessions/:sessionId', requireAuth, async (req, res) => {
     try {
       const { sessionId } = req.params;
       const session = await storage.getCoachingSession(sessionId);
@@ -1588,7 +1584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get coaching messages for a session
-  app.get('/api/coaching/sessions/:sessionId/messages', requireAuth, ensureUser, async (req, res) => {
+  app.get('/api/coaching/sessions/:sessionId/messages', requireAuth, async (req, res) => {
     try {
       const { sessionId } = req.params;
       const session = await storage.getCoachingSession(sessionId);
@@ -1624,7 +1620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Start coaching conversation
-  app.post('/api/coaching/sessions/:sessionId/start', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/coaching/sessions/:sessionId/start', requireAuth, async (req, res) => {
     try {
       const { sessionId } = req.params;
       const session = await storage.getCoachingSession(sessionId);
@@ -1667,7 +1663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Process user response with immediate AI guidance
-  app.post('/api/coaching/sessions/:sessionId/respond', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/coaching/sessions/:sessionId/respond', requireAuth, async (req, res) => {
     try {
       const { sessionId } = req.params;
       const { response } = req.body;
@@ -1724,7 +1720,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Complete coaching session and get model answers
-  app.post('/api/coaching/sessions/:sessionId/complete', requireAuth, ensureUser, async (req, res) => {
+  app.post('/api/coaching/sessions/:sessionId/complete', requireAuth, async (req, res) => {
     try {
       const { sessionId } = req.params;
       const session = await storage.getCoachingSession(sessionId);
