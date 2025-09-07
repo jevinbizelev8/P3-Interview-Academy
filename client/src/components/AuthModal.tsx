@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import LoginForm from "./LoginForm";
 import SignupForm from "./SignupForm";
+import ResetPasswordForm from "./ResetPasswordForm";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -10,10 +11,19 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const [isLogin, setIsLogin] = useState(true);
+  const [currentView, setCurrentView] = useState<'login' | 'signup' | 'reset'>('login');
 
   const handleSuccess = () => {
     onClose();
+  };
+
+  const getDialogTitle = () => {
+    switch (currentView) {
+      case 'login': return "Login";
+      case 'signup': return "Sign Up";
+      case 'reset': return "Reset Password";
+      default: return "Authentication";
+    }
   };
 
   return (
@@ -21,18 +31,23 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       <DialogContent className="sm:max-w-md p-0 border-0">
         <DialogHeader>
           <VisuallyHidden>
-            <DialogTitle>{isLogin ? "Login" : "Sign Up"}</DialogTitle>
+            <DialogTitle>{getDialogTitle()}</DialogTitle>
           </VisuallyHidden>
         </DialogHeader>
-        {isLogin ? (
+        {currentView === 'login' ? (
           <LoginForm 
             onSuccess={handleSuccess}
-            onSwitchToSignup={() => setIsLogin(false)}
+            onSwitchToSignup={() => setCurrentView('signup')}
+            onSwitchToReset={() => setCurrentView('reset')}
           />
-        ) : (
+        ) : currentView === 'signup' ? (
           <SignupForm 
             onSuccess={handleSuccess}
-            onSwitchToLogin={() => setIsLogin(true)}
+            onSwitchToLogin={() => setCurrentView('login')}
+          />
+        ) : (
+          <ResetPasswordForm 
+            onBackToLogin={() => setCurrentView('login')}
           />
         )}
       </DialogContent>

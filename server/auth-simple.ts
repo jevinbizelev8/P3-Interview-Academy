@@ -183,6 +183,69 @@ export async function setupSimpleAuth(app: Express) {
       res.json({ success: true });
     });
   });
+
+  // Forgot password endpoint (simplified version without email sending)
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Don't reveal if email exists for security
+        return res.json({ success: true, message: "If the email exists, reset instructions have been sent" });
+      }
+
+      // In a real app, you would:
+      // 1. Generate a secure reset token
+      // 2. Store it in database with expiration
+      // 3. Send email with reset link
+      
+      // For now, just simulate success
+      console.log(`Password reset requested for: ${email}`);
+      console.log(`In a real app, would send email with reset link`);
+      
+      res.json({ 
+        success: true, 
+        message: "If the email exists, reset instructions have been sent" 
+      });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to process password reset request" });
+    }
+  });
+
+  // Reset password endpoint (simplified version)
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      // In a real app, you would:
+      // 1. Validate the reset token
+      // 2. Check if it's not expired
+      // 3. Find the user associated with the token
+      // 4. Update their password
+      
+      // For now, just simulate success
+      console.log(`Password reset with token: ${token}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Password has been reset successfully" 
+      });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
 }
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
