@@ -40,8 +40,11 @@ export class TranslationService {
         language: targetLanguage
       });
 
-      // Simple cleaning - just trim and remove common prefixes
+      // Enhanced cleaning to remove AI thinking process and unwanted content
       let cleanTranslation = translatedContent.trim();
+      
+      // Remove AI thinking/reasoning tags and content (the main issue you reported)
+      cleanTranslation = this.removeAIThinkingProcess(cleanTranslation);
       
       // Remove common AI prefixes if they exist
       const prefixesToRemove = [
@@ -53,7 +56,12 @@ export class TranslationService {
         'Translation is:',
         'The translation is:',
         'Terjemahan:',
-        'Here\'s the translation:'
+        'Here\'s the translation:',
+        'Okay, the user wants the translation of',
+        'I need to recall the common translations for',
+        'First, I',
+        'Let me',
+        'I should'
       ];
       
       for (const prefix of prefixesToRemove) {
@@ -68,6 +76,9 @@ export class TranslationService {
           (cleanTranslation.startsWith("'") && cleanTranslation.endsWith("'"))) {
         cleanTranslation = cleanTranslation.slice(1, -1).trim();
       }
+      
+      // Additional cleaning for truncated content
+      cleanTranslation = this.cleanTruncatedContent(cleanTranslation);
 
       return {
         original: content,
@@ -154,6 +165,59 @@ export class TranslationService {
       'en': 'Respond in English only.'
     };
     return instructions[language as keyof typeof instructions] || instructions['en'];
+  }
+
+  /**
+   * Remove AI thinking process tags and content
+   */
+  private removeAIThinkingProcess(content: string): string {
+    // Remove <think> tags and their content
+    content = content.replace(/<think>[\s\S]*?<\/think>/gi, '');
+    
+    // Remove <thinking> tags and their content  
+    content = content.replace(/<thinking>[\s\S]*?<\/thinking>/gi, '');
+    
+    // Remove reasoning markers and explanations
+    content = content.replace(/\[Thinking:[\s\S]*?\]/gi, '');
+    content = content.replace(/\[Reasoning:[\s\S]*?\]/gi, '');
+    
+    // Remove common AI reasoning patterns
+    const reasoningPatterns = [
+      /Okay, the user wants[\s\S]*?Let me/gi,
+      /First, I need to[\s\S]*?So the/gi,
+      /I need to[\s\S]*?Therefore/gi,
+      /Let me think about this[\s\S]*?The answer/gi
+    ];
+    
+    for (const pattern of reasoningPatterns) {
+      content = content.replace(pattern, '');
+    }
+    
+    return content.trim();
+  }
+
+  /**
+   * Clean truncated or incomplete content
+   */
+  private cleanTruncatedContent(content: string): string {
+    // Remove incomplete sentences at the end
+    content = content.replace(/\.\s*[^.]*$/, '.');
+    
+    // Handle specific truncation markers
+    if (content.endsWith('...') || content.endsWith('…')) {
+      // Find the last complete sentence
+      const lastPeriod = content.lastIndexOf('.', content.length - 4);
+      if (lastPeriod > 0) {
+        content = content.substring(0, lastPeriod + 1);
+      }
+    }
+    
+    // Remove "null" at the end if it appears
+    if (content.trim().endsWith('null')) {
+      content = content.replace(/\s*null\s*$/, '').trim();
+    }
+    
+    return content;
   }
 }
 
