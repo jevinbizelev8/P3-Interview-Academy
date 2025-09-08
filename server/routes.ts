@@ -960,12 +960,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalSessions = userSessions.length;
       const completedCount = completedSessions.length;
       
-      // Calculate average score from completed sessions
+      // Calculate average score from completed sessions (5-point scale)
       let totalScore = 0;
       let scoreCount = 0;
       completedSessions.forEach(session => {
         if (session.overallScore && !isNaN(Number(session.overallScore))) {
-          totalScore += Number(session.overallScore);
+          // Convert to 5-point scale if needed (assuming stored scores might be on 10-point scale)
+          const score = Number(session.overallScore);
+          const normalizedScore = score > 5 ? score / 2 : score; // Convert 10-point to 5-point if necessary
+          totalScore += normalizedScore;
           scoreCount++;
         }
       });
@@ -987,7 +990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: session.id,
           date: new Date(session.completedAt || session.createdAt || Date.now()).toLocaleDateString('en-GB'),
           scenario: session.scenario?.title || 'Interview Practice',
-          score: Number(session.overallScore) || 0,
+          score: session.overallScore ? (Number(session.overallScore) > 5 ? Number(session.overallScore) / 2 : Number(session.overallScore)) : 0, // Normalize to 5-point scale
           duration: Math.floor((session.duration || 0) / 60) // Convert to minutes
         }));
       
@@ -1020,17 +1023,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const uniqueStrengths = Array.from(new Set(strongestSkills)).slice(0, 5);
       const uniqueImprovementAreas = Array.from(new Set(improvementAreas)).slice(0, 5);
       
-      // Calculate improvement rate (simple version - could be more sophisticated)
+      // Calculate improvement rate (5-point scale with 3.0 as baseline)
       const improvementRate = completedCount > 1 ? 
-        ((averageScore - 6) / 6) * 100 : 0; // Assuming 6 as baseline
+        ((averageScore - 3.0) / 3.0) * 100 : 0; // Using 3.0 as baseline for 5-point scale
       
-      // Mock skill breakdown (in real implementation, this would be calculated from evaluations)
-      const skillBreakdown = [
-        { skill: "Communication Clarity", score: averageScore > 0 ? Math.min(averageScore + Math.random(), 10) : 7, trend: 'up' as const },
-        { skill: "Problem Solving", score: averageScore > 0 ? Math.min(averageScore + Math.random() - 0.5, 10) : 6.5, trend: 'stable' as const },
-        { skill: "Cultural Alignment", score: averageScore > 0 ? Math.min(averageScore + Math.random() - 1, 10) : 6, trend: 'up' as const },
-        { skill: "Empathy & EQ", score: averageScore > 0 ? Math.min(averageScore + Math.random() - 0.3, 10) : 6.8, trend: 'stable' as const }
-      ];
+      // Calculate skill breakdown from actual evaluation data
+      const skillBreakdown: Array<{ skill: string; score: number; trend: 'up' | 'down' | 'stable' }> = [];
+      const skillAverages: Record<string, number[]> = {
+        "Communication Skills": [],
+        "Problem Solving": [],
+        "STAR Structure": [],
+        "Role Alignment": []
+      };
+
+      // Helper function to normalize scores to 5-point scale
+      const normalizeScore = (score: string | number): number => {
+        const numScore = Number(score);
+        if (isNaN(numScore)) return 3.0; // Default to average if invalid
+        
+        // If score is already on 5-point scale (0-5), return as is
+        if (numScore <= 5) return Math.max(1, Math.min(5, numScore));
+        
+        // If score appears to be on 10-point scale (>5), convert to 5-point scale
+        const normalized = numScore / 2;
+        return Math.max(1, Math.min(5, normalized));
+      };
+
+      // Aggregate skill scores from evaluations with proper normalization
+      try {
+        for (const session of completedSessions.slice(0, 15)) {
+          try {
+            const evaluation = await storage.getEvaluationResult(session.id);
+            if (evaluation) {
+              if (evaluation.communicationScore) {
+                const normalized = normalizeScore(evaluation.communicationScore);
+                skillAverages["Communication Skills"].push(normalized);
+              }
+              if (evaluation.problemSolvingScore) {
+                const normalized = normalizeScore(evaluation.problemSolvingScore);
+                skillAverages["Problem Solving"].push(normalized);
+              }
+              if (evaluation.starStructureScore) {
+                const normalized = normalizeScore(evaluation.starStructureScore);
+                skillAverages["STAR Structure"].push(normalized);
+              }
+              if (evaluation.roleAlignmentScore) {
+                const normalized = normalizeScore(evaluation.roleAlignmentScore);
+                skillAverages["Role Alignment"].push(normalized);
+              }
+            }
+          } catch (evalError) {
+            continue;
+          }
+        }
+      } catch (error) {
+        console.log("Could not fetch evaluations for skill breakdown:", error);
+      }
+
+      // Calculate averages and trends for each skill
+      Object.entries(skillAverages).forEach(([skill, scores]) => {
+        if (scores.length > 0) {
+          const rawAvg = scores.reduce((a, b) => a + b, 0) / scores.length;
+          // Ensure final average is within 5-point scale bounds
+          const avg = Math.max(1, Math.min(5, rawAvg));
+          
+          const trend = scores.length > 2 ? 
+            (scores[scores.length - 1] > scores[0] ? 'up' : scores[scores.length - 1] < scores[0] ? 'down' : 'stable') : 
+            'stable';
+          skillBreakdown.push({ skill, score: avg, trend });
+        } else {
+          // Fallback values when no data available (already on 5-point scale)
+          const fallbackScore = averageScore > 0 ? averageScore + (Math.random() - 0.5) * 0.5 : 3.0 + Math.random();
+          skillBreakdown.push({ 
+            skill, 
+            score: Math.max(1, Math.min(5, fallbackScore)), 
+            trend: 'stable' as const 
+          });
+        }
+      });
       
       const dashboardData = {
         totalSessions,
@@ -1041,7 +1111,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         strongestSkills: uniqueStrengths.length > 0 ? uniqueStrengths : ['Complete more sessions to identify strengths'],
         improvementAreas: uniqueImprovementAreas.length > 0 ? uniqueImprovementAreas : ['Complete more sessions to identify areas for improvement'],
         recentSessions,
-        performanceTrends: [], // Could be implemented later with more data
+        performanceTrends: recentSessions.map(session => ({
+          date: session.date,
+          score: session.score,
+          category: session.scenario
+        })),
         skillBreakdown
       };
       
@@ -1117,10 +1191,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const completedDate = new Date(sessionDate.getTime() + (20 + Math.random() * 40) * 60 * 1000); // 20-60 min sessions
         const duration = Math.floor((completedDate.getTime() - sessionDate.getTime()) / 1000);
         
-        // Generate realistic scores with some progression over time
+        // Generate realistic scores with progression over time (5-point scale)
         const progressionFactor = (sessionsToCreate - i) / sessionsToCreate; // Earlier sessions get slight boost
-        const baseScore = 6.0 + (progressionFactor * 2) + (Math.random() * 2);
-        const overallScore = Math.min(Math.max(baseScore, 4.0), 9.5);
+        const baseScore = 2.5 + (progressionFactor * 1.5) + (Math.random() * 1.0);
+        const overallScore = Math.min(Math.max(baseScore, 2.0), 4.8);
         
         // Create practice session
         const session = await storage.createInterviewSession({
@@ -1135,12 +1209,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           duration,
           currentQuestion: 15,
           totalQuestions: 15,
-          overallScore: Math.min(9.99, Math.max(1.00, overallScore)).toFixed(2),
-          situationScore: Math.min(9.99, Math.max(1.00, overallScore + (Math.random() - 0.5))).toFixed(2),
-          taskScore: Math.min(9.99, Math.max(1.00, overallScore + (Math.random() - 0.5))).toFixed(2),
-          actionScore: Math.min(9.99, Math.max(1.00, overallScore + (Math.random() - 0.5))).toFixed(2),
-          resultScore: Math.min(9.99, Math.max(1.00, overallScore + (Math.random() - 0.5))).toFixed(2),
-          flowScore: Math.min(9.99, Math.max(1.00, overallScore + (Math.random() - 0.5))).toFixed(2),
+          overallScore: Math.min(4.99, Math.max(1.00, overallScore)).toFixed(2),
+          situationScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.5)).toFixed(2),
+          taskScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.5)).toFixed(2),
+          actionScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.5)).toFixed(2),
+          resultScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.5)).toFixed(2),
+          flowScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.5)).toFixed(2),
           qualitativeFeedback: `Great performance in the ${scenario.title.toLowerCase()}. Shows strong technical expertise and excellent communication skills.`,
           strengths: [
             "Strong technical knowledge and problem-solving approach",
@@ -1185,10 +1259,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
 
-        // Skip evaluation creation for now - just create the session
-        console.log(`Created session ${session.id}, skipping evaluation due to schema issues`);
+        // Create comprehensive evaluation data matching interview rubrics
+        const evaluation = {
+          sessionId: session.id,
+          overallScore: overallScore.toFixed(2),
+          weightedOverallScore: overallScore.toFixed(2),
+          overallRating: overallScore >= 3.5 ? 'Pass' : overallScore >= 3.0 ? 'Borderline' : 'Needs Improvement',
+          
+          // 9 Criteria scores (5-point scale from interview rubrics)
+          relevanceScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          starStructureScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          specificEvidenceScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          roleAlignmentScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          outcomeOrientedScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          communicationScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          problemSolvingScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          culturalFitScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          learningAgilityScore: Math.min(4.99, Math.max(1.00, overallScore + (Math.random() - 0.5) * 0.6)).toFixed(2),
+          
+          // Detailed feedback for each criteria
+          relevanceFeedback: "Provides focused, direct responses that address questions appropriately.",
+          starStructureFeedback: "Uses logical structure in responses with clear situation, task, action, and result components.",
+          specificEvidenceFeedback: "Supports claims with concrete examples and measurable outcomes.",
+          roleAlignmentFeedback: `Demonstrates relevant experience and skills for ${scenario.jobRole} position.`,
+          outcomeOrientedFeedback: "Effectively highlights measurable business impact and results.",
+          communicationFeedback: "Clear, confident communication with professional tone throughout.",
+          problemSolvingFeedback: "Shows analytical thinking and creative problem-solving approach.",
+          culturalFitFeedback: `Aligns well with ${scenario.company} values and collaborative approach.`,
+          learningAgilityFeedback: "Demonstrates adaptability and continuous learning mindset.",
+          
+          // Overall qualitative feedback
+          qualitativeObservations: `Strong performance in this ${scenario.stage} interview. Candidate shows excellent technical knowledge and communication skills. Demonstrates good alignment with the ${scenario.jobRole} role requirements.`,
+          
+          // Dynamic strengths and improvement areas based on score
+          strengths: overallScore >= 4.0 ? [
+            "Exceptional communication clarity and structure",
+            "Strong technical expertise with concrete examples",
+            "Excellent alignment with role requirements",
+            "Outstanding problem-solving methodology"
+          ] : overallScore >= 3.5 ? [
+            "Good communication and technical knowledge",
+            "Uses specific examples effectively", 
+            "Shows strong role alignment",
+            "Demonstrates problem-solving skills"
+          ] : [
+            "Basic communication skills present",
+            "Some relevant experience demonstrated",
+            "Shows potential for growth"
+          ],
+          
+          improvementAreas: overallScore < 3.5 ? [
+            "Improve response structure using STAR method",
+            "Provide more specific examples and metrics",
+            "Enhance technical depth in responses",
+            "Practice behavioral question techniques"
+          ] : overallScore < 4.0 ? [
+            "Fine-tune STAR method implementation",
+            "Add more quantified achievements",
+            "Expand on technical problem-solving approach"
+          ] : [
+            "Continue practicing for consistency",
+            "Consider adding more industry-specific examples"
+          ],
+          
+          // Actionable insights
+          actionableInsights: [
+            `Focus on ${scenario.stage} interview best practices`,
+            "Practice more behavioral questions using STAR method",
+            `Research ${scenario.company} culture and values`,
+            "Prepare specific technical examples with measurable outcomes"
+          ],
+          
+          // Practice drills
+          personalizedDrills: [
+            "STAR Method Practice: Structure 5 behavioral responses",
+            "Technical Deep-dive: Explain complex problems clearly", 
+            `${scenario.jobRole} Role Play: Practice role-specific scenarios`,
+            "Metrics and Results: Quantify your achievements"
+          ],
+          
+          // Reflection prompts  
+          reflectionPrompts: [
+            "What aspects of this interview felt most challenging?",
+            "How can you better demonstrate your technical expertise?",
+            "What specific examples showcase your problem-solving skills?",
+            `How do your experiences align with ${scenario.company}'s mission?`
+          ],
+          
+          coachReflectionSummary: `This ${scenario.stage} interview performance shows ${overallScore >= 3.5 ? 'strong' : 'developing'} skills. Focus on continued practice with behavioral questions and technical storytelling.`,
+          
+          createdAt: completedDate,
+          evaluatedAt: completedDate
+        };
 
-        // await storage.createEvaluationResult(evaluation);
+        try {
+          await storage.createEvaluationResult(evaluation);
+          console.log(`Created comprehensive evaluation for session ${session.id}`);
+        } catch (evalError) {
+          console.log(`Could not create evaluation for session ${session.id}:`, evalError);
+          // Continue without evaluation if there are schema issues
+        }
         createdSessions.push({
           ...session,
           scenario: { title: scenario.title }

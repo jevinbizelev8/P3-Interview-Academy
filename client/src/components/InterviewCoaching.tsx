@@ -16,7 +16,9 @@ import {
   ChevronDown,
   Eye,
   EyeOff,
-  Globe
+  Globe,
+  Brain,
+  CheckCircle
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 
@@ -91,7 +93,7 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
     }
   });
 
-  // Fetch messages
+  // Intelligent polling with exponential backoff
   const { data: messages, refetch: refetchMessages } = useQuery({
     queryKey: ['coaching-messages', sessionId],
     queryFn: async () => {
@@ -100,7 +102,30 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
       const result = await response.json();
       return result.data as CoachingMessage[];
     },
-    refetchInterval: 2000 // Auto-refresh every 2 seconds
+    refetchInterval: (query) => {
+      // If no data yet, poll quickly (every 1s)
+      const data = query.state.data;
+      if (!data || data.length === 0) return 1000;
+      
+      // If we're loading (waiting for response), poll more frequently
+      if (isLoading) return 1500;
+      
+      // If conversation has recent activity (last message < 30s ago), poll every 3s
+      const lastMessage = data[data.length - 1];
+      if (lastMessage) {
+        const messageTime = new Date(lastMessage.timestamp).getTime();
+        const timeSinceLastMessage = Date.now() - messageTime;
+        
+        if (timeSinceLastMessage < 30000) return 3000; // 3 seconds
+        if (timeSinceLastMessage < 60000) return 5000; // 5 seconds
+        if (timeSinceLastMessage < 300000) return 10000; // 10 seconds
+      }
+      
+      // For inactive conversations, poll every 15 seconds
+      return 15000;
+    },
+    refetchOnWindowFocus: true,
+    staleTime: 1000 // Consider data stale after 1 second
   });
 
   // Start conversation with ASEAN language support
@@ -223,10 +248,108 @@ export function InterviewCoaching({ sessionId }: InterviewCoachingProps) {
     }
   }, [sessionId, messages]);
 
+  // Progressive loading states
   if (!sessionDetails) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-blue-50 flex items-center justify-center">
+        <div className="max-w-md w-full mx-4">
+          <Card className="p-8 text-center">
+            <div className="space-y-4">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto flex items-center justify-center">
+                <Bot className="w-8 h-8 text-white animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-gray-900">Loading Session Details</h3>
+                <p className="text-sm text-gray-600">Setting up your personalized coaching session...</p>
+              </div>
+              <div className="flex items-center justify-center space-x-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Show initial loading while conversation starts
+  const isInitializing = startConversationMutation.isPending || (!messages || messages.length === 0);
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-blue-50 flex flex-col">
+        {/* Session Info Header (Loaded) */}
+        <div className="bg-white border border-gray-200 rounded-lg mb-4 mx-6 mt-4 flex-shrink-0">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Bot className="h-4 w-4 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-gray-900">
+                    {sessionDetails.jobPosition} at {sessionDetails.companyName}
+                  </h2>
+                  <p className="text-sm text-gray-600 capitalize">
+                    {sessionDetails.interviewStage.replace('-', ' ')} • {sessionDetails.experienceLevel} Level
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Progressive Loading States */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="max-w-lg w-full mx-4">
+            <Card className="p-8">
+              <div className="space-y-6">
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mx-auto flex items-center justify-center mb-4">
+                    <Brain className="w-10 h-10 text-white animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Preparing Your AI Coach</h3>
+                  <p className="text-gray-600 mb-6">We're personalizing your interview experience...</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-sm text-gray-700">Session details loaded</span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 border-2 border-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-gray-700">Loading industry knowledge...</span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 border-2 border-gray-300 rounded-full"></div>
+                    <span className="text-sm text-gray-400">Preparing interview questions</span>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3">
+                    <div className="w-6 h-6 border-2 border-gray-300 rounded-full"></div>
+                    <span className="text-sm text-gray-400">Generating personalized content</span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <Clock className="w-5 h-5 text-blue-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-blue-900">Estimated wait time</h4>
+                      <p className="text-sm text-blue-700">~15-30 seconds for first-time setup</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }

@@ -100,53 +100,69 @@ export class CoachingEngineService {
       // Build coaching context
       const context = await this.buildCoachingContext(session, languageOptions);
       
-      // Generate initial coaching introduction
-      const introduction = await this.generateCoachingIntroduction(context);
-      
-      // Generate first question based on session configuration
-      const firstQuestion = await this.generateContextualQuestion(context, 1);
-      
-      // Clean up the responses to remove any internal reasoning
-      const cleanIntroduction = this.cleanAIResponse(introduction);
-      const cleanFirstQuestion = this.cleanAIResponse(firstQuestion);
+      // Parallel generation of introduction and first question
+      const [introduction, firstQuestion] = await Promise.allSettled([
+        this.generateCoachingIntroduction(context),
+        this.generateContextualQuestion(context, 1)
+      ]);
 
-      // Save introduction and first question as messages
-      // Get translations for introduction and first question if needed
+      // Extract results and clean responses
+      const introResult = introduction.status === 'fulfilled' ? introduction.value : 'Welcome to your interview coaching session!';
+      const questionResult = firstQuestion.status === 'fulfilled' ? firstQuestion.value : 'Tell me about yourself and your background.';
+      
+      const cleanIntroduction = this.cleanAIResponse(introResult);
+      const cleanFirstQuestion = this.cleanAIResponse(questionResult);
+
+      // Batch translation if needed
       let introTranslation: string | undefined;
       let questionTranslation: string | undefined;
       
       if (context.language && context.language !== 'en') {
-        const introTransResult = await translationService.translateContent(cleanIntroduction, context.language);
-        introTranslation = introTransResult.translated;
+        // Batch translate both pieces of content in parallel
+        const [introTransResult, questionTransResult] = await Promise.allSettled([
+          translationService.translateContent(cleanIntroduction, context.language),
+          translationService.translateContent(cleanFirstQuestion, context.language)
+        ]);
         
-        const questionTransResult = await translationService.translateContent(cleanFirstQuestion, context.language);
-        questionTranslation = questionTransResult.translated;
+        introTranslation = introTransResult.status === 'fulfilled' ? introTransResult.value.translated : undefined;
+        questionTranslation = questionTransResult.status === 'fulfilled' ? questionTransResult.value.translated : undefined;
+        
+        // Log translation failures without blocking
+        if (introTransResult.status === 'rejected') {
+          console.warn('Failed to translate introduction:', introTransResult.reason);
+        }
+        if (questionTransResult.status === 'rejected') {
+          console.warn('Failed to translate first question:', questionTransResult.reason);
+        }
       }
 
-      await this.saveCoachingMessage(sessionId, {
-        sessionId,
-        messageType: 'coach',
-        content: cleanIntroduction,
-        coachingType: 'introduction',
-        questionNumber: 0,
-        industryContext: context.session.industryContext as any,
-        aiMetadata: { type: 'introduction', generated: true, translation: introTranslation } as any
-      });
+      // Parallel save of messages and session update
+      await Promise.allSettled([
+        this.saveCoachingMessage(sessionId, {
+          sessionId,
+          messageType: 'coach',
+          content: cleanIntroduction,
+          coachingType: 'introduction',
+          questionNumber: 0,
+          industryContext: context.session.industryContext as any,
+          aiMetadata: { type: 'introduction', generated: true, translation: introTranslation } as any
+        }),
 
-      await this.saveCoachingMessage(sessionId, {
-        sessionId,
-        messageType: 'coach', 
-        content: cleanFirstQuestion,
-        coachingType: 'question',
-        questionNumber: 1,
-        industryContext: context.session.industryContext as any,
-        aiMetadata: { type: 'question', questionNumber: 1, translation: questionTranslation } as any
-      });
+        this.saveCoachingMessage(sessionId, {
+          sessionId,
+          messageType: 'coach', 
+          content: cleanFirstQuestion,
+          coachingType: 'question',
+          questionNumber: 1,
+          industryContext: context.session.industryContext as any,
+          aiMetadata: { type: 'question', questionNumber: 1, translation: questionTranslation } as any
+        }),
 
-      // Update session progress
-      await storage.updateCoachingSession(sessionId, {
-        currentQuestion: 1
-      });
+        // Update session progress
+        storage.updateCoachingSession(sessionId, {
+          currentQuestion: 1
+        })
+      ]);
 
       // Translate content if language is not English
       let combinedQuestion = `${cleanIntroduction}\n\n**Question 1:**\n${cleanFirstQuestion}`;
@@ -361,37 +377,58 @@ export class CoachingEngineService {
    * Build comprehensive coaching context
    */
   private async buildCoachingContext(session: CoachingSession, languageOptions?: LanguageOptions): Promise<CoachingContext> {
-    // Get existing messages
-    const messages = await storage.getCoachingMessages(session.id);
+    const startTime = Date.now();
     
-    // Get industry knowledge if available
-    let industryKnowledge = null;
-    if (session.primaryIndustry) {
-      industryKnowledge = await industryIntelligenceService.getIndustryKnowledge(session.primaryIndustry);
-    }
+    // Parallel execution of all context-building operations
+    const [messages, industryKnowledge, questionBank] = await Promise.allSettled([
+      // Get existing messages
+      storage.getCoachingMessages(session.id),
+      
+      // Get industry knowledge if available
+      session.primaryIndustry 
+        ? industryIntelligenceService.getIndustryKnowledge(session.primaryIndustry)
+        : Promise.resolve(null),
+      
+      // Get relevant question bank for this industry/stage
+      (session.primaryIndustry && session.interviewStage)
+        ? storage.getIndustryQuestions({
+            industry: session.primaryIndustry,
+            interviewStage: session.interviewStage,
+            difficultyLevel: session.experienceLevel as any,
+            limit: 50
+          })
+        : Promise.resolve([])
+    ]);
 
-    // Get relevant question bank for this industry/stage
-    let questionBank: IndustryQuestion[] = [];
-    if (session.primaryIndustry && session.interviewStage) {
-      questionBank = await storage.getIndustryQuestions({
-        industry: session.primaryIndustry,
-        interviewStage: session.interviewStage,
-        difficultyLevel: session.experienceLevel as any,
-        limit: 50
-      });
+    // Extract results from Promise.allSettled
+    const messagesResult = messages.status === 'fulfilled' ? messages.value : [];
+    const industryKnowledgeResult = industryKnowledge.status === 'fulfilled' ? industryKnowledge.value : null;
+    const questionBankResult = questionBank.status === 'fulfilled' ? questionBank.value : [];
+
+    // Log any errors without blocking execution
+    if (messages.status === 'rejected') {
+      console.warn('Failed to load coaching messages:', messages.reason);
+    }
+    if (industryKnowledge.status === 'rejected') {
+      console.warn('Failed to load industry knowledge:', industryKnowledge.reason);
+    }
+    if (questionBank.status === 'rejected') {
+      console.warn('Failed to load question bank:', questionBank.reason);
     }
 
     // Determine language preference from session or language options
     const language = languageOptions?.language || session.preferredLanguage || (session as any).interviewLanguage || 'en';
     const useSeaLion = languageOptions?.useSeaLion;
     
-    console.log(`🔧 Context built with language: ${language}, useSeaLion: ${useSeaLion}`);
+    const buildTime = Date.now() - startTime;
+    console.log(`🔧 Context built in ${buildTime}ms with language: ${language}, useSeaLion: ${useSeaLion}`);
+    console.log(`📊 Loaded: ${messagesResult.length} messages, industry knowledge: ${!!industryKnowledgeResult}, questions: ${questionBankResult.length}`);
 
     return {
       session,
-      messages,
-      industryKnowledge,
-      questionBank,
+      messages: messagesResult,
+      industryKnowledge: industryKnowledgeResult,
+      questionBank: questionBankResult,
       language,
       useSeaLion
     };
@@ -564,26 +601,26 @@ Generate content specifically for this job position and company, not generic con
       let jsonEnd = cleanResponse.lastIndexOf('}');
       
       if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+        const jsonStr = cleanResponse.substring(jsonStart, jsonEnd + 1);
+        // Fix common JSON issues more aggressively
+        const fixedJson = jsonStr
+          .replace(/,\s*}/g, '}')        // Remove trailing commas
+          .replace(/,\s*]/g, ']')         // Remove trailing commas in arrays
+          .replace(/'/g, '"')             // Replace single quotes with double quotes
+          .replace(/[\u0000-\u0019]+/g, '') // Remove control characters
+          .replace(/\n/g, ' ')            // Replace newlines with spaces
+          .replace(/\r/g, ' ')            // Replace carriage returns
+          .replace(/\t/g, ' ')            // Replace tabs
+          .replace(/\\/g, '\\\\')         // Escape backslashes
+          .replace(/"/g, '\\"')           // Escape quotes (and then fix structure)
+          .replace(/\\"/g, '"')           // Restore proper quotes
+          .replace(/\s+/g, ' ')           // Normalize whitespace
+          .trim();
+        
         try {
-          const jsonStr = cleanResponse.substring(jsonStart, jsonEnd + 1);
-          // Fix common JSON issues more aggressively
-          const fixedJson = jsonStr
-            .replace(/,\s*}/g, '}')        // Remove trailing commas
-            .replace(/,\s*]/g, ']')         // Remove trailing commas in arrays
-            .replace(/'/g, '"')             // Replace single quotes with double quotes
-            .replace(/[\u0000-\u0019]+/g, '') // Remove control characters
-            .replace(/\n/g, ' ')            // Replace newlines with spaces
-            .replace(/\r/g, ' ')            // Replace carriage returns
-            .replace(/\t/g, ' ')            // Replace tabs
-            .replace(/\\/g, '\\\\')         // Escape backslashes
-            .replace(/"/g, '\\"')           // Escape quotes (and then fix structure)
-            .replace(/\\"/g, '"')           // Restore proper quotes
-            .replace(/\s+/g, ' ')           // Normalize whitespace
-            .trim();
-          
           return JSON.parse(fixedJson);
         } catch (parseError) {
-          console.error('JSON parsing failed with content:', jsonStr.substring(0, 200), 'Error:', parseError.message);
+          console.error('JSON parsing failed with content:', fixedJson.substring(0, 200), 'Error:', (parseError as Error).message);
           return this.getDefaultStarAnalysis();
         }
       } else {
