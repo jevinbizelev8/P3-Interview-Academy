@@ -97,6 +97,7 @@ export interface IStorage {
   addCoachingMessage(message: InsertCoachingMessage): Promise<CoachingMessage>;
   getCoachingMessages(sessionId: string): Promise<CoachingMessage[]>;
   updateCoachingMessage(id: string, updates: Partial<InsertCoachingMessage>): Promise<CoachingMessage>;
+  deleteCoachingMessages(sessionId: string): Promise<void>;
   
   // Industry questions
   createIndustryQuestion(question: InsertIndustryQuestion): Promise<IndustryQuestion>;
@@ -960,6 +961,12 @@ export class DatabaseStorage implements IStorage {
       .where(eq(coachingMessages.id, id))
       .returning();
     return message;
+  }
+
+  async deleteCoachingMessages(sessionId: string): Promise<void> {
+    await db
+      .delete(coachingMessages)
+      .where(eq(coachingMessages.sessionId, sessionId));
   }
 
   // Industry questions operations

@@ -18,7 +18,8 @@ import {
   Target, 
   BookOpen,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RotateCcw
 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { FeedbackCard } from './FeedbackCard';
@@ -121,6 +122,20 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
     }
   });
 
+  const restartSessionMutation = useMutation({
+    mutationFn: async () => {
+      const result = await apiRequest('POST', `/api/coaching/sessions/${sessionId}/restart`);
+      if (!result.ok) throw new Error('Failed to restart session');
+      return result.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['coaching-messages', sessionId] });
+      setCurrentResponse('');
+      setShowCompletion(false);
+      setCompletionData(null);
+    }
+  });
+
   const handleSendResponse = async () => {
     if (!currentResponse.trim() || isLoading) return;
     
@@ -137,6 +152,12 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendResponse();
+    }
+  };
+
+  const handleRestartSession = () => {
+    if (confirm('Are you sure you want to restart this coaching session? All progress will be lost.')) {
+      restartSessionMutation.mutate();
     }
   };
 
@@ -358,6 +379,18 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
                   </div>
                   
                   <div className="flex items-center gap-2">
+                    {messages.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRestartSession}
+                        disabled={restartSessionMutation.isPending}
+                        className="bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100"
+                      >
+                        <RotateCcw className="h-3 w-3 mr-1" />
+                        {restartSessionMutation.isPending ? "Restarting..." : "Restart Session"}
+                      </Button>
+                    )}
                     {messages.length > 4 && (
                       <Button
                         variant="outline"

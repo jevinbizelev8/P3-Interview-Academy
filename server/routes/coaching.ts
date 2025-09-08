@@ -328,6 +328,52 @@ router.post('/sessions/:sessionId/complete', async (req, res) => {
   }
 });
 
+// Restart coaching session
+router.post('/sessions/:sessionId/restart', async (req, res) => {
+  try {
+    const session = await storage.getCoachingSession(req.params.sessionId);
+    
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Coaching session not found'
+      });
+    }
+
+    // Verify user owns the session
+    if (session.userId !== (req.user!.id)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    // Delete all messages for this session
+    await storage.deleteCoachingMessages(req.params.sessionId);
+    
+    // Reset session progress
+    await storage.updateCoachingSession(req.params.sessionId, {
+      currentQuestion: 1,
+      overallProgress: '0',
+      status: 'active',
+      completedAt: null
+    });
+
+    console.log(`🔄 Coaching session ${req.params.sessionId} restarted successfully`);
+
+    res.json({
+      success: true,
+      message: 'Coaching session restarted successfully'
+    });
+  } catch (error) {
+    console.error('Error restarting coaching session:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to restart coaching session'
+    });
+  }
+});
+
 // Get user coaching sessions
 router.get('/sessions', async (req, res) => {
   try {
