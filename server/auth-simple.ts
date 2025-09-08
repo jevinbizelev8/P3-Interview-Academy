@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import session from "express-session";
+import crypto from "crypto";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
@@ -29,7 +30,7 @@ export function getSession() {
     },
     // Enhanced security: clean up expired sessions
     genid: () => {
-      return require('crypto').randomBytes(32).toString('hex');
+      return crypto.randomBytes(32).toString('hex');
     }
   });
 }
