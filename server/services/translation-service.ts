@@ -1,4 +1,5 @@
 import { sealionService } from './sealion';
+import { openaiService } from './openai-service';
 
 interface TranslationResponse {
   original: string;
@@ -63,13 +64,42 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       };
 
     } catch (error) {
-      console.error('Translation error:', error);
-      // Return original content if translation fails
-      return {
-        original: content,
-        translated: content + ` [Translation to ${this.getLanguageName(targetLanguage)} unavailable]`,
-        language: targetLanguage
-      };
+      console.error('❌ SeaLion translation failed:', error);
+      console.log('🔄 Attempting OpenAI fallback for translation...');
+      
+      try {
+        // Try OpenAI as ultimate fallback for translation
+        const openaiTranslation = await openaiService.generateResponse({
+          messages: [
+            {
+              role: 'system',
+              content: `You are a translation service. Translate the following text to ${this.getLanguageName(targetLanguage)}. Respond ONLY with the translation, no explanations.`
+            },
+            {
+              role: 'user',
+              content: `Translate to ${this.getLanguageName(targetLanguage)}: "${content}"`
+            }
+          ],
+          maxTokens: 150,
+          temperature: 0
+        });
+        
+        console.log('✅ OpenAI fallback translation successful');
+        return {
+          original: content,
+          translated: openaiTranslation.trim(),
+          language: targetLanguage
+        };
+        
+      } catch (openaiError) {
+        console.error('❌ OpenAI fallback also failed:', openaiError);
+        // Return original content if both services fail
+        return {
+          original: content,
+          translated: content + ` [Translation to ${this.getLanguageName(targetLanguage)} unavailable]`,
+          language: targetLanguage
+        };
+      }
     }
   }
 

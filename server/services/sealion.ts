@@ -90,15 +90,18 @@ export class SeaLionService {
         });
         return response;
       } catch (error) {
-        console.warn('Vertex AI call failed, falling back to direct API:', error instanceof Error ? error.message : 'Unknown error');
+        console.warn('🔄 Vertex AI call failed, falling back to direct API:', error instanceof Error ? error.message : 'Unknown error');
         
-        // If Vertex AI fails and we don't have direct API key, throw error
+        // Enhanced fallback strategy
         if (!this.config.apiKey) {
+          console.error('❌ Both Vertex AI and direct SeaLion API are unavailable');
+          console.log('💡 For translation requests, consider routing to OpenAI as final fallback');
           throw new Error('Both Vertex AI and direct API are unavailable');
         }
         
         // Initialize direct client if not already done
         if (!this.client) {
+          console.log('🔧 Initializing direct SeaLion API client as fallback');
           this.client = new OpenAI({
             apiKey: this.config.apiKey,
             baseURL: this.config.baseUrl
