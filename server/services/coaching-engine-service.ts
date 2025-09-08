@@ -444,15 +444,22 @@ export class CoachingEngineService {
   private async generateCoachingIntroduction(context: CoachingContext): Promise<string> {
     const { session } = context;
     
-    const introPrompt = `Create a concise ${session.interviewStage} interview coaching introduction for ${session.jobPosition} at ${session.companyName || 'target company'}. Include: brief welcome, STAR method reminder, ${session.totalQuestions} questions in ${session.timeAllocation}min. Max 3 sentences, respond in English, encouraging tone for ${session.experienceLevel} level.
+    const introPrompt = `You are conducting a real ${session.interviewStage} interview at ${session.companyName || 'the company'} for a ${session.jobPosition} position.
 
-DEBUG INFO: 
-Position: ${session.jobPosition}
-Company: ${session.companyName}
+Roleplay as the interviewer and create an opening statement that includes:
+1. Introduce yourself with a realistic name and title (e.g., "Hi, I'm Sarah, Senior Manager in the Finance Department")
+2. Welcome the candidate to the interview
+3. Briefly explain what this interview stage involves
+4. Set expectations for the conversation format
+
+Make it feel like a real interview, not a coaching session. Keep it professional but friendly.
+
+Company: ${session.companyName || 'the company'}
+Role: ${session.jobPosition}
 Stage: ${session.interviewStage}
 Level: ${session.experienceLevel}
 
-Generate content specifically for this job position and company, not generic content.`;
+Respond as the interviewer speaking directly to the candidate:`;
 
     try {
       // console.log(`🎤 Generating introduction in language: ${context.language}`);
@@ -473,7 +480,21 @@ Generate content specifically for this job position and company, not generic con
         'executive-final': 'final decision-making conversation with senior leadership'
       }[session.interviewStage] || 'interview assessment';
 
-      return `Welcome to your ${session.interviewStage.replace('-', ' ')} coaching session for the ${session.jobPosition} role at ${session.companyName || 'your target company'}! This stage typically involves ${stageDescription}. I'll be guiding you through ${session.totalQuestions} ${session.primaryIndustry ? `${session.primaryIndustry} industry-specific` : ''} interview questions using the STAR method over ${session.timeAllocation} minutes. As a ${session.experienceLevel} professional, we'll focus on showcasing your expertise and building your confidence for this critical interview stage!`;
+      // Create persona-based fallback introduction
+      const interviewerNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Casey'];
+      const randomName = interviewerNames[Math.floor(Math.random() * interviewerNames.length)];
+      
+      const departmentMap = {
+        'phone-screening': 'Talent Acquisition',
+        'functional-team': `${session.primaryIndustry || 'Operations'} Department`,
+        'hiring-manager': 'Management',
+        'subject-matter-expertise': `${session.primaryIndustry || 'Technical'} Leadership`,
+        'executive-final': 'Executive Leadership'
+      };
+      
+      const department = departmentMap[session.interviewStage as keyof typeof departmentMap] || 'the team';
+      
+      return `Hi, I'm ${randomName}, and I'm a Senior Manager in ${department} at ${session.companyName || 'our company'}. Welcome to your ${session.interviewStage.replace('-', ' ')} interview for the ${session.jobPosition} position! This stage typically involves ${stageDescription}. We'll be having a structured conversation where I'll ask you several questions to better understand your experience and how you approach different situations. Please feel free to take a moment to think before responding, and don't hesitate to ask for clarification if needed. Shall we get started?`;
     }
   }
 
