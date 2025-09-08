@@ -69,6 +69,10 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       
       try {
         // Try OpenAI as ultimate fallback for translation
+        if (!openaiService) {
+          throw new Error('OpenAI service not available');
+        }
+        
         const openaiTranslation = await openaiService.generateResponse({
           messages: [
             {

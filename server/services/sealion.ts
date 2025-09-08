@@ -43,7 +43,7 @@ const DEFAULT_CONFIG: Omit<SeaLionConfig, 'apiKey'> = {
 };
 
 export class SeaLionService {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
   private config: SeaLionConfig;
   private vertexAI: VertexAIService;
   private useVertexAI: boolean = false;
