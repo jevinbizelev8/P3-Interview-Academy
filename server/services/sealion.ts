@@ -122,19 +122,19 @@ export class SeaLionService {
     throw new Error('No available API client');
   }
 
-  // Get language-specific instructions for SeaLion
+  // Get language-specific instructions for SeaLion - ULTRA MINIMAL to prevent overthinking
   private getLanguageInstructions(language: string): string {
     const instructions = {
-      en: "Respond in professional English suitable for a job interview context.",
-      id: "Berikan respons dalam Bahasa Indonesia yang profesional dan sesuai untuk konteks wawancara kerja.",
-      ms: "Berikan respons dalam Bahasa Melayu yang profesional dan sesuai untuk konteks wawancara kerja.",
-      th: "บังคับ: ตอบทุกอย่างเป็นภาษาไทยเท่านั้น ใช้คำไทยที่เป็นทางการและเหมาะสมสำหรับการสัมภาษณ์งาน ห้ามผสมภาษาอังกฤษเด็ดขาด ไม่ต้องใส่ชื่อผู้สัมภาษณ์เป็นภาษาอังกฤษ",
-      vi: "Trả lời bằng tiếng Việt chuyên nghiệp và phù hợp với bối cảnh phỏng vấn việc làm.",
-      fil: "Tumugon sa wikang Filipino na propesyonal at angkop para sa konteksto ng panayam sa trabaho.",
-      my: "အလုပ်သွားရောက်မေးမြန်းခြင်းအခြေအနေအတွက် သင့်တော်သော ပရော်ဖက်ရှင်နယ်မြန်မာဘာသာဖြင့် ပြန်လည်ဖြေကြားပါ။",
-      km: "សូមឆ្លើយតបជាភាសាខ្មែរដែលមានលក្ខណៈវិជ្ជាជីវៈ និងសមរម្យសម្រាប់បរិបទនៃការសម្ភាសន៍ការងារ។",
-      lo: "ກະລຸນາຕອບກັບເປັນພາສາລາວທີ່ມີວິຊາຊີບ ແລະ ເໝາະສົມສໍາລັບບໍລິບົດຂອງການສໍາພາດວຽກ.",
-      'zh-sg': "请用纯正的简体中文回应。严格要求：1）仅使用中文汉字；2）绝对禁止拼音；3）绝对禁止英文；4）绝对禁止括号内拼音注释；5）不要提供任何罗马化文字；6）直接输出中文内容，无需任何翻译或注释。"
+      en: "Respond in English only. No explanations.",
+      id: "Respons dalam Bahasa Indonesia saja. Tidak ada penjelasan.",
+      ms: "Respons dalam Bahasa Melayu sahaja. Tiada penjelasan.",
+      th: "ตอบเป็นภาษาไทยเท่านั้น ห้ามอธิบาย",
+      vi: "Chỉ trả lời bằng tiếng Việt. Không giải thích.",
+      fil: "Tumugon sa Filipino lamang. Walang paliwanag.",
+      my: "မြန်မာဘာသာဖြင့်သာ ဖြေကြားပါ။ ရှင်းလင်းမှု မလိုအပ်။",
+      km: "ឆ្លើយជាភាសាខ្មែរបុណ្ណោះ។ មិនត្រូវអធិប្បាយទេ។",
+      lo: "ຕອບເປັນພາສາລາວເທົ່ານັ້ນ. ບໍ່ຕ້ອງອະທິບາຍ.",
+      'zh-sg': "只用中文回答。不要解释。"
     };
     
     return instructions[language as keyof typeof instructions] || instructions.en;

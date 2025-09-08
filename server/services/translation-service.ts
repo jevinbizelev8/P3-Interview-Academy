@@ -24,102 +24,37 @@ export class TranslationService {
     }
 
     try {
-      // Use a very simple and direct translation prompt
-      const simplePrompt = `Translate to ${this.getLanguageName(targetLanguage)}: "${content}"`;
-
+      // Ultra-minimal directive prompt - no personality, no reasoning allowed
       const translatedContent = await sealionService.generateResponse({
         messages: [
           { 
             role: 'system', 
-            content: `You are a professional translator. CRITICAL RULES:
-1. Output ONLY the ${this.getLanguageName(targetLanguage)} translation
-2. NO thinking process, reasoning, or explanations
-3. NO <think> tags or analysis
-4. NO English words in your response
-5. Just the direct translation, nothing else` 
+            content: `Translate to ${this.getLanguageDisplayName(targetLanguage)}. Rules:
+- Output ONLY the direct translation
+- NO explanations, reasoning, or thinking process
+- NO "Okay", "Let me", "The user", "I need to", "First"
+- NO additional context or cultural notes
+
+Example:
+Input: "What is your name?"
+Output: ${this.getTranslationExample(targetLanguage)}`
           },
-          { role: 'user', content: simplePrompt }
+          { role: 'user', content: content }
         ],
-        maxTokens: 300,
+        maxTokens: 150, // Reduced to prevent verbose responses
         temperature: 0,
         language: targetLanguage
       });
 
-      // Enhanced cleaning to remove AI thinking process and unwanted content
-      let cleanTranslation = translatedContent.trim();
-      
-      // DIRECT EXTRACTION: If response contains reasoning, extract just the final translation
-      if (cleanTranslation.includes('Okay, the user wants') || cleanTranslation.length > 200) {
-        console.log('🔍 Applying direct extraction - original length:', cleanTranslation.length);
-        
-        // First, remove everything before the last paragraph that looks like target language
-        // The pattern is usually: long reasoning... [empty line] [target language translation]
-        const parts = cleanTranslation.split('\n\n');
-        if (parts.length > 1) {
-          // Take the last part that's not too long and contains target language words
-          const lastPart = parts[parts.length - 1].trim();
-          const aseanWords = ['anda', 'kamu', 'dalam', 'untuk', 'dengan', 'yang', 'ini', 'itu', 'menonjol', 'ceritakan', 'apa', 'kelebihan', 'tentang', 'berjaya', 'temuduga', 'kosong', 'null', 'saya', 'adalah', 'akan', 'dapat', 'boleh', 'siapa', 'nama', 'bolehkah'];
-          
-          const hasAseanWords = aseanWords.some(word => lastPart.toLowerCase().includes(word));
-          if (lastPart.length < 150 && hasAseanWords && !lastPart.includes('user wants') && !lastPart.includes('translation')) {
-            cleanTranslation = lastPart.replace(/^["']|["']$/g, '').replace(/^Final translation:\s*/i, '');
-            console.log('✅ Extracted from last paragraph:', cleanTranslation);
-          }
-        }
-        
-        // If still contains reasoning, try line-by-line approach
-        if (cleanTranslation.includes('Okay, the user wants')) {
-          const lines = cleanTranslation.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-          const aseanWords = ['anda', 'kamu', 'dalam', 'untuk', 'dengan', 'yang', 'ini', 'itu', 'menonjol', 'ceritakan', 'apa', 'kelebihan', 'tentang', 'berjaya', 'temuduga', 'kosong', 'null', 'saya', 'adalah', 'akan', 'dapat', 'boleh', 'siapa', 'nama', 'bolehkah'];
-          
-          for (let i = lines.length - 1; i >= 0; i--) {
-            const line = lines[i];
-            const hasAseanWords = aseanWords.some(word => line.toLowerCase().includes(word));
-            const isReasonableLength = line.length >= 3 && line.length <= 80;
-            const hasMinimalEnglish = !line.includes('translation') && !line.includes('context') && !line.includes('user wants');
-            
-            if (hasAseanWords && isReasonableLength && hasMinimalEnglish) {
-              cleanTranslation = line.replace(/^["']|["']$/g, '').replace(/^Final translation:\s*/i, '');
-              console.log('✅ Extracted from line approach:', cleanTranslation);
-              break;
-            }
-          }
-        }
+      // Validate response doesn't contain reasoning/explanations
+      if (this.containsReasoning(translatedContent)) {
+        console.warn(`⚠️ SeaLion returned reasoning instead of clean translation: "${translatedContent.substring(0, 100)}..."`);
+        // Force retry with even more constrained prompt
+        throw new Error('Response contains reasoning - retry needed');
       }
-      
-      // Remove common AI prefixes if they exist
-      const prefixesToRemove = [
-        'Translation:',
-        'Translated:',
-        'In Bahasa Malaysia:',
-        'Bahasa Malaysia translation:',
-        'Here is the translation:',
-        'Translation is:',
-        'The translation is:',
-        'Terjemahan:',
-        'Here\'s the translation:',
-        'Okay, the user wants the translation of',
-        'I need to recall the common translations for',
-        'First, I',
-        'Let me',
-        'I should'
-      ];
-      
-      for (const prefix of prefixesToRemove) {
-        if (cleanTranslation.toLowerCase().startsWith(prefix.toLowerCase())) {
-          cleanTranslation = cleanTranslation.substring(prefix.length).trim();
-          break;
-        }
-      }
-      
-      // Remove quotes if the entire response is wrapped in them
-      if ((cleanTranslation.startsWith('"') && cleanTranslation.endsWith('"')) ||
-          (cleanTranslation.startsWith("'") && cleanTranslation.endsWith("'"))) {
-        cleanTranslation = cleanTranslation.slice(1, -1).trim();
-      }
-      
-      // Additional cleaning for truncated content
-      cleanTranslation = this.cleanTruncatedContent(cleanTranslation);
+
+      // Use bulletproof extraction method
+      const cleanTranslation = this.extractCleanTranslation(translatedContent, targetLanguage);
 
       return {
         original: content,
@@ -154,24 +89,74 @@ export class TranslationService {
     }
 
     try {
-      // Combine content for efficient batch translation
-      const combinedContent = contents.join('\n---SEPARATOR---\n');
-      const batchTranslation = await this.translateContent(combinedContent, targetLanguage);
+      // For better accuracy, translate individually rather than combining
+      const translations = await Promise.all(
+        contents.map(content => this.translateContent(content, targetLanguage))
+      );
       
-      const translatedParts = batchTranslation.translated.split('\n---SEPARATOR---\n');
-      
-      return contents.map((original, index) => ({
-        original,
-        translated: translatedParts[index] || original,
-        language: targetLanguage
-      }));
+      return translations;
 
     } catch (error) {
       console.error('Batch translation error:', error);
       return contents.map(content => ({
         original: content,
-        translated: content,
+        translated: content + ' [Translation unavailable]',
         language: targetLanguage
+      }));
+    }
+  }
+
+  /**
+   * Translate a set of question objects while preserving structure
+   */
+  async translateQuestionSet(
+    questions: any[], 
+    targetLanguage: string
+  ): Promise<any[]> {
+    if (targetLanguage === 'en') {
+      return questions;
+    }
+
+    console.log(`🔄 Translating ${questions.length} questions to ${targetLanguage}`);
+    
+    try {
+      const translatedQuestions = await Promise.all(
+        questions.map(async (question) => {
+          // Create a copy to avoid mutating original
+          let translatedQuestion = { ...question };
+          
+          // Translate the main question text
+          if (question.question) {
+            const questionTranslation = await this.translateContent(question.question, targetLanguage);
+            translatedQuestion.question = questionTranslation.translated;
+          }
+          
+          // Translate cultural context if present
+          if (question.culturalContext) {
+            const contextTranslation = await this.translateContent(question.culturalContext, targetLanguage);
+            translatedQuestion.culturalContext = contextTranslation.translated;
+          }
+          
+          // Keep metadata in English for consistency
+          // (id, category, difficulty, interviewStage, tags, etc. remain unchanged)
+          
+          // Apply format validation and consistency checks
+          translatedQuestion = this.ensureConsistentFormat(question, translatedQuestion, targetLanguage);
+          
+          return translatedQuestion;
+        })
+      );
+
+      console.log(`✅ Successfully translated ${translatedQuestions.length} questions to ${targetLanguage}`);
+      return translatedQuestions;
+
+    } catch (error) {
+      console.error(`❌ Error translating question set to ${targetLanguage}:`, error);
+      
+      // Fallback: return original questions with translation unavailable notice
+      return questions.map(question => ({
+        ...question,
+        question: question.question + ` [${this.getLanguageName(targetLanguage)} translation unavailable]`
       }));
     }
   }
@@ -190,6 +175,62 @@ export class TranslationService {
       'en': 'English'
     };
     return languageNames[code as keyof typeof languageNames] || 'the target language';
+  }
+
+  private getLanguageDisplayName(code: string): string {
+    const languageNames = {
+      'ms': 'Bahasa Malaysia',
+      'id': 'Bahasa Indonesia',
+      'th': 'Thai',
+      'vi': 'Vietnamese',
+      'fil': 'Filipino',
+      'my': 'Myanmar',
+      'km': 'Khmer',
+      'lo': 'Lao',
+      'zh-sg': 'Chinese',
+      'en': 'English'
+    };
+    return languageNames[code as keyof typeof languageNames] || code.toUpperCase();
+  }
+
+  private getTranslationExample(code: string): string {
+    const examples = {
+      'ms': 'Siapakah nama anda?',
+      'id': 'Siapa nama Anda?',
+      'th': 'คุณชื่ออะไร?',
+      'vi': 'Tên bạn là gì?',
+      'fil': 'Ano ang pangalan mo?',
+      'my': 'သင့်နာမည်ဘာလဲ?',
+      'km': 'តើ​អ្នក​ឈ្មោះ​អ្វី?',
+      'lo': 'ເຈົ້າຊື່ຫຍັງ?',
+      'zh-sg': '你叫什么名字？',
+      'en': 'What is your name?'
+    };
+    return examples[code as keyof typeof examples] || 'Translation example';
+  }
+
+  /**
+   * Detect if response contains reasoning/explanations instead of clean translation
+   */
+  private containsReasoning(content: string): boolean {
+    const reasoningPatterns = [
+      /^Okay,/i,
+      /^Let me/i,
+      /^I need to/i,
+      /^I will/i,
+      /^The user/i,
+      /^First,/i,
+      /^Based on/i,
+      /^In.*culture/i,
+      /translation.*means/i,
+      /appropriate.*response/i,
+      /should.*consider/i,
+      /better.*phrase/i,
+      /more.*suitable/i,
+      /cultural.*context/i
+    ];
+
+    return reasoningPatterns.some(pattern => pattern.test(content.trim()));
   }
 
   private getLanguageInstruction(language: string): string {
@@ -281,76 +322,160 @@ export class TranslationService {
   }
 
   /**
-   * Extract final translation from response that may contain reasoning
+   * Bulletproof extraction method for clean translations from verbose SeaLion responses
    */
-  private extractFinalTranslation(content: string): string {
-    // Split into lines and find the translation
-    const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  private extractCleanTranslation(content: string, targetLanguage: string): string {
+    console.log(`🔍 Extracting translation for ${targetLanguage}, original length: ${content.length}`);
     
-    if (lines.length === 0) return content;
+    let cleaned = content.trim();
     
-    // If response contains reasoning, look for the actual translation
-    // It's usually the last meaningful line that doesn't contain English reasoning words
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i];
-      
-      // Skip lines that are clearly reasoning/thinking
-      if (line.includes('Okay, the user wants') ||
-          line.includes('Let me think') ||
-          line.includes('First, I') ||
-          line.includes('I need to') ||
-          line.includes('translation') ||
-          line.includes('context') ||
-          line.includes('appropriate') ||
-          line.includes('should') ||
-          line.includes('business') ||
-          line.includes('professional') ||
-          line.includes('Malaysia') ||
-          line.includes('Indonesia') ||
-          line.includes('Southeast') ||
-          line.length > 200) {
-        continue;
-      }
-      
-      // This looks like a translation - short, meaningful, no English reasoning words
-      if (line.length >= 3 && line.length <= 100) {
-        return line.replace(/^["']|["']$/g, ''); // Remove surrounding quotes
-      }
+    // Strategy 1: Remove common verbose patterns first
+    const verbosePatterns = [
+      /^Okay, the user wants[\s\S]*?(?=\n[A-Z\u00C0-\u017F\u0100-\u017F])/gim, // Remove "Okay, the user wants..." until capital letter
+      /^First, I[\s\S]*?(?=\n[A-Z\u00C0-\u017F\u0100-\u017F])/gim,
+      /^Let me[\s\S]*?(?=\n[A-Z\u00C0-\u017F\u0100-\u017F])/gim,
+      /^I need to[\s\S]*?(?=\n[A-Z\u00C0-\u017F\u0100-\u017F])/gim,
+      /<think>[\s\S]*?<\/think>/gi,
+      /<thinking>[\s\S]*?<\/thinking>/gi
+    ];
+    
+    for (const pattern of verbosePatterns) {
+      cleaned = cleaned.replace(pattern, '').trim();
     }
     
-    // More aggressive extraction: look for lines that contain target language words
-    const aseanWords = ['anda', 'kamu', 'dalam', 'untuk', 'dengan', 'yang', 'ini', 'itu', 'menonjol', 'ceritakan', 'apa', 'kelebihan', 'tentang', 'berjaya', 'temuduga', 'kosong', 'null', 'saya', 'adalah', 'akan', 'dapat', 'boleh'];
-    
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i];
+    // Strategy 2: If still verbose, extract using line-by-line approach
+    if (cleaned.includes('Okay, the user') || cleaned.includes('translation') || cleaned.length > 150) {
+      console.log('🔍 Applying line-by-line extraction');
       
-      // Check if this line contains ASEAN language words and is reasonably short
-      const hasAseanWords = aseanWords.some(word => line.toLowerCase().includes(word));
-      const isReasonableLength = line.length >= 3 && line.length <= 80;
-      const hasMinimalEnglish = !line.includes('translation') && !line.includes('context') && !line.includes('user wants');
+      const lines = cleaned.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+      const targetLanguageWords = this.getTargetLanguageWords(targetLanguage);
       
-      if (hasAseanWords && isReasonableLength && hasMinimalEnglish) {
-        return line.replace(/^["']|["']$/g, '').replace(/^Final translation:\s*/i, '');
+      // Find the best translation line (reverse order, shortest valid line wins)
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i];
+        
+        // Skip obviously wrong lines
+        if (this.isReasoningLine(line)) continue;
+        
+        // Check if line contains target language words
+        const hasTargetWords = targetLanguageWords.some(word => 
+          line.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        // Good translation characteristics
+        const isGoodLength = line.length >= 3 && line.length <= 100;
+        const hasMinimalEnglishWords = this.countEnglishWords(line) < 3;
+        
+        if (hasTargetWords && isGoodLength && hasMinimalEnglishWords) {
+          console.log(`✅ Found clean translation: "${line}"`);
+          return this.finalCleanup(line);
+        }
       }
     }
     
-    // Very last resort: extract anything after the last period that looks like target language
-    const finalSentenceMatch = content.match(/\.[\s\n]*([^.]*?(?:anda|dalam|untuk|dengan|apa|menonjol|ceritakan|kelebihan|temuduga)[^.]*?)[\s\n]*$/i);
-    if (finalSentenceMatch) {
-      return finalSentenceMatch[1].trim().replace(/^["']|["']$/g, '');
+    // Strategy 3: Pattern matching for specific formats
+    const patterns = [
+      // Extract quoted translations
+      /"([^"]{3,100})"/g,
+      /'([^']{3,100})'/g,
+      // Extract after "Translation:" or similar
+      /(?:Translation|Terjemahan|翻译):\s*(.{3,100}?)(?:\n|$)/gi,
+      // Extract standalone sentences with target language
+      /([A-Z\u00C0-\u017F][\w\s\u00C0-\u017F]{2,99}[.!?]?)/g
+    ];
+    
+    for (const pattern of patterns) {
+      const matches = Array.from(cleaned.matchAll(pattern));
+      const targetLanguageWords = this.getTargetLanguageWords(targetLanguage);
+      
+      for (const match of matches.reverse()) { // Check from end
+        const candidate = match[1] || match[0];
+        const hasTargetWords = targetLanguageWords.some(word => 
+          candidate.toLowerCase().includes(word.toLowerCase())
+        );
+        
+        if (hasTargetWords && candidate.length <= 100 && !this.isReasoningLine(candidate)) {
+          console.log(`✅ Pattern matched translation: "${candidate}"`);
+          return this.finalCleanup(candidate);
+        }
+      }
     }
     
-    // Absolute final fallback - return the shortest line that's not empty
-    const shortestLine = lines.reduce((shortest, current) => 
-      (current.length > 0 && current.length < (shortest?.length || Infinity)) ? current : shortest, 
-      undefined
-    );
+    // Strategy 4: Emergency fallback - find shortest meaningful content
+    const lines = cleaned.split(/[.\n]+/).map(line => line.trim()).filter(line => line.length > 2);
+    const shortestMeaningful = lines.reduce((shortest, current) => {
+      if (current.length < (shortest?.length || Infinity) && 
+          current.length >= 3 && 
+          current.length <= 100 &&
+          !this.isReasoningLine(current)) {
+        return current;
+      }
+      return shortest;
+    }, undefined as string | undefined);
     
-    if (shortestLine && shortestLine.length < 100) {
-      return shortestLine.replace(/^["']|["']$/g, '');
+    if (shortestMeaningful) {
+      console.log(`⚠️ Emergency fallback used: "${shortestMeaningful}"`);
+      return this.finalCleanup(shortestMeaningful);
     }
     
-    return content;
+    console.log(`❌ All extraction strategies failed, returning cleaned content`);
+    return this.finalCleanup(cleaned);
+  }
+  
+  /**
+   * Check if a line contains reasoning/thinking patterns
+   */
+  private isReasoningLine(line: string): boolean {
+    const reasoningIndicators = [
+      'okay, the user', 'let me', 'first, i', 'i need to', 'i should',
+      'translation', 'context', 'user wants', 'appropriate', 'business',
+      'professional', 'malaysia', 'indonesia', 'southeast', 'language',
+      'think', 'consider', 'recall', 'understand', 'analyze'
+    ];
+    
+    const lowerLine = line.toLowerCase();
+    return reasoningIndicators.some(indicator => lowerLine.includes(indicator)) ||
+           line.length > 150;
+  }
+  
+  /**
+   * Count English words in a string
+   */
+  private countEnglishWords(text: string): number {
+    const englishWords = ['the', 'and', 'is', 'in', 'to', 'of', 'for', 'with', 'on', 'at', 'by', 'from', 'as', 'be', 'have', 'this', 'that', 'you', 'are', 'will', 'can', 'should', 'would', 'could'];
+    const words = text.toLowerCase().split(/\s+/);
+    return words.filter(word => englishWords.includes(word)).length;
+  }
+  
+  /**
+   * Get common words for target language detection
+   */
+  private getTargetLanguageWords(targetLanguage: string): string[] {
+    const languageWords = {
+      'ms': ['anda', 'dalam', 'untuk', 'dengan', 'yang', 'ini', 'itu', 'adalah', 'akan', 'dapat', 'boleh', 'saya', 'kita', 'mereka', 'dia'],
+      'id': ['anda', 'dalam', 'untuk', 'dengan', 'yang', 'ini', 'itu', 'adalah', 'akan', 'dapat', 'saya', 'kita', 'mereka', 'dia', 'dari'],
+      'th': ['ใน', 'และ', 'ที่', 'เป็น', 'มี', 'จะ', 'ได้', 'ไม่', 'แล้ว', 'ของ', 'กับ', 'ก็', 'ให้', 'มา', 'ไป'],
+      'vi': ['trong', 'và', 'của', 'là', 'có', 'được', 'một', 'tôi', 'bạn', 'họ', 'chúng', 'với', 'để', 'sẽ', 'đã'],
+      'fil': ['sa', 'ng', 'at', 'na', 'ang', 'para', 'mga', 'ako', 'ikaw', 'sila', 'ito', 'iyan', 'may', 'hindi', 'kung'],
+      'my': ['တွင်', 'နှင့်', 'သည်', 'ဖြစ်', 'မည်', 'ရှိ', 'လုပ်', 'ငါ', 'သင်', 'သူ', 'ဤ', 'ထို', 'များ', 'မ', 'ကို'],
+      'km': ['ក្នុង', 'និង', 'នេះ', 'នោះ', 'ជា', 'មាន', 'បាន', 'ខ្ញុំ', 'អ្នក', 'គាត់', 'ពួកគេ', 'ដើម្បី', 'ទៅ', 'មក', 'ផង'],
+      'lo': ['ໃນ', 'ແລະ', 'ທີ່', 'ເປັນ', 'ມີ', 'ໄດ້', 'ຈະ', 'ຂ້ອຍ', 'ເຈົ້າ', 'ເຂົາ', 'ນີ້', 'ນັ້ນ', 'ກັບ', 'ໄປ', 'ມາ'],
+      'zh-sg': ['的', '是', '在', '了', '有', '和', '就', '不', '这', '那', '我', '你', '他', '她', '它', '我们', '你们', '他们']
+    };
+    
+    return languageWords[targetLanguage as keyof typeof languageWords] || [];
+  }
+  
+  /**
+   * Final cleanup of extracted translation
+   */
+  private finalCleanup(text: string): string {
+    return text
+      .replace(/^["']+|["']+$/g, '') // Remove surrounding quotes
+      .replace(/^[:\-\s]+|[:\-\s]+$/g, '') // Remove colons, dashes, spaces
+      .replace(/^(Translation|Terjemahan|翻译):\s*/gi, '') // Remove translation labels
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim();
   }
 
   /**
@@ -375,6 +500,63 @@ export class TranslationService {
     }
     
     return content;
+  }
+
+  /**
+   * Validate and ensure translated question maintains consistent format
+   */
+  ensureConsistentFormat(originalQuestion: any, translatedQuestion: any, targetLanguage: string): any {
+    console.log(`🔍 Validating format consistency for question ${originalQuestion.id} in ${targetLanguage}`);
+    
+    const validatedQuestion = { ...translatedQuestion };
+    
+    // 1. Preserve all metadata fields from original
+    const metadataFields = ['id', 'category', 'difficulty', 'interviewStage', 'tags', 'expectedAnswerTime', 'starMethodRelevant', 'industrySpecific'];
+    metadataFields.forEach(field => {
+      if (originalQuestion[field] !== undefined) {
+        validatedQuestion[field] = originalQuestion[field];
+      }
+    });
+    
+    // 2. Validate required fields exist
+    const requiredFields = ['question', 'category', 'difficulty', 'interviewStage'];
+    for (const field of requiredFields) {
+      if (!validatedQuestion[field]) {
+        console.warn(`⚠️ Missing required field '${field}' in translated question, using original`);
+        validatedQuestion[field] = originalQuestion[field];
+      }
+    }
+    
+    // 3. Validate question content is not empty or suspiciously short
+    if (!validatedQuestion.question || validatedQuestion.question.length < 10) {
+      console.warn(`⚠️ Translated question seems invalid or too short, using original`);
+      validatedQuestion.question = originalQuestion.question + ` [${this.getLanguageName(targetLanguage)} translation failed]`;
+    }
+    
+    // 4. Ensure arrays remain arrays
+    if (originalQuestion.tags && Array.isArray(originalQuestion.tags)) {
+      if (!Array.isArray(validatedQuestion.tags)) {
+        validatedQuestion.tags = originalQuestion.tags;
+      }
+    }
+    
+    // 5. Validate boolean fields
+    if (typeof originalQuestion.starMethodRelevant === 'boolean') {
+      validatedQuestion.starMethodRelevant = originalQuestion.starMethodRelevant;
+    }
+    
+    // 6. Validate numeric fields
+    if (typeof originalQuestion.expectedAnswerTime === 'number') {
+      validatedQuestion.expectedAnswerTime = originalQuestion.expectedAnswerTime;
+    }
+    
+    // 7. Add translation metadata
+    validatedQuestion.translatedFrom = 'en';
+    validatedQuestion.targetLanguage = targetLanguage;
+    validatedQuestion.translatedAt = new Date().toISOString();
+    
+    console.log(`✅ Format validation completed for question ${originalQuestion.id}`);
+    return validatedQuestion;
   }
 }
 

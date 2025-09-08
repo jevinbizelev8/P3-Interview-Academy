@@ -1,6 +1,7 @@
 import express from 'express';
 import { z } from 'zod';
 import { questionBankService } from '../services/question-bank-service';
+import { translationService } from '../services/translation-service';
 import type { SupportedLanguage } from '@shared/schema';
 
 const router = express.Router();
@@ -350,24 +351,77 @@ router.post('/translate', async (req, res) => {
       });
     }
 
-    // TODO: Implement enhanced translation with cultural context
-    // For now, return a mock response
-    const translatedText = `[${targetLanguage.toUpperCase()}] ${text}`;
+    // Validate target language
+    const supportedLanguages = ['ms', 'id', 'th', 'vi', 'fil', 'my', 'km', 'lo', 'zh-sg', 'en'];
+    if (!supportedLanguages.includes(targetLanguage)) {
+      return res.status(400).json({
+        error: `Unsupported target language: ${targetLanguage}. Supported: ${supportedLanguages.join(', ')}`
+      });
+    }
+
+    // If requesting English, return original text
+    if (targetLanguage === 'en') {
+      return res.json({
+        success: true,
+        data: {
+          originalText: text,
+          translatedText: text,
+          targetLanguage,
+          context,
+          culturalAdaptations: [
+            'Original English text maintained',
+            'Professional tone preserved'
+          ]
+        }
+      });
+    }
+
+    console.log(`🌏 Translating text to ${targetLanguage}: "${text.substring(0, 100)}..."`);
+    
+    // Use the enhanced translation service
+    const translationResult = await translationService.translateContent(
+      text, 
+      targetLanguage as SupportedLanguage,
+      context || 'interview question'
+    );
+
+    const culturalAdaptations = [
+      'Culturally adapted for Southeast Asian context',
+      'Professional tone maintained',
+      'Respectful language used',
+      'Context-aware translation applied'
+    ];
+
+    // Add specific adaptations based on language
+    const languageSpecificAdaptations: Record<string, string> = {
+      'ms': 'Adapted for Malaysian business culture',
+      'id': 'Adapted for Indonesian professional context',
+      'th': 'Respectful Thai language conventions applied',
+      'vi': 'Vietnamese professional courtesy maintained',
+      'fil': 'Filipino cultural respect and hierarchy considered',
+      'my': 'Myanmar cultural sensitivity maintained',
+      'km': 'Khmer professional etiquette applied',
+      'lo': 'Lao cultural context respected',
+      'zh-sg': 'Singapore Chinese business context applied'
+    };
+
+    if (languageSpecificAdaptations[targetLanguage]) {
+      culturalAdaptations.push(languageSpecificAdaptations[targetLanguage]);
+    }
 
     res.json({
       success: true,
       data: {
         originalText: text,
-        translatedText,
+        translatedText: translationResult.translated,
         targetLanguage,
-        context,
-        culturalAdaptations: [
-          'Culturally adapted for Southeast Asian context',
-          'Professional tone maintained',
-          'Respectful language used'
-        ]
+        context: context || 'interview question',
+        culturalAdaptations,
+        provider: translationResult.provider,
+        responseTime: translationResult.responseTime
       }
     });
+
   } catch (error) {
     console.error('Error translating question:', error);
     res.status(500).json({
