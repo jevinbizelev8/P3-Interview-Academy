@@ -45,7 +45,10 @@
       "Bash(echo:*)",
       "Read(//home/runner/**)",
       "Read(//etc/**)",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(BYPASS_AUTH=true PORT=3001 npm run dev)",
+      "Bash(NODE_ENV=development BYPASS_AUTH=true PORT=3001 npm run dev)",
+      "Bash(NODE_ENV=development PORT=3001 npm run dev)"
     ],
     "deny": [],
     "ask": []

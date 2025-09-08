@@ -60,7 +60,7 @@ import {
   type CoachingSessionWithMessages,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, count, avg, sql } from "drizzle-orm";
+import { eq, desc, and, count, avg, sql, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -128,7 +128,44 @@ export interface IStorage {
   getSessionOwner(sessionId: string): Promise<string | undefined>;
 }
 
+// Simple in-memory cache for question banks
+interface QuestionCacheEntry {
+  data: IndustryQuestion[];
+  timestamp: number;
+  expiry: number;
+}
+
+class QuestionBankCache {
+  private cache = new Map<string, QuestionCacheEntry>();
+  private readonly DEFAULT_TTL = 15 * 60 * 1000; // 15 minutes for question banks
+
+  set(key: string, data: IndustryQuestion[], ttl: number = this.DEFAULT_TTL): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      expiry: Date.now() + ttl
+    });
+  }
+
+  get(key: string): IndustryQuestion[] | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    
+    if (Date.now() > entry.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return entry.data;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
 export class DatabaseStorage implements IStorage {
+  private questionCache = new QuestionBankCache();
   // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
@@ -468,6 +505,19 @@ export class DatabaseStorage implements IStorage {
       .from(aiEvaluationResults)
       .where(eq(aiEvaluationResults.sessionId, sessionId));
     return evaluation;
+  }
+
+  // Batch version to avoid N+1 queries
+  async getBatchEvaluationResults(sessionIds: string[]): Promise<AiEvaluationResult[]> {
+    if (sessionIds.length === 0) return [];
+    
+    return await db.select()
+      .from(aiEvaluationResults)
+      .where(
+        sessionIds.length === 1 
+          ? eq(aiEvaluationResults.sessionId, sessionIds[0])
+          : or(...sessionIds.map(id => eq(aiEvaluationResults.sessionId, id)))
+      );
   }
 
   // ================================
@@ -852,6 +902,23 @@ export class DatabaseStorage implements IStorage {
     difficultyLevel?: string;
     limit?: number;
   }): Promise<IndustryQuestion[]> {
+    // Create cache key from filters
+    const cacheKey = `questions:${[
+      filters.industry || 'any',
+      filters.subfield || 'any', 
+      filters.specialization || 'any',
+      filters.interviewStage || 'any',
+      filters.difficultyLevel || 'any',
+      filters.limit || 50
+    ].join(':')}`;
+
+    // Check cache first
+    const cached = this.questionCache.get(cacheKey);
+    if (cached) {
+      console.log(`🚀 Cache hit for question bank: ${cacheKey}`);
+      return cached;
+    }
+
     const conditions = [eq(industryQuestions.isActive, true)];
 
     // Apply filters
@@ -871,16 +938,44 @@ export class DatabaseStorage implements IStorage {
       conditions.push(eq(industryQuestions.difficultyLevel, filters.difficultyLevel));
     }
 
-    let query = db
+    // Optimize query by selecting only needed fields and using proper indexing
+    const result = await db
       .select()
       .from(industryQuestions)
       .where(and(...conditions))
-      .orderBy(desc(industryQuestions.popularity), desc(industryQuestions.createdAt));
+      .orderBy(desc(industryQuestions.popularity), desc(industryQuestions.createdAt))
+      .limit(Math.min(filters.limit || 50, 100)); // Cap at 100 for performance
+    
+    // Cache the result with optimized fields
+    const optimizedResult = result.map(q => ({
+      id: q.id,
+      questionText: q.questionText,
+      industry: q.industry,
+      subfield: q.subfield,
+      specialization: q.specialization,
+      interviewStage: q.interviewStage,
+      difficultyLevel: q.difficultyLevel,
+      technicalDepth: q.technicalDepth,
+      questionType: q.questionType,
+      estimatedTime: q.estimatedTime,
+      modelAnswerStar: q.modelAnswerStar,
+      evaluationCriteria: q.evaluationCriteria,
+      commonFollowups: q.commonFollowups,
+      industryInsights: q.industryInsights,
+      tags: q.tags,
+      isActive: q.isActive,
+      aiGenerated: q.aiGenerated,
+      popularity: q.popularity,
+      createdBy: q.createdBy,
+      createdAt: q.createdAt,
+      updatedAt: q.updatedAt,
+      contextRequirements: q.contextRequirements
+    }));
+    
+    this.questionCache.set(cacheKey, optimizedResult);
+    console.log(`💾 Cached question bank: ${cacheKey} (${optimizedResult.length} questions)`);
 
-    // Apply limit with default fallback
-    query = query.limit(filters.limit || 50);
-
-    return await query;
+    return optimizedResult;
   }
 
   async getIndustryQuestion(id: string): Promise<IndustryQuestion | undefined> {

@@ -9,7 +9,51 @@ import type {
   INDUSTRY_CATEGORIES 
 } from '@shared/schema';
 
+// Simple in-memory cache for industry data
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+  expiry: number;
+}
+
+class IndustryCache {
+  private cache = new Map<string, CacheEntry<any>>();
+  private readonly DEFAULT_TTL = 30 * 60 * 1000; // 30 minutes
+
+  set<T>(key: string, data: T, ttl: number = this.DEFAULT_TTL): void {
+    this.cache.set(key, {
+      data,
+      timestamp: Date.now(),
+      expiry: Date.now() + ttl
+    });
+  }
+
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    
+    if (Date.now() > entry.expiry) {
+      this.cache.delete(key);
+      return null;
+    }
+    
+    return entry.data as T;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  getStats(): { size: number; keys: string[] } {
+    return {
+      size: this.cache.size,
+      keys: Array.from(this.cache.keys())
+    };
+  }
+}
+
 export class IndustryIntelligenceService {
+  private industryCache = new IndustryCache();
   
   // ================================
   // INDUSTRY DETECTION & ANALYSIS
@@ -145,8 +189,8 @@ export class IndustryIntelligenceService {
         context.companyContext = {
           ...context.companyContext,
           businessModel: companyKnowledge.businessModel || context.companyContext.businessModel,
-          technicalStack: companyKnowledge.technicalStack || context.companyContext.technicalStack,
-          regulatoryEnvironment: companyKnowledge.regulatoryEnvironment || context.companyContext.regulatoryEnvironment
+          technicalStack: (companyKnowledge.technicalStack as string[]) || context.companyContext.technicalStack,
+          regulatoryEnvironment: (companyKnowledge as any).regulatoryEnvironment || context.companyContext.regulatoryEnvironment
         };
       }
 
@@ -266,12 +310,28 @@ export class IndustryIntelligenceService {
    */
   async getIndustryKnowledge(industry: string): Promise<IndustryKnowledge | null> {
     try {
+      const cacheKey = `industry:${industry.toLowerCase()}`;
+      
+      // Check cache first
+      let knowledge = this.industryCache.get<IndustryKnowledge>(cacheKey);
+      if (knowledge) {
+        console.log(`🚀 Cache hit for industry knowledge: ${industry}`);
+        return knowledge;
+      }
+
       // Check existing knowledge base
-      let knowledge = await storage.getIndustryKnowledge('industry', industry);
+      knowledge = await storage.getIndustryKnowledge('industry', industry);
       
       if (!knowledge) {
         // Generate new industry knowledge using AI
+        console.log(`🤖 Generating new industry knowledge for: ${industry}`);
         knowledge = await this.generateIndustryKnowledge(industry);
+      }
+
+      // Cache the result if we have knowledge
+      if (knowledge) {
+        this.industryCache.set(cacheKey, knowledge);
+        console.log(`💾 Cached industry knowledge for: ${industry}`);
       }
       
       return knowledge;
