@@ -48,6 +48,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Use the requireAuth middleware from simple auth
 
+  // System diagnostic endpoints
+  app.get('/api/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+
+  // Vertex AI connection test endpoint
+  app.get('/api/vertex-ai/test', async (req, res) => {
+    try {
+      const { getVertexAIService } = await import('./services/vertex-ai-config');
+      const vertexAI = getVertexAIService();
+      
+      if (!vertexAI.isAvailable()) {
+        return res.status(503).json({
+          success: false,
+          message: 'Vertex AI service is not properly configured',
+          config: {
+            hasProjectId: !!process.env.GCP_PROJECT_ID,
+            hasRegion: !!process.env.GCP_REGION,
+            hasEndpointId: !!process.env.GCP_ENDPOINT_ID,
+            hasCredentials: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
+            hasApiKey: !!process.env.GOOGLE_API_KEY
+          }
+        });
+      }
+      
+      const testResult = await vertexAI.testConnection();
+      
+      res.json({
+        success: testResult.success,
+        message: testResult.message,
+        endpoint: testResult.endpoint,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('Vertex AI test endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Interview Scenarios API
   app.get("/api/practice/scenarios", async (req, res) => {
     try {

@@ -31,7 +31,7 @@ export class VertexAIService {
       region: config?.region || process.env.GCP_REGION || 'asia-southeast1',
       endpointId: config?.endpointId || process.env.GCP_ENDPOINT_ID || '',
       apiKey: config?.apiKey || process.env.GOOGLE_API_KEY,
-      credentialsPath: config?.credentialsPath || process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      credentialsPath: config?.credentialsPath || process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim(),
       oauthClientCredentialsPath: config?.oauthClientCredentialsPath || process.env.GOOGLE_OAUTH_CLIENT_CREDENTIALS,
       oauthAccessToken: config?.oauthAccessToken || process.env.GOOGLE_OAUTH_ACCESS_TOKEN
     };
@@ -45,10 +45,17 @@ export class VertexAIService {
 
     // Initialize Google Auth based on available credentials
     try {
+      // Define comprehensive scopes for ML and Vertex AI operations
+      const vertexAIScopes = [
+        'https://www.googleapis.com/auth/cloud-platform',
+        'https://www.googleapis.com/auth/cloud-platform.read-only',
+        'https://www.googleapis.com/auth/aiplatform'
+      ];
+
       if (this.config.credentialsPath) {
         console.log('Using service account credentials file:', this.config.credentialsPath);
         this.auth = new GoogleAuth({
-          scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          scopes: vertexAIScopes,
           keyFilename: this.config.credentialsPath
         });
       } else if (this.config.apiKey) {
@@ -60,19 +67,13 @@ export class VertexAIService {
       } else if (this.config.oauthClientCredentialsPath) {
         console.log('Using OAuth client credentials file:', this.config.oauthClientCredentialsPath);
         this.auth = new GoogleAuth({
-          scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+          scopes: vertexAIScopes,
           keyFilename: this.config.oauthClientCredentialsPath
-        });
-      } else if (this.config.credentialsPath) {
-        console.log('Using service account credentials file:', this.config.credentialsPath);
-        this.auth = new GoogleAuth({
-          scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-          keyFilename: this.config.credentialsPath
         });
       } else {
         console.log('Using default application credentials');
         this.auth = new GoogleAuth({
-          scopes: ['https://www.googleapis.com/auth/cloud-platform']
+          scopes: vertexAIScopes
         });
       }
 
@@ -88,9 +89,11 @@ export class VertexAIService {
 
   /**
    * Get the base URL for the Vertex AI endpoint
+   * Fixed format for custom model endpoints
    */
   private getBaseUrl(): string {
-    return `https://${this.config.region}-aiplatform.googleapis.com/v1/projects/${this.config.projectId}/locations/${this.config.region}/endpoints/${this.config.endpointId}`;
+    // Updated endpoint format for Vertex AI custom models
+    return `https://${this.config.region}-aiplatform.googleapis.com/v1/projects/${this.config.projectId}/locations/${this.config.region}/endpoints/${this.config.endpointId}:predict`;
   }
 
   /**
@@ -119,23 +122,28 @@ export class VertexAIService {
         const tokenResponse = await authClient.getAccessToken();
         
         if (!tokenResponse.token) {
-          throw new Error('Failed to obtain access token from Google Cloud');
+          throw new Error('Failed to obtain access token from Google Cloud. Verify service account permissions.');
         }
         
         accessToken = tokenResponse.token;
-        console.log('Obtained access token via GoogleAuth');
+        console.log('✅ Obtained access token via GoogleAuth');
       } else {
-        throw new Error('No authentication method configured');
+        throw new Error('No authentication method configured. Ensure GOOGLE_APPLICATION_CREDENTIALS or GOOGLE_API_KEY is set.');
       }
 
       // Create OpenAI client with Vertex AI endpoint
       this.client = new OpenAI({
         apiKey: accessToken,
-        baseURL: this.getBaseUrl()
+        baseURL: this.getBaseUrl(),
+        defaultHeaders: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       this.lastTokenRefresh = Date.now();
-      console.log('Vertex AI client initialized with authentication');
+      console.log('✅ Vertex AI client initialized with authentication');
+      console.log('🔗 Endpoint:', this.getBaseUrl());
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -270,7 +278,30 @@ export class VertexAIService {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Vertex AI response generation failed:', errorMessage);
+      
+      // Enhanced error logging for debugging
+      if (error && typeof error === 'object' && 'status' in error) {
+        const statusError = error as any;
+        console.error('🚨 Vertex AI error details:', {
+          status: statusError.status,
+          statusText: statusError.statusText,
+          message: errorMessage,
+          endpoint: this.getBaseUrl(),
+          hasAuth: !!this.client,
+          tokenAge: this.lastTokenRefresh ? Date.now() - this.lastTokenRefresh : 'No token'
+        });
+        
+        if (statusError.status === 401) {
+          console.error('❌ 401 Unauthorized: Token might be expired or service account lacks permissions');
+          console.error('💡 Troubleshooting: Check service account has Vertex AI User role');
+        } else if (statusError.status === 404) {
+          console.error('❌ 404 Not Found: Endpoint might not exist or is incorrectly formatted');
+          console.error('💡 Check GCP_ENDPOINT_ID and ensure the model is deployed');
+        }
+      } else {
+        console.error('🚨 Vertex AI response generation failed:', errorMessage);
+      }
+      
       throw new Error(`Vertex AI generation failed: ${errorMessage}`);
     }
   }
