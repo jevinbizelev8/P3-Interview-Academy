@@ -43,6 +43,12 @@ interface CoachingMessage {
       overall: number;
     };
   };
+  aiMetadata?: {
+    type?: string;
+    translation?: string;
+    questionNumber?: number;
+    generated?: boolean;
+  };
   timestamp: string;
 }
 
@@ -272,10 +278,24 @@ export function CoachingChat({ sessionId, sessionDetails }: CoachingChatProps) {
                           : 'bg-white text-gray-900 border border-gray-200'
                       }`}
                     >
+                      {/* Primary content (English) */}
                       <div 
                         className="whitespace-pre-wrap prose prose-sm max-w-none"
                         dangerouslySetInnerHTML={{ __html: cleanedContent }}
                       />
+                      
+                      {/* Translation if available and this is a coach message */}
+                      {message.messageType === 'coach' && message.aiMetadata?.translation && (
+                        <div className="mt-3 pt-3 border-t border-gray-200">
+                          <div className="flex items-center gap-1 mb-2">
+                            <span className="text-xs font-medium text-blue-600">🌐 Bahasa Malaysia</span>
+                          </div>
+                          <div 
+                            className="text-sm text-gray-700 whitespace-pre-wrap"
+                            dangerouslySetInnerHTML={{ __html: cleanMessageContent(message.aiMetadata.translation) }}
+                          />
+                        </div>
+                      )}
                       
                       <div className={`flex items-center gap-2 mt-2 text-xs ${
                         message.messageType === 'user' ? 'text-blue-100' : 'text-gray-500'
