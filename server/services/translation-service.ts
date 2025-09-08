@@ -48,8 +48,44 @@ export class TranslationService {
       // Enhanced cleaning to remove AI thinking process and unwanted content
       let cleanTranslation = translatedContent.trim();
       
-      // Remove AI thinking/reasoning tags and content (the main issue you reported)
-      cleanTranslation = this.removeAIThinkingProcess(cleanTranslation);
+      // DIRECT EXTRACTION: If response contains reasoning, extract just the final translation
+      if (cleanTranslation.includes('Okay, the user wants') || cleanTranslation.length > 200) {
+        console.log('🔍 Applying direct extraction - original length:', cleanTranslation.length);
+        
+        // First, remove everything before the last paragraph that looks like target language
+        // The pattern is usually: long reasoning... [empty line] [target language translation]
+        const parts = cleanTranslation.split('\n\n');
+        if (parts.length > 1) {
+          // Take the last part that's not too long and contains target language words
+          const lastPart = parts[parts.length - 1].trim();
+          const aseanWords = ['anda', 'kamu', 'dalam', 'untuk', 'dengan', 'yang', 'ini', 'itu', 'menonjol', 'ceritakan', 'apa', 'kelebihan', 'tentang', 'berjaya', 'temuduga', 'kosong', 'null', 'saya', 'adalah', 'akan', 'dapat', 'boleh', 'siapa', 'nama', 'bolehkah'];
+          
+          const hasAseanWords = aseanWords.some(word => lastPart.toLowerCase().includes(word));
+          if (lastPart.length < 150 && hasAseanWords && !lastPart.includes('user wants') && !lastPart.includes('translation')) {
+            cleanTranslation = lastPart.replace(/^["']|["']$/g, '').replace(/^Final translation:\s*/i, '');
+            console.log('✅ Extracted from last paragraph:', cleanTranslation);
+          }
+        }
+        
+        // If still contains reasoning, try line-by-line approach
+        if (cleanTranslation.includes('Okay, the user wants')) {
+          const lines = cleanTranslation.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+          const aseanWords = ['anda', 'kamu', 'dalam', 'untuk', 'dengan', 'yang', 'ini', 'itu', 'menonjol', 'ceritakan', 'apa', 'kelebihan', 'tentang', 'berjaya', 'temuduga', 'kosong', 'null', 'saya', 'adalah', 'akan', 'dapat', 'boleh', 'siapa', 'nama', 'bolehkah'];
+          
+          for (let i = lines.length - 1; i >= 0; i--) {
+            const line = lines[i];
+            const hasAseanWords = aseanWords.some(word => line.toLowerCase().includes(word));
+            const isReasonableLength = line.length >= 3 && line.length <= 80;
+            const hasMinimalEnglish = !line.includes('translation') && !line.includes('context') && !line.includes('user wants');
+            
+            if (hasAseanWords && isReasonableLength && hasMinimalEnglish) {
+              cleanTranslation = line.replace(/^["']|["']$/g, '').replace(/^Final translation:\s*/i, '');
+              console.log('✅ Extracted from line approach:', cleanTranslation);
+              break;
+            }
+          }
+        }
+      }
       
       // Remove common AI prefixes if they exist
       const prefixesToRemove = [
@@ -242,6 +278,79 @@ export class TranslationService {
     }
     
     return content.trim();
+  }
+
+  /**
+   * Extract final translation from response that may contain reasoning
+   */
+  private extractFinalTranslation(content: string): string {
+    // Split into lines and find the translation
+    const lines = content.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    if (lines.length === 0) return content;
+    
+    // If response contains reasoning, look for the actual translation
+    // It's usually the last meaningful line that doesn't contain English reasoning words
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      
+      // Skip lines that are clearly reasoning/thinking
+      if (line.includes('Okay, the user wants') ||
+          line.includes('Let me think') ||
+          line.includes('First, I') ||
+          line.includes('I need to') ||
+          line.includes('translation') ||
+          line.includes('context') ||
+          line.includes('appropriate') ||
+          line.includes('should') ||
+          line.includes('business') ||
+          line.includes('professional') ||
+          line.includes('Malaysia') ||
+          line.includes('Indonesia') ||
+          line.includes('Southeast') ||
+          line.length > 200) {
+        continue;
+      }
+      
+      // This looks like a translation - short, meaningful, no English reasoning words
+      if (line.length >= 3 && line.length <= 100) {
+        return line.replace(/^["']|["']$/g, ''); // Remove surrounding quotes
+      }
+    }
+    
+    // More aggressive extraction: look for lines that contain target language words
+    const aseanWords = ['anda', 'kamu', 'dalam', 'untuk', 'dengan', 'yang', 'ini', 'itu', 'menonjol', 'ceritakan', 'apa', 'kelebihan', 'tentang', 'berjaya', 'temuduga', 'kosong', 'null', 'saya', 'adalah', 'akan', 'dapat', 'boleh'];
+    
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const line = lines[i];
+      
+      // Check if this line contains ASEAN language words and is reasonably short
+      const hasAseanWords = aseanWords.some(word => line.toLowerCase().includes(word));
+      const isReasonableLength = line.length >= 3 && line.length <= 80;
+      const hasMinimalEnglish = !line.includes('translation') && !line.includes('context') && !line.includes('user wants');
+      
+      if (hasAseanWords && isReasonableLength && hasMinimalEnglish) {
+        return line.replace(/^["']|["']$/g, '').replace(/^Final translation:\s*/i, '');
+      }
+    }
+    
+    // Very last resort: extract anything after the last period that looks like target language
+    const finalSentenceMatch = content.match(/\.[\s\n]*([^.]*?(?:anda|dalam|untuk|dengan|apa|menonjol|ceritakan|kelebihan|temuduga)[^.]*?)[\s\n]*$/i);
+    if (finalSentenceMatch) {
+      return finalSentenceMatch[1].trim().replace(/^["']|["']$/g, '');
+    }
+    
+    // Absolute final fallback - return the shortest line that's not empty
+    const shortestLine = lines.reduce((shortest, current) => 
+      (current.length > 0 && current.length < (shortest?.length || Infinity)) ? current : shortest, 
+      undefined
+    );
+    
+    if (shortestLine && shortestLine.length < 100) {
+      return shortestLine.replace(/^["']|["']$/g, '');
+    }
+    
+    return content;
   }
 
   /**
