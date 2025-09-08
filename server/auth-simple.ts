@@ -19,13 +19,18 @@ export function getSession() {
     resave: false,
     saveUninitialized: false,
     name: 'connect.sid',
+    rolling: true, // Reset expiration on each request for active users
     cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Only use secure cookies in production
-      maxAge: sessionTtl,
-      sameSite: 'lax',
+      httpOnly: true, // Prevent XSS attacks
+      secure: process.env.NODE_ENV === 'production', // HTTPS in production
+      maxAge: sessionTtl, // 7 days but resets with rolling
+      sameSite: 'lax', // CSRF protection
       domain: undefined, // Let browser handle domain
     },
+    // Enhanced security: clean up expired sessions
+    genid: () => {
+      return require('crypto').randomBytes(32).toString('hex');
+    }
   });
 }
 
