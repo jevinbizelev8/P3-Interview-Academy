@@ -40,6 +40,16 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // CRITICAL: API 404 handler MUST be placed before static file serving
+  // to prevent non-existent API routes from serving the frontend HTML
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ 
+      message: `API endpoint not found: ${req.method} ${req.originalUrl}`,
+      timestamp: new Date().toISOString(),
+      suggestion: "Check the API documentation for available endpoints"
+    });
+  });
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
