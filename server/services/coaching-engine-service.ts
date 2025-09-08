@@ -493,7 +493,17 @@ Generate content specifically for this job position and company, not generic con
       .map(m => `${m.messageType}: ${m.content}`)
       .join('\n');
 
-    const questionPrompt = `Generate a concise ${session.interviewStage} interview question for ${session.jobPosition}. Requirements: ${session.experienceLevel} level, STAR-suitable, industry-relevant for ${session.primaryIndustry}. Format: "Question text" followed by "Context: Why this matters (1 sentence)". Keep total under 50 words. Respond in English.`;
+    const questionPrompt = `Generate a ${session.interviewStage} interview question for ${session.jobPosition} role. 
+
+Question requirements:
+- ${session.experienceLevel} experience level
+- Industry: ${session.primaryIndustry}
+- Use STAR format (situation, task, action, result)
+- Question only, no explanations
+
+Example: "Describe a time you solved a difficult problem at work."
+
+Generate one question:`;
 
     try {
       // console.log(`❓ Generating question in language: ${context.language}`);
@@ -945,16 +955,64 @@ Focus on STAR structure and make the model answer relevant to the specific quest
   }
 
   private getFallbackQuestion(session: CoachingSession, questionNumber: number): string {
-    const fallbackQuestions = {
-      'phone-screening': 'Tell me about yourself and what interests you about this role.',
-      'functional-team': 'Describe a challenging project you worked on and how you handled it.',
-      'hiring-manager': 'What motivates you in your work, and how does this role align with your career goals?',
-      'subject-matter-expertise': `Describe a complex ${session.primaryIndustry} challenge you've solved and your approach.`,
-      'executive-final': 'Where do you see yourself in 5 years, and how would this role help you get there?'
+    // Multiple fallback questions for each stage to avoid repetition
+    const fallbackQuestionsByStage = {
+      'phone-screening': [
+        'Tell me about yourself and what interests you about this role.',
+        'What draws you to working at our company?',
+        'Walk me through your background and relevant experience.',
+        'What are your key strengths and how do they apply to this position?',
+        'Tell me about a recent achievement you\'re proud of.'
+      ],
+      'functional-team': [
+        'Describe a challenging project you worked on and how you handled it.',
+        'Tell me about a time you had to collaborate with a difficult team member.',
+        'Walk me through a complex problem you solved recently.',
+        'Describe a situation where you had to learn something new quickly.',
+        'Tell me about a time you had to adapt to unexpected changes.'
+      ],
+      'hiring-manager': [
+        'What motivates you in your work, and how does this role align with your career goals?',
+        'Describe a time you disagreed with your manager and how you handled it.',
+        'Tell me about your greatest professional accomplishment.',
+        'How do you handle competing priorities and tight deadlines?',
+        'Describe a time you had to make a difficult decision with limited information.'
+      ],
+      'subject-matter-expertise': [
+        `Describe a complex ${session.primaryIndustry} challenge you've solved and your approach.`,
+        'Tell me about a time you had to explain a technical concept to non-technical stakeholders.',
+        'Describe a situation where you had to troubleshoot a critical issue under pressure.',
+        'Walk me through your approach to staying current with industry trends.',
+        'Tell me about a time you had to mentor or train someone less experienced.'
+      ],
+      'executive-final': [
+        'Where do you see yourself in 5 years, and how would this role help you get there?',
+        'Tell me about a time you had to lead a team through a major change.',
+        'Describe your approach to building relationships with key stakeholders.',
+        'How would you contribute to our company culture and values?',
+        'Tell me about a strategic decision you made that had significant impact.'
+      ]
     };
 
-    return fallbackQuestions[session.interviewStage as keyof typeof fallbackQuestions] || 
-           'Tell me about a time when you had to overcome a significant challenge.';
+    const stageQuestions = fallbackQuestionsByStage[session.interviewStage as keyof typeof fallbackQuestionsByStage];
+    
+    if (stageQuestions && stageQuestions.length > 0) {
+      // Use questionNumber to select different questions, with wraparound
+      const questionIndex = (questionNumber - 1) % stageQuestions.length;
+      return stageQuestions[questionIndex];
+    }
+
+    // Final fallback with question number variation
+    const genericFallbacks = [
+      'Tell me about a time when you had to overcome a significant challenge.',
+      'Describe a situation where you had to work under pressure.',
+      'Tell me about a time you had to solve a complex problem.',
+      'Describe a situation where you showed leadership.',
+      'Tell me about a time you had to adapt to change.'
+    ];
+    
+    const fallbackIndex = (questionNumber - 1) % genericFallbacks.length;
+    return genericFallbacks[fallbackIndex];
   }
 
   private getDefaultStarAnalysis(): StarAnalysis {
