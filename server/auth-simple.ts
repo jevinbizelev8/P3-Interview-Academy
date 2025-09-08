@@ -175,6 +175,7 @@ export async function setupSimpleAuth(app: Express) {
 
   // Get current user
   app.get("/api/auth/user", async (req, res) => {
+    const authStartTime = Date.now();
     console.log("🔍 AUTH CHECK:", {
       sessionID: req.sessionID,
       cookies: req.headers.cookie,
@@ -185,21 +186,25 @@ export async function setupSimpleAuth(app: Express) {
     
     try {
       const session = req.session as any;
+      const sessionLoadTime = Date.now() - authStartTime;
       
       console.log("📋 SESSION STATE:", {
         exists: !!req.session,
         sessionID: req.sessionID,
         userId: session?.userId,
         userEmail: session?.userEmail,
-        sessionKeys: session ? Object.keys(session) : 'no session'
+        sessionKeys: session ? Object.keys(session) : 'no session',
+        loadTime: `${sessionLoadTime}ms`
       });
       
       if (!session.userId) {
-        console.log("❌ AUTH FAILED: No userId in session");
+        console.log(`❌ AUTH FAILED: No userId in session (checked in ${Date.now() - authStartTime}ms)`);
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      const userLookupStart = Date.now();
       const user = await storage.getUser(session.userId);
+      const userLookupTime = Date.now() - userLookupStart;
       if (!user) {
         console.log("❌ AUTH FAILED: User not found in database:", session.userId);
         return res.status(401).json({ message: "User not found" });
@@ -208,7 +213,9 @@ export async function setupSimpleAuth(app: Express) {
       console.log("✅ AUTH SUCCESS: User authenticated:", {
         userId: user.id,
         email: user.email,
-        sessionID: req.sessionID
+        sessionID: req.sessionID,
+        totalTime: `${Date.now() - authStartTime}ms`,
+        userLookupTime: `${userLookupTime}ms`
       });
 
       res.json({
