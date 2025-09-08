@@ -1,6 +1,7 @@
 import { storage } from "../storage";
 import { sealionService } from "./sealion";
 import { aiRouter } from "./ai-router";
+import { translationService } from "./translation-service";
 import type { SupportedLanguage } from "@shared/schema";
 
 export interface QuestionData {
@@ -951,6 +952,9 @@ export class QuestionBankService {
     difficulty?: 'beginner' | 'intermediate' | 'advanced',
     language: SupportedLanguage = 'en'
   ): Promise<QuestionData[]> {
+    console.log(`🔧 English-First Generation: Generating ${count} questions for ${interviewStage} stage`);
+    
+    // Step 1: Always generate in English first for consistency
     const prompt = this.buildQuestionGenerationPrompt(interviewStage, count, difficulty);
     
     try {
@@ -958,26 +962,87 @@ export class QuestionBankService {
         messages: [
           {
             role: "system",
-            content: "You are an expert interview coach specializing in Southeast Asian business culture. Generate professional interview questions that are culturally appropriate and effective for assessment."
+            content: "Generate interview questions as valid JSON array only. No explanations. No reasoning. No 'Okay' or 'Let me'. Output format: JSON array with exact structure specified."
           },
           {
             role: "user",
             content: prompt
           }
         ],
-        maxTokens: 2000,
-        temperature: 0.7,
+        maxTokens: 1500, // Reduced to prevent verbose responses
+        temperature: 0.3, // Lower creativity for consistent format
         domain: 'general'
       });
 
       console.log(`📋 Generated additional questions using ${aiResult.provider} in ${aiResult.responseTime}ms${aiResult.fallbackUsed ? ' (fallback)' : ''}`);
-      const generatedQuestions = this.parseGeneratedQuestions(aiResult.content, interviewStage, count);
       
-      return generatedQuestions;
+      // Validate response doesn't contain reasoning/explanations
+      if (this.containsQuestionReasoning(aiResult.content)) {
+        console.warn(`⚠️ SeaLion returned reasoning instead of JSON: "${aiResult.content.substring(0, 100)}..."`);
+        throw new Error('Response contains reasoning instead of valid JSON - retry needed');
+      }
+
+      // Step 2: Parse generated English questions
+      const englishQuestions = this.parseGeneratedQuestions(aiResult.content, interviewStage, count);
+      
+      // Step 3: Translate to target language if not English
+      if (language !== 'en') {
+        console.log(`🌏 Translating ${englishQuestions.length} questions from English to ${language}`);
+        const translatedQuestions = await translationService.translateQuestionSet(englishQuestions, language);
+        console.log(`✅ English-First + Translation approach completed for ${language}`);
+        return translatedQuestions;
+      }
+      
+      console.log(`✅ English-First generation completed (no translation needed)`);
+      return englishQuestions;
+      
     } catch (error) {
       console.error("Error generating additional questions:", error);
-      return this.generateFallbackQuestions(interviewStage, count, difficulty);
+      const fallbackQuestions = this.generateFallbackQuestions(interviewStage, count, difficulty);
+      
+      // Apply same translation logic to fallback questions
+      if (language !== 'en') {
+        try {
+          return await translationService.translateQuestionSet(fallbackQuestions, language);
+        } catch (translationError) {
+          console.error("Error translating fallback questions:", translationError);
+          return fallbackQuestions;
+        }
+      }
+      
+      return fallbackQuestions;
     }
+  }
+
+  /**
+   * Detect if response contains reasoning/explanations instead of clean JSON
+   */
+  private containsQuestionReasoning(content: string): boolean {
+    const reasoningPatterns = [
+      /^Okay,/i,
+      /^Let me/i,
+      /^I'll/i,
+      /^I will/i,
+      /^I need to/i,
+      /^Based on/i,
+      /^For the/i,
+      /^Here are/i,
+      /stage.*requires/i,
+      /questions.*should/i,
+      /appropriate.*for/i,
+      /focusing.*on/i,
+      /assessment.*of/i,
+      /evaluate.*candidate/i
+    ];
+
+    const trimmed = content.trim();
+    
+    // If it doesn't start with '[' it's likely reasoning, not JSON
+    if (!trimmed.startsWith('[')) {
+      return true;
+    }
+
+    return reasoningPatterns.some(pattern => pattern.test(trimmed));
   }
   
   private buildQuestionGenerationPrompt(
@@ -987,18 +1052,12 @@ export class QuestionBankService {
   ): string {
     const stageContext = this.getStageContext(interviewStage);
     
-    return `Generate ${count} professional interview questions for the ${interviewStage} interview stage.
+    return `Generate ${count} interview questions for ${interviewStage} stage. Output ONLY valid JSON array. NO explanations.
 
-Stage Context: ${stageContext}
-${difficulty ? `Difficulty Level: ${difficulty}` : 'Mixed difficulty levels (beginner, intermediate, advanced)'}
+${difficulty ? `Difficulty: ${difficulty}` : 'Mixed difficulty'}
+Context: ${stageContext}
 
-Requirements:
-- Questions should be culturally appropriate for Southeast Asian business environments
-- Mix of behavioral, situational, and role-specific questions
-- Include STAR method relevant questions
-- Professional language suitable for diverse candidates
-
-Return a JSON array with this structure:
+REQUIRED: Return valid JSON array with EXACTLY this structure:
 [
   {
     "question": "string",
@@ -1011,7 +1070,8 @@ Return a JSON array with this structure:
   }
 ]
 
-Focus on questions that assess competency while being respectful of diverse backgrounds and experiences.`;
+Example output:
+[{"question":"Tell me about a challenging situation you faced at work","category":"behavioral","difficulty":"intermediate","tags":["problem-solving","resilience"],"expectedAnswerTime":4,"starMethodRelevant":true,"culturalContext":"Shows problem-solving approach"}]`;
   }
   
   private getStageContext(interviewStage: string): string {
