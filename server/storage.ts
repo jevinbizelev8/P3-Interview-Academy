@@ -507,17 +507,35 @@ export class DatabaseStorage implements IStorage {
     return evaluation;
   }
 
-  // Batch version to avoid N+1 queries
+  // Batch version to avoid N+1 queries with safety limits
   async getBatchEvaluationResults(sessionIds: string[]): Promise<AiEvaluationResult[]> {
     if (sessionIds.length === 0) return [];
     
-    return await db.select()
-      .from(aiEvaluationResults)
-      .where(
-        sessionIds.length === 1 
-          ? eq(aiEvaluationResults.sessionId, sessionIds[0])
-          : or(...sessionIds.map(id => eq(aiEvaluationResults.sessionId, id)))
-      );
+    // Safety limit: prevent excessive batch queries
+    const MAX_BATCH_SIZE = 200;
+    const limitedSessionIds = sessionIds.slice(0, MAX_BATCH_SIZE);
+    
+    if (sessionIds.length > MAX_BATCH_SIZE) {
+      console.warn(`⚠️  Batch query limited from ${sessionIds.length} to ${MAX_BATCH_SIZE} sessions for performance`);
+    }
+    
+    const startTime = Date.now();
+    
+    try {
+      const results = await db.select()
+        .from(aiEvaluationResults)
+        .where(
+          limitedSessionIds.length === 1 
+            ? eq(aiEvaluationResults.sessionId, limitedSessionIds[0])
+            : or(...limitedSessionIds.map(id => eq(aiEvaluationResults.sessionId, id)))
+        );
+      
+      console.log(`⏱️  getBatchEvaluationResults took: ${Date.now() - startTime}ms, found ${results.length} evaluations (${limitedSessionIds.length} sessions)`);
+      return results;
+    } catch (error) {
+      console.error("❌ Error in getBatchEvaluationResults:", error);
+      return [];
+    }
   }
 
   // ================================
