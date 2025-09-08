@@ -31,7 +31,12 @@ export class TranslationService {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a translator. Only output the translation, nothing else.' 
+            content: `You are a professional translator. CRITICAL RULES:
+1. Output ONLY the ${this.getLanguageName(targetLanguage)} translation
+2. NO thinking process, reasoning, or explanations
+3. NO <think> tags or analysis
+4. NO English words in your response
+5. Just the direct translation, nothing else` 
           },
           { role: 'user', content: simplePrompt }
         ],
@@ -181,16 +186,59 @@ export class TranslationService {
     content = content.replace(/\[Thinking:[\s\S]*?\]/gi, '');
     content = content.replace(/\[Reasoning:[\s\S]*?\]/gi, '');
     
-    // Remove common AI reasoning patterns
+    // Remove everything from "Okay, the user wants" up until the final result
+    // This is the main pattern causing issues in your screenshots
+    content = content.replace(/Okay, the user wants[\s\S]*?\n\n([^Okay]*?)$/gi, '$1');
+    
+    // Remove common AI reasoning patterns - more aggressive
     const reasoningPatterns = [
-      /Okay, the user wants[\s\S]*?Let me/gi,
-      /First, I need to[\s\S]*?So the/gi,
-      /I need to[\s\S]*?Therefore/gi,
-      /Let me think about this[\s\S]*?The answer/gi
+      /^Okay, the user wants[\s\S]*?(?=\n[A-Z])/gim,
+      /^First, I[\s\S]*?(?=\n[A-Z])/gim,
+      /^Let me[\s\S]*?(?=\n[A-Z])/gim,
+      /^I need to[\s\S]*?(?=\n[A-Z])/gim,
+      /^I should[\s\S]*?(?=\n[A-Z])/gim,
+      /In [A-Za-z\s]+, (direct translations|the term commonly used)[\s\S]*?(?=\n[A-Z])/gim,
+      /Double-checking[\s\S]*?(?=\n[A-Z])/gim,
+      /Final translation:[\s\S]*?(?=\")/gi
     ];
     
     for (const pattern of reasoningPatterns) {
       content = content.replace(pattern, '');
+    }
+    
+    // Extract just the final translated line if reasoning is still present
+    const lines = content.split('\n');
+    const lastNonEmptyLine = lines.filter(line => line.trim()).pop();
+    
+    // If content still has reasoning patterns, try to extract just the translation
+    if (content.includes('Okay, the user wants') || content.includes('Let me') || content.includes('First, I')) {
+      // Look for the actual translation at the end - it's usually the shortest, meaningful line
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // The translation is typically the last line that doesn't contain reasoning words
+      for (let i = lines.length - 1; i >= 0; i--) {
+        const line = lines[i].trim();
+        
+        // Skip lines that contain reasoning markers
+        if (!line.includes('Okay, the user') && 
+            !line.includes('Let me') && 
+            !line.includes('First, I') && 
+            !line.includes('In Bahasa') &&
+            !line.includes('translation') &&
+            !line.includes('context') &&
+            !line.includes('should') &&
+            !line.includes('need to') &&
+            line.length < 150 &&
+            line.length > 3) {
+          return line.replace(/^"|"$/g, '').trim(); // Remove quotes if present
+        }
+      }
+      
+      // Last resort: look for common Malaysian/Indonesian patterns
+      const translationMatch = content.match(/([A-Za-z\s]*(?:anda|kamu|dalam|untuk|dengan|yang|ini|itu|menonjol|ceritakan|apa|kelebihan|tentang)[A-Za-z\s]*[.?!]?)/gi);
+      if (translationMatch && translationMatch.length > 0) {
+        return translationMatch[translationMatch.length - 1].trim();
+      }
     }
     
     return content.trim();
