@@ -2406,6 +2406,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // API 404 handler - MUST be before static file serving to prevent route conflicts
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ 
+      message: `API endpoint not found: ${req.method} ${req.originalUrl}`,
+      timestamp: new Date().toISOString(),
+      suggestion: "Check API documentation for available endpoints"
+    });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
