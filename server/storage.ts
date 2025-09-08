@@ -60,7 +60,7 @@ import {
   type CoachingSessionWithMessages,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, count, avg, sql } from "drizzle-orm";
+import { eq, desc, and, count, avg, sql, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -505,6 +505,19 @@ export class DatabaseStorage implements IStorage {
       .from(aiEvaluationResults)
       .where(eq(aiEvaluationResults.sessionId, sessionId));
     return evaluation;
+  }
+
+  // Batch version to avoid N+1 queries
+  async getBatchEvaluationResults(sessionIds: string[]): Promise<AiEvaluationResult[]> {
+    if (sessionIds.length === 0) return [];
+    
+    return await db.select()
+      .from(aiEvaluationResults)
+      .where(
+        sessionIds.length === 1 
+          ? eq(aiEvaluationResults.sessionId, sessionIds[0])
+          : or(...sessionIds.map(id => eq(aiEvaluationResults.sessionId, id)))
+      );
   }
 
   // ================================

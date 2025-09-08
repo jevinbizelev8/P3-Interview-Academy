@@ -705,10 +705,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recommendations: fallbackReport.recommendations,
         mostCommonErrors: fallbackReport.mostCommonErrors,
         bugReport: {
-          criticalIssues: ['SeaLion API key format incorrect (OpenAI format detected)'],
+          criticalIssues: [],
           fallbackStatus: 'All systems operational with fallbacks',
           platformReady: true,
-          requiresUserAction: ['Provide correct SeaLion API key']
+          requiresUserAction: []
         }
       });
     } catch (error) {
@@ -949,11 +949,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Get dashboard analytics data
   app.get('/api/perform/dashboard', requireAuth, async (req, res) => {
+    const startTime = Date.now();
+    console.log('🏁 Dashboard API started for user:', req.user!.id);
+    
     try {
       const userId = req.user!.id;
       
-      // Get all user sessions (from both Practice and legacy Perform)
+      // Step 1: Get all user sessions (from both Practice and legacy Perform)
+      const sessionStart = Date.now();
       const userSessions = await storage.getUserInterviewSessions(userId);
+      console.log(`⏱️  getUserInterviewSessions took: ${Date.now() - sessionStart}ms, found ${userSessions.length} sessions`);
       const completedSessions = userSessions.filter(session => session.status === 'completed');
       
       // Calculate basic stats
@@ -994,6 +999,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           duration: Math.floor((session.duration || 0) / 60) // Convert to minutes
         }));
       
+      // Step 2: Get all evaluations in batch to avoid N+1 queries
+      const evaluationStart = Date.now();
+      const sessionIds = completedSessions.slice(0, 15).map(s => s.id); // Get top 15 for all analysis
+      const evaluations = await storage.getBatchEvaluationResults(sessionIds);
+      console.log(`⏱️  getBatchEvaluationResults took: ${Date.now() - evaluationStart}ms, found ${evaluations.length} evaluations`);
+
       // Get aggregated strengths and improvement areas from evaluations
       const strongestSkills = [];
       const improvementAreas = [];
@@ -1001,7 +1012,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         for (const session of completedSessions.slice(0, 10)) { // Check last 10 sessions
           try {
-            const evaluation = await storage.getEvaluationResult(session.id);
+            const evaluation = evaluations.find(e => e.sessionId === session.id);
             if (evaluation) {
               if (evaluation.strengths && Array.isArray(evaluation.strengths)) {
                 strongestSkills.push(...evaluation.strengths);
@@ -1049,11 +1060,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return Math.max(1, Math.min(5, normalized));
       };
 
-      // Aggregate skill scores from evaluations with proper normalization
+      // Aggregate skill scores from evaluations with proper normalization (use cached evaluations)
       try {
         for (const session of completedSessions.slice(0, 15)) {
           try {
-            const evaluation = await storage.getEvaluationResult(session.id);
+            const evaluation = evaluations.find(e => e.sessionId === session.id);
             if (evaluation) {
               if (evaluation.communicationScore) {
                 const normalized = normalizeScore(evaluation.communicationScore);
@@ -1119,10 +1130,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         skillBreakdown
       };
       
+      console.log(`🏁 Dashboard API completed in: ${Date.now() - startTime}ms`);
       res.json(dashboardData);
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard data" });
+      console.error("Error loading dashboard data:", error);
+      console.log(`❌ Dashboard API failed after: ${Date.now() - startTime}ms`);
+      res.status(500).json({ message: "Failed to load dashboard data" });
     }
   });
 
