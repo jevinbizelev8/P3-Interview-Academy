@@ -138,13 +138,25 @@ interface QuestionCacheEntry {
 class QuestionBankCache {
   private cache = new Map<string, QuestionCacheEntry>();
   private readonly DEFAULT_TTL = 15 * 60 * 1000; // 15 minutes for question banks
+  private readonly MAX_CACHE_SIZE = 100; // Maximum number of cached entries
+  private accessOrder = new Map<string, number>(); // Track access order for LRU eviction
 
   set(key: string, data: IndustryQuestion[], ttl: number = this.DEFAULT_TTL): void {
+    // Clean expired entries before adding new ones
+    this.cleanExpired();
+    
+    // If cache is at capacity, remove oldest entries (LRU)
+    if (this.cache.size >= this.MAX_CACHE_SIZE) {
+      this.evictOldest();
+    }
+    
     this.cache.set(key, {
       data,
       timestamp: Date.now(),
       expiry: Date.now() + ttl
     });
+    
+    this.accessOrder.set(key, Date.now());
   }
 
   get(key: string): IndustryQuestion[] | null {
@@ -153,10 +165,57 @@ class QuestionBankCache {
     
     if (Date.now() > entry.expiry) {
       this.cache.delete(key);
+      this.accessOrder.delete(key);
       return null;
     }
     
+    // Update access order for LRU
+    this.accessOrder.set(key, Date.now());
+    
     return entry.data;
+  }
+
+  // Clean expired entries
+  private cleanExpired(): void {
+    const now = Date.now();
+    const expiredKeys = Array.from(this.cache.entries())
+      .filter(([_, entry]) => now > entry.expiry)
+      .map(([key]) => key);
+    
+    expiredKeys.forEach(key => {
+      this.cache.delete(key);
+      this.accessOrder.delete(key);
+    });
+    
+    if (expiredKeys.length > 0) {
+      console.log(`🧹 Cleaned ${expiredKeys.length} expired cache entries`);
+    }
+  }
+
+  // Evict oldest entries when cache is full (LRU)
+  private evictOldest(): void {
+    const entries = Array.from(this.accessOrder.entries())
+      .sort(([,a], [,b]) => a - b); // Sort by access time
+    
+    const toEvict = Math.ceil(this.MAX_CACHE_SIZE * 0.1); // Remove 10% of entries
+    const keysToEvict = entries.slice(0, toEvict).map(([key]) => key);
+    
+    keysToEvict.forEach(key => {
+      this.cache.delete(key);
+      this.accessOrder.delete(key);
+    });
+    
+    console.log(`🧹 Evicted ${keysToEvict.length} old cache entries (LRU)`);
+  }
+
+  // Get cache statistics
+  getStats(): { size: number; maxSize: number; memoryUsage: string } {
+    const sizeInBytes = JSON.stringify(Array.from(this.cache.values())).length;
+    return {
+      size: this.cache.size,
+      maxSize: this.MAX_CACHE_SIZE,
+      memoryUsage: `${Math.round(sizeInBytes / 1024)}KB`
+    };
   }
 
   clear(): void {
