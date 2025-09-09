@@ -1,0 +1,17 @@
+2025-09-09 23:43:16.460 [info] Resolving ssh remote authority '450109d7-7493-43e5-b1d6-9ceb76b7d8eb@450109d7-7493-43e5-b1d6-9ceb76b7d8eb-00-26ezj6pwnav8r.worf.replit.dev:22' (Unparsed 'ssh-remote+450109d7-7493-43e5-b1d6-9ceb76b7d8eb@450109d7-7493-43e5-b1d6-9ceb76b7d8eb-00-26ezj6pwnav8r.worf.replit.dev:22') (attempt #1)
+2025-09-09 23:43:16.460 [info] SSH askpass server listening on port 60576
+2025-09-09 23:43:16.460 [info] Using configured platform windows for remote host 450109d7-7493-43e5-b1d6-9ceb76b7d8eb-00-26ezj6pwnav8r.worf.replit.dev
+2025-09-09 23:43:16.461 [info] Using askpass script: c:\Users\User\.cursor\extensions\anysphere.remote-ssh-1.0.27\dist\scripts\launchSSHAskpass.bat with javascript file c:\Users\User\.cursor\extensions\anysphere.remote-ssh-1.0.27\dist\scripts\sshAskClient.js. Askpass handle: 60576
+2025-09-09 23:43:16.463 [info] Command length (8191 max): 7618
+2025-09-09 23:43:16.475 [info] Launching SSH server via shell with command: type "C:\Users\User\AppData\Local\Temp\cursor_remote_install_b4a4d372-052c-4c35-995e-610593b48807.ps1" | ssh -T -D 60577 -p 22 450109d7-7493-43e5-b1d6-9ceb76b7d8eb@450109d7-7493-43e5-b1d6-9ceb76b7d8eb-00-26ezj6pwnav8r.worf.replit.dev powershell -NoProfile
+2025-09-09 23:43:16.475 [info] Establishing SSH connection: type "C:\Users\User\AppData\Local\Temp\cursor_remote_install_b4a4d372-052c-4c35-995e-610593b48807.ps1" | ssh -T -D 60577 -p 22 450109d7-7493-43e5-b1d6-9ceb76b7d8eb@450109d7-7493-43e5-b1d6-9ceb76b7d8eb-00-26ezj6pwnav8r.worf.replit.dev powershell -NoProfile
+2025-09-09 23:43:16.475 [info] Waiting for server to install...
+2025-09-09 23:43:18.140 [info] (ssh_tunnel) stderr: Welcome to the Replit SSH Proxy.
+
+Visit https://docs.replit.com/replit-workspace/ssh to learn more about SSH on Replit.
+
+2025-09-09 23:43:19.597 [info] (ssh_tunnel) stdout: bash: powershell: command not found
+
+2025-09-09 23:43:19.613 [error] Error installing server: Failed to connect to the remote SSH host. Please check the logs for more details.
+2025-09-09 23:43:19.613 [info] Deleting local script C:\Users\User\AppData\Local\Temp\cursor_remote_install_b4a4d372-052c-4c35-995e-610593b48807.ps1
+2025-09-09 23:43:19.614 [error] Error resolving SSH authority Failed to connect to the remote SSH host. Please check the logs for more details.
