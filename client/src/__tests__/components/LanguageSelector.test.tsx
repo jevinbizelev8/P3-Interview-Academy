@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '../utils/test-utils';
 import userEvent from '@testing-library/user-event';
 import LanguageSelector, { ASEAN_LANGUAGES } from '@/components/LanguageSelector';
@@ -200,7 +200,7 @@ describe('LanguageSelector Component', () => {
   describe('Language Data Integrity', () => {
     it('has unique language codes', () => {
       const codes = ASEAN_LANGUAGES.map(lang => lang.code);
-      const uniqueCodes = [...new Set(codes)];
+      const uniqueCodes = Array.from(new Set(codes));
       
       expect(codes.length).toBe(uniqueCodes.length);
     });

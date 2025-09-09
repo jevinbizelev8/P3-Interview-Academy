@@ -67,7 +67,7 @@ export const validateSessionOwnership: RequestHandler = async (req, res, next) =
     }
 
     // Store session in request for downstream use
-    req.session = session;
+    (req as any).interviewSession = session;
     next();
   } catch (error) {
     console.error('Error validating session ownership:', error);
@@ -118,7 +118,7 @@ export const validateEvaluationAccess: RequestHandler = async (req, res, next) =
       });
     }
 
-    req.session = session;
+    (req as any).interviewSession = session;
     next();
   } catch (error) {
     console.error('Error validating evaluation access:', error);
@@ -178,11 +178,11 @@ export const requireAdmin: RequestHandler = (req, res, next) => {
   next();
 };
 
-// Extend Express Request type to include session
+// Extend Express Request type to include interview session
 declare global {
   namespace Express {
     interface Request {
-      session?: any;
+      interviewSession?: any;
     }
   }
 }

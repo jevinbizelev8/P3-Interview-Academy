@@ -27,7 +27,11 @@ Response Format (JSON):
   "starMethodRelevant": true
 }`;
 
-    const response = await sealionService.generateResponse(testPrompt);
+    const response = await sealionService.generateResponse({
+      messages: [{ role: 'user', content: testPrompt }],
+      maxTokens: 1000,
+      temperature: 0.7
+    });
     
     // Check if response contains thinking process
     const hasThinkingTags = response.includes('<thinking>') || response.includes('</thinking>');
@@ -61,7 +65,7 @@ Response Format (JSON):
     console.error('❌ SeaLion test error:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
   }
@@ -119,7 +123,7 @@ router.post('/api/test-question-generation', async (req: Request, res: Response)
     console.error('❌ Question generation test error:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
   }
@@ -177,7 +181,7 @@ router.post('/api/test-fallback', async (req: Request, res: Response) => {
     console.error('❌ Fallback test error:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
   }
@@ -190,7 +194,7 @@ router.post('/api/test-multilanguage', async (req: Request, res: Response) => {
     
     const languages = ['en', 'id', 'ms', 'th', 'vi', 'tl'];
     const generator = new AIQuestionGenerator();
-    const results = {};
+    const results: Record<string, any> = {};
     
     for (const lang of languages) {
       const testRequest = {
@@ -220,7 +224,7 @@ router.post('/api/test-multilanguage', async (req: Request, res: Response) => {
       } catch (error) {
         results[lang] = {
           success: false,
-          error: error.message
+          error: error instanceof Error ? error.message : 'Unknown error'
         };
       }
     }
@@ -232,8 +236,8 @@ router.post('/api/test-multilanguage', async (req: Request, res: Response) => {
       results,
       summary: {
         tested: languages.length,
-        successful: Object.values(results).filter(r => r.success).length,
-        failed: Object.values(results).filter(r => !r.success).length
+        successful: Object.values(results).filter((r: any) => r.success).length,
+        failed: Object.values(results).filter((r: any) => !r.success).length
       },
       timestamp: new Date().toISOString()
     });
@@ -242,7 +246,7 @@ router.post('/api/test-multilanguage', async (req: Request, res: Response) => {
     console.error('❌ Multi-language test error:', error);
     res.status(500).json({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
   }

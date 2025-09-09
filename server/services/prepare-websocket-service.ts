@@ -505,7 +505,7 @@ export class PrepareWebSocketService {
       });
 
     } catch (error) {
-      console.warn('⚠️ Audio generation failed:', error.message);
+      console.warn('⚠️ Audio generation failed:', error instanceof Error ? error.message : 'Unknown error');
       // Audio generation failure shouldn't block the question
     }
   }

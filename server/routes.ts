@@ -23,6 +23,7 @@ import { errorLogger, logAPIError } from "./services/error-logger";
 // import { // coachingRouter } from "./routes/coaching"; // QUARANTINED
 // import { coachingEngineService } from "./services/coaching-engine-service"; // QUARANTINED
 import { prepareAIRouter } from "./routes/prepare-ai";
+import voiceServicesRouter from "./routes/voice-services-mvp";
 import testEndpoints from "./test-endpoints";
 
 // Extend Express Request to include user property
@@ -1564,8 +1565,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/prepare/sessions/:id', requireAuth, async (req, res) => {
     try {
       const updates = req.body;
-  // REMOVED: const session = await // prepareService.updatePreparationSession(req.params.id, updates);
-      res.json(session);
+      // TODO: Implement preparation session update
+      res.json({ message: "Preparation session update not yet implemented", updates });
     } catch (error) {
       console.error("Error updating preparation session:", error);
       res.status(500).json({ message: "Failed to update preparation session" });
@@ -2159,6 +2160,509 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.use('/api/prepare-ai', requireAuth, prepareAIRouter);
   
+  // Voice services routes
+  app.use('/api/voice', voiceServicesRouter);
+
+
+
+  // ================================
+  // TEST ENDPOINTS FOR SEALION INTEGRATION
+  // ================================
+  app.get('/api/voice/config', async (req, res) => {
+    try {
+      const config = {
+        supportedLanguages: [
+          { code: 'en', name: 'English', localName: 'English', browserSupport: true },
+          { code: 'ms', name: 'Bahasa Malaysia', localName: 'Bahasa Malaysia', browserSupport: true },
+          { code: 'id', name: 'Bahasa Indonesia', localName: 'Bahasa Indonesia', browserSupport: true },
+          { code: 'th', name: 'Thai', localName: 'ไทย', browserSupport: true },
+          { code: 'vi', name: 'Vietnamese', localName: 'Tiếng Việt', browserSupport: true },
+          { code: 'fil', name: 'Filipino', localName: 'Filipino', browserSupport: true },
+          { code: 'my', name: 'Myanmar', localName: 'မြန်မာ', browserSupport: false },
+          { code: 'km', name: 'Khmer', localName: 'ខ្មែរ', browserSupport: false },
+          { code: 'lo', name: 'Lao', localName: 'ລາວ', browserSupport: false },
+          { code: 'zh-sg', name: 'Chinese Singapore', localName: '中文', browserSupport: true }
+        ],
+        ttsVoices: {
+          en: ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop'],
+          ms: ['Google Bahasa Malaysia', 'Microsoft Rizwan Desktop'],
+          id: ['Google Bahasa Indonesia', 'Microsoft Andika Desktop'],
+          th: ['Google ไทย', 'Microsoft Pattara Desktop'],
+          vi: ['Google Tiếng Việt', 'Microsoft An Desktop'],
+          fil: ['Google Filipino', 'Microsoft Angelo Desktop'],
+          'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
+        },
+        browserVoices: {
+          en: ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop', 'Samantha'],
+          ms: ['Google Bahasa Malaysia', 'Microsoft Rizwan Desktop'],
+          id: ['Google Bahasa Indonesia', 'Microsoft Andika Desktop'],
+          th: ['Google ไทย', 'Microsoft Pattara Desktop'],
+          vi: ['Google Tiếng Việt', 'Microsoft An Desktop'],
+          fil: ['Google Filipino', 'Microsoft Angelo Desktop'],
+          'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
+        },
+        sttModels: ['browser-speech-api', 'whisper-1'],
+        maxFileSize: '10MB',
+        supportedFormats: ['wav', 'mp3', 'm4a', 'webm', 'ogg'],
+        freeServices: {
+          browserTTS: 'Unlimited',
+          browserSTT: 'Unlimited',
+          translation: 'Unlimited via SeaLion'
+        }
+      };
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get voice configuration' });
+    }
+  });
+
+  // Text-to-Speech endpoint (processes text for browser TTS)
+  app.post('/api/voice/tts', requireAuth, async (req, res) => {
+    try {
+      const { text, language = 'en', voice, rate = 1.0, pitch = 1.0 } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: 'Text is required' });
+      }
+
+      // Use SeaLion for text processing and optimization
+      const processedText = await sealionService.generateResponse({
+        messages: [{
+          role: 'user',
+          content: `Optimize this text for speech synthesis in ${language}: "${text}". 
+          Add natural pauses, correct pronunciation hints, and ensure it flows well when spoken. 
+          Return only the optimized text, no explanations.`
+        }],
+        maxTokens: 500,
+        temperature: 0.3
+      });
+
+      // Get available browser voices for the language
+      const availableVoices = getBrowserVoices(language);
+      const selectedVoice = voice || availableVoices[0] || 'default';
+
+      const ttsResponse = {
+        success: true,
+        text: processedText,
+        originalText: text,
+        language,
+        voice: selectedVoice,
+        availableVoices,
+        rate,
+        pitch,
+        duration: estimateDuration(processedText),
+        method: 'browser-speech-api',
+        instructions: {
+          useBrowserTTS: true,
+          voiceName: selectedVoice,
+          rate: rate,
+          pitch: pitch,
+          language: language
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      res.json(ttsResponse);
+    } catch (error) {
+      console.error('TTS Error:', error);
+      res.status(500).json({ 
+        error: 'TTS processing failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Speech-to-Text endpoint (provides configuration for browser STT)
+  app.post('/api/voice/stt', requireAuth, async (req, res) => {
+    try {
+      const { language = 'en', continuous = false, interimResults = true } = req.body;
+
+      const sttResponse = {
+        success: true,
+        language,
+        continuous,
+        interimResults,
+        method: 'browser-speech-api',
+        instructions: {
+          useBrowserSTT: true,
+          language: language,
+          continuous: continuous,
+          interimResults: interimResults,
+          maxAlternatives: 1
+        },
+        supportedLanguages: getSupportedSTTLanguages(),
+        timestamp: new Date().toISOString()
+      };
+
+      res.json(sttResponse);
+    } catch (error) {
+      console.error('STT Error:', error);
+      res.status(500).json({ 
+        error: 'STT configuration failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Translation endpoint
+  app.post('/api/voice/translate', requireAuth, async (req, res) => {
+    try {
+      const { text, targetLanguage, sourceLanguage = 'en' } = req.body;
+      
+      if (!text || !targetLanguage) {
+        return res.status(400).json({ error: 'Text and target language are required' });
+      }
+
+      // Use SeaLion for translation
+      const translation = await sealionService.generateResponse({
+        messages: [{
+          role: 'user',
+          content: `Translate this text from ${sourceLanguage} to ${targetLanguage}: "${text}". 
+          Ensure the translation is natural, culturally appropriate, and maintains the original meaning. 
+          Return only the translation, no explanations.`
+        }],
+        maxTokens: 1000,
+        temperature: 0.3
+      });
+
+      const translationResponse = {
+        success: true,
+        originalText: text,
+        translatedText: translation,
+        sourceLanguage,
+        targetLanguage,
+        method: 'sealion-ai',
+        timestamp: new Date().toISOString()
+      };
+
+      res.json(translationResponse);
+    } catch (error) {
+      console.error('Translation Error:', error);
+      res.status(500).json({ 
+        error: 'Translation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Browser voice detection endpoint
+  app.get('/api/voice/browser-voices', async (req, res) => {
+    try {
+      const { language } = req.query;
+      
+      const voices = getBrowserVoices(language || 'en');
+      
+      res.json({
+        success: true,
+        voices,
+        language: language || 'en',
+        totalVoices: voices.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Browser Voices Error:', error);
+      res.status(500).json({ 
+        error: 'Failed to get browser voices',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Helper functions
+  function getBrowserVoices(language) {
+    const voiceMap = {
+      'en': ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop', 'Samantha'],
+      'ms': ['Google Bahasa Malaysia', 'Microsoft Rizwan Desktop'],
+      'id': ['Google Bahasa Indonesia', 'Microsoft Andika Desktop'],
+      'th': ['Google ไทย', 'Microsoft Pattara Desktop'],
+      'vi': ['Google Tiếng Việt', 'Microsoft An Desktop'],
+      'fil': ['Google Filipino', 'Microsoft Angelo Desktop'],
+      'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
+    };
+    return voiceMap[language] || ['Default Voice'];
+  }
+
+  function getSupportedSTTLanguages() {
+    return [
+      'en-US', 'en-GB', 'en-AU', 'en-CA', 'en-IN',
+      'ms-MY', 'id-ID', 'th-TH', 'vi-VN', 'fil-PH',
+      'zh-CN', 'zh-TW', 'zh-HK', 'ja-JP', 'ko-KR'
+    ];
+  }
+
+  function estimateDuration(text) {
+    // Rough estimate: 150 words per minute
+    const words = text.split(' ').length;
+    return Math.ceil((words / 150) * 60);
+  }
+  
+  // ================================
+  // END DIRECT VOICE SERVICES ROUTES
+  // ================================
+
+  
+  // ================================
+  // DIRECT VOICE SERVICES ROUTES (MVP)
+  // ================================
+  
+  // Voice service status
+  app.get('/api/voice/health', async (req, res) => {
+    try {
+      const status = {
+        status: 'healthy',
+        services: {
+          browserTTS: true,
+          browserSTT: true,
+          sealion: true,
+          translation: true
+        },
+        features: {
+          tts: 'Browser Web Speech API',
+          stt: 'Browser Web Speech API',
+          translation: 'SeaLion AI',
+          languages: 10
+        },
+        timestamp: new Date().toISOString()
+      };
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ error: 'Voice services health check failed' });
+    }
+  });
+
+  // Voice service configuration
+  app.get('/api/voice/config', async (req, res) => {
+    try {
+      const config = {
+        supportedLanguages: [
+          { code: 'en', name: 'English', localName: 'English', browserSupport: true },
+          { code: 'ms', name: 'Bahasa Malaysia', localName: 'Bahasa Malaysia', browserSupport: true },
+          { code: 'id', name: 'Bahasa Indonesia', localName: 'Bahasa Indonesia', browserSupport: true },
+          { code: 'th', name: 'Thai', localName: 'ไทย', browserSupport: true },
+          { code: 'vi', name: 'Vietnamese', localName: 'Tiếng Việt', browserSupport: true },
+          { code: 'fil', name: 'Filipino', localName: 'Filipino', browserSupport: true },
+          { code: 'my', name: 'Myanmar', localName: 'မြန်မာ', browserSupport: false },
+          { code: 'km', name: 'Khmer', localName: 'ខ្មែរ', browserSupport: false },
+          { code: 'lo', name: 'Lao', localName: 'ລາວ', browserSupport: false },
+          { code: 'zh-sg', name: 'Chinese Singapore', localName: '中文', browserSupport: true }
+        ],
+        ttsVoices: {
+          en: ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop'],
+          ms: ['Google Bahasa Malaysia', 'Microsoft Rizwan Desktop'],
+          id: ['Google Bahasa Indonesia', 'Microsoft Andika Desktop'],
+          th: ['Google ไทย', 'Microsoft Pattara Desktop'],
+          vi: ['Google Tiếng Việt', 'Microsoft An Desktop'],
+          fil: ['Google Filipino', 'Microsoft Angelo Desktop'],
+          'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
+        },
+        browserVoices: {
+          en: ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop', 'Samantha'],
+          ms: ['Google Bahasa Malaysia', 'Microsoft Rizwan Desktop'],
+          id: ['Google Bahasa Indonesia', 'Microsoft Andika Desktop'],
+          th: ['Google ไทย', 'Microsoft Pattara Desktop'],
+          vi: ['Google Tiếng Việt', 'Microsoft An Desktop'],
+          fil: ['Google Filipino', 'Microsoft Angelo Desktop'],
+          'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
+        },
+        sttModels: ['browser-speech-api', 'whisper-1'],
+        maxFileSize: '10MB',
+        supportedFormats: ['wav', 'mp3', 'm4a', 'webm', 'ogg'],
+        freeServices: {
+          browserTTS: 'Unlimited',
+          browserSTT: 'Unlimited',
+          translation: 'Unlimited via SeaLion'
+        }
+      };
+      res.json(config);
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get voice configuration' });
+    }
+  });
+
+  // Text-to-Speech endpoint (processes text for browser TTS)
+  app.post('/api/voice/tts', requireAuth, async (req, res) => {
+    try {
+      const { text, language = 'en', voice, rate = 1.0, pitch = 1.0 } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: 'Text is required' });
+      }
+
+      // Use SeaLion for text processing and optimization
+      const processedText = await sealionService.generateResponse({
+        messages: [{
+          role: 'user',
+          content: `Optimize this text for speech synthesis in ${language}: "${text}". 
+          Add natural pauses, correct pronunciation hints, and ensure it flows well when spoken. 
+          Return only the optimized text, no explanations.`
+        }],
+        maxTokens: 500,
+        temperature: 0.3
+      });
+
+      // Get available browser voices for the language
+      const availableVoices = getBrowserVoices(language);
+      const selectedVoice = voice || availableVoices[0] || 'default';
+
+      const ttsResponse = {
+        success: true,
+        text: processedText,
+        originalText: text,
+        language,
+        voice: selectedVoice,
+        availableVoices,
+        rate,
+        pitch,
+        duration: estimateDuration(processedText),
+        method: 'browser-speech-api',
+        instructions: {
+          useBrowserTTS: true,
+          voiceName: selectedVoice,
+          rate: rate,
+          pitch: pitch,
+          language: language
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      res.json(ttsResponse);
+    } catch (error) {
+      console.error('TTS Error:', error);
+      res.status(500).json({ 
+        error: 'TTS processing failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Speech-to-Text endpoint (provides configuration for browser STT)
+  app.post('/api/voice/stt', requireAuth, async (req, res) => {
+    try {
+      const { language = 'en', continuous = false, interimResults = true } = req.body;
+
+      const sttResponse = {
+        success: true,
+        language,
+        continuous,
+        interimResults,
+        method: 'browser-speech-api',
+        instructions: {
+          useBrowserSTT: true,
+          language: language,
+          continuous: continuous,
+          interimResults: interimResults,
+          maxAlternatives: 1
+        },
+        supportedLanguages: getSupportedSTTLanguages(),
+        timestamp: new Date().toISOString()
+      };
+
+      res.json(sttResponse);
+    } catch (error) {
+      console.error('STT Error:', error);
+      res.status(500).json({ 
+        error: 'STT configuration failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Translation endpoint
+  app.post('/api/voice/translate', requireAuth, async (req, res) => {
+    try {
+      const { text, targetLanguage, sourceLanguage = 'en' } = req.body;
+      
+      if (!text || !targetLanguage) {
+        return res.status(400).json({ error: 'Text and target language are required' });
+      }
+
+      // Use SeaLion for translation
+      const translation = await sealionService.generateResponse({
+        messages: [{
+          role: 'user',
+          content: `Translate this text from ${sourceLanguage} to ${targetLanguage}: "${text}". 
+          Ensure the translation is natural, culturally appropriate, and maintains the original meaning. 
+          Return only the translation, no explanations.`
+        }],
+        maxTokens: 1000,
+        temperature: 0.3
+      });
+
+      const translationResponse = {
+        success: true,
+        originalText: text,
+        translatedText: translation,
+        sourceLanguage,
+        targetLanguage,
+        method: 'sealion-ai',
+        timestamp: new Date().toISOString()
+      };
+
+      res.json(translationResponse);
+    } catch (error) {
+      console.error('Translation Error:', error);
+      res.status(500).json({ 
+        error: 'Translation failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Browser voice detection endpoint
+  app.get('/api/voice/browser-voices', async (req, res) => {
+    try {
+      const { language } = req.query;
+      
+      const voices = getBrowserVoices(language || 'en');
+      
+      res.json({
+        success: true,
+        voices,
+        language: language || 'en',
+        totalVoices: voices.length,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Browser Voices Error:', error);
+      res.status(500).json({ 
+        error: 'Failed to get browser voices',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Helper functions
+  function getBrowserVoices(language) {
+    const voiceMap = {
+      'en': ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop', 'Samantha'],
+      'ms': ['Google Bahasa Malaysia', 'Microsoft Rizwan Desktop'],
+      'id': ['Google Bahasa Indonesia', 'Microsoft Andika Desktop'],
+      'th': ['Google ไทย', 'Microsoft Pattara Desktop'],
+      'vi': ['Google Tiếng Việt', 'Microsoft An Desktop'],
+      'fil': ['Google Filipino', 'Microsoft Angelo Desktop'],
+      'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
+    };
+    return voiceMap[language] || ['Default Voice'];
+  }
+
+  function getSupportedSTTLanguages() {
+    return [
+      'en-US', 'en-GB', 'en-AU', 'en-CA', 'en-IN',
+      'ms-MY', 'id-ID', 'th-TH', 'vi-VN', 'fil-PH',
+      'zh-CN', 'zh-TW', 'zh-HK', 'ja-JP', 'ko-KR'
+    ];
+  }
+
+  function estimateDuration(text) {
+    // Rough estimate: 150 words per minute
+    const words = text.split(' ').length;
+    return Math.ceil((words / 150) * 60);
+  }
+  
+  // ================================
+  // END DIRECT VOICE SERVICES ROUTES
+  // ================================
+
   // ================================
   // TEST ENDPOINTS FOR SEALION INTEGRATION
   // ================================

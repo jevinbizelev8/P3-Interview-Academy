@@ -62,7 +62,7 @@ export class ResponseEvaluationService {
           const seaLionEvaluation = await this.evaluateWithSeaLion(request);
           if (seaLionEvaluation) return seaLionEvaluation;
         } catch (error) {
-          console.warn("⚠️ SeaLion evaluation failed, falling back:", error.message);
+          console.warn("⚠️ SeaLion evaluation failed, falling back:", error instanceof Error ? error.message : 'Unknown error');
         }
       }
 
@@ -71,7 +71,7 @@ export class ResponseEvaluationService {
 
     } catch (error) {
       console.error("❌ Error evaluating response:", error);
-      throw new Error(`Failed to evaluate response: ${error.message}`);
+      throw new Error(`Failed to evaluate response: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -82,7 +82,11 @@ export class ResponseEvaluationService {
     try {
       const prompt = this.buildEvaluationPrompt(request);
       
-      const response = await this.seaLionService.generateResponse(prompt);
+      const response = await this.seaLionService.generateResponse({
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: 1500,
+        temperature: 0.3
+      });
 
       return this.parseEvaluationResponse(response, request);
 

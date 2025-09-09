@@ -156,7 +156,7 @@ export async function setupAuth(app: Express) {
     passport.authenticate(strategyName, {
       successReturnToOrRedirect: "/dashboard",
       failureRedirect: "/?error=auth_failed",
-    })(req, res, (err) => {
+    })(req, res, (err: any) => {
       if (err) {
         console.error("Authentication callback error:", err);
         return res.redirect("/?error=auth_failed");

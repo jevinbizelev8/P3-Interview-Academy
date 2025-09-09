@@ -334,7 +334,7 @@ export class AIRouter {
     const now = Date.now();
     const expiredKeys: string[] = [];
     
-    for (const [key, entry] of this.cache.entries()) {
+    for (const [key, entry] of Array.from(this.cache.entries())) {
       if (now - entry.timestamp > this.CACHE_TTL_MS) {
         expiredKeys.push(key);
       }

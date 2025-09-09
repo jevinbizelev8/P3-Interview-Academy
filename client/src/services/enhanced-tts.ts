@@ -316,13 +316,13 @@ class EnhancedTTSService {
         const originalOnEnd = utterance.onend;
         const originalOnError = utterance.onerror;
 
-        utterance.onend = (event) => {
-          originalOnEnd?.(event);
+        utterance.onend = function(event) {
+          originalOnEnd?.call(this, event);
           resolve();
         };
 
-        utterance.onerror = (event) => {
-          originalOnError?.(event);
+        utterance.onerror = function(event) {
+          originalOnError?.call(this, event);
           reject(new Error(event.error));
         };
       });

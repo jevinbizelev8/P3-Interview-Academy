@@ -65,7 +65,7 @@ export class FreeVoiceService {
 
     } catch (error) {
       console.error('❌ Audio transcription error:', error);
-      throw new Error(`Transcription failed: ${error.message}`);
+      throw new Error(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -90,7 +90,7 @@ export class FreeVoiceService {
 
     } catch (error) {
       console.error('❌ Speech synthesis error:', error);
-      throw new Error(`Speech synthesis failed: ${error.message}`);
+      throw new Error(`Speech synthesis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

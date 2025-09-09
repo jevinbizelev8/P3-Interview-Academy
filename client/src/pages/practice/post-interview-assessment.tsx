@@ -255,21 +255,20 @@ export default function PostInterviewAssessment() {
               <h3 className="text-xl font-semibold text-gray-900 mb-4">Detailed Feedback</h3>
               
               {/* Qualitative Summary */}
-              {session?.qualitativeFeedback && (
+              {(session as any)?.qualitativeFeedback ? (
                 <div className="mb-6">
-                  <p className="text-gray-700">{session.qualitativeFeedback as string}</p>
+                  <p className="text-gray-700">{String(session.qualitativeFeedback)}</p>
                 </div>
-              )}
+              ) : null}
 
-              {/* Strengths */}
-              {session?.strengths && Array.isArray(session.strengths) && session.strengths.length > 0 && (
+              {(session as any)?.strengths && Array.isArray((session as any).strengths) && (session as any).strengths.length > 0 && (
                 <div className="mb-6">
                   <h4 className="font-semibold text-green-600 mb-3 flex items-center">
                     <CheckCircle className="w-5 h-5 mr-2" />
                     Strengths
                   </h4>
                   <ul className="space-y-2 text-gray-700">
-                    {session.strengths.map((strength: any, index: number) => (
+                    {(session as any).strengths.map((strength: any, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-green-500 rounded-full mt-2 mr-2 flex-shrink-0"></div>
                         <span>{strength as string}</span>
@@ -279,15 +278,14 @@ export default function PostInterviewAssessment() {
                 </div>
               )}
 
-              {/* Areas for Improvement */}
-              {session?.improvements && Array.isArray(session.improvements) && session.improvements.length > 0 && (
+              {(session as any)?.improvements && Array.isArray((session as any).improvements) && (session as any).improvements.length > 0 && (
                 <div className="mb-6">
                   <h4 className="font-semibold text-yellow-600 mb-3 flex items-center">
                     <AlertTriangle className="w-5 h-5 mr-2" />
                     Areas for Improvement
                   </h4>
                   <ul className="space-y-2 text-gray-700">
-                    {session.improvements.map((improvement: any, index: number) => (
+                    {(session as any).improvements.map((improvement: any, index: number) => (
                       <li key={index} className="flex items-start">
                         <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 mr-2 flex-shrink-0"></div>
                         <span>{improvement as string}</span>

@@ -59,7 +59,7 @@ export class AIQuestionGenerator {
           const seaLionQuestion = await this.generateWithSeaLion(request);
           if (seaLionQuestion) return seaLionQuestion;
         } catch (error) {
-          console.warn("⚠️ SeaLion generation failed, falling back:", error.message);
+          console.warn("⚠️ SeaLion generation failed, falling back:", error instanceof Error ? error.message : 'Unknown error');
         }
       }
 
@@ -68,7 +68,7 @@ export class AIQuestionGenerator {
 
     } catch (error) {
       console.error("❌ Error generating question:", error);
-      throw new Error(`Failed to generate question: ${error.message}`);
+      throw new Error(`Failed to generate question: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -79,7 +79,11 @@ export class AIQuestionGenerator {
     try {
       const prompt = this.buildSeaLionPrompt(request);
       
-      const response = await this.seaLionService.generateResponse(prompt);
+      const response = await this.seaLionService.generateResponse({
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: 1000,
+        temperature: 0.7
+      });
 
       return this.parseSeaLionResponse(response, request);
 
@@ -381,7 +385,7 @@ Response Format (JSON):
       }
     };
 
-    const languageTranslations = basicTranslations[language];
+    const languageTranslations = basicTranslations[language as keyof typeof basicTranslations];
     if (languageTranslations) {
       // Find the closest matching translation
       for (const [englishPhrase, translation] of Object.entries(languageTranslations)) {

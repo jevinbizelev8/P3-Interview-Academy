@@ -390,7 +390,7 @@ export const usePrepareAI = (): UsePrepareAIReturn => {
     }
   }, []);
 
-  const stopVoiceRecording = useCallback(() => {
+  const stopVoiceRecording = useCallback(async () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);

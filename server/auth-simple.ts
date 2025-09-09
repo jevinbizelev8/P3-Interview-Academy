@@ -326,10 +326,10 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
 
     req.user = {
       id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role
+      email: user.email || undefined,
+      firstName: user.firstName || undefined,
+      lastName: user.lastName || undefined,
+      role: user.role || "user"
     };
     next();
   } catch (error) {
