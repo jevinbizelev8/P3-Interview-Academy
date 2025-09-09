@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { sealionService } from "./services/sealion";
 import { AIService } from "./services/ai-service";
-import { prepareService } from "./services/prepare-service";
+// import { prepareService } from "./services/prepare-service"; // QUARANTINED - moved to legacy-quarantine/
 import { questionBankService } from "./services/question-bank-service";
 import { setupAuth, isAuthenticated } from "./replit-auth";
 import { 
@@ -20,8 +20,10 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 import { errorLogger, logAPIError } from "./services/error-logger";
-import { coachingRouter } from "./routes/coaching";
-import { coachingEngineService } from "./services/coaching-engine-service";
+// import { // coachingRouter } from "./routes/coaching"; // QUARANTINED
+// import { coachingEngineService } from "./services/coaching-engine-service"; // QUARANTINED
+import { prepareAIRouter } from "./routes/prepare-ai";
+import testEndpoints from "./test-endpoints";
 
 // Extend Express Request to include user property
 declare global {
@@ -1514,55 +1516,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ================================
 
   // Preparation Sessions
-  app.post('/api/prepare/sessions', requireAuth, async (req, res) => {
-    try {
-      // Simple validation for preparation sessions - avoid complex schema validation for now
-      const sessionData = {
-        userId: req.user!.id,
-        title: req.body.title || "Preparation Session",
-        targetRole: req.body.targetRole || "Professional",
-        targetCompany: req.body.targetCompany || "Company",
-        targetIndustry: req.body.targetIndustry || "General",
-        interviewStage: req.body.interviewStage || "general",
-        preferredLanguage: req.body.preferredLanguage || "en",
-        status: "active"
-      };
-      
-      const session = await prepareService.createPreparationSession(req.user!.id, sessionData);
-      res.json(session);
-    } catch (error) {
-      console.error("Error creating preparation session:", error);
-      res.status(500).json({ message: "Failed to create preparation session" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/sessions', requireAuth, async (req, res) => {
+  // try {
+  // // Simple validation for preparation sessions - avoid complex schema validation for now
+  // const sessionData = {
+  // userId: req.user!.id,
+  // title: req.body.title || "Preparation Session",
+  // targetRole: req.body.targetRole || "Professional",
+  // targetCompany: req.body.targetCompany || "Company",
+  // targetIndustry: req.body.targetIndustry || "General",
+  // interviewStage: req.body.interviewStage || "general",
+  // preferredLanguage: req.body.preferredLanguage || "en",
+  // status: "active"
+  // };
+  // 
+  // const session = await // prepareService.createPreparationSession(req.user!.id, sessionData);
+  // res.json(session);
+  // } catch (error) {
+  // console.error("Error creating preparation session:", error);
+  // res.status(500).json({ message: "Failed to create preparation session" });
+  // }
+  // });
 
-  app.get('/api/prepare/sessions', requireAuth, async (req, res) => {
-    try {
-      const sessions = await prepareService.getUserPreparationSessions(req.user!.id);
-      res.json(sessions);
-    } catch (error) {
-      console.error("Error fetching preparation sessions:", error);
-      res.status(500).json({ message: "Failed to fetch preparation sessions" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/sessions', requireAuth, async (req, res) => {
+  // try {
+  // const sessions = await // prepareService.getUserPreparationSessions(req.user!.id);
+  // res.json(sessions);
+  // } catch (error) {
+  // console.error("Error fetching preparation sessions:", error);
+  // res.status(500).json({ message: "Failed to fetch preparation sessions" });
+  // }
+  // });
 
-  app.get('/api/prepare/sessions/:id', requireAuth, async (req, res) => {
-    try {
-      const session = await prepareService.getPreparationSession(req.params.id);
-      if (!session) {
-        return res.status(404).json({ message: "Preparation session not found" });
-      }
-      res.json(session);
-    } catch (error) {
-      console.error("Error fetching preparation session:", error);
-      res.status(500).json({ message: "Failed to fetch preparation session" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/sessions/:id', requireAuth, async (req, res) => {
+  // try {
+  // const session = await // prepareService.getPreparationSession(req.params.id);
+  // if (!session) {
+  // return res.status(404).json({ message: "Preparation session not found" });
+  // }
+  // res.json(session);
+  // } catch (error) {
+  // console.error("Error fetching preparation session:", error);
+  // res.status(500).json({ message: "Failed to fetch preparation session" });
+  // }
+  // });
 
   app.put('/api/prepare/sessions/:id', requireAuth, async (req, res) => {
     try {
       const updates = req.body;
-      const session = await prepareService.updatePreparationSession(req.params.id, updates);
+  // REMOVED: const session = await // prepareService.updatePreparationSession(req.params.id, updates);
       res.json(session);
     } catch (error) {
       console.error("Error updating preparation session:", error);
@@ -1571,303 +1573,303 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Study Plans
-  app.post('/api/prepare/sessions/:id/study-plan', requireAuth, async (req, res) => {
-    try {
-      const { jobPosition, companyName, interviewDate, timeAvailable, focusAreas, language } = req.body;
-      
-      const studyPlan = await prepareService.generateStudyPlan(req.params.id, {
-        jobPosition,
-        companyName,
-        interviewDate: interviewDate ? new Date(interviewDate) : undefined,
-        timeAvailable,
-        focusAreas,
-        language
-      });
-      
-      res.json(studyPlan);
-    } catch (error) {
-      console.error("Error generating study plan:", error);
-      res.status(500).json({ message: "Failed to generate study plan" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/sessions/:id/study-plan', requireAuth, async (req, res) => {
+  // try {
+  // const { jobPosition, companyName, interviewDate, timeAvailable, focusAreas, language } = req.body;
+  // 
+  // const studyPlan = await // prepareService.generateStudyPlan(req.params.id, {
+  // jobPosition,
+  // companyName,
+  // interviewDate: interviewDate ? new Date(interviewDate) : undefined,
+  // timeAvailable,
+  // focusAreas,
+  // language
+  // });
+  // 
+  // res.json(studyPlan);
+  // } catch (error) {
+  // console.error("Error generating study plan:", error);
+  // res.status(500).json({ message: "Failed to generate study plan" });
+  // }
+  // });
 
-  app.get('/api/prepare/study-plans/:id', requireAuth, async (req, res) => {
-    try {
-      const studyPlan = await storage.getStudyPlan(req.params.id);
-      if (!studyPlan) {
-        return res.status(404).json({ message: "Study plan not found" });
-      }
-      res.json(studyPlan);
-    } catch (error) {
-      console.error("Error fetching study plan:", error);
-      res.status(500).json({ message: "Failed to fetch study plan" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/study-plans/:id', requireAuth, async (req, res) => {
+  // try {
+  // const studyPlan = await storage.getStudyPlan(req.params.id);
+  // if (!studyPlan) {
+  // return res.status(404).json({ message: "Study plan not found" });
+  // }
+  // res.json(studyPlan);
+  // } catch (error) {
+  // console.error("Error fetching study plan:", error);
+  // res.status(500).json({ message: "Failed to fetch study plan" });
+  // }
+  // });
 
   // Company Research
-  app.post('/api/prepare/company-research', requireAuth, async (req, res) => {
-    try {
-      const { companyName, jobPosition } = req.body;
-      
-      if (!companyName) {
-        return res.status(400).json({ message: "Company name is required" });
-      }
-      
-      const research = await prepareService.generateCompanyResearch(req.user!.id, companyName, jobPosition);
-      res.json(research);
-    } catch (error) {
-      console.error("Error generating company research:", error);
-      res.status(500).json({ message: "Failed to generate company research" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/company-research', requireAuth, async (req, res) => {
+  // try {
+  // const { companyName, jobPosition } = req.body;
+  // 
+  // if (!companyName) {
+  // return res.status(400).json({ message: "Company name is required" });
+  // }
+  // 
+  // const research = await // prepareService.generateCompanyResearch(req.user!.id, companyName, jobPosition);
+  // res.json(research);
+  // } catch (error) {
+  // console.error("Error generating company research:", error);
+  // res.status(500).json({ message: "Failed to generate company research" });
+  // }
+  // });
 
-  app.get('/api/prepare/company-research', requireAuth, async (req, res) => {
-    try {
-      const { companyName } = req.query;
-      
-      if (!companyName) {
-        return res.status(400).json({ message: "Company name is required" });
-      }
-      
-      const research = await storage.getCompanyResearch(req.user!.id, companyName as string);
-      if (!research) {
-        return res.status(404).json({ message: "Company research not found" });
-      }
-      
-      res.json(research);
-    } catch (error) {
-      console.error("Error fetching company research:", error);
-      res.status(500).json({ message: "Failed to fetch company research" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/company-research', requireAuth, async (req, res) => {
+  // try {
+  // const { companyName } = req.query;
+  // 
+  // if (!companyName) {
+  // return res.status(400).json({ message: "Company name is required" });
+  // }
+  // 
+  // const research = await storage.getCompanyResearch(req.user!.id, companyName as string);
+  // if (!research) {
+  // return res.status(404).json({ message: "Company research not found" });
+  // }
+  // 
+  // res.json(research);
+  // } catch (error) {
+  // console.error("Error fetching company research:", error);
+  // res.status(500).json({ message: "Failed to fetch company research" });
+  // }
+  // });
 
   // STAR Practice Sessions
-  app.post('/api/prepare/star-practice', requireAuth, async (req, res) => {
-    try {
-      const { preparationSessionId, scenario, language } = req.body;
-      
-      const session = await prepareService.createStarPracticeSession(req.user!.id, {
-        preparationSessionId,
-        scenario,
-        language
-      });
-      
-      res.json(session);
-    } catch (error) {
-      console.error("Error creating STAR practice session:", error);
-      res.status(500).json({ message: "Failed to create STAR practice session" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/star-practice', requireAuth, async (req, res) => {
+  // try {
+  // const { preparationSessionId, scenario, language } = req.body;
+  // 
+  // const session = await // prepareService.createStarPracticeSession(req.user!.id, {
+  // preparationSessionId,
+  // scenario,
+  // language
+  // });
+  // 
+  // res.json(session);
+  // } catch (error) {
+  // console.error("Error creating STAR practice session:", error);
+  // res.status(500).json({ message: "Failed to create STAR practice session" });
+  // }
+  // });
 
-  app.post('/api/prepare/star-practice/:id/submit', requireAuth, async (req, res) => {
-    try {
-      const { situation, task, action, result } = req.body;
-      
-      const session = await prepareService.submitStarResponse(req.params.id, {
-        situation,
-        task,
-        action,
-        result
-      });
-      
-      res.json(session);
-    } catch (error) {
-      console.error("Error submitting STAR response:", error);
-      res.status(500).json({ message: "Failed to submit STAR response" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/star-practice/:id/submit', requireAuth, async (req, res) => {
+  // try {
+  // const { situation, task, action, result } = req.body;
+  // 
+  // const session = await // prepareService.submitStarResponse(req.params.id, {
+  // situation,
+  // task,
+  // action,
+  // result
+  // });
+  // 
+  // res.json(session);
+  // } catch (error) {
+  // console.error("Error submitting STAR response:", error);
+  // res.status(500).json({ message: "Failed to submit STAR response" });
+  // }
+  // });
 
-  app.get('/api/prepare/star-practice', requireAuth, async (req, res) => {
-    try {
-      const { preparationSessionId } = req.query;
-      
-      const sessions = await storage.getUserStarPracticeSessions(
-        req.user!.id, 
-        preparationSessionId as string
-      );
-      
-      res.json(sessions);
-    } catch (error) {
-      console.error("Error fetching STAR practice sessions:", error);
-      res.status(500).json({ message: "Failed to fetch STAR practice sessions" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/star-practice', requireAuth, async (req, res) => {
+  // try {
+  // const { preparationSessionId } = req.query;
+  // 
+  // const sessions = await storage.getUserStarPracticeSessions(
+  // req.user!.id,
+  // preparationSessionId as string
+  // );
+  // 
+  // res.json(sessions);
+  // } catch (error) {
+  // console.error("Error fetching STAR practice sessions:", error);
+  // res.status(500).json({ message: "Failed to fetch STAR practice sessions" });
+  // }
+  // });
 
   // Preparation Resources
-  app.get('/api/prepare/resources', async (req, res) => {
-    try {
-      const { category, interviewStage, industry, difficulty, language } = req.query;
-      
-      const resources = await prepareService.getPreparationResources({
-        category: category as string,
-        interviewStage: interviewStage as string,
-        industry: industry as string,
-        difficulty: difficulty as string,
-        language: language as any || 'en' // Allow any string for language
-      });
-      
-      res.json(resources);
-    } catch (error) {
-      console.error("Error fetching preparation resources:", error);
-      res.status(500).json({ message: "Failed to fetch preparation resources" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/resources', async (req, res) => {
+  // try {
+  // const { category, interviewStage, industry, difficulty, language } = req.query;
+  // 
+  // const resources = await // prepareService.getPreparationResources({
+  // category: category as string,
+  // interviewStage: interviewStage as string,
+  // industry: industry as string,
+  // difficulty: difficulty as string,
+  // language: language as any || 'en' // Allow any string for language
+  // });
+  // 
+  // res.json(resources);
+  // } catch (error) {
+  // console.error("Error fetching preparation resources:", error);
+  // res.status(500).json({ message: "Failed to fetch preparation resources" });
+  // }
+  // });
 
-  app.post('/api/prepare/resources/generate', requireAuth, async (req, res) => {
-    try {
-      const { topic, resourceType, interviewStage, language } = req.body;
-      
-      if (!topic || !resourceType) {
-        return res.status(400).json({ message: "Topic and resource type are required" });
-      }
-      
-      const resource = await prepareService.generateDynamicResource(topic, {
-        resourceType,
-        interviewStage,
-        language,
-        userId: req.user!.id
-      });
-      
-      res.json(resource);
-    } catch (error) {
-      console.error("Error generating resource:", error);
-      res.status(500).json({ message: "Failed to generate resource" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/resources/generate', requireAuth, async (req, res) => {
+  // try {
+  // const { topic, resourceType, interviewStage, language } = req.body;
+  // 
+  // if (!topic || !resourceType) {
+  // return res.status(400).json({ message: "Topic and resource type are required" });
+  // }
+  // 
+  // const resource = await // prepareService.generateDynamicResource(topic, {
+  // resourceType,
+  // interviewStage,
+  // language,
+  // userId: req.user!.id
+  // });
+  // 
+  // res.json(resource);
+  // } catch (error) {
+  // console.error("Error generating resource:", error);
+  // res.status(500).json({ message: "Failed to generate resource" });
+  // }
+  // });
 
   // Practice Tests
-  app.get('/api/prepare/practice-tests', async (req, res) => {
-    try {
-      const { testType, interviewStage, industry, difficulty } = req.query;
-      
-      const tests = await storage.getPracticeTests({
-        testType: testType as string,
-        interviewStage: interviewStage as string,
-        industry: industry as string,
-        difficulty: difficulty as string
-      });
-      
-      res.json(tests);
-    } catch (error) {
-      console.error("Error fetching practice tests:", error);
-      res.status(500).json({ message: "Failed to fetch practice tests" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/practice-tests', async (req, res) => {
+  // try {
+  // const { testType, interviewStage, industry, difficulty } = req.query;
+  // 
+  // const tests = await storage.getPracticeTests({
+  // testType: testType as string,
+  // interviewStage: interviewStage as string,
+  // industry: industry as string,
+  // difficulty: difficulty as string
+  // });
+  // 
+  // res.json(tests);
+  // } catch (error) {
+  // console.error("Error fetching practice tests:", error);
+  // res.status(500).json({ message: "Failed to fetch practice tests" });
+  // }
+  // });
 
-  app.post('/api/prepare/practice-tests/:id/results', requireAuth, async (req, res) => {
-    try {
-      const { answers, timeSpent } = req.body;
-      
-      const test = await storage.getPracticeTest(req.params.id);
-      if (!test) {
-        return res.status(404).json({ message: "Practice test not found" });
-      }
-      
-      // Calculate score (simplified - would be more complex in real implementation)
-      const correctAnswers = answers.filter((answer: any) => answer.correct).length;
-      const score = (correctAnswers / test.totalQuestions) * 100;
-      const passed = test.passingScore ? score >= Number(test.passingScore) : true;
-      
-      const result = await storage.createPracticeTestResult({
-        userId: req.user!.id,
-        practiceTestId: req.params.id,
-        score: score.toString(),
-        totalQuestions: test.totalQuestions,
-        correctAnswers,
-        timeSpent,
-        answers,
-        feedback: [], // Would generate detailed feedback
-        passed,
-        strengths: [], // Would analyze performance
-        improvementAreas: [], // Would identify weak areas
-        completedAt: new Date()
-      });
-      
-      res.json(result);
-    } catch (error) {
-      console.error("Error submitting practice test results:", error);
-      res.status(500).json({ message: "Failed to submit practice test results" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/practice-tests/:id/results', requireAuth, async (req, res) => {
+  // try {
+  // const { answers, timeSpent } = req.body;
+  // 
+  // const test = await storage.getPracticeTest(req.params.id);
+  // if (!test) {
+  // return res.status(404).json({ message: "Practice test not found" });
+  // }
+  // 
+  // // Calculate score (simplified - would be more complex in real implementation)
+  // const correctAnswers = answers.filter((answer: any) => answer.correct).length;
+  // const score = (correctAnswers / test.totalQuestions) * 100;
+  // const passed = test.passingScore ? score >= Number(test.passingScore) : true;
+  // 
+  // const result = await storage.createPracticeTestResult({
+  // userId: req.user!.id,
+  // practiceTestId: req.params.id,
+  // score: score.toString(),
+  // totalQuestions: test.totalQuestions,
+  // correctAnswers,
+  // timeSpent,
+  // answers,
+  // feedback: [], // Would generate detailed feedback
+  // passed,
+  // strengths: [], // Would analyze performance
+  // improvementAreas: [], // Would identify weak areas
+  // completedAt: new Date()
+  // });
+  // 
+  // res.json(result);
+  // } catch (error) {
+  // console.error("Error submitting practice test results:", error);
+  // res.status(500).json({ message: "Failed to submit practice test results" });
+  // }
+  // });
 
   // Progress Tracking
-  app.post('/api/prepare/sessions/:id/progress', requireAuth, async (req, res) => {
-    try {
-      const { activityType, activityId, progress, timeSpent, notes } = req.body;
-      
-      const progressEntry = await prepareService.updateProgress(req.user!.id, req.params.id, {
-        activityType,
-        activityId,
-        progress,
-        timeSpent,
-        notes
-      });
-      
-      res.json(progressEntry);
-    } catch (error) {
-      console.error("Error updating progress:", error);
-      res.status(500).json({ message: "Failed to update progress" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/sessions/:id/progress', requireAuth, async (req, res) => {
+  // try {
+  // const { activityType, activityId, progress, timeSpent, notes } = req.body;
+  // 
+  // const progressEntry = await // prepareService.updateProgress(req.user!.id, req.params.id, {
+  // activityType,
+  // activityId,
+  // progress,
+  // timeSpent,
+  // notes
+  // });
+  // 
+  // res.json(progressEntry);
+  // } catch (error) {
+  // console.error("Error updating progress:", error);
+  // res.status(500).json({ message: "Failed to update progress" });
+  // }
+  // });
 
-  app.get('/api/prepare/sessions/:id/progress', async (req, res) => {
-    try {
-      const progressSummary = await prepareService.getSessionProgress(req.params.id);
-      res.json(progressSummary);
-    } catch (error) {
-      console.error("Error fetching session progress:", error);
-      res.status(500).json({ message: "Failed to fetch session progress" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/sessions/:id/progress', async (req, res) => {
+  // try {
+  // const progressSummary = await // prepareService.getSessionProgress(req.params.id);
+  // res.json(progressSummary);
+  // } catch (error) {
+  // console.error("Error fetching session progress:", error);
+  // res.status(500).json({ message: "Failed to fetch session progress" });
+  // }
+  // });
 
   // Language Support Routes
-  app.post('/api/prepare/translate', async (req, res) => {
-    try {
-      const { content, targetLanguage, contentType, preserveFormatting } = req.body;
-      
-      if (!content || !targetLanguage) {
-        return res.status(400).json({ message: "Content and target language are required" });
-      }
-      
-      const translation = await prepareService.translateContent(content, targetLanguage, {
-        contentType,
-        preserveFormatting
-      });
-      
-      res.json({ translation });
-    } catch (error) {
-      console.error("Error translating content:", error);
-      res.status(500).json({ message: "Failed to translate content" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/translate', async (req, res) => {
+  // try {
+  // const { content, targetLanguage, contentType, preserveFormatting } = req.body;
+  // 
+  // if (!content || !targetLanguage) {
+  // return res.status(400).json({ message: "Content and target language are required" });
+  // }
+  // 
+  // const translation = await // prepareService.translateContent(content, targetLanguage, {
+  // contentType,
+  // preserveFormatting
+  // });
+  // 
+  // res.json({ translation });
+  // } catch (error) {
+  // console.error("Error translating content:", error);
+  // res.status(500).json({ message: "Failed to translate content" });
+  // }
+  // });
 
-  app.post('/api/prepare/multilingual-question', async (req, res) => {
-    try {
-      const { baseQuestion, targetLanguage, context } = req.body;
-      
-      if (!baseQuestion || !targetLanguage) {
-        return res.status(400).json({ message: "Base question and target language are required" });
-      }
-      
-      const result = await prepareService.generateMultilingualQuestion(baseQuestion, targetLanguage, context);
-      res.json(result);
-    } catch (error) {
-      console.error("Error generating multilingual question:", error);
-      res.status(500).json({ message: "Failed to generate multilingual question" });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/multilingual-question', async (req, res) => {
+  // try {
+  // const { baseQuestion, targetLanguage, context } = req.body;
+  // 
+  // if (!baseQuestion || !targetLanguage) {
+  // return res.status(400).json({ message: "Base question and target language are required" });
+  // }
+  // 
+  // const result = await // prepareService.generateMultilingualQuestion(baseQuestion, targetLanguage, context);
+  // res.json(result);
+  // } catch (error) {
+  // console.error("Error generating multilingual question:", error);
+  // res.status(500).json({ message: "Failed to generate multilingual question" });
+  // }
+  // });
 
-  app.get('/api/prepare/language-tips/:language', async (req, res) => {
-    try {
-      const { language } = req.params;
-      
-      const tips = await prepareService.getLanguageSpecificTips(language as any);
-      res.json(tips);
-    } catch (error) {
-      console.error("Error fetching language tips:", error);
-      res.status(500).json({ message: "Failed to fetch language tips" });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/language-tips/:language', async (req, res) => {
+  // try {
+  // const { language } = req.params;
+  // 
+  // const tips = await // prepareService.getLanguageSpecificTips(language as any);
+  // res.json(tips);
+  // } catch (error) {
+  // console.error("Error fetching language tips:", error);
+  // res.status(500).json({ message: "Failed to fetch language tips" });
+  // }
+  // });
 
   // ================================
   // COACHING MODULE API ROUTES
@@ -1875,244 +1877,244 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
 
   // Coaching sessions API routes (inline for better compatibility)
-  app.post('/api/coaching/sessions', requireAuth, async (req, res) => {
-    try {
-      const userId = req.user?.id || 'dev-user-123';
-      // Log the request body for debugging
-      // console.log('Coaching session request body:', JSON.stringify(req.body, null, 2));
-      
-      // Preprocess request body to handle null values
-      const processedBody = {
-        ...req.body,
-        jobPosition: req.body.jobPosition === null || req.body.jobPosition === undefined || req.body.jobPosition === '' ? 'Professional' : req.body.jobPosition,
-        companyName: req.body.companyName === null || req.body.companyName === undefined ? undefined : req.body.companyName,
-        primaryIndustry: req.body.primaryIndustry === null || req.body.primaryIndustry === undefined ? undefined : req.body.primaryIndustry,
-        specializations: Array.isArray(req.body.specializations) ? req.body.specializations : [],
-        experienceLevel: req.body.experienceLevel || 'intermediate'
-      };
-      
-      // console.log('Processed body:', JSON.stringify(processedBody, null, 2));
-      const validatedData = z.object({
-        jobPosition: z.string().min(1, 'Job position is required'),
-        companyName: z.string().optional(),
-        interviewStage: z.enum(['phone-screening', 'functional-team', 'hiring-manager', 'subject-matter-expertise', 'executive-final']),
-        primaryIndustry: z.string().optional(),
-        specializations: z.array(z.string()).default([]),
-        experienceLevel: z.enum(['intermediate', 'senior', 'expert']).default('intermediate'),
-        companyContext: z.object({
-          type: z.enum(['startup', 'enterprise', 'consulting', 'agency']).default('enterprise'),
-          businessModel: z.string().default(''),
-          technicalStack: z.array(z.string()).default([])
-        }).default({}),
-        interviewLanguage: z.string().min(2).max(10).default('en')
-      }).safeParse(processedBody);
-
-      if (!validatedData.success) {
-        console.log('Validation failed:', validatedData.error.issues);
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid session data',
-          errors: validatedData.error.errors
-        });
-      }
-
-      const { interviewLanguage, ...sessionData } = validatedData.data;
-      const sessionPayload = {
-        userId,
-        ...sessionData,
-        preferredLanguage: interviewLanguage
-      };
-      const session = await storage.createCoachingSession(sessionPayload);
-
-      res.status(201).json({
-        success: true,
-        data: session
-      });
-    } catch (error) {
-      console.error('Error creating coaching session:', error);
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid session data',
-          errors: error.errors
-        });
-      }
-      res.status(500).json({
-        success: false,
-        message: 'Failed to create coaching session'
-      });
-    }
-  });
+  // QUARANTINED COACHING ROUTE - app.post('/api/coaching/sessions', requireAuth, async (req, res) => {
+  // try {
+  // const userId = req.user?.id || 'dev-user-123';
+  // // Log the request body for debugging
+  // // console.log('Coaching session request body:', JSON.stringify(req.body, null, 2));
+  // 
+  // // Preprocess request body to handle null values
+  // const processedBody = {
+  // ...req.body,
+  // jobPosition: req.body.jobPosition === null || req.body.jobPosition === undefined || req.body.jobPosition === '' ? 'Professional' : req.body.jobPosition,
+  // companyName: req.body.companyName === null || req.body.companyName === undefined ? undefined : req.body.companyName,
+  // primaryIndustry: req.body.primaryIndustry === null || req.body.primaryIndustry === undefined ? undefined : req.body.primaryIndustry,
+  // specializations: Array.isArray(req.body.specializations) ? req.body.specializations : [],
+  // experienceLevel: req.body.experienceLevel || 'intermediate'
+  // };
+  // 
+  // // console.log('Processed body:', JSON.stringify(processedBody, null, 2));
+  // const validatedData = z.object({
+  // jobPosition: z.string().min(1, 'Job position is required'),
+  // companyName: z.string().optional(),
+  // interviewStage: z.enum(['phone-screening', 'functional-team', 'hiring-manager', 'subject-matter-expertise', 'executive-final']),
+  // primaryIndustry: z.string().optional(),
+  // specializations: z.array(z.string()).default([]),
+  // experienceLevel: z.enum(['intermediate', 'senior', 'expert']).default('intermediate'),
+  // companyContext: z.object({
+  // type: z.enum(['startup', 'enterprise', 'consulting', 'agency']).default('enterprise'),
+  // businessModel: z.string().default(''),
+  // technicalStack: z.array(z.string()).default([])
+  // }).default({}),
+  // interviewLanguage: z.string().min(2).max(10).default('en')
+  // }).safeParse(processedBody);
+  // 
+  // if (!validatedData.success) {
+  // console.log('Validation failed:', validatedData.error.issues);
+  // return res.status(400).json({
+  // success: false,
+  // message: 'Invalid session data',
+  // errors: validatedData.error.errors
+  // });
+  // }
+  // 
+  // const { interviewLanguage, ...sessionData } = validatedData.data;
+  // const sessionPayload = {
+  // userId,
+  // ...sessionData,
+  // preferredLanguage: interviewLanguage
+  // };
+  // const session = await storage.createCoachingSession(sessionPayload);
+  // 
+  // res.status(201).json({
+  // success: true,
+  // data: session
+  // });
+  // } catch (error) {
+  // console.error('Error creating coaching session:', error);
+  // if (error instanceof z.ZodError) {
+  // return res.status(400).json({
+  // success: false,
+  // message: 'Invalid session data',
+  // errors: error.errors
+  // });
+  // }
+  // res.status(500).json({
+  // success: false,
+  // message: 'Failed to create coaching session'
+  // });
+  // }
+  // });
 
   // Get coaching session by ID
-  app.get('/api/coaching/sessions/:sessionId', requireAuth, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const session = await storage.getCoachingSession(sessionId);
-      
-      if (!session) {
-        return res.status(404).json({
-          success: false,
-          message: 'Coaching session not found'
-        });
-      }
-
-      // Verify user owns the session
-      if (session.userId !== (req.user?.id || 'dev-user-123')) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied'
-        });
-      }
-
-      res.json({
-        success: true,
-        data: session
-      });
-    } catch (error) {
-      console.error('Error fetching coaching session:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to fetch coaching session'
-      });
-    }
-  });
+  // QUARANTINED COACHING ROUTE - app.get('/api/coaching/sessions/:sessionId', requireAuth, async (req, res) => {
+  // try {
+  // const { sessionId } = req.params;
+  // const session = await storage.getCoachingSession(sessionId);
+  // 
+  // if (!session) {
+  // return res.status(404).json({
+  // success: false,
+  // message: 'Coaching session not found'
+  // });
+  // }
+  // 
+  // // Verify user owns the session
+  // if (session.userId !== (req.user?.id || 'dev-user-123')) {
+  // return res.status(403).json({
+  // success: false,
+  // message: 'Access denied'
+  // });
+  // }
+  // 
+  // res.json({
+  // success: true,
+  // data: session
+  // });
+  // } catch (error) {
+  // console.error('Error fetching coaching session:', error);
+  // res.status(500).json({
+  // success: false,
+  // message: 'Failed to fetch coaching session'
+  // });
+  // }
+  // });
 
   // Get coaching messages for a session
-  app.get('/api/coaching/sessions/:sessionId/messages', requireAuth, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const session = await storage.getCoachingSession(sessionId);
-      
-      if (!session) {
-        return res.status(404).json({
-          success: false,
-          message: 'Coaching session not found'
-        });
-      }
-
-      // Verify user owns the session
-      if (session.userId !== (req.user?.id || 'dev-user-123')) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied'
-        });
-      }
-
-      const messages = await storage.getCoachingMessages(sessionId);
-
-      res.json({
-        success: true,
-        data: messages
-      });
-    } catch (error) {
-      console.error('Error fetching coaching messages:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to fetch coaching messages'
-      });
-    }
-  });
+  // QUARANTINED COACHING ROUTE - app.get('/api/coaching/sessions/:sessionId/messages', requireAuth, async (req, res) => {
+  // try {
+  // const { sessionId } = req.params;
+  // const session = await storage.getCoachingSession(sessionId);
+  // 
+  // if (!session) {
+  // return res.status(404).json({
+  // success: false,
+  // message: 'Coaching session not found'
+  // });
+  // }
+  // 
+  // // Verify user owns the session
+  // if (session.userId !== (req.user?.id || 'dev-user-123')) {
+  // return res.status(403).json({
+  // success: false,
+  // message: 'Access denied'
+  // });
+  // }
+  // 
+  // const messages = await storage.getCoachingMessages(sessionId);
+  // 
+  // res.json({
+  // success: true,
+  // data: messages
+  // });
+  // } catch (error) {
+  // console.error('Error fetching coaching messages:', error);
+  // res.status(500).json({
+  // success: false,
+  // message: 'Failed to fetch coaching messages'
+  // });
+  // }
+  // });
 
   // Start coaching conversation
-  app.post('/api/coaching/sessions/:sessionId/start', requireAuth, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const session = await storage.getCoachingSession(sessionId);
-      
-      if (!session) {
-        return res.status(404).json({
-          success: false,
-          message: 'Coaching session not found'
-        });
-      }
-
-      // Verify user owns the session
-      if (session.userId !== (req.user?.id || 'dev-user-123')) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied'
-        });
-      }
-
-      // Parse language parameters from request body
-      const languageOptions = {
-        language: req.body.language,
-        useSeaLion: req.body.useSeaLion
-      };
-      // console.log('Starting coaching with language options:', languageOptions);
-      
-      const response = await coachingEngineService.startCoachingConversation(sessionId, languageOptions);
-
-      res.json({
-        success: true,
-        data: response
-      });
-    } catch (error) {
-      console.error('Error starting coaching conversation:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to start coaching conversation'
-      });
-    }
-  });
+  // QUARANTINED COACHING ROUTE - app.post('/api/coaching/sessions/:sessionId/start', requireAuth, async (req, res) => {
+  // try {
+  // const { sessionId } = req.params;
+  // const session = await storage.getCoachingSession(sessionId);
+  // 
+  // if (!session) {
+  // return res.status(404).json({
+  // success: false,
+  // message: 'Coaching session not found'
+  // });
+  // }
+  // 
+  // // Verify user owns the session
+  // if (session.userId !== (req.user?.id || 'dev-user-123')) {
+  // return res.status(403).json({
+  // success: false,
+  // message: 'Access denied'
+  // });
+  // }
+  // 
+  // // Parse language parameters from request body
+  // const languageOptions = {
+  // language: req.body.language,
+  // useSeaLion: req.body.useSeaLion
+  // };
+  // // console.log('Starting coaching with language options:', languageOptions);
+  // 
+  // const response = await // coachingEngineService.startCoachingConversation(sessionId, languageOptions);
+  // 
+  // res.json({
+  // success: true,
+  // data: response
+  // });
+  // } catch (error) {
+  // console.error('Error starting coaching conversation:', error);
+  // res.status(500).json({
+  // success: false,
+  // message: 'Failed to start coaching conversation'
+  // });
+  // }
+  // });
 
   // Process user response with immediate AI guidance
-  app.post('/api/coaching/sessions/:sessionId/respond', requireAuth, async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const { response } = req.body;
-      
-      if (!response) {
-        return res.status(400).json({
-          success: false,
-          message: 'Response is required'
-        });
-      }
-
-      const session = await storage.getCoachingSession(sessionId);
-      
-      if (!session) {
-        return res.status(404).json({
-          success: false,
-          message: 'Coaching session not found'
-        });
-      }
-
-      // Verify user owns the session
-      if (session.userId !== (req.user?.id || 'dev-user-123')) {
-        return res.status(403).json({
-          success: false,
-          message: 'Access denied'
-        });
-      }
-
-      // Parse language parameters from request body
-      const languageOptions = {
-        language: req.body.language,
-        useSeaLion: req.body.useSeaLion
-      };
-      // console.log('Processing response with language options:', languageOptions);
-      
-      const coachingResponse = await coachingEngineService.processCoachingResponse(
-        sessionId,
-        response,
-        undefined, // questionNumber
-        languageOptions
-      );
-
-      res.json({
-        success: true,
-        data: coachingResponse
-      });
-    } catch (error) {
-      console.error('Error processing coaching response:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Failed to process coaching response'
-      });
-    }
-  });
+  // QUARANTINED COACHING ROUTE - app.post('/api/coaching/sessions/:sessionId/respond', requireAuth, async (req, res) => {
+  // try {
+  // const { sessionId } = req.params;
+  // const { response } = req.body;
+  // 
+  // if (!response) {
+  // return res.status(400).json({
+  // success: false,
+  // message: 'Response is required'
+  // });
+  // }
+  // 
+  // const session = await storage.getCoachingSession(sessionId);
+  // 
+  // if (!session) {
+  // return res.status(404).json({
+  // success: false,
+  // message: 'Coaching session not found'
+  // });
+  // }
+  // 
+  // // Verify user owns the session
+  // if (session.userId !== (req.user?.id || 'dev-user-123')) {
+  // return res.status(403).json({
+  // success: false,
+  // message: 'Access denied'
+  // });
+  // }
+  // 
+  // // Parse language parameters from request body
+  // const languageOptions = {
+  // language: req.body.language,
+  // useSeaLion: req.body.useSeaLion
+  // };
+  // // console.log('Processing response with language options:', languageOptions);
+  // 
+  // const coachingResponse = await // coachingEngineService.processCoachingResponse(
+  // sessionId,
+  // response,
+  // undefined, // questionNumber
+  // languageOptions
+  // );
+  // 
+  // res.json({
+  // success: true,
+  // data: coachingResponse
+  // });
+  // } catch (error) {
+  // console.error('Error processing coaching response:', error);
+  // res.status(500).json({
+  // success: false,
+  // message: 'Failed to process coaching response'
+  // });
+  // }
+  // });
 
   // Complete coaching session and get model answers
   app.post('/api/coaching/sessions/:sessionId/complete', requireAuth, async (req, res) => {
@@ -2151,309 +2153,328 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ================================  
+  // AI-POWERED PREPARE MODULE ROUTES
+  // ================================
+  
+  app.use('/api/prepare-ai', requireAuth, prepareAIRouter);
+  
+  // ================================
+  // TEST ENDPOINTS FOR SEALION INTEGRATION
+  // ================================
+  
+  app.use(testEndpoints);
+
   // ================================
   // ENHANCED QUESTION BANK API ROUTES
   // ================================
 
   // Get questions for specific interview stage
-  app.get('/api/prepare/questions/stage/:stage', async (req, res) => {
-    try {
-      const { stage } = req.params;
-      const count = Math.min(parseInt(req.query.count as string) || 15, 50);
-      const difficulty = req.query.difficulty as 'beginner' | 'intermediate' | 'advanced' | undefined;
-      const language = (req.query.language as string) || 'en';
-
-      if (!['phone-screening', 'functional-team', 'hiring-manager', 'subject-matter-expertise', 'executive-final'].includes(stage)) {
-        return res.status(400).json({ message: 'Invalid interview stage' });
-      }
-
-      const questions = await questionBankService.getQuestionsForStage(
-        stage,
-        count,
-        difficulty,
-        language as any
-      );
-
-      res.json({
-        success: true,
-        data: {
-          questions,
-          metadata: {
-            stage,
-            count: questions.length,
-            difficulty,
-            language,
-            totalAvailable: questions.length
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching questions for stage:', error);
-      res.status(500).json({
-        error: 'Failed to fetch questions',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/questions/stage/:stage', async (req, res) => {
+  // try {
+  // const { stage } = req.params;
+  // const count = Math.min(parseInt(req.query.count as string) || 15, 50);
+  // const difficulty = req.query.difficulty as 'beginner' | 'intermediate' | 'advanced' | undefined;
+  // const language = (req.query.language as string) || 'en';
+  // 
+  // if (!['phone-screening', 'functional-team', 'hiring-manager', 'subject-matter-expertise', 'executive-final'].includes(stage)) {
+  // return res.status(400).json({ message: 'Invalid interview stage' });
+  // }
+  // 
+  // const questions = await questionBankService.getQuestionsForStage(
+  // stage,
+  // count,
+  // difficulty,
+  // language as any
+  // );
+  // 
+  // res.json({
+  // success: true,
+  // data: {
+  // questions,
+  // metadata: {
+  // stage,
+  // count: questions.length,
+  // difficulty,
+  // language,
+  // totalAvailable: questions.length
+  // }
+  // }
+  // });
+  // } catch (error) {
+  // console.error('Error fetching questions for stage:', error);
+  // res.status(500).json({
+  // error: 'Failed to fetch questions',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   // Get questions by category
-  app.get('/api/prepare/questions/category/:category', async (req, res) => {
-    try {
-      const { category } = req.params;
-      const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-
-      if (!['behavioral', 'situational', 'technical', 'company-specific', 'general'].includes(category)) {
-        return res.status(400).json({ message: 'Invalid question category' });
-      }
-
-      const questions = await questionBankService.getQuestionsByCategory(category as any, limit);
-
-      res.json({
-        success: true,
-        data: {
-          questions,
-          metadata: {
-            category,
-            count: questions.length,
-            limit
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching questions by category:', error);
-      res.status(500).json({
-        error: 'Failed to fetch questions by category',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/questions/category/:category', async (req, res) => {
+  // try {
+  // const { category } = req.params;
+  // const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+  // 
+  // if (!['behavioral', 'situational', 'technical', 'company-specific', 'general'].includes(category)) {
+  // return res.status(400).json({ message: 'Invalid question category' });
+  // }
+  // 
+  // const questions = await questionBankService.getQuestionsByCategory(category as any, limit);
+  // 
+  // res.json({
+  // success: true,
+  // data: {
+  // questions,
+  // metadata: {
+  // category,
+  // count: questions.length,
+  // limit
+  // }
+  // }
+  // });
+  // } catch (error) {
+  // console.error('Error fetching questions by category:', error);
+  // res.status(500).json({
+  // error: 'Failed to fetch questions by category',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   // Get STAR method questions
-  app.get('/api/prepare/questions/star-method', async (req, res) => {
-    try {
-      const limit = Math.min(parseInt(req.query.limit as string) || 15, 50);
-      
-      const questions = await questionBankService.getStarMethodQuestions(limit);
-
-      res.json({
-        success: true,
-        data: {
-          questions,
-          metadata: {
-            type: 'star-method',
-            count: questions.length,
-            limit
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching STAR method questions:', error);
-      res.status(500).json({
-        error: 'Failed to fetch STAR method questions',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/questions/star-method', async (req, res) => {
+  // try {
+  // const limit = Math.min(parseInt(req.query.limit as string) || 15, 50);
+  // 
+  // const questions = await questionBankService.getStarMethodQuestions(limit);
+  // 
+  // res.json({
+  // success: true,
+  // data: {
+  // questions,
+  // metadata: {
+  // type: 'star-method',
+  // count: questions.length,
+  // limit
+  // }
+  // }
+  // });
+  // } catch (error) {
+  // console.error('Error fetching STAR method questions:', error);
+  // res.status(500).json({
+  // error: 'Failed to fetch STAR method questions',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   // Get all stage questions overview
-  app.get('/api/prepare/questions/all-stages', async (req, res) => {
-    try {
-      const allStageQuestions = await questionBankService.getAllStageQuestions();
-
-      res.json({
-        success: true,
-        data: {
-          stages: allStageQuestions,
-          metadata: {
-            totalStages: Object.keys(allStageQuestions).length,
-            totalQuestions: Object.values(allStageQuestions).reduce((sum, stage) => sum + stage.totalQuestions, 0)
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching all stage questions:', error);
-      res.status(500).json({
-        error: 'Failed to fetch all stage questions',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/questions/all-stages', async (req, res) => {
+  // try {
+  // const allStageQuestions = await questionBankService.getAllStageQuestions();
+  // 
+  // res.json({
+  // success: true,
+  // data: {
+  // stages: allStageQuestions,
+  // metadata: {
+  // totalStages: Object.keys(allStageQuestions).length,
+  // totalQuestions: Object.values(allStageQuestions).reduce((sum, stage) => sum + stage.totalQuestions, 0)
+  // }
+  // }
+  // });
+  // } catch (error) {
+  // console.error('Error fetching all stage questions:', error);
+  // res.status(500).json({
+  // error: 'Failed to fetch all stage questions',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   // Get question bank statistics
-  app.get('/api/prepare/questions/statistics', async (req, res) => {
-    try {
-      const stats = await questionBankService.getQuestionStatistics();
-
-      res.json({
-        success: true,
-        data: stats
-      });
-    } catch (error) {
-      console.error('Error fetching question statistics:', error);
-      res.status(500).json({
-        error: 'Failed to fetch question statistics',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/questions/statistics', async (req, res) => {
+  // try {
+  // const stats = await questionBankService.getQuestionStatistics();
+  // 
+  // res.json({
+  // success: true,
+  // data: stats
+  // });
+  // } catch (error) {
+  // console.error('Error fetching question statistics:', error);
+  // res.status(500).json({
+  // error: 'Failed to fetch question statistics',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   // Generate additional questions using AI
-  app.post('/api/prepare/questions/generate', async (req, res) => {
-    try {
-      const { stage, count, difficulty, language } = req.body;
-
-      if (!stage || !count) {
-        return res.status(400).json({
-          error: 'Missing required parameters: stage and count'
-        });
-      }
-
-      if (count > 20) {
-        return res.status(400).json({
-          error: 'Maximum 20 questions can be generated at once'
-        });
-      }
-
-      const questions = await questionBankService.generateAdditionalQuestions(
-        stage,
-        count,
-        difficulty,
-        language as any
-      );
-
-      res.json({
-        success: true,
-        data: {
-          questions,
-          metadata: {
-            stage,
-            count: questions.length,
-            generated: true,
-            language: language || 'en'
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error generating questions:', error);
-      res.status(500).json({
-        error: 'Failed to generate questions',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/questions/generate', async (req, res) => {
+  // try {
+  // const { stage, count, difficulty, language } = req.body;
+  // 
+  // if (!stage || !count) {
+  // return res.status(400).json({
+  // error: 'Missing required parameters: stage and count'
+  // });
+  // }
+  // 
+  // if (count > 20) {
+  // return res.status(400).json({
+  // error: 'Maximum 20 questions can be generated at once'
+  // });
+  // }
+  // 
+  // const questions = await questionBankService.generateAdditionalQuestions(
+  // stage,
+  // count,
+  // difficulty,
+  // language as any
+  // );
+  // 
+  // res.json({
+  // success: true,
+  // data: {
+  // questions,
+  // metadata: {
+  // stage,
+  // count: questions.length,
+  // generated: true,
+  // language: language || 'en'
+  // }
+  // }
+  // });
+  // } catch (error) {
+  // console.error('Error generating questions:', error);
+  // res.status(500).json({
+  // error: 'Failed to generate questions',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   // Get questions for a specific session
-  app.get('/api/prepare/questions/session/:sessionId', async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const count = Math.min(parseInt(req.query.count as string) || 15, 50);
-      const difficulty = req.query.difficulty as 'beginner' | 'intermediate' | 'advanced' | undefined;
-      const language = (req.query.language as string) || 'en';
-
-      // For now, use default stage - in real implementation, fetch from session
-      const defaultStage = 'phone-screening';
-      
-      const questions = await questionBankService.getQuestionsForStage(
-        defaultStage,
-        count,
-        difficulty,
-        language as any
-      );
-
-      res.json({
-        success: true,
-        data: {
-          questions,
-          sessionId,
-          metadata: {
-            stage: defaultStage,
-            count: questions.length,
-            difficulty,
-            language
-          }
-        }
-      });
-    } catch (error) {
-      console.error('Error fetching session questions:', error);
-      res.status(500).json({
-        error: 'Failed to fetch session questions',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.get('/api/prepare/questions/session/:sessionId', async (req, res) => {
+  // try {
+  // const { sessionId } = req.params;
+  // const count = Math.min(parseInt(req.query.count as string) || 15, 50);
+  // const difficulty = req.query.difficulty as 'beginner' | 'intermediate' | 'advanced' | undefined;
+  // const language = (req.query.language as string) || 'en';
+  // 
+  // // For now, use default stage - in real implementation, fetch from session
+  // const defaultStage = 'phone-screening';
+  // 
+  // const questions = await questionBankService.getQuestionsForStage(
+  // defaultStage,
+  // count,
+  // difficulty,
+  // language as any
+  // );
+  // 
+  // res.json({
+  // success: true,
+  // data: {
+  // questions,
+  // sessionId,
+  // metadata: {
+  // stage: defaultStage,
+  // count: questions.length,
+  // difficulty,
+  // language
+  // }
+  // }
+  // });
+  // } catch (error) {
+  // console.error('Error fetching session questions:', error);
+  // res.status(500).json({
+  // error: 'Failed to fetch session questions',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   // Enhanced translation endpoint with cultural context
-  app.post('/api/prepare/questions/translate', async (req, res) => {
-    try {
-      const { text, targetLanguage, context } = req.body;
-
-      if (!text || !targetLanguage) {
-        return res.status(400).json({
-          error: 'Missing required parameters: text and targetLanguage'
-        });
-      }
-
-      // Enhanced translation using prepareService
-      const translatedText = await prepareService.translateContent(text, targetLanguage as any, {
-        contentType: context?.contentType || 'question',
-        preserveFormatting: true
-      });
-
-      res.json({
-        success: true,
-        data: {
-          originalText: text,
-          translatedText,
-          targetLanguage,
-          context,
-          culturalAdaptations: [
-            'Culturally adapted for Southeast Asian context',
-            'Professional tone maintained',
-            'Respectful language used'
-          ]
-        }
-      });
-    } catch (error) {
-      console.error('Error translating question:', error);
-      res.status(500).json({
-        error: 'Failed to translate question',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/questions/translate', async (req, res) => {
+  // try {
+  // const { text, targetLanguage, context } = req.body;
+  // 
+  // if (!text || !targetLanguage) {
+  // return res.status(400).json({
+  // error: 'Missing required parameters: text and targetLanguage'
+  // });
+  // }
+  // 
+  // // Enhanced translation using prepareService
+  // const translatedText = await // prepareService.translateContent(text, targetLanguage as any, {
+  // contentType: context?.contentType || 'question',
+  // preserveFormatting: true
+  // });
+  // 
+  // res.json({
+  // success: true,
+  // data: {
+  // originalText: text,
+  // translatedText,
+  // targetLanguage,
+  // context,
+  // culturalAdaptations: [
+  // 'Culturally adapted for Southeast Asian context',
+  // 'Professional tone maintained',
+  // 'Respectful language used'
+  // ]
+  // }
+  // });
+  // } catch (error) {
+  // console.error('Error translating question:', error);
+  // res.status(500).json({
+  // error: 'Failed to translate question',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   // Bookmark question for session
-  app.post('/api/prepare/questions/session/:sessionId/bookmark', async (req, res) => {
-    try {
-      const { sessionId } = req.params;
-      const { questionId, bookmarked } = req.body;
-
-      if (!questionId) {
-        return res.status(400).json({
-          error: 'Missing questionId in request body'
-        });
-      }
-
-      // TODO: Implement bookmark functionality in database
-      // For now, return success response
-      res.json({
-        success: true,
-        data: {
-          sessionId,
-          questionId,
-          bookmarked: bookmarked !== false,
-          timestamp: new Date().toISOString()
-        }
-      });
-    } catch (error) {
-      console.error('Error bookmarking question:', error);
-      res.status(500).json({
-        error: 'Failed to bookmark question',
-        message: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
+  // QUARANTINED ROUTE - app.post('/api/prepare/questions/session/:sessionId/bookmark', async (req, res) => {
+  // try {
+  // const { sessionId } = req.params;
+  // const { questionId, bookmarked } = req.body;
+  // 
+  // if (!questionId) {
+  // return res.status(400).json({
+  // error: 'Missing questionId in request body'
+  // });
+  // }
+  // 
+  // // TODO: Implement bookmark functionality in database
+  // // For now, return success response
+  // res.json({
+  // success: true,
+  // data: {
+  // sessionId,
+  // questionId,
+  // bookmarked: bookmarked !== false,
+  // timestamp: new Date().toISOString()
+  // }
+  // });
+  // } catch (error) {
+  // console.error('Error bookmarking question:', error);
+  // res.status(500).json({
+  // error: 'Failed to bookmark question',
+  // message: error instanceof Error ? error.message : 'Unknown error'
+  // });
+  // }
+  // });
 
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket service for AI Prepare Module
+  const { PrepareWebSocketService } = await import("./services/prepare-websocket-service");
+  const prepareWebSocketService = new PrepareWebSocketService(httpServer);
+  
+  console.log("🔌 WebSocket service initialized for AI Prepare Module");
+  
   return httpServer;
 }

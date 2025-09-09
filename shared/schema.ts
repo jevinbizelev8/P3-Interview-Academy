@@ -1062,3 +1062,302 @@ export type CoachingMessageWithFeedback = CoachingMessage & {
   feedback?: CoachingFeedback[];
   relatedQuestions?: IndustryQuestion[];
 };
+
+// ===========================================
+// AI-POWERED PREPARE MODULE TABLES
+// ===========================================
+
+// AI Preparation Sessions with Voice Capabilities
+export const aiPrepareSessions = pgTable("ai_prepare_sessions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Session Configuration
+  sessionName: varchar("session_name", { length: 255 }),
+  jobPosition: varchar("job_position", { length: 200 }).notNull(),
+  companyName: varchar("company_name", { length: 200 }),
+  interviewStage: varchar("interview_stage", { length: 50 }).notNull(), // phone-screening, functional-team, etc.
+  experienceLevel: varchar("experience_level", { length: 20 }).notNull(), // intermediate, senior, expert
+  preferredLanguage: varchar("preferred_language", { length: 10 }).default("en"),
+  
+  // AI Configuration
+  difficultyLevel: varchar("difficulty_level", { length: 20 }).default("adaptive"), // adaptive, beginner, intermediate, advanced
+  focusAreas: jsonb("focus_areas").default("[]"), // ["behavioral", "technical", "situational"]
+  questionCategories: jsonb("question_categories").default("[]"),
+  maxQuestions: integer("max_questions").default(20),
+  timeLimitMinutes: integer("time_limit_minutes").default(60),
+  
+  // Session State
+  status: varchar("status", { length: 20 }).default("active"), // active, completed, paused, abandoned
+  currentQuestionNumber: integer("current_question_number").default(1),
+  totalQuestionsAsked: integer("total_questions_asked").default(0),
+  sessionProgress: numeric("session_progress", { precision: 5, scale: 2 }).default("0.00"), // 0-100%
+  
+  // Performance Tracking
+  averageStarScore: numeric("average_star_score", { precision: 3, scale: 2 }),
+  totalTimeSpent: integer("total_time_spent").default(0), // seconds
+  questionsAnswered: integer("questions_answered").default(0),
+  
+  // Voice Settings
+  voiceEnabled: boolean("voice_enabled").default(true),
+  preferredVoice: varchar("preferred_voice", { length: 50 }),
+  speechRate: numeric("speech_rate", { precision: 2, scale: 1 }).default("1.0"),
+  autoPlayQuestions: boolean("auto_play_questions").default(true),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  startedAt: timestamp("started_at"),
+  pausedAt: timestamp("paused_at"),
+  completedAt: timestamp("completed_at"),
+});
+
+// AI-Generated Questions with Cultural Context
+export const aiPrepareQuestions = pgTable("ai_prepare_questions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").notNull().references(() => aiPrepareSessions.id, { onDelete: "cascade" }),
+  
+  // Question Content
+  questionText: text("question_text").notNull(),
+  questionTextTranslated: text("question_text_translated"), // Translated version
+  questionCategory: varchar("question_category", { length: 50 }).notNull(), // behavioral, situational, technical, company-specific
+  questionType: varchar("question_type", { length: 30 }).notNull(), // behavioral, situational, technical, general
+  difficultyLevel: varchar("difficulty_level", { length: 20 }).notNull(),
+  
+  // Question Metadata
+  expectedAnswerTime: integer("expected_answer_time").default(180), // seconds
+  starMethodRelevant: boolean("star_method_relevant").default(true),
+  culturalContext: text("cultural_context"),
+  industrySpecific: boolean("industry_specific").default(false),
+  followUpQuestions: jsonb("follow_up_questions").default("[]"),
+  
+  // Question State
+  questionNumber: integer("question_number").notNull(),
+  isAnswered: boolean("is_answered").default(false),
+  timeSpent: integer("time_spent").default(0),
+  attempts: integer("attempts").default(0),
+  
+  // AI Generation Info
+  generatedBy: varchar("generated_by", { length: 20 }).default("sealion"), // sealion, openai, fallback
+  generationPrompt: text("generation_prompt"),
+  generationTimestamp: timestamp("generation_timestamp").defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// User Responses with Voice & AI Evaluation
+export const aiPrepareResponses = pgTable("ai_prepare_responses", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").notNull().references(() => aiPrepareSessions.id, { onDelete: "cascade" }),
+  questionId: uuid("question_id").notNull().references(() => aiPrepareQuestions.id, { onDelete: "cascade" }),
+  
+  // Response Content
+  responseText: text("response_text").notNull(),
+  responseLanguage: varchar("response_language", { length: 10 }).default("en"),
+  inputMethod: varchar("input_method", { length: 20 }).default("text"), // text, voice, hybrid
+  
+  // Audio Data (if voice input)
+  audioFileUrl: text("audio_file_url"),
+  audioDuration: integer("audio_duration"), // seconds
+  transcriptionConfidence: numeric("transcription_confidence", { precision: 3, scale: 2 }),
+  
+  // AI Evaluation Results
+  starScores: jsonb("star_scores").notNull(), // {situation: 4, task: 3, action: 5, result: 4, overall: 4}
+  detailedFeedback: jsonb("detailed_feedback").notNull(), // {strengths: [], weaknesses: [], suggestions: []}
+  modelAnswer: text("model_answer"),
+  modelAnswerTranslated: text("model_answer_translated"),
+  
+  // Performance Metrics
+  relevanceScore: numeric("relevance_score", { precision: 3, scale: 2 }),
+  communicationScore: numeric("communication_score", { precision: 3, scale: 2 }),
+  completenessScore: numeric("completeness_score", { precision: 3, scale: 2 }),
+  improvementAreas: jsonb("improvement_areas").default("[]"),
+  
+  // Evaluation Metadata
+  evaluatedBy: varchar("evaluated_by", { length: 20 }).default("sealion"),
+  evaluationTimestamp: timestamp("evaluation_timestamp").defaultNow(),
+  evaluationDuration: integer("evaluation_duration"), // milliseconds
+  
+  // Response Metadata
+  timeTaken: integer("time_taken").notNull(), // seconds to answer
+  wordCount: integer("word_count"),
+  retryCount: integer("retry_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Session Analytics and Performance Tracking
+export const aiPrepareAnalytics = pgTable("ai_prepare_analytics", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").notNull().references(() => aiPrepareSessions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Performance Metrics
+  overallPerformance: jsonb("overall_performance").notNull(), // detailed performance breakdown
+  categoryScores: jsonb("category_scores").default("{}"), // scores by question category
+  improvementOverTime: jsonb("improvement_over_time").default("[]"), // performance progression
+  
+  // Behavioral Analysis
+  responsePatterns: jsonb("response_patterns").default("{}"), // common patterns in responses
+  strengthsIdentified: jsonb("strengths_identified").default("[]"),
+  areasForImprovement: jsonb("areas_for_improvement").default("[]"),
+  personalizedRecommendations: jsonb("personalized_recommendations").default("[]"),
+  
+  // Voice Analytics (if applicable)
+  voiceMetrics: jsonb("voice_metrics").default("{}"), // speech rate, clarity, confidence
+  
+  // Session Statistics
+  totalSessionTime: integer("total_session_time").notNull(),
+  averageResponseTime: numeric("average_response_time", { precision: 5, scale: 2 }),
+  questionsAnswered: integer("questions_answered").notNull(),
+  questionsSkipped: integer("questions_skipped").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Relations for AI Prepare Module
+export const aiPrepareSessionsRelations = relations(aiPrepareSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [aiPrepareSessions.userId],
+    references: [users.id],
+  }),
+  questions: many(aiPrepareQuestions),
+  responses: many(aiPrepareResponses),
+  analytics: one(aiPrepareAnalytics),
+}));
+
+export const aiPrepareQuestionsRelations = relations(aiPrepareQuestions, ({ one, many }) => ({
+  session: one(aiPrepareSessions, {
+    fields: [aiPrepareQuestions.sessionId],
+    references: [aiPrepareSessions.id],
+  }),
+  responses: many(aiPrepareResponses),
+}));
+
+export const aiPrepareResponsesRelations = relations(aiPrepareResponses, ({ one }) => ({
+  session: one(aiPrepareSessions, {
+    fields: [aiPrepareResponses.sessionId],
+    references: [aiPrepareSessions.id],
+  }),
+  question: one(aiPrepareQuestions, {
+    fields: [aiPrepareResponses.questionId],
+    references: [aiPrepareQuestions.id],
+  }),
+}));
+
+export const aiPrepareAnalyticsRelations = relations(aiPrepareAnalytics, ({ one }) => ({
+  session: one(aiPrepareSessions, {
+    fields: [aiPrepareAnalytics.sessionId],
+    references: [aiPrepareSessions.id],
+  }),
+  user: one(users, {
+    fields: [aiPrepareAnalytics.userId],
+    references: [users.id],
+  }),
+}));
+
+// Insert schemas for AI Prepare Module
+export const insertAiPrepareSessionSchema = createInsertSchema(aiPrepareSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiPrepareQuestionSchema = createInsertSchema(aiPrepareQuestions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAiPrepareResponseSchema = createInsertSchema(aiPrepareResponses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAiPrepareAnalyticsSchema = createInsertSchema(aiPrepareAnalytics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for AI Prepare Module
+export type AiPrepareSession = typeof aiPrepareSessions.$inferSelect;
+export type InsertAiPrepareSession = z.infer<typeof insertAiPrepareSessionSchema>;
+export type AiPrepareQuestion = typeof aiPrepareQuestions.$inferSelect;
+export type InsertAiPrepareQuestion = z.infer<typeof insertAiPrepareQuestionSchema>;
+export type AiPrepareResponse = typeof aiPrepareResponses.$inferSelect;
+export type InsertAiPrepareResponse = z.infer<typeof insertAiPrepareResponseSchema>;
+export type AiPrepareAnalytics = typeof aiPrepareAnalytics.$inferSelect;
+export type InsertAiPrepareAnalytics = z.infer<typeof insertAiPrepareAnalyticsSchema>;
+
+// Extended types for API responses
+export type AiPrepareSessionWithDetails = AiPrepareSession & {
+  questions?: AiPrepareQuestion[];
+  responses?: AiPrepareResponse[];
+  analytics?: AiPrepareAnalytics;
+  currentQuestion?: AiPrepareQuestion;
+  lastResponse?: AiPrepareResponse;
+};
+
+export type AiPrepareQuestionWithResponse = AiPrepareQuestion & {
+  response?: AiPrepareResponse;
+  nextQuestion?: AiPrepareQuestion;
+};
+
+export type AiPrepareSessionProgress = {
+  sessionId: string;
+  overallProgress: number;
+  questionsAnswered: number;
+  totalQuestions: number;
+  averageStarScore: number;
+  timeSpent: number;
+  strengthAreas: string[];
+  improvementAreas: string[];
+};
+
+// Voice service types
+export type VoiceInputMethod = 'text' | 'voice' | 'hybrid';
+export type VoiceQuality = 'excellent' | 'good' | 'fair' | 'poor';
+
+export interface VoiceTranscriptionResult {
+  text: string;
+  confidence: number;
+  language: string;
+  processingTime: number;
+  quality: VoiceQuality;
+}
+
+export interface VoiceSynthesisOptions {
+  language: string;
+  voice?: string;
+  rate?: number;
+  pitch?: number;
+  volume?: number;
+}
+
+// AI evaluation types
+export interface StarMethodScores {
+  situation: number;
+  task: number;
+  action: number;
+  result: number;
+  overall: number;
+}
+
+export interface DetailedFeedback {
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+  overallComment: string;
+}
+
+export interface ModelAnswer {
+  situation: string;
+  task: string;
+  action: string;
+  result: string;
+  fullAnswer: string;
+  keyPoints: string[];
+}

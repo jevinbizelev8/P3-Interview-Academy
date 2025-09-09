@@ -112,17 +112,36 @@ export class SeaLionService {
 
     // Use direct API (either as primary or fallback)
     if (this.client) {
-      const completion = await this.client.chat.completions.create({
-        model: model || this.config.defaultModel,
-        messages: messages as any,
-        max_tokens: maxTokens,
-        temperature
-      });
+      try {
+        const completion = await this.client.chat.completions.create({
+          model: model || this.config.defaultModel,
+          messages: messages as any,
+          max_tokens: maxTokens,
+          temperature
+        });
 
-      return completion.choices[0].message.content || '';
+        return completion.choices[0].message.content || '';
+      } catch (directApiError) {
+        console.warn('🔄 Direct SeaLion API failed, falling back to OpenAI:', directApiError instanceof Error ? directApiError.message : 'Unknown error');
+      }
     }
 
-    throw new Error('No available API client');
+    // Final fallback to OpenAI
+    console.log('🔄 Falling back to OpenAI for generation...');
+    try {
+      const { AIService } = await import('./ai-service');
+      const aiService = new AIService();
+      
+      // Convert messages to prompt format for OpenAI
+      const prompt = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n\n');
+      const response = await aiService.generateResponse(prompt);
+      
+      console.log('✅ OpenAI fallback successful');
+      return response;
+    } catch (openaiError) {
+      console.error('❌ OpenAI fallback also failed:', openaiError);
+      throw new Error(`All AI services failed. SeaLion: Not available, OpenAI: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`);
+    }
   }
 
   // Get language-specific instructions for SeaLion - ULTRA MINIMAL to prevent overthinking

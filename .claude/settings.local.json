@@ -50,7 +50,10 @@
       "Bash(NODE_ENV=development BYPASS_AUTH=true PORT=3001 npm run dev)",
       "Bash(NODE_ENV=development PORT=3001 npm run dev)",
       "Bash(env)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(npx tsx:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []
