@@ -359,12 +359,6 @@ export default function InterviewPractice() {
     }
   }, [session?.preferredLanguage]);
   
-  // Generate initial AI question if no messages exist
-  useEffect(() => {
-    if (session && messages.length === 0) {
-      generateAiResponseMutation.mutate();
-    }
-  }, [session?.id, messages.length]);
   
   // Auto-speak latest AI message when messages change
   useEffect(() => {
