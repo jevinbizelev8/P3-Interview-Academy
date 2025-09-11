@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BreadcrumbNavigation } from "@/components/prepare/breadcrumb-navigation";
 import { FooterNavigation } from "@/components/prepare/footer-navigation";
+import MainNav from '@/components/navigation/main-nav';
 import { 
   FileText, 
   ChevronDown, 
@@ -147,6 +148,7 @@ export default function CommonQuestions() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <MainNav currentModule="prepare" />
       <BreadcrumbNavigation currentPage="Common Questions" />
 
       {/* Header */}

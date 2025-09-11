@@ -28,6 +28,7 @@ import { apiRequest } from "@/lib/queryClient";
 import ProgressTracker from "@/components/ProgressTracker";
 import ResourceLibrary from "@/components/ResourceLibrary";
 import StarMethodTrainer from "@/components/StarMethodTrainer";
+import MainNav from '@/components/navigation/main-nav';
 
 // Import existing components that we'll enhance
 import { SessionProvider } from "@/contexts/SessionContext";
@@ -241,6 +242,7 @@ export default function EnhancedDashboard() {
   return (
     <SessionProvider>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <MainNav currentModule="prepare" />
         {/* Header */}
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

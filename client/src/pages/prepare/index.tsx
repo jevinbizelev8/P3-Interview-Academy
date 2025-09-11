@@ -11,6 +11,9 @@ import studentAICoaching from '@assets/generated_images/Student_AI_interview_coa
 import learningPathway from '@assets/generated_images/Three_module_learning_pathway_3e9c7ef9.png';
 import preparationSteps from '@assets/generated_images/Interview_preparation_steps_guide_19dc5895.png';
 
+// Navigation
+import MainNav from '@/components/navigation/main-nav';
+
 // AI Prepare Components
 import PrepareAIInterface from '@/components/prepare-ai/PrepareAIInterface';
 import SessionSetup from '@/components/prepare-ai/SessionSetup';
@@ -51,52 +54,63 @@ export default function Prepare() {
   // Render different views based on current state
   if (currentView === 'session') {
     return (
-      <div className="container mx-auto py-8">
-        <PrepareAIInterface 
-          onSessionChange={setCurrentSession}
-          initialSession={currentSession}
-        />
-      </div>
+      <>
+        <MainNav currentModule="prepare" />
+        <div className="container mx-auto py-8">
+          <PrepareAIInterface 
+            onSessionChange={setCurrentSession}
+            initialSession={currentSession}
+          />
+        </div>
+      </>
     );
   }
 
   if (currentView === 'setup') {
     return (
-      <div className="container mx-auto py-8">
-        <SessionSetup 
-          onStartSession={handleCreateSession}
-          initialConfig={currentSession}
-        />
-      </div>
+      <>
+        <MainNav currentModule="prepare" />
+        <div className="container mx-auto py-8">
+          <SessionSetup 
+            onStartSession={handleCreateSession}
+            initialConfig={currentSession}
+          />
+        </div>
+      </>
     );
   }
 
   if (currentView === 'dashboard') {
     return (
-      <div className="container mx-auto py-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Your AI Prepare Dashboard</h1>
-          <Button variant="outline" onClick={handleBackToLanding}>
-            ← Back to Home
-          </Button>
+      <>
+        <MainNav currentModule="prepare" />
+        <div className="container mx-auto py-8">
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-3xl font-bold">Your AI Prepare Dashboard</h1>
+            <Button variant="outline" onClick={handleBackToLanding}>
+              ← Back to Home
+            </Button>
+          </div>
+          <SessionDashboard 
+            onStartNewSession={handleStartNewSession}
+            onResumeSession={(sessionId) => {
+              // Load session and switch to session view
+              setCurrentView('session');
+            }}
+            onViewSession={(sessionId) => {
+              // Load session details
+              console.log('View session:', sessionId);
+            }}
+          />
         </div>
-        <SessionDashboard 
-          onStartNewSession={handleStartNewSession}
-          onResumeSession={(sessionId) => {
-            // Load session and switch to session view
-            setCurrentView('session');
-          }}
-          onViewSession={(sessionId) => {
-            // Load session details
-            console.log('View session:', sessionId);
-          }}
-        />
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <>
+      <MainNav currentModule="prepare" />
+      <div className="container mx-auto py-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">
@@ -395,5 +409,6 @@ export default function Prepare() {
         </Card>
       </div>
     </div>
+    </>
   );
 }
