@@ -202,6 +202,12 @@ export default function Dashboard() {
 
   const practiceSessionsCount = dashboardStats.practiceSessions || 0;
   const totalSessionsCount = dashboardStats.totalSessions || 0;
+  
+  // Filter out generic messages from backend to let our logic work
+  const hasRealStrengths = dashboardStats.strongestSkills && dashboardStats.strongestSkills.length > 0 && 
+    !dashboardStats.strongestSkills[0].includes('Complete more sessions');
+  const hasRealImprovementAreas = dashboardStats.improvementAreas && dashboardStats.improvementAreas.length > 0 && 
+    !dashboardStats.improvementAreas[0].includes('Complete more sessions');
 
   return (
     <ProtectedRoute>
@@ -636,7 +642,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {dashboardStats.strongestSkills && dashboardStats.strongestSkills.length > 0 ? (
+                  {hasRealStrengths ? (
                     dashboardStats.strongestSkills.slice(0, 3).map((strength: string, index: number) => (
                       <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-green-100">
                         <Zap className="w-4 h-4 text-green-600 mt-0.5" />
@@ -668,7 +674,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {dashboardStats.improvementAreas && dashboardStats.improvementAreas.length > 0 ? (
+                  {hasRealImprovementAreas ? (
                     dashboardStats.improvementAreas.slice(0, 3).map((area: string, index: number) => (
                       <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-blue-100">
                         <AlertTriangle className="w-4 h-4 text-blue-600 mt-0.5" />
