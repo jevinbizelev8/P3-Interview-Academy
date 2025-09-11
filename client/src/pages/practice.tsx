@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import MainNav from "@/components/navigation/main-nav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ScenarioSelection from "./practice/scenario-selection";
@@ -9,11 +9,15 @@ import { useAuth } from "@/hooks/use-auth";
 
 export default function Practice() {
   const { user } = useAuth();
+  const [location] = useLocation();
+
+  // Check if we're on the assessment page
+  const isAssessmentPage = location.includes('/practice/assessment/');
 
   return (
     <ProtectedRoute requireAuth={true}>
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
-        <MainNav currentModule="practice" />
+        <MainNav currentModule="practice" hideModuleNav={isAssessmentPage} />
 
         {/* Routes */}
         <Switch>
