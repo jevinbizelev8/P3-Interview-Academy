@@ -81,7 +81,7 @@ export default function PrepareAIInterface({
   useEffect(() => {
     if (!session) return;
 
-    const socket = io('ws://localhost:3001', {
+    const socket = io('/', {
       query: { sessionId: session.id }
     });
 
