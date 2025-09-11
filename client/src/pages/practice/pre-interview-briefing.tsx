@@ -432,12 +432,12 @@ export default function PreInterviewBriefing() {
         credentials: "include",
         body: JSON.stringify({
           scenarioId: scenarioId,
-          status: "in_progress",
-          currentQuestion: 1,
+          jobPosition: jobContext.jobPosition,
+          companyName: jobContext.companyName,
+          interviewStage: scenario?.interviewStage || "behavioral", // Use scenario stage or default
+          difficultyLevel: "intermediate",
+          preferredLanguage: jobContext.interviewLanguage || 'en',
           totalQuestions: 15,
-          userJobPosition: jobContext.jobPosition,
-          userCompanyName: jobContext.companyName,
-          interviewLanguage: jobContext.interviewLanguage || 'en',
         }),
       });
 
@@ -445,8 +445,9 @@ export default function PreInterviewBriefing() {
         throw new Error("Failed to create interview session");
       }
 
-      const session = await response.json();
-      setLocation(`/practice/interview/${session.id}`);
+      const result = await response.json();
+      const sessionId = result.data?.id || result.id;
+      setLocation(`/practice/interview/${sessionId}`);
     } catch (error) {
       console.error("Error creating session:", error);
       toast({
