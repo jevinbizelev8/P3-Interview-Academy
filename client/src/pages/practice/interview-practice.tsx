@@ -50,6 +50,7 @@ export default function InterviewPractice() {
   const [speechRate, setSpeechRate] = useState(1.0);
   const [selectedVoice, setSelectedVoice] = useState('');
   const [transcriptionActive, setTranscriptionActive] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState(''); // For real-time transcription display
   const voiceInitializedRef = useRef(false);
 
   // Fetch session data
@@ -230,9 +231,11 @@ export default function InterviewPractice() {
     console.log('🔍 INTERVIEW-PRACTICE: handleTranscriptionResult called with result:', result);
     console.log(`🎯 INTERVIEW-PRACTICE: Transcription method: ${result.method}, text: "${result.text}", confidence: ${result.confidence}`);
     
+    // Reset all voice states
     setTranscriptionActive(false);
     setIsRecording(false);
     setIsListening(false);
+    setInterimTranscript(''); // Clear interim transcript
     
     if (result.text.trim()) {
       console.log(`✅ INTERVIEW-PRACTICE: Valid transcription text found: "${result.text.trim()}"`);
@@ -241,6 +244,17 @@ export default function InterviewPractice() {
     } else {
       console.warn('❌ INTERVIEW-PRACTICE: No valid transcription text found');
     }
+  };
+
+  // Handle interim transcription results (real-time display)
+  const handleInterimTranscription = (interimText: string) => {
+    console.log('🔍 INTERIM-TRANSCRIPTION:', interimText);
+    setInterimTranscript(interimText);
+    // Update the message field with interim + existing text for real-time feedback
+    setMessage(prev => {
+      const baseText = prev.replace(interimTranscript, '').trim(); // Remove previous interim
+      return baseText + (baseText && interimText ? ' ' : '') + interimText;
+    });
   };
   
   const handleTTSComplete = (result: TTSResult) => {
@@ -256,33 +270,46 @@ export default function InterviewPractice() {
       description: `${service}: ${error}`,
       variant: "destructive"
     });
+    // Reset all voice states on error
     setIsRecording(false);
     setIsListening(false);
     setIsSpeaking(false);
+    setTranscriptionActive(false);
+    setInterimTranscript('');
   };
   
-  // Voice control handlers
-  const handleStartRecording = async () => {
-    if (isRecording || transcriptionActive) return;
-    
-    setTranscriptionActive(true);
-    setIsListening(true);
-    
-    const started = await integratedVoiceService.startRecording();
-    if (started) {
-      setIsRecording(true);
-    } else {
-      setTranscriptionActive(false);
+  // Voice control handlers - Toggle recording
+  const handleToggleRecording = async () => {
+    if (isRecording) {
+      // Stop recording
+      console.log('🛑 STOPPING recording...');
       setIsListening(false);
+      await integratedVoiceService.stopRecording();
+      setIsRecording(false);
+    } else {
+      // Start recording
+      if (transcriptionActive) {
+        console.warn('⚠️ Transcription still active, skipping start...');
+        return;
+      }
+      
+      console.log('🎤 STARTING recording...');
+      // Reset states before starting
+      setInterimTranscript('');
+      setTranscriptionActive(true);
+      setIsListening(true);
+      
+      const started = await integratedVoiceService.startRecording();
+      if (started) {
+        setIsRecording(true);
+        console.log('✅ Recording started successfully');
+      } else {
+        console.error('❌ Failed to start recording');
+        setTranscriptionActive(false);
+        setIsListening(false);
+        setInterimTranscript('');
+      }
     }
-  };
-  
-  const handleStopRecording = async () => {
-    if (!isRecording) return;
-    
-    setIsListening(false);
-    await integratedVoiceService.stopRecording();
-    setIsRecording(false);
   };
   
   const handleToggleVoice = () => {
@@ -379,6 +406,7 @@ export default function InterviewPractice() {
       integratedVoiceService.setEventHandlers({
         onStatusChange: setVoiceStatus,
         onTranscriptionResult: handleTranscriptionResult,
+        onInterimTranscription: handleInterimTranscription, // Add interim handler
         onTTSComplete: handleTTSComplete,
         onError: handleVoiceError
       });
@@ -668,10 +696,7 @@ export default function InterviewPractice() {
                       <Button
                         variant={isRecording ? "destructive" : "outline"}
                         size="lg"
-                        onMouseDown={handleStartRecording}
-                        onMouseUp={handleStopRecording}
-                        onTouchStart={handleStartRecording}
-                        onTouchEnd={handleStopRecording}
+                        onClick={handleToggleRecording}
                         disabled={sendMessageMutation.isPending || isCompleted || isSpeaking}
                         className="px-8 py-4 text-base font-medium min-w-[280px]"
                         data-testid="button-voice-dictate"
@@ -679,7 +704,7 @@ export default function InterviewPractice() {
                         {isRecording ? (
                           <>
                             <MicOff className="w-5 h-5 mr-3 animate-pulse" />
-                            Release to Stop Recording
+                            Stop Recording
                           </>
                         ) : transcriptionActive ? (
                           <>
@@ -689,7 +714,7 @@ export default function InterviewPractice() {
                         ) : (
                           <>
                             <Mic className="w-5 h-5 mr-3" />
-                            Hold to Dictate (fills text field)
+                            Start Voice Dictation
                           </>
                         )}
                       </Button>
@@ -728,8 +753,22 @@ export default function InterviewPractice() {
                       </div>
                     )}
                     
+                    {/* Real-time transcription indicator */}
+                    {(interimTranscript || isRecording) && (
+                      <div className="text-center">
+                        <p className="text-sm text-blue-600">
+                          {isRecording ? '🎤 Listening... speak now' : '✍️ Processing transcription...'}
+                        </p>
+                        {interimTranscript && (
+                          <p className="text-xs text-gray-500 italic mt-1">
+                            "{interimTranscript}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
                     <p className="text-sm text-gray-500 text-center">
-                      Voice dictation will fill the text field above for review before submitting
+                      Click to start/stop voice dictation. Speech will appear in text field for review.
                     </p>
                   </>
                 )}
