@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import PrepareProgressDashboard from "@/components/PrepareProgressDashboard";
+import ProgressTracker from "@/components/ProgressTracker";
 import ResourceLibrary from "@/components/ResourceLibrary";
 import StarMethodTrainer from "@/components/StarMethodTrainer";
 
@@ -465,7 +465,11 @@ export default function EnhancedDashboard() {
 
             {/* Progress Tab */}
             <TabsContent value="progress">
-              <PrepareProgressDashboard preparationSessionId={sessionId} />
+              <ProgressTracker 
+                currentStage="practice" 
+                currentStep={2} 
+                totalSteps={4} 
+              />
             </TabsContent>
 
             {/* Study Plan Tab */}

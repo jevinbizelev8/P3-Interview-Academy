@@ -255,6 +255,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   firstName: true,
   lastName: true,
   profileImageUrl: true,
+  passwordHash: true,
   role: true,
 });
 

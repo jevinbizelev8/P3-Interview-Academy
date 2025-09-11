@@ -8,6 +8,57 @@ import { voiceQualityDetector, type AudioQualityMetrics, type QualityStatus } fr
 import { enhancedTTS, type TTSVoice, type TTSOptions, type LanguageConfig } from './enhanced-tts';
 import { audioProcessor, type AudioMetrics, type ProcessingOptions } from './audio-processor';
 
+// Speech Recognition API type declarations
+declare global {
+  interface Window {
+    SpeechRecognition: typeof SpeechRecognition;
+    webkitSpeechRecognition: typeof SpeechRecognition;
+  }
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+}
+
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
 interface VoiceServiceConfig {
   language: string;
   enableWhisperFallback: boolean;
@@ -255,7 +306,7 @@ class IntegratedVoiceService {
       console.error('TTS error:', error);
       const result: TTSResult = {
         success: false,
-        error: error.message
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
       
       this.setStatus('ready');
@@ -387,21 +438,23 @@ class IntegratedVoiceService {
     
     if (SpeechRecognition) {
       this.recognition = new SpeechRecognition();
-      this.recognition.continuous = false;
-      this.recognition.interimResults = false;
-      this.recognition.lang = this.config.language;
+      if (this.recognition) {
+        this.recognition.continuous = false;
+        this.recognition.interimResults = false;
+        this.recognition.lang = this.config.language;
 
-      this.recognition.onresult = (event) => {
-        this.handleWebSpeechResult(event);
-      };
+        this.recognition.onresult = (event) => {
+          this.handleWebSpeechResult(event);
+        };
 
-      this.recognition.onerror = (event) => {
-        this.handleWebSpeechError(event);
-      };
+        this.recognition.onerror = (event) => {
+          this.handleWebSpeechError(event);
+        };
 
-      this.recognition.onend = () => {
-        this.handleWebSpeechEnd();
-      };
+        this.recognition.onend = () => {
+          this.handleWebSpeechEnd();
+        };
+      }
     }
 
     if ('speechSynthesis' in window) {

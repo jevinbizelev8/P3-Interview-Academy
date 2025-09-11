@@ -126,7 +126,7 @@ class WhisperWasmService {
 
     } catch (error) {
       console.error('Whisper transcription error:', error);
-      throw new Error(`Transcription failed: ${error.message}`);
+      throw new Error(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

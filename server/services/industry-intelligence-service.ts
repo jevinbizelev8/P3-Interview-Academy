@@ -181,7 +181,7 @@ export class IndustryIntelligenceService {
           industryKnowledge, 
           context.specializations
         );
-        context.specializations = [...new Set([...context.specializations, ...additionalSpecializations])];
+        context.specializations = Array.from(new Set([...context.specializations, ...additionalSpecializations]));
       }
 
       // Enhance company context with knowledge base data
@@ -320,7 +320,8 @@ export class IndustryIntelligenceService {
       }
 
       // Check existing knowledge base
-      knowledge = await storage.getIndustryKnowledge('industry', industry);
+      const industryKnowledge = await storage.getIndustryKnowledge('industry', industry);
+      knowledge = industryKnowledge || null;
       
       if (!knowledge) {
         // Generate new industry knowledge using AI

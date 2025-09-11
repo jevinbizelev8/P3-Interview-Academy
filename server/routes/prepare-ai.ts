@@ -89,7 +89,7 @@ router.get('/sessions/:sessionId', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Get AI session error:', error);
-    if (error.message.includes('not found')) {
+    if (error instanceof Error && error.message.includes('not found')) {
       return res.status(404).json({ error: 'Session not found' });
     }
     res.status(500).json({

@@ -157,7 +157,8 @@ export class PrepareAIService {
 
     } catch (error) {
       console.error("❌ Error retrieving user sessions:", error);
-      throw new Error(`Failed to get user sessions: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get user sessions: ${errorMessage}`);
     }
   }
 
@@ -210,7 +211,8 @@ export class PrepareAIService {
 
     } catch (error) {
       console.error("❌ Error generating question:", error);
-      throw new Error(`Failed to generate question: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to generate question: ${errorMessage}`);
     }
   }
 
@@ -284,7 +286,8 @@ export class PrepareAIService {
 
     } catch (error) {
       console.error("❌ Error processing response:", error);
-      throw new Error(`Failed to process response: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to process response: ${errorMessage}`);
     }
   }
 
@@ -304,7 +307,7 @@ export class PrepareAIService {
       
       // Calculate average STAR score
       const starScores = responses.map((r: any) => r.starScores?.overall || 0);
-      const averageStarScore = starScores.reduce((sum, score) => sum + score, 0) / starScores.length;
+      const averageStarScore = starScores.reduce((sum: number, score: number) => sum + score, 0) / starScores.length;
       
       // Calculate progress percentage (assuming 20 questions target)
       const progressPercentage = Math.min((questionsAnswered / 20) * 100, 100);
@@ -324,7 +327,8 @@ export class PrepareAIService {
 
     } catch (error) {
       console.error("❌ Error updating session progress:", error);
-      throw new Error(`Failed to update session progress: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to update session progress: ${errorMessage}`);
     }
   }
 
@@ -343,7 +347,7 @@ export class PrepareAIService {
       // Calculate average STAR score
       const starScores = responses.map((r: any) => r.starScores?.overall || 0);
       const averageStarScore = starScores.length > 0 
-        ? starScores.reduce((sum, score) => sum + score, 0) / starScores.length 
+        ? starScores.reduce((sum: number, score: number) => sum + score, 0) / starScores.length 
         : 0;
 
       const progressPercentage = Math.min((questionsAnswered / 20) * 100, 100);
@@ -360,7 +364,8 @@ export class PrepareAIService {
 
     } catch (error) {
       console.error("❌ Error getting session progress:", error);
-      throw new Error(`Failed to get session progress: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to get session progress: ${errorMessage}`);
     }
   }
 
@@ -384,7 +389,8 @@ export class PrepareAIService {
 
     } catch (error) {
       console.error("❌ Error updating session status:", error);
-      throw new Error(`Failed to update session status: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to update session status: ${errorMessage}`);
     }
   }
 
@@ -409,7 +415,8 @@ export class PrepareAIService {
 
     } catch (error) {
       console.error("❌ Error deleting session:", error);
-      throw new Error(`Failed to delete session: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to delete session: ${errorMessage}`);
     }
   }
 }

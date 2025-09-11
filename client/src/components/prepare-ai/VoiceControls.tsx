@@ -55,7 +55,7 @@ export default function VoiceControls({
 }: VoiceControlsProps) {
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [showSettings, setShowSettings] = useState(false);
-  const [microphoneStatus, setMicrophoneStatus] = useState<'unknown' | 'granted' | 'denied'>('unknown');
+  const [microphoneStatus, setMicrophoneStatus] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown');
   const [audioLevel, setAudioLevel] = useState(0);
   
   const audioContextRef = useRef<AudioContext | null>(null);
