@@ -8,7 +8,6 @@ import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCirc
 import { useAuth } from "@/hooks/use-auth";
 import AuthenticatedLanding from "@/components/AuthenticatedLanding";
 import AuthModal from "@/components/AuthModal";
-import MainNav from "@/components/navigation/main-nav";
 import professionalInterviewImage from "@assets/generated_images/Professional_interview_scene_0e52b9e3.png";
 import aiCoachingImage from "@assets/generated_images/AI_coaching_dashboard_732a8dd4.png";
 import careerSuccessImage from "@assets/generated_images/Career_success_celebration_559e261d.png";
