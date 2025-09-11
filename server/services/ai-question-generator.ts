@@ -61,18 +61,7 @@ export class AIQuestionGenerator {
     try {
       console.log(`🎯 Generating question ${request.questionNumber} for ${request.jobPosition} (${request.preferredLanguage})`);
 
-      // For non-English languages, prioritize SeaLion AI (optimized for ASEAN languages)
-      if (request.preferredLanguage !== 'en' && this.shouldUseSeaLion(request.preferredLanguage)) {
-        try {
-          console.log(`🌏 Using SeaLion AI for ${request.preferredLanguage} language generation`);
-          const seaLionQuestion = await this.generateWithSeaLion(request);
-          if (seaLionQuestion) return seaLionQuestion;
-        } catch (error) {
-          console.warn("⚠️ SeaLion generation failed, trying OpenAI:", error instanceof Error ? error.message : 'Unknown error');
-        }
-      }
-
-      // Try OpenAI (prioritized for English, fallback for non-English)
+      // Try OpenAI first (prioritized as requested)
       if (this.openaiService) {
         try {
           const openaiQuestion = await this.generateWithOpenAI(request);
@@ -82,9 +71,10 @@ export class AIQuestionGenerator {
         }
       }
 
-      // Try SeaLion AI as backup for English or if not tried above
+      // Try SeaLion AI as fallback for ASEAN languages and cultural context
       if (this.shouldUseSeaLion(request.preferredLanguage)) {
         try {
+          console.log(`🌏 Using SeaLion AI as fallback for ${request.preferredLanguage} language generation`);
           const seaLionQuestion = await this.generateWithSeaLion(request);
           if (seaLionQuestion) return seaLionQuestion;
         } catch (error) {
