@@ -261,8 +261,13 @@ export default function PrepareAIInterface({
       setSessionStatus('active');
       onSessionChange?.(newSession);
 
-      // Generate first question
-      await generateFirstQuestion(newSession.id);
+      // Add interview introduction message
+      addInterviewIntroduction(newSession);
+
+      // Generate first question after introduction
+      setTimeout(() => {
+        generateFirstQuestion(newSession.id);
+      }, 2000);
     } catch (error) {
       console.error('Error creating session:', error);
     } finally {
@@ -577,6 +582,70 @@ export default function PrepareAIInterface({
     } catch (error) {
       console.error('Error evaluating voice response:', error);
     }
+  };
+
+  // Add interview introduction message
+  const addInterviewIntroduction = (sessionData: any) => {
+    const languageIntro = getIntroductionMessage(sessionData);
+    
+    const introMessage: Message = {
+      id: crypto.randomUUID(),
+      type: 'question',
+      content: languageIntro,
+      timestamp: new Date()
+    };
+    
+    setMessages(prev => [...prev, introMessage]);
+    
+    // Speak the introduction if voice is enabled
+    if (voiceEnabled && sessionData.voiceEnabled) {
+      setTimeout(() => {
+        speakText(languageIntro);
+      }, 500);
+    }
+  };
+
+  // Get introduction message based on language
+  const getIntroductionMessage = (sessionData: any) => {
+    const introductions: Record<string, string> = {
+      'en': `Hello! Welcome to your interview preparation session for the ${sessionData.jobPosition} position at ${sessionData.companyName}. I'm your AI interviewer, and I'll be conducting your ${sessionData.interviewStage} interview today. 
+
+This will be a realistic interview simulation where I'll ask you relevant questions and provide detailed feedback on your responses. Feel free to answer in a natural, conversational way as you would in a real interview.
+
+Are you ready to begin?`,
+      
+      'id': `Halo! Selamat datang di sesi persiapan wawancara Anda untuk posisi ${sessionData.jobPosition} di ${sessionData.companyName}. Saya adalah pewawancara AI Anda, dan saya akan melakukan wawancara ${sessionData.interviewStage} Anda hari ini.
+
+Ini akan menjadi simulasi wawancara yang realistis di mana saya akan mengajukan pertanyaan yang relevan dan memberikan umpan balik terperinci tentang tanggapan Anda. Silakan menjawab dengan cara yang natural dan percakapan seperti yang Anda lakukan dalam wawancara sungguhan.
+
+Apakah Anda siap untuk memulai?`,
+
+      'ms': `Helo! Selamat datang ke sesi persediaan temu duga anda untuk jawatan ${sessionData.jobPosition} di ${sessionData.companyName}. Saya adalah penemu duga AI anda, dan saya akan menjalankan temu duga ${sessionData.interviewStage} anda hari ini.
+
+Ini akan menjadi simulasi temu duga yang realistik di mana saya akan bertanya soalan yang berkaitan dan memberikan maklum balas terperinci tentang jawapan anda. Sila jawab dengan cara yang natural dan seperti perbualan seperti yang anda lakukan dalam temu duga sebenar.
+
+Adakah anda bersedia untuk bermula?`,
+
+      'th': `สวัสดี! ยินดีต้อนรับสู่เซสชันการเตรียมตัวสัมภาษณ์ของคุณสำหรับตำแหน่ง ${sessionData.jobPosition} ที่ ${sessionData.companyName} ฉันคือผู้สัมภาษณ์ AI ของคุณ และฉันจะดำเนินการสัมภาษณ์ ${sessionData.interviewStage} ของคุณวันนี้
+
+นี่จะเป็นการจำลองการสัมภาษณ์ที่สมจริง ซึ่งฉันจะถามคำถามที่เกี่ยวข้องและให้ข้อเสนอแนะโดยละเอียดเกี่ยวกับการตอบของคุณ กรุณาตอบในลักษณะธรรมชาติและเป็นการสนทนาเหมือนที่คุณทำในการสัมภาษณ์จริง
+
+คุณพร้อมที่จะเริ่มแล้วหรือยัง?`,
+
+      'vi': `Xin chào! Chào mừng bạn đến với phiên chuẩn bị phỏng vấn cho vị trí ${sessionData.jobPosition} tại ${sessionData.companyName}. Tôi là người phỏng vấn AI của bạn, và tôi sẽ tiến hành buổi phỏng vấn ${sessionData.interviewStage} của bạn hôm nay.
+
+Đây sẽ là một mô phỏng phỏng vấn thực tế nơi tôi sẽ đặt những câu hỏi liên quan và cung cấp phản hồi chi tiết về các câu trả lời của bạn. Hãy trả lời một cách tự nhiên, đàm thoại như bạn sẽ làm trong một cuộc phỏng vấn thực tế.
+
+Bạn đã sẵn sàng bắt đầu chưa?`,
+
+      'tl': `Kumusta! Maligayang pagdating sa inyong session ng paghahanda sa interview para sa posisyong ${sessionData.jobPosition} sa ${sessionData.companyName}. Ako ang inyong AI interviewer, at ako ang magkokonduct ng inyong ${sessionData.interviewStage} interview ngayong araw.
+
+Ito ay magiging realistic na interview simulation kung saan magtatanong ako ng mga relevant na katanungan at magbibigay ng detalyadong feedback sa inyong mga sagot. Mangyaring sumagot sa natural at conversational na paraan tulad ng ginagawa ninyo sa tunay na interview.
+
+Handa na ba kayong magsimula?`
+    };
+
+    return introductions[sessionData.preferredLanguage] || introductions['en'];
   };
 
   // Generate next question
