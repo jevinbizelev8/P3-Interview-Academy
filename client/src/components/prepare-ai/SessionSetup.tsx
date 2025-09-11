@@ -17,40 +17,34 @@ import {
   CheckCircle
 } from 'lucide-react';
 
-// Interview stages with descriptions
+// Interview stages with descriptions - Updated to match backend enum
 const INTERVIEW_STAGES = [
   { 
-    value: 'behavioral', 
-    label: 'Behavioral Interview', 
-    description: 'STAR method questions about past experiences',
-    color: 'blue'
-  },
-  { 
-    value: 'technical', 
-    label: 'Technical Interview', 
-    description: 'Problem-solving and technical knowledge',
-    color: 'green' 
-  },
-  { 
-    value: 'phone_screening', 
+    value: 'phone-screening', 
     label: 'Phone Screening', 
     description: 'Initial screening conversation',
     color: 'purple'
   },
   { 
-    value: 'functional', 
-    label: 'Functional Interview', 
-    description: 'Role-specific skills and expertise',
-    color: 'orange'
+    value: 'functional-team', 
+    label: 'Team Interview', 
+    description: 'Interview with your future team members',
+    color: 'green' 
   },
   { 
-    value: 'hiring_manager', 
+    value: 'hiring-manager', 
     label: 'Hiring Manager', 
     description: 'Leadership and cultural fit assessment',
     color: 'red'
   },
   { 
-    value: 'executive', 
+    value: 'sme-expert', 
+    label: 'Technical Expert', 
+    description: 'Deep technical/domain expertise interview',
+    color: 'blue'
+  },
+  { 
+    value: 'executive-leadership', 
     label: 'Executive Interview', 
     description: 'Strategic thinking and leadership',
     color: 'indigo'
@@ -114,7 +108,7 @@ export default function SessionSetup({
   const [config, setConfig] = useState<SessionConfig>({
     jobTitle: safeInitialConfig.jobTitle || '',
     companyName: safeInitialConfig.companyName || '',
-    interviewStage: safeInitialConfig.interviewStage || 'behavioral',
+    interviewStage: safeInitialConfig.interviewStage || 'phone-screening',
     language: safeInitialConfig.language || 'en',
     voiceEnabled: safeInitialConfig.voiceEnabled ?? true,
     difficulty: safeInitialConfig.difficulty || 'intermediate',
@@ -128,11 +122,28 @@ export default function SessionSetup({
   };
 
   const handleStartSession = () => {
-    if (!config.jobTitle.trim() || !config.companyName.trim()) {
-      alert('Please fill in job title and company name');
+    if (!config.jobTitle.trim()) {
+      alert('Please fill in job title');
       return;
     }
-    onStartSession(config);
+    
+    // Map frontend config to backend schema
+    const backendConfig = {
+      jobPosition: config.jobTitle,
+      companyName: config.companyName || undefined,
+      interviewStage: config.interviewStage,
+      experienceLevel: "intermediate" as const, // Default to intermediate
+      preferredLanguage: config.language,
+      voiceEnabled: config.voiceEnabled,
+      speechRate: "1.0",
+      difficultyLevel: config.difficulty === 'beginner' ? 'beginner' as const : 
+                      config.difficulty === 'advanced' ? 'advanced' as const : 
+                      'intermediate' as const,
+      focusAreas: ["behavioral", "situational"],
+      questionCategories: ["general"]
+    };
+    
+    onStartSession(backendConfig);
   };
 
   const selectedStage = INTERVIEW_STAGES.find(stage => stage.value === config.interviewStage);
