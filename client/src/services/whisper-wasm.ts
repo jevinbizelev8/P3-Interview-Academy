@@ -88,7 +88,10 @@ class WhisperService {
    * Transcribe audio using OpenAI Whisper API via backend
    */
   async transcribe(audioData: Float32Array, options: TranscriptionOptions = {}): Promise<string> {
+    console.log(`🔍 WHISPER TRANSCRIBE CALLED - audioData length: ${audioData.length}, options:`, options);
+    
     if (!this.initialized || !this.currentModel) {
+      console.error('❌ WHISPER NOT INITIALIZED - initialized:', this.initialized, 'currentModel:', this.currentModel);
       throw new Error('OpenAI Whisper service not initialized. Call initialize() first.');
     }
 
@@ -96,37 +99,49 @@ class WhisperService {
       console.log(`🎤 Starting OpenAI Whisper transcription (${audioData.length} samples)`);
       
       // Convert Float32Array to audio blob
+      console.log('🔄 Converting audio data to blob...');
       const audioBlob = await this.audioDataToBlob(audioData);
+      console.log(`✅ Audio blob created - size: ${audioBlob.size} bytes, type: ${audioBlob.type}`);
       
       // Create FormData for file upload
       const formData = new FormData();
       formData.append('audio', audioBlob, 'recording.wav');
       formData.append('language', options.language || 'en');
       formData.append('model', this.currentModel.name);
+      console.log(`📤 FormData prepared - language: ${options.language || 'en'}, model: ${this.currentModel.name}`);
 
       // Call backend STT endpoint
+      console.log('🌐 Making API call to /api/voice-services/stt...');
       const response = await fetch('/api/voice-services/stt', {
         method: 'POST',
         body: formData,
         credentials: 'include'
       });
+      console.log(`📥 API response received - status: ${response.status}, statusText: ${response.statusText}`);
 
       if (!response.ok) {
+        console.error(`❌ API request failed - status: ${response.status}`);
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Error response data:', errorData);
         throw new Error(`HTTP ${response.status}: ${errorData.error || 'Transcription request failed'}`);
       }
 
+      console.log('📋 Parsing response JSON...');
       const result: TranscriptionResult = await response.json();
+      console.log('📋 Full transcription result:', result);
       
       if (!result.success) {
+        console.error('❌ Transcription failed:', result.error);
         throw new Error(result.error || 'Transcription failed');
       }
 
       console.log(`✅ OpenAI Whisper transcription successful: "${result.transcription.substring(0, 100)}..."`);
+      console.log(`🎯 RETURNING TRANSCRIPTION: "${result.transcription}"`);
       return result.transcription;
 
     } catch (error) {
       console.error('❌ OpenAI Whisper transcription error:', error);
+      console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
       throw new Error(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

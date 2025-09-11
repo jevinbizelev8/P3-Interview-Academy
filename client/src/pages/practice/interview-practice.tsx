@@ -80,29 +80,40 @@ export default function InterviewPractice() {
   // Send message mutation (adapted to work with existing Practice API)
   const sendMessageMutation = useMutation({
     mutationFn: async ({ content, voiceMetadata }: { content: string; voiceMetadata?: any }) => {
+      console.log('🔍 SEND-MESSAGE-MUTATION: Starting with content:', content);
+      console.log('🔍 SEND-MESSAGE-MUTATION: voiceMetadata:', voiceMetadata);
+      console.log(`🔍 SEND-MESSAGE-MUTATION: sessionId: ${sessionId}, questionNumber: ${currentQuestionNumber}`);
+      
+      const requestBody = { 
+        content,
+        questionNumber: currentQuestionNumber,
+        questionContext: messages.filter(m => m.messageType === 'ai_question').slice(-1)[0]?.content || "",
+        inputMethod: voiceMetadata ? 'voice' : 'text',
+        voiceMetadata: voiceMetadata ? {
+          transcriptionMethod: voiceMetadata.method,
+          confidence: voiceMetadata.confidence,
+          processingTime: voiceMetadata.processingTime,
+          audioMetrics: voiceMetadata.audioMetrics
+        } : undefined
+      };
+      console.log('📤 SEND-MESSAGE-MUTATION: Request body:', requestBody);
+      
       const response = await fetch(`/api/practice/sessions/${sessionId}/user-response`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ 
-          content,
-          questionNumber: currentQuestionNumber,
-          questionContext: messages.filter(m => m.messageType === 'ai_question').slice(-1)[0]?.content || "",
-          inputMethod: voiceMetadata ? 'voice' : 'text',
-          voiceMetadata: voiceMetadata ? {
-            transcriptionMethod: voiceMetadata.method,
-            confidence: voiceMetadata.confidence,
-            processingTime: voiceMetadata.processingTime,
-            audioMetrics: voiceMetadata.audioMetrics
-          } : undefined
-        }),
+        body: JSON.stringify(requestBody),
       });
+      console.log(`📥 SEND-MESSAGE-MUTATION: Response status: ${response.status}`);
       
       if (!response.ok) {
+        console.error('❌ SEND-MESSAGE-MUTATION: Request failed with status:', response.status);
         throw new Error("Failed to send message");
       }
       
-      return response.json();
+      const result = await response.json();
+      console.log('✅ SEND-MESSAGE-MUTATION: Success response:', result);
+      return result;
     },
     onSuccess: () => {
       setMessage("");
@@ -216,14 +227,21 @@ export default function InterviewPractice() {
 
   // Voice event handlers
   const handleTranscriptionResult = (result: TranscriptionResult) => {
+    console.log('🔍 INTERVIEW-PRACTICE: handleTranscriptionResult called with result:', result);
+    console.log(`🎯 INTERVIEW-PRACTICE: Transcription method: ${result.method}, text: "${result.text}", confidence: ${result.confidence}`);
+    
     setTranscriptionActive(false);
     setIsRecording(false);
     setIsListening(false);
     
     if (result.text.trim()) {
+      console.log(`✅ INTERVIEW-PRACTICE: Valid transcription text found: "${result.text.trim()}"`);
+      console.log('🔍 INTERVIEW-PRACTICE: Setting message state and calling sendVoiceMessage');
       setMessage(result.text);
       // Auto-submit voice transcription with metadata
       sendVoiceMessage(result.text.trim(), result);
+    } else {
+      console.warn('❌ INTERVIEW-PRACTICE: No valid transcription text found');
     }
   };
   
@@ -316,8 +334,18 @@ export default function InterviewPractice() {
   
   // Send voice message with metadata
   const sendVoiceMessage = (content: string, transcriptionResult: TranscriptionResult) => {
-    if (!content.trim() || sendMessageMutation.isPending) return;
+    console.log('🔍 SEND-VOICE-MESSAGE: Called with content:', content);
+    console.log('🔍 SEND-VOICE-MESSAGE: Transcription result:', transcriptionResult);
+    console.log(`🔍 SEND-VOICE-MESSAGE: Content length: ${content.trim().length}, mutation pending: ${sendMessageMutation.isPending}`);
+    
+    if (!content.trim() || sendMessageMutation.isPending) {
+      console.warn('❌ SEND-VOICE-MESSAGE: Aborting - empty content or mutation pending');
+      return;
+    }
+    
+    console.log('📤 SEND-VOICE-MESSAGE: Calling sendMessageMutation.mutate...');
     sendMessageMutation.mutate({ content: content.trim(), voiceMetadata: transcriptionResult });
+    console.log('✅ SEND-VOICE-MESSAGE: Mutation called successfully');
   };
   
   // Send text message

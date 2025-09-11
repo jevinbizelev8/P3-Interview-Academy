@@ -168,15 +168,18 @@ class IntegratedVoiceService {
    * Start voice recording with intelligent fallback
    */
   async startRecording(): Promise<boolean> {
+    console.log('🔍 INTEGRATED-VOICE: startRecording() called');
     if (this.isRecording) {
       console.warn('Recording already in progress');
       return false;
     }
 
     try {
+      console.log('🔍 INTEGRATED-VOICE: Setting status to recording');
       this.setStatus('recording');
       
       // Get microphone stream
+      console.log('🔍 INTEGRATED-VOICE: Getting microphone stream...');
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -185,6 +188,7 @@ class IntegratedVoiceService {
           sampleRate: 16000
         }
       });
+      console.log('✅ INTEGRATED-VOICE: Microphone stream obtained');
 
       // Start quality monitoring
       if (this.config.enableQualityMonitoring) {
@@ -198,17 +202,23 @@ class IntegratedVoiceService {
       }
 
       // Try Web Speech API first
+      console.log('🔍 INTEGRATED-VOICE: Trying Web Speech API first...');
       const webSpeechStarted = this.startWebSpeechRecognition();
+      console.log(`🔍 INTEGRATED-VOICE: Web Speech started: ${webSpeechStarted}`);
       if (webSpeechStarted) {
         this.isRecording = true;
+        console.log('✅ INTEGRATED-VOICE: Using Web Speech API for transcription');
         return true;
       }
 
       // Fallback to manual recording for Whisper
+      console.log('🔍 INTEGRATED-VOICE: Web Speech failed, trying Whisper fallback...');
       if (this.config.enableWhisperFallback) {
         const manualRecordingStarted = this.startManualRecording();
+        console.log(`🔍 INTEGRATED-VOICE: Manual recording started: ${manualRecordingStarted}`);
         if (manualRecordingStarted) {
           this.isRecording = true;
+          console.log('✅ INTEGRATED-VOICE: Using Whisper WASM for transcription');
           return true;
         }
       }
@@ -515,22 +525,27 @@ class IntegratedVoiceService {
    * Process audio with Whisper WASM
    */
   private async processAudioWithWhisper(audioBlob: Blob): Promise<void> {
+    console.log('🔍 WHISPER-PROCESSING: Starting Whisper audio processing...');
     const startTime = Date.now();
 
     try {
       // Process audio for optimal recognition
       let processedBlob = audioBlob;
       let audioMetrics: AudioMetrics | undefined;
+      console.log(`🔍 WHISPER-PROCESSING: Audio blob size: ${audioBlob.size} bytes`);
 
       if (this.config.enableAudioProcessing) {
+        console.log('🔍 WHISPER-PROCESSING: Optimizing audio for speech recognition...');
         const result = await audioProcessor.optimizeForSpeechRecognition(audioBlob);
         processedBlob = result;
         // audioMetrics = result.metrics; // If processAudioBlob returned metrics
       }
 
       // Convert to format expected by Whisper
+      console.log('🔍 WHISPER-PROCESSING: Converting audio blob to buffer...');
       const audioBuffer = await this.audioBufferFromBlob(processedBlob);
       const audioData = audioBuffer.getChannelData(0);
+      console.log(`🔍 WHISPER-PROCESSING: Audio data length: ${audioData.length}`);
 
       // Transcribe with Whisper
       const transcriptionOptions: TranscriptionOptions = {
@@ -538,8 +553,11 @@ class IntegratedVoiceService {
         temperature: 0.0,
         maxTokens: 1000
       };
+      console.log('🔍 WHISPER-PROCESSING: Transcription options:', transcriptionOptions);
+      console.log('🔍 WHISPER-PROCESSING: Calling whisperWasm.transcribe()...');
 
       const text = await whisperWasm.transcribe(audioData, transcriptionOptions);
+      console.log(`🎯 WHISPER-PROCESSING: Whisper transcription completed: "${text}"`);
       const processingTime = Date.now() - startTime;
 
       const result: TranscriptionResult = {
@@ -549,9 +567,12 @@ class IntegratedVoiceService {
         processingTime,
         audioMetrics
       };
+      console.log(`🎯 WHISPER-PROCESSING: Final transcription result:`, result);
+      console.log(`📤 WHISPER-PROCESSING: Calling onTranscriptionResult handler...`);
 
       this.onTranscriptionResult?.(result);
       this.setStatus('ready');
+      console.log('✅ WHISPER-PROCESSING: Result handled and status set to ready');
 
     } catch (error) {
       console.error('Whisper transcription failed:', error);
@@ -564,7 +585,9 @@ class IntegratedVoiceService {
    * Handle Web Speech recognition result
    */
   private handleWebSpeechResult(event: SpeechRecognitionEvent): void {
+    console.log('🔍 WEB-SPEECH: handleWebSpeechResult called, results:', event.results);
     const result = event.results[0];
+    console.log(`🔍 WEB-SPEECH: First result - isFinal: ${result.isFinal}`);
     if (result.isFinal) {
       const transcriptionResult: TranscriptionResult = {
         text: result[0].transcript,
@@ -572,9 +595,12 @@ class IntegratedVoiceService {
         method: 'web-speech',
         processingTime: 0 // Web Speech API doesn't provide processing time
       };
+      console.log(`🎯 WEB-SPEECH: Final transcription result:`, transcriptionResult);
+      console.log(`📤 WEB-SPEECH: Calling onTranscriptionResult handler...`);
 
       this.onTranscriptionResult?.(transcriptionResult);
       this.setStatus('ready');
+      console.log('✅ WEB-SPEECH: Result handled and status set to ready');
     }
   }
 
