@@ -284,7 +284,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/practice/sessions", requireAuth, async (req, res) => {
     try {
       const sessions = await storage.getUserInterviewSessions(req.user!.id);
-      res.json(sessions);
+      // Filter out deleted sessions
+      const activeSessions = sessions.filter((session: any) => session.status !== 'deleted');
+      res.json(activeSessions);
     } catch (error) {
       console.error("Error fetching user sessions:", error);
       res.status(500).json({ message: "Failed to fetch sessions" });
@@ -311,6 +313,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid session data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update session" });
+    }
+  });
+
+  app.delete("/api/practice/sessions/:id", requireAuth, async (req, res) => {
+    try {
+      const session = await storage.getInterviewSession(req.params.id);
+      if (!session) {
+        return res.status(404).json({ message: "Session not found" });
+      }
+      
+      if (session.userId !== req.user?.id) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Only allow deletion of incomplete sessions
+      if (session.status === 'completed') {
+        return res.status(400).json({ 
+          message: 'Cannot delete completed sessions', 
+          details: 'Completed practice sessions cannot be deleted to preserve evaluation history.'
+        });
+      }
+      
+      // For incomplete sessions, mark as deleted instead of physically deleting
+      // This preserves referential integrity while removing from user's view
+      const updatedSession = await storage.updateInterviewSession(req.params.id, {
+        status: 'deleted' as any
+      });
+      
+      res.json({
+        success: true,
+        message: 'Practice session deleted successfully'
+      });
+
+    } catch (error: any) {
+      console.error("Error deleting session:", error);
+      res.status(500).json({ message: "Failed to delete session" });
     }
   });
 

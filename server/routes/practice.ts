@@ -590,4 +590,57 @@ router.get('/overview', async (req, res) => {
   }
 });
 
+// ================================
+// SESSION MANAGEMENT ENDPOINTS
+// ================================
+
+/**
+ * DELETE /sessions/:id
+ * Delete practice session (only incomplete sessions can be deleted)
+ */
+router.delete('/sessions/:id', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const sessionId = req.params.id;
+
+    // Verify session exists and ownership
+    const session = await storage.getPracticeSession(sessionId);
+    if (!session) {
+      return res.status(404).json({ error: 'Practice session not found' });
+    }
+    if (session.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied to this session' });
+    }
+
+    // Only allow deletion of incomplete sessions
+    if (session.status === 'completed') {
+      return res.status(400).json({ 
+        error: 'Cannot delete completed sessions', 
+        message: 'Completed practice sessions cannot be deleted to preserve evaluation history.'
+      });
+    }
+
+    // Delete related data first (messages, reports if any)
+    await storage.deletePracticeMessages(sessionId);
+    
+    // Delete the session itself
+    await storage.deletePracticeSession(sessionId);
+    
+    res.json({
+      success: true,
+      message: 'Practice session deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Delete practice session error:', error);
+    res.status(500).json({
+      error: 'Failed to delete session',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
