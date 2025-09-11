@@ -1007,19 +1007,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user!.id;
       
-      // Step 1: Get all user sessions (from both Practice and legacy Perform)
+      // Step 1: Get all user sessions (from both Practice and Interview modules)
       const sessionStart = Date.now();
-      const userSessions = await storage.getUserInterviewSessions(userId);
+      const [userSessions, practiceSessions, practiceOverview] = await Promise.all([
+        storage.getUserInterviewSessions(userId),
+        storage.getUserPracticeSessions(userId),
+        storage.getPracticeOverview(userId)
+      ]);
       console.log(`⏱️  getUserInterviewSessions took: ${Date.now() - sessionStart}ms, found ${userSessions.length} sessions`);
+      console.log(`⏱️  getUserPracticeSessions found: ${practiceSessions.length} sessions`);
       const completedSessions = userSessions.filter(session => session.status === 'completed');
+      const completedPracticeSessions = practiceSessions.filter(session => session.status === 'completed');
       
-      // Calculate basic stats
-      const totalSessions = userSessions.length;
-      const completedCount = completedSessions.length;
+      // Calculate combined basic stats (Interview + Practice sessions)
+      const totalSessions = userSessions.length + practiceSessions.length;
+      const completedCount = completedSessions.length + completedPracticeSessions.length;
       
-      // Calculate average score from completed sessions (5-point scale)
+      // Calculate combined average score from completed sessions (5-point scale)
       let totalScore = 0;
       let scoreCount = 0;
+      
+      // Add Interview session scores
       completedSessions.forEach(session => {
         if (session.overallScore && !isNaN(Number(session.overallScore))) {
           // Convert to 5-point scale if needed (assuming stored scores might be on 10-point scale)
@@ -1029,27 +1037,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
           scoreCount++;
         }
       });
+      
+      // Add Practice session scores from practiceOverview
+      if (practiceOverview.averageScore > 0) {
+        const normalizedPracticeScore = practiceOverview.averageScore > 5 ? practiceOverview.averageScore / 2 : practiceOverview.averageScore;
+        totalScore += normalizedPracticeScore * completedPracticeSessions.length;
+        scoreCount += completedPracticeSessions.length;
+      }
+      
       const averageScore = scoreCount > 0 ? totalScore / scoreCount : 0;
       
-      // Calculate total practice time (in minutes)
+      // Calculate total practice time (in minutes) - Interview + Practice sessions
       let totalPracticeTime = 0;
       completedSessions.forEach(session => {
         if (session.duration) {
           totalPracticeTime += Math.floor(session.duration / 60); // Convert seconds to minutes
         }
       });
+      // Add Practice session time (assume 5 minutes per completed practice session if duration not tracked)
+      completedPracticeSessions.forEach(session => {
+        if (session.duration) {
+          totalPracticeTime += Math.floor(session.duration / 60);
+        } else {
+          // Estimate 5 minutes per practice session if duration not tracked
+          totalPracticeTime += 5;
+        }
+      });
       
-      // Get recent sessions (last 5)
-      const recentSessions = completedSessions
-        .sort((a, b) => new Date(b.completedAt || b.createdAt || Date.now()).getTime() - new Date(a.completedAt || a.createdAt || Date.now()).getTime())
-        .slice(0, 5)
-        .map(session => ({
+      // Get recent sessions (last 5) - combining Interview and Practice sessions
+      const allRecentSessions = [
+        ...completedSessions.map(session => ({
           id: session.id,
           date: new Date(session.completedAt || session.createdAt || Date.now()).toLocaleDateString('en-GB'),
           scenario: session.scenario?.title || 'Interview Practice',
+          sessionType: 'Interview' as const,
           score: session.overallScore ? (Number(session.overallScore) > 5 ? Number(session.overallScore) / 2 : Number(session.overallScore)) : 0, // Normalize to 5-point scale
-          duration: Math.floor((session.duration || 0) / 60) // Convert to minutes
-        }));
+          duration: Math.floor((session.duration || 0) / 60), // Convert to minutes
+          questionsAnswered: session.messages?.filter(m => m.messageType === 'user').length || 0,
+          voiceEnabled: session.messages?.some(m => m.messageType === 'voice') || false
+        })),
+        ...completedPracticeSessions.map(session => ({
+          id: session.id,
+          date: new Date(session.completedAt || session.createdAt || Date.now()).toLocaleDateString('en-GB'),
+          scenario: session.scenarioCategory || 'Practice Session',
+          sessionType: 'Practice' as const,
+          score: session.averageScore ? (Number(session.averageScore) > 5 ? Number(session.averageScore) / 2 : Number(session.averageScore)) : 0,
+          duration: session.duration ? Math.floor(session.duration / 60) : 5, // Convert to minutes or estimate
+          questionsAnswered: session.questionsAnswered || 1, // Default to 1 if not tracked
+          voiceEnabled: session.voiceEnabled || false
+        }))
+      ];
+      
+      const recentSessions = allRecentSessions
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 10);
       
       // Step 2: Get all evaluations in batch to avoid N+1 queries
       const evaluationStart = Date.now();
@@ -1165,12 +1206,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
       
+      // Calculate Practice-specific metrics
+      const totalPracticeQuestions = completedPracticeSessions.reduce((sum, session) => sum + (session.questionsAnswered || 1), 0) + 
+                                    completedSessions.reduce((sum, session) => sum + (session.messages?.filter(m => m.messageType === 'user').length || 0), 0);
+      const voiceEnabledSessions = allRecentSessions.filter(session => session.voiceEnabled).length;
+      const voiceUsagePercent = allRecentSessions.length > 0 ? Math.round((voiceEnabledSessions / allRecentSessions.length) * 100) : 0;
+
       const dashboardData = {
+        // Combined metrics (Interview + Practice)
         totalSessions,
         completedSessions: completedCount,
+        totalQuestions: totalPracticeQuestions,
         averageScore,
+        averageStarScore: averageScore, // Use same value for STAR score
         totalPracticeTime,
         improvementRate,
+        voiceUsagePercent,
         strongestSkills: uniqueStrengths.length > 0 ? uniqueStrengths : ['Complete more sessions to identify strengths'],
         improvementAreas: uniqueImprovementAreas.length > 0 ? uniqueImprovementAreas : ['Complete more sessions to identify areas for improvement'],
         recentSessions,
@@ -1179,7 +1230,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           score: session.score,
           category: session.scenario
         })),
-        skillBreakdown
+        skillBreakdown,
+        
+        // Module-specific metrics
+        interviewSessions: completedSessions.length,
+        practiceSessions: completedPracticeSessions.length,
+        practiceQuestions: totalPracticeQuestions,
+        
+        // Session type breakdown for charts
+        sessionTypeBreakdown: [
+          { type: 'Interview', count: completedSessions.length, percentage: completedCount > 0 ? Math.round((completedSessions.length / completedCount) * 100) : 0 },
+          { type: 'Practice', count: completedPracticeSessions.length, percentage: completedCount > 0 ? Math.round((completedPracticeSessions.length / completedCount) * 100) : 0 }
+        ]
       };
       
       console.log(`🏁 Dashboard API completed in: ${Date.now() - startTime}ms`);

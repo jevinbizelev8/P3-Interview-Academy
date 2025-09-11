@@ -47,6 +47,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { useState } from "react";
 
 interface DashboardStats {
+  // Combined metrics (Interview + Practice)
   totalSessions: number;
   completedSessions: number;
   totalQuestions: number;
@@ -61,6 +62,7 @@ interface DashboardStats {
     id: string;
     date: string;
     scenario?: string;
+    sessionType?: 'Interview' | 'Practice';
     jobTitle?: string;
     companyName?: string;
     interviewStage?: string;
@@ -79,6 +81,18 @@ interface DashboardStats {
     skill: string;
     score: number;
     trend: 'up' | 'down' | 'stable';
+  }>;
+  
+  // Module-specific metrics
+  interviewSessions?: number;
+  practiceSessions?: number;
+  practiceQuestions?: number;
+  
+  // Session type breakdown for charts
+  sessionTypeBreakdown?: Array<{
+    type: 'Interview' | 'Practice';
+    count: number;
+    percentage: number;
   }>;
 }
 
@@ -322,12 +336,94 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* Session Type Breakdown */}
+      {dashboardStats.sessionTypeBreakdown && dashboardStats.sessionTypeBreakdown.some(s => s.count > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2 text-indigo-600" />
+                Session Type Distribution
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {dashboardStats.sessionTypeBreakdown.map((sessionType, index) => (
+                  <div key={sessionType.type} className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className={`w-3 h-3 rounded-full mr-3 ${
+                        sessionType.type === 'Interview' ? 'bg-blue-500' : 'bg-green-500'
+                      }`} />
+                      <span className="text-sm font-medium">{sessionType.type} Sessions</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className={sessionType.type === 'Interview' ? 'text-blue-600' : 'text-green-600'}>
+                        {sessionType.count}
+                      </Badge>
+                      <span className="text-xs text-gray-500">{sessionType.percentage}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Target className="w-5 h-5 mr-2 text-emerald-600" />
+                Module Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full mr-3 bg-blue-500" />
+                    <span className="text-sm font-medium">Interview Sessions</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="text-blue-600">
+                      {dashboardStats.interviewSessions || 0}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full mr-3 bg-green-500" />
+                    <span className="text-sm font-medium">Practice Sessions</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="text-green-600">
+                      {dashboardStats.practiceSessions || 0}
+                    </Badge>
+                  </div>
+                </div>
+                {dashboardStats.voiceUsagePercent && dashboardStats.voiceUsagePercent > 0 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-3 h-3 rounded-full mr-3 bg-purple-500" />
+                      <span className="text-sm font-medium">Voice-enabled Sessions</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="text-purple-600">
+                        {dashboardStats.voiceUsagePercent}%
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Recent Sessions */}
       <Card className="mb-8">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center">
             <BarChart3 className="w-5 h-5 mr-2" />
-            Recent Practice Sessions
+            Recent Sessions
           </CardTitle>
           <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
             <Activity className="w-4 h-4 mr-2" />
@@ -337,7 +433,7 @@ export default function Dashboard() {
         <CardContent>
           <div className="space-y-4">
             {dashboardStats.recentSessions && dashboardStats.recentSessions.length > 0 ? (
-              dashboardStats.recentSessions.slice(0, 5).map((session) => (
+              dashboardStats.recentSessions.slice(0, 8).map((session) => (
                 <div key={session.id} className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50">
                   <div className="flex items-center space-x-4">
                     <div className={`w-3 h-3 rounded-full ${
@@ -349,8 +445,20 @@ export default function Dashboard() {
                     <div>
                       <div className="flex items-center space-x-2 mb-1">
                         <span className="font-medium">
-                          {session.jobTitle || session.scenario || 'Interview Session'}
+                          {session.jobTitle || session.scenario || 'Session'}
                         </span>
+                        {session.sessionType && (
+                          <Badge 
+                            variant="outline" 
+                            className={`text-xs ${
+                              session.sessionType === 'Interview' 
+                                ? 'text-blue-600 border-blue-200 bg-blue-50' 
+                                : 'text-green-600 border-green-200 bg-green-50'
+                            }`}
+                          >
+                            {session.sessionType}
+                          </Badge>
+                        )}
                         {session.companyName && (
                           <span className="text-sm text-gray-500">at {session.companyName}</span>
                         )}
@@ -362,7 +470,7 @@ export default function Dashboard() {
                       <div className="flex items-center space-x-4 text-sm text-gray-600">
                         <div className="flex items-center">
                           <Calendar className="w-3 h-3 mr-1" />
-                          {new Date(session.date).toLocaleDateString()}
+                          {session.date}
                         </div>
                         {session.interviewStage && (
                           <Badge variant="outline" className="text-xs">
