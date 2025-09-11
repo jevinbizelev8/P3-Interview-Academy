@@ -18,6 +18,10 @@ import {
   industryQuestions,
   industryKnowledge,
   coachingFeedback,
+  // Practice module tables
+  practiceSessions,
+  practiceMessages,
+  practiceReports,
   type User,
   type UpsertUser,
   type InsertInterviewScenario,
@@ -58,6 +62,15 @@ import {
   type CoachingFeedback,
   type InsertCoachingFeedback,
   type CoachingSessionWithMessages,
+  // Practice module types
+  type PracticeSession,
+  type InsertPracticeSession,
+  type PracticeMessage,
+  type InsertPracticeMessage,
+  type PracticeReport,
+  type InsertPracticeReport,
+  type PracticeSessionWithMessages,
+  type PracticeSessionOverview,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, avg, sql, or } from "drizzle-orm";
@@ -127,6 +140,27 @@ export interface IStorage {
   cleanupAbandonedSessions(cutoffTime: Date): Promise<number>;
   archiveOldCompletedSessions(olderThanDate: Date): Promise<number>;
   getSessionOwner(sessionId: string): Promise<string | undefined>;
+  
+  // Practice module operations
+  // Practice sessions
+  createPracticeSession(session: InsertPracticeSession): Promise<PracticeSession>;
+  getPracticeSession(id: string): Promise<PracticeSessionWithMessages | undefined>;
+  updatePracticeSession(id: string, updates: Partial<InsertPracticeSession>): Promise<PracticeSession>;
+  getUserPracticeSessions(userId: string, limit?: number): Promise<PracticeSession[]>;
+  deletePracticeSession(id: string): Promise<void>;
+  
+  // Practice messages
+  addPracticeMessage(message: InsertPracticeMessage): Promise<PracticeMessage>;
+  getPracticeMessages(sessionId: string): Promise<PracticeMessage[]>;
+  deletePracticeMessages(sessionId: string): Promise<void>;
+  
+  // Practice reports
+  createPracticeReport(report: InsertPracticeReport): Promise<PracticeReport>;
+  getPracticeReport(sessionId: string): Promise<PracticeReport | undefined>;
+  updatePracticeReport(id: string, updates: Partial<InsertPracticeReport>): Promise<PracticeReport>;
+  
+  // Practice overview/analytics
+  getPracticeOverview(userId: string): Promise<PracticeSessionOverview>;
 }
 
 // Simple in-memory cache for question banks
@@ -1214,6 +1248,175 @@ export class DatabaseStorage implements IStorage {
       console.error('Error getting session owner:', error);
       return undefined;
     }
+  }
+
+  // ================================
+  // PRACTICE MODULE STORAGE METHODS
+  // ================================
+
+  // Practice sessions
+  async createPracticeSession(session: InsertPracticeSession): Promise<PracticeSession> {
+    const [newSession] = await db
+      .insert(practiceSessions)
+      .values({
+        ...session,
+        startedAt: new Date(),
+        lastActivityAt: new Date(),
+      })
+      .returning();
+    return newSession;
+  }
+
+  async getPracticeSession(id: string): Promise<PracticeSessionWithMessages | undefined> {
+    const [session] = await db
+      .select()
+      .from(practiceSessions)
+      .where(eq(practiceSessions.id, id));
+
+    if (!session) return undefined;
+
+    const messages = await db
+      .select()
+      .from(practiceMessages)
+      .where(eq(practiceMessages.sessionId, id))
+      .orderBy(practiceMessages.timestamp);
+
+    const report = await this.getPracticeReport(id);
+
+    return {
+      ...session,
+      messages,
+      report,
+    };
+  }
+
+  async updatePracticeSession(id: string, updates: Partial<InsertPracticeSession>): Promise<PracticeSession> {
+    const [updatedSession] = await db
+      .update(practiceSessions)
+      .set({
+        ...updates,
+        lastActivityAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(practiceSessions.id, id))
+      .returning();
+    return updatedSession;
+  }
+
+  async getUserPracticeSessions(userId: string, limit: number = 20): Promise<PracticeSession[]> {
+    return await db
+      .select()
+      .from(practiceSessions)
+      .where(eq(practiceSessions.userId, userId))
+      .orderBy(desc(practiceSessions.createdAt))
+      .limit(limit);
+  }
+
+  async deletePracticeSession(id: string): Promise<void> {
+    await db.delete(practiceSessions).where(eq(practiceSessions.id, id));
+  }
+
+  // Practice messages
+  async addPracticeMessage(message: InsertPracticeMessage): Promise<PracticeMessage> {
+    const [newMessage] = await db
+      .insert(practiceMessages)
+      .values({
+        ...message,
+        timestamp: new Date(),
+      })
+      .returning();
+
+    // Update session activity
+    await db
+      .update(practiceSessions)
+      .set({ lastActivityAt: new Date() })
+      .where(eq(practiceSessions.id, message.sessionId));
+
+    return newMessage;
+  }
+
+  async getPracticeMessages(sessionId: string): Promise<PracticeMessage[]> {
+    return await db
+      .select()
+      .from(practiceMessages)
+      .where(eq(practiceMessages.sessionId, sessionId))
+      .orderBy(practiceMessages.timestamp);
+  }
+
+  async deletePracticeMessages(sessionId: string): Promise<void> {
+    await db.delete(practiceMessages).where(eq(practiceMessages.sessionId, sessionId));
+  }
+
+  // Practice reports
+  async createPracticeReport(report: InsertPracticeReport): Promise<PracticeReport> {
+    const [newReport] = await db
+      .insert(practiceReports)
+      .values(report)
+      .returning();
+    return newReport;
+  }
+
+  async getPracticeReport(sessionId: string): Promise<PracticeReport | undefined> {
+    const [report] = await db
+      .select()
+      .from(practiceReports)
+      .where(eq(practiceReports.sessionId, sessionId));
+    return report;
+  }
+
+  async updatePracticeReport(id: string, updates: Partial<InsertPracticeReport>): Promise<PracticeReport> {
+    const [updatedReport] = await db
+      .update(practiceReports)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(practiceReports.id, id))
+      .returning();
+    return updatedReport;
+  }
+
+  // Practice overview/analytics
+  async getPracticeOverview(userId: string): Promise<PracticeSessionOverview> {
+    const sessions = await db
+      .select()
+      .from(practiceSessions)
+      .where(eq(practiceSessions.userId, userId));
+
+    const completedSessions = sessions.filter(s => s.status === 'completed');
+    
+    // Get average score from reports
+    const reports = await db
+      .select()
+      .from(practiceReports)
+      .where(eq(practiceReports.userId, userId));
+
+    const averageScore = reports.length > 0 
+      ? reports.reduce((sum, r) => sum + (Number(r.overallScore) || 0), 0) / reports.length
+      : 0;
+
+    // Get recent sessions (last 10)
+    const recentSessions = await db
+      .select()
+      .from(practiceSessions)
+      .where(eq(practiceSessions.userId, userId))
+      .orderBy(desc(practiceSessions.createdAt))
+      .limit(10);
+
+    // Simple improvement trend calculation
+    const improvementTrends = [
+      { category: 'Overall', trend: 'stable' as const, score: averageScore },
+      { category: 'Communication', trend: 'stable' as const, score: averageScore },
+      { category: 'STAR Method', trend: 'stable' as const, score: averageScore },
+    ];
+
+    return {
+      totalSessions: sessions.length,
+      completedSessions: completedSessions.length,
+      averageScore,
+      recentSessions,
+      improvementTrends,
+    };
   }
 }
 
