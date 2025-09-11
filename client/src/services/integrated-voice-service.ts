@@ -11,8 +11,8 @@ import { audioProcessor, type AudioMetrics, type ProcessingOptions } from './aud
 // Speech Recognition API type declarations
 declare global {
   interface Window {
-    SpeechRecognition: typeof SpeechRecognition;
-    webkitSpeechRecognition: typeof SpeechRecognition;
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
   }
 }
 
@@ -57,7 +57,7 @@ interface SpeechRecognitionAlternative {
   confidence: number;
 }
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SpeechRecognition: new () => SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 interface VoiceServiceConfig {
   language: string;

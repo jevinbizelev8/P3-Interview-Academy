@@ -6,10 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Mic, MicOff, User, Bot, Award, Clock, CheckCircle, Phone, Users, Bus, ServerCog, Crown } from "lucide-react";
+import { Send, Mic, MicOff, User, Bot, Award, Clock, CheckCircle, Phone, Users, Bus, ServerCog, Crown, Volume2, VolumeX } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { InterviewSessionWithScenario, InterviewMessage } from "@shared/schema";
+import { integratedVoiceService, type VoiceServiceStatus, type TranscriptionResult, type TTSResult } from "@/services/integrated-voice-service";
+import VoiceControls from "@/components/prepare-ai/VoiceControls";
 
 const STAGE_ICONS = {
   'phone-screening': Phone,
@@ -34,9 +36,19 @@ export default function InterviewPractice() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const [message, setMessage] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(1);
   const [isCompleted, setIsCompleted] = useState(false);
+  
+  // Voice-related state
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<VoiceServiceStatus>('initializing');
+  const [speechRate, setSpeechRate] = useState(1.0);
+  const [selectedVoice, setSelectedVoice] = useState('');
+  const [transcriptionActive, setTranscriptionActive] = useState(false);
+  const voiceInitializedRef = useRef(false);
 
   // Fetch session data
   const { data: session, isLoading: sessionLoading } = useQuery<InterviewSessionWithScenario>({
@@ -49,14 +61,21 @@ export default function InterviewPractice() {
 
   // Send message mutation (adapted to work with existing Practice API)
   const sendMessageMutation = useMutation({
-    mutationFn: async (content: string) => {
+    mutationFn: async ({ content, voiceMetadata }: { content: string; voiceMetadata?: any }) => {
       const response = await fetch(`/api/practice/sessions/${sessionId}/user-response`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ 
           content,
-          questionContext: messages.filter(m => m.messageType === 'ai').slice(-1)[0]?.content || ""
+          questionContext: messages.filter(m => m.messageType === 'ai').slice(-1)[0]?.content || "",
+          inputMethod: voiceMetadata ? 'voice' : 'text',
+          voiceMetadata: voiceMetadata ? {
+            transcriptionMethod: voiceMetadata.method,
+            confidence: voiceMetadata.confidence,
+            processingTime: voiceMetadata.processingTime,
+            audioMetrics: voiceMetadata.audioMetrics
+          } : undefined
         }),
       });
       
@@ -101,6 +120,12 @@ export default function InterviewPractice() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: [`/api/practice/sessions/${sessionId}`] });
+      
+      // Speak the AI response if voice is enabled
+      if (voiceEnabled && data.content) {
+        speakAIResponse(data.content);
+      }
+      
       if (data.isCompleted || (session?.currentQuestion || 1) >= 15) {
         setIsCompleted(true);
         toast({
@@ -158,10 +183,117 @@ export default function InterviewPractice() {
     },
   });
 
+  // Voice event handlers
+  const handleTranscriptionResult = (result: TranscriptionResult) => {
+    setTranscriptionActive(false);
+    setIsRecording(false);
+    setIsListening(false);
+    
+    if (result.text.trim()) {
+      setMessage(result.text);
+      // Auto-submit voice transcription with metadata
+      sendVoiceMessage(result.text.trim(), result);
+    }
+  };
+  
+  const handleTTSComplete = (result: TTSResult) => {
+    setIsSpeaking(false);
+    if (!result.success) {
+      console.error('TTS failed:', result.error);
+    }
+  };
+  
+  const handleVoiceError = (error: string, service: string) => {
+    toast({
+      title: "Voice Error",
+      description: `${service}: ${error}`,
+      variant: "destructive"
+    });
+    setIsRecording(false);
+    setIsListening(false);
+    setIsSpeaking(false);
+  };
+  
+  // Voice control handlers
+  const handleStartRecording = async () => {
+    if (isRecording || transcriptionActive) return;
+    
+    setTranscriptionActive(true);
+    setIsListening(true);
+    
+    const started = await integratedVoiceService.startRecording();
+    if (started) {
+      setIsRecording(true);
+    } else {
+      setTranscriptionActive(false);
+      setIsListening(false);
+    }
+  };
+  
+  const handleStopRecording = async () => {
+    if (!isRecording) return;
+    
+    setIsListening(false);
+    await integratedVoiceService.stopRecording();
+    setIsRecording(false);
+  };
+  
+  const handleToggleVoice = () => {
+    setVoiceEnabled(!voiceEnabled);
+    if (isSpeaking) {
+      integratedVoiceService.stopSpeech();
+    }
+  };
+  
+  const handleSpeechRateChange = (rate: number) => {
+    setSpeechRate(rate);
+  };
+  
+  const handleVoiceChange = (voiceId: string) => {
+    setSelectedVoice(voiceId);
+  };
+  
+  const handleStopSpeech = () => {
+    integratedVoiceService.stopSpeech();
+    setIsSpeaking(false);
+  };
+  
+  const handleTestVoice = async () => {
+    const language = session?.interviewLanguage || 'en';
+    await integratedVoiceService.testVoice(language === 'en' ? 'en-US' : `${language}-MY`);
+  };
+  
+  // Speak AI response function
+  const speakAIResponse = async (text: string) => {
+    if (!voiceEnabled || isSpeaking) return;
+    
+    setIsSpeaking(true);
+    const language = session?.interviewLanguage || 'en';
+    const voiceLanguage = language === 'en' ? 'en-US' : `${language}-MY`;
+    
+    try {
+      await integratedVoiceService.speak(text, {
+        language: voiceLanguage,
+        rate: speechRate,
+        voice: selectedVoice || undefined
+      });
+    } catch (error) {
+      console.error('TTS failed:', error);
+      setIsSpeaking(false);
+    }
+  };
+  
+  // Send voice message with metadata
+  const sendVoiceMessage = (content: string, transcriptionResult: TranscriptionResult) => {
+    if (!content.trim() || sendMessageMutation.isPending) return;
+    sendMessageMutation.mutate({ content: content.trim(), voiceMetadata: transcriptionResult });
+  };
+  
+  // Send text message
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || sendMessageMutation.isPending) return;
-    sendMessageMutation.mutate(message.trim());
+    sendMessageMutation.mutate({ content: message.trim() });
   };
 
   const scrollToBottom = () => {
@@ -170,12 +302,51 @@ export default function InterviewPractice() {
 
   useEffect(scrollToBottom, [messages]);
 
+  // Initialize voice service
+  useEffect(() => {
+    if (!voiceInitializedRef.current) {
+      voiceInitializedRef.current = true;
+      
+      // Configure voice service for the session language
+      const language = session?.interviewLanguage || 'en';
+      const voiceLanguage = language === 'en' ? 'en-US' : `${language}-MY`;
+      
+      integratedVoiceService.updateConfig({
+        language: voiceLanguage,
+        enableWhisperFallback: true,
+        enableQualityMonitoring: true,
+        autoSelectTTSVoice: true
+      });
+      
+      // Set up voice event handlers
+      integratedVoiceService.setEventHandlers({
+        onStatusChange: setVoiceStatus,
+        onTranscriptionResult: handleTranscriptionResult,
+        onTTSComplete: handleTTSComplete,
+        onError: handleVoiceError
+      });
+    }
+  }, [session?.interviewLanguage]);
+  
   // Generate initial AI question if no messages exist
   useEffect(() => {
     if (session && messages.length === 0) {
       generateAiResponseMutation.mutate();
     }
   }, [session?.id, messages.length]);
+  
+  // Auto-speak latest AI message when messages change
+  useEffect(() => {
+    if (voiceEnabled && messages.length > 0) {
+      const latestMessage = messages[messages.length - 1];
+      if (latestMessage.messageType === 'ai' && !isSpeaking) {
+        // Add a small delay to ensure the UI has updated
+        setTimeout(() => {
+          speakAIResponse(latestMessage.content);
+        }, 500);
+      }
+    }
+  }, [messages.length, voiceEnabled]);
 
   if (sessionLoading) {
     return (
@@ -322,37 +493,121 @@ export default function InterviewPractice() {
                 </div>
               </ScrollArea>
               
-              {/* Message Input */}
-              <div className="border-t p-4">
-                <form onSubmit={handleSendMessage} className="flex space-x-2">
-                  <Input
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your response here..."
-                    disabled={sendMessageMutation.isPending || isCompleted}
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsRecording(!isRecording)}
-                    disabled={isCompleted}
-                    className={isRecording ? "bg-red-100 border-red-300" : ""}
-                  >
-                    {isRecording ? (
-                      <MicOff className="w-4 h-4 text-red-600" />
-                    ) : (
-                      <Mic className="w-4 h-4" />
+              {/* Speech-First Input Interface */}
+              <div className="border-t p-4 space-y-4">
+                {voiceEnabled ? (
+                  <>
+                    {/* Primary Voice Input */}
+                    <div className="text-center">
+                      <Button
+                        variant={isRecording ? "destructive" : "default"}
+                        size="lg"
+                        onMouseDown={handleStartRecording}
+                        onMouseUp={handleStopRecording}
+                        onTouchStart={handleStartRecording}
+                        onTouchEnd={handleStopRecording}
+                        disabled={sendMessageMutation.isPending || isCompleted || isSpeaking}
+                        className="px-8 py-6 text-lg font-medium min-w-[280px]"
+                        data-testid="button-voice-record"
+                      >
+                        {isRecording ? (
+                          <>
+                            <MicOff className="w-6 h-6 mr-3 animate-pulse" />
+                            Release to Stop Recording
+                          </>
+                        ) : transcriptionActive ? (
+                          <>
+                            <div className="w-6 h-6 mr-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            Processing Speech...
+                          </>
+                        ) : (
+                          <>
+                            <Mic className="w-6 h-6 mr-3" />
+                            Hold to Speak Your Response
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    
+                    {/* Voice Status Indicators */}
+                    {(isRecording || transcriptionActive || isSpeaking) && (
+                      <div className="flex items-center justify-center space-x-4 text-sm">
+                        {isRecording && (
+                          <div className="flex items-center text-red-600">
+                            <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse mr-2" />
+                            Recording...
+                          </div>
+                        )}
+                        {transcriptionActive && (
+                          <div className="flex items-center text-blue-600">
+                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse mr-2" />
+                            Processing speech...
+                          </div>
+                        )}
+                        {isSpeaking && (
+                          <div className="flex items-center text-green-600">
+                            <Volume2 className="w-4 h-4 mr-2 animate-pulse" />
+                            AI Speaking...
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleStopSpeech}
+                              className="ml-2 text-green-600"
+                              data-testid="button-stop-speech"
+                            >
+                              Stop
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     )}
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!message.trim() || sendMessageMutation.isPending || isCompleted}
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </form>
+                    
+                    {/* Fallback Text Input */}
+                    <details className="group">
+                      <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 text-center">
+                        Having trouble with voice? Use text input instead
+                      </summary>
+                      <div className="mt-2">
+                        <form onSubmit={handleSendMessage} className="flex space-x-2">
+                          <Input
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
+                            placeholder="Type your response here..."
+                            disabled={sendMessageMutation.isPending || isCompleted}
+                            className="flex-1"
+                            data-testid="input-text-message"
+                          />
+                          <Button
+                            type="submit"
+                            disabled={!message.trim() || sendMessageMutation.isPending || isCompleted}
+                            data-testid="button-send-text"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </form>
+                      </div>
+                    </details>
+                  </>
+                ) : (
+                  /* Text Input When Voice Disabled */
+                  <form onSubmit={handleSendMessage} className="flex space-x-2">
+                    <Input
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Type your response here..."
+                      disabled={sendMessageMutation.isPending || isCompleted}
+                      className="flex-1"
+                      data-testid="input-text-message"
+                    />
+                    <Button
+                      type="submit"
+                      disabled={!message.trim() || sendMessageMutation.isPending || isCompleted}
+                      data-testid="button-send-text"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </form>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -360,6 +615,24 @@ export default function InterviewPractice() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Voice Controls */}
+          <VoiceControls
+            isRecording={isRecording}
+            isListening={isListening}
+            isSpeaking={isSpeaking}
+            voiceEnabled={voiceEnabled}
+            speechRate={speechRate}
+            selectedVoice={selectedVoice}
+            language={session?.interviewLanguage || 'en'}
+            onStartRecording={handleStartRecording}
+            onStopRecording={handleStopRecording}
+            onToggleVoice={handleToggleVoice}
+            onSpeechRateChange={handleSpeechRateChange}
+            onVoiceChange={handleVoiceChange}
+            onStopSpeech={handleStopSpeech}
+            onTestVoice={handleTestVoice}
+          />
+          
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Interview Context</CardTitle>
