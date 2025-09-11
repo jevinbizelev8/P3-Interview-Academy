@@ -8,7 +8,6 @@ import { Bot, Brain, Mic, Globe, Zap, CheckCircle, Play, BarChart3 } from 'lucid
 
 // Import generated images
 import studentAICoaching from '@assets/generated_images/Student_AI_interview_coaching_bbfdc2fa.png';
-import learningPathway from '@assets/generated_images/Three_module_learning_pathway_3e9c7ef9.png';
 import preparationSteps from '@assets/generated_images/Interview_preparation_steps_guide_19dc5895.png';
 
 // Navigation
@@ -360,29 +359,6 @@ export default function Prepare() {
                     <h4 className="font-bold text-gray-800 mb-2">Ace Your Real Interview</h4>
                     <p className="text-gray-600 text-sm">Apply your improved skills in actual interviews with confidence. Use STAR method techniques you've mastered here!</p>
                   </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white p-6 rounded-lg shadow-inner border">
-              <h4 className="text-lg font-bold text-center text-gray-800 mb-4">🎆 Learning Pathway Overview</h4>
-              <img 
-                src={learningPathway} 
-                alt="Three module learning pathway"
-                className="w-full max-w-4xl mx-auto rounded-lg"
-              />
-              <div className="grid md:grid-cols-3 gap-4 mt-6">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <h5 className="font-semibold text-blue-800 mb-2">PREPARE Module</h5>
-                  <p className="text-sm text-blue-600">Learn fundamentals, practice STAR method, build confidence with AI coaching</p>
-                </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <h5 className="font-semibold text-green-800 mb-2">PRACTICE Module</h5>
-                  <p className="text-sm text-green-600">Simulate real interviews, test different scenarios, refine your responses</p>
-                </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <h5 className="font-semibold text-purple-800 mb-2">PERFORM Module</h5>
-                  <p className="text-sm text-purple-600">Final assessments, mock interviews, get interview-ready certification</p>
                 </div>
               </div>
             </div>
