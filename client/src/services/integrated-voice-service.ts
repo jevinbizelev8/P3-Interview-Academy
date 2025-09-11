@@ -104,6 +104,7 @@ class IntegratedVoiceService {
   // Event handlers
   private onStatusChange?: (status: VoiceServiceStatus) => void;
   private onTranscriptionResult?: (result: TranscriptionResult) => void;
+  private onInterimTranscription?: (interimText: string) => void; // New handler for interim results
   private onTTSComplete?: (result: TTSResult) => void;
   private onError?: (error: string, service: string) => void;
   private onQualityUpdate?: (quality: QualityStatus, metrics: AudioQualityMetrics) => void;
@@ -425,12 +426,14 @@ class IntegratedVoiceService {
   setEventHandlers(handlers: {
     onStatusChange?: (status: VoiceServiceStatus) => void;
     onTranscriptionResult?: (result: TranscriptionResult) => void;
+    onInterimTranscription?: (interimText: string) => void; // New handler for real-time transcription
     onTTSComplete?: (result: TTSResult) => void;
     onError?: (error: string, service: string) => void;
     onQualityUpdate?: (quality: QualityStatus, metrics: AudioQualityMetrics) => void;
   }): void {
     this.onStatusChange = handlers.onStatusChange;
     this.onTranscriptionResult = handlers.onTranscriptionResult;
+    this.onInterimTranscription = handlers.onInterimTranscription; // Add interim handler
     this.onTTSComplete = handlers.onTTSComplete;
     this.onError = handlers.onError;
     this.onQualityUpdate = handlers.onQualityUpdate;
@@ -464,7 +467,7 @@ class IntegratedVoiceService {
       this.recognition = new SpeechRecognition();
       if (this.recognition) {
         this.recognition.continuous = false;
-        this.recognition.interimResults = false;
+        this.recognition.interimResults = true; // Enable interim results for real-time display
         this.recognition.lang = this.config.language;
 
         this.recognition.onresult = (event) => {
@@ -602,10 +605,15 @@ class IntegratedVoiceService {
     console.log('🔍 WEB-SPEECH: handleWebSpeechResult called, results:', event.results);
     const result = event.results[0];
     console.log(`🔍 WEB-SPEECH: First result - isFinal: ${result.isFinal}`);
+    
+    const transcript = result[0].transcript.trim();
+    const confidence = result[0].confidence;
+    
     if (result.isFinal) {
+      // Handle final results
       const transcriptionResult: TranscriptionResult = {
-        text: result[0].transcript,
-        confidence: result[0].confidence,
+        text: transcript,
+        confidence,
         method: 'web-speech',
         processingTime: 0 // Web Speech API doesn't provide processing time
       };
@@ -615,6 +623,12 @@ class IntegratedVoiceService {
       this.onTranscriptionResult?.(transcriptionResult);
       this.setStatus('ready');
       console.log('✅ WEB-SPEECH: Result handled and status set to ready');
+    } else {
+      // Handle interim results for real-time display
+      console.log('📝 WEB-SPEECH: Interim transcription result:', transcript);
+      if (this.onInterimTranscription && transcript.length > 0) {
+        this.onInterimTranscription(transcript);
+      }
     }
   }
 
