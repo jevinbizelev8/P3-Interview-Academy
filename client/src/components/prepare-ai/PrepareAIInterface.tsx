@@ -132,6 +132,35 @@ export default function PrepareAIInterface({
       }
     });
 
+    // Handle voice transcription results
+    socket.on('prepare:message', (message: any) => {
+      if (message.type === 'system') {
+        if (message.data.status === 'authenticated') {
+          console.log('✅ WebSocket authenticated, joining session...');
+          socket.emit('prepare:join-session', { sessionId: session.id });
+        } else if (message.data.status === 'joined-session') {
+          console.log('✅ Joined session room, ready for questions');
+        } else if (message.data.status === 'voice-transcription-complete') {
+          // Update the transcribing message with actual transcription
+          const transcription = message.data.transcription;
+          console.log('✅ Voice transcription complete:', transcription);
+          
+          setMessages(prev => prev.map(msg => 
+            msg.content === 'Voice response (transcribing...)' 
+              ? { ...msg, content: transcription || 'Voice response transcribed' }
+              : msg
+          ));
+          
+          // Now submit the transcribed text via REST API for evaluation
+          if (transcription && session?.currentQuestionId) {
+            submitVoiceResponseForEvaluation(transcription, session.currentQuestionId);
+          }
+        } else if (message.data.status === 'voice-processing') {
+          console.log('🎤 Voice processing started...');
+        }
+      }
+    });
+
     socket.on('response-evaluated', (data: { 
       evaluation: Message['evaluation'];
       nextQuestion?: string;
@@ -307,55 +336,72 @@ export default function PrepareAIInterface({
     }
   };
 
-  // Process voice response
+  // Process voice response using WebSocket workflow
   const processVoiceResponse = async (audioBlob: Blob) => {
-    if (!session?.id || !session?.currentQuestionId) return;
+    if (!session?.id || !session?.currentQuestionId || !socketRef.current) return;
 
     setIsLoading(true);
+    
     try {
-      // For voice responses, we need to send proper JSON data, not FormData
-      // Convert audio to base64 for JSON transmission
-      const audioBase64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(audioBlob);
-      });
-
-      const response = await fetch(`/api/prepare-ai/sessions/${session.id}/respond`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          questionId: session.currentQuestionId,
-          responseText: '[Voice Response]', // Placeholder until transcribed
-          responseLanguage: session.preferredLanguage || 'en',
-          inputMethod: 'voice',
-          audioDuration: audioBlob.size, // Rough estimate
-          audioData: audioBase64 // Include audio for transcription
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Voice response submission failed:', errorData);
-        throw new Error(`Failed to process voice response: ${errorData.error}`);
-      }
+      console.log('🎤 Processing voice response via WebSocket...');
       
-      const result = await response.json();
-      console.log('✅ Voice response processed successfully:', result);
-      
-      // Add response message with transcription
-      const responseMessage: Message = {
+      // Add user's voice message immediately
+      const voiceMessage: Message = {
         id: crypto.randomUUID(),
         type: 'response',
-        content: result.transcription || result.data?.transcription || 'Voice response processed',
+        content: 'Voice response (transcribing...)',
         timestamp: new Date(),
         isAudio: true
       };
+      setMessages(prev => [...prev, voiceMessage]);
       
-      setMessages(prev => [...prev, responseMessage]);
-      setCurrentResponse('');
+      // Use the WebSocket voice workflow as the backend expects
+      const socket = socketRef.current;
+      
+      // Start voice recording session
+      socket.emit('prepare:voice-start', {
+        sessionId: session.id,
+        questionId: session.currentQuestionId
+      });
+      
+      // Convert blob to array buffer and send as chunks
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const chunkSize = 1024; // 1KB chunks
+      const totalChunks = Math.ceil(arrayBuffer.byteLength / chunkSize);
+      
+      // Send audio in chunks
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, arrayBuffer.byteLength);
+        const chunk = arrayBuffer.slice(start, end);
+        
+        socket.emit('prepare:voice-chunk', {
+          sessionId: session.id,
+          questionId: session.currentQuestionId,
+          audioData: chunk,
+          chunkIndex: i,
+          isLastChunk: i === totalChunks - 1
+        });
+      }
+      
+      // Signal end of recording
+      socket.emit('prepare:voice-end', {
+        sessionId: session.id,
+        questionId: session.currentQuestionId,
+        totalChunks: totalChunks
+      });
+      
+      console.log(`✅ Voice data sent via WebSocket: ${totalChunks} chunks`);
+      
     } catch (error) {
       console.error('Error processing voice response:', error);
+      
+      // Update the message to show error
+      setMessages(prev => prev.map(msg => 
+        msg.content === 'Voice response (transcribing...)' 
+          ? { ...msg, content: 'Voice response (transcription failed)' }
+          : msg
+      ));
     } finally {
       setIsLoading(false);
     }
@@ -397,11 +443,144 @@ export default function PrepareAIInterface({
       const result = await response.json();
       console.log('✅ Response submitted successfully:', result);
       
+      // Process the evaluation results from backend
+      if (result.success && result.data) {
+        const evaluationData = result.data;
+        
+        // Add evaluation feedback as system message
+        const feedbackMessage: Message = {
+          id: crypto.randomUUID(),
+          type: 'response',
+          content: `Feedback: ${evaluationData.detailedFeedback?.feedback || 'Good response!'}`,
+          timestamp: new Date(),
+          evaluation: {
+            starScore: evaluationData.starScores?.overall || 0,
+            feedback: evaluationData.detailedFeedback?.feedback || '',
+            strengths: evaluationData.detailedFeedback?.strengths || [],
+            improvements: evaluationData.detailedFeedback?.suggestions || []
+          }
+        };
+        
+        setMessages(prev => [...prev, feedbackMessage]);
+        
+        // Add model answer
+        if (evaluationData.modelAnswer) {
+          const modelAnswerMessage: Message = {
+            id: crypto.randomUUID(), 
+            type: 'question',
+            content: `Model Answer: ${evaluationData.modelAnswer}`,
+            timestamp: new Date()
+          };
+          
+          setTimeout(() => {
+            setMessages(prev => [...prev, modelAnswerMessage]);
+          }, 1000);
+        }
+        
+        // Generate next question after showing evaluation
+        setTimeout(() => {
+          generateNextQuestion();
+        }, 2000);
+      }
+      
       setCurrentResponse('');
     } catch (error) {
       console.error('Error submitting response:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Submit voice response for evaluation after transcription
+  const submitVoiceResponseForEvaluation = async (transcription: string, questionId: string) => {
+    if (!session?.id) return;
+
+    try {
+      const response = await fetch(`/api/prepare-ai/sessions/${session.id}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: questionId,
+          responseText: transcription,
+          responseLanguage: session.preferredLanguage || 'en',
+          inputMethod: 'voice'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Voice response evaluation failed:', errorData);
+        return;
+      }
+      
+      const result = await response.json();
+      console.log('✅ Voice response evaluated successfully:', result);
+      
+      // Process the evaluation results (same as text response)
+      if (result.success && result.data) {
+        const evaluationData = result.data;
+        
+        // Add evaluation feedback as system message
+        const feedbackMessage: Message = {
+          id: crypto.randomUUID(),
+          type: 'response',
+          content: `Feedback: ${evaluationData.detailedFeedback?.feedback || 'Good response!'}`,
+          timestamp: new Date(),
+          evaluation: {
+            starScore: evaluationData.starScores?.overall || 0,
+            feedback: evaluationData.detailedFeedback?.feedback || '',
+            strengths: evaluationData.detailedFeedback?.strengths || [],
+            improvements: evaluationData.detailedFeedback?.suggestions || []
+          }
+        };
+        
+        setTimeout(() => {
+          setMessages(prev => [...prev, feedbackMessage]);
+        }, 1000);
+        
+        // Add model answer
+        if (evaluationData.modelAnswer) {
+          const modelAnswerMessage: Message = {
+            id: crypto.randomUUID(),
+            type: 'question', 
+            content: `Model Answer: ${evaluationData.modelAnswer}`,
+            timestamp: new Date()
+          };
+          
+          setTimeout(() => {
+            setMessages(prev => [...prev, modelAnswerMessage]);
+          }, 2000);
+        }
+        
+        // Generate next question after showing evaluation
+        setTimeout(() => {
+          generateNextQuestion();
+        }, 3000);
+      }
+      
+    } catch (error) {
+      console.error('Error evaluating voice response:', error);
+    }
+  };
+
+  // Generate next question
+  const generateNextQuestion = async () => {
+    if (!session?.id) return;
+    
+    try {
+      const response = await fetch(`/api/prepare-ai/sessions/${session.id}/question`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        console.error('Failed to generate next question');
+        return;
+      }
+      
+      console.log('✅ Next question generation requested');
+    } catch (error) {
+      console.error('Error generating next question:', error);
     }
   };
 
