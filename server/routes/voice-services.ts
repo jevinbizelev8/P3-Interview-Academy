@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { sealionService } from '../services/sealion';
 import { AIService } from '../services/ai-service';
+import { getOpenAIService } from '../services/openai-service';
 import { requireAuth } from '../middleware/auth-middleware';
 import * as multer from 'multer';
 import { v4 as uuidv4 } from 'uuid';
@@ -125,44 +126,52 @@ router.post('/stt', requireAuth, upload.single('audio'), async (req, res) => {
     const audioPath = req.file.path;
 
     try {
-      // For now, return a mock transcription since we don't have OpenAI Whisper API key
-      // In production, this would use OpenAI Whisper API
-      const mockTranscription = `This is a mock transcription for ${language}. In production, this would use OpenAI Whisper API to transcribe the audio file.`;
+      console.log(`🎤 Processing audio transcription: ${req.file.originalname} (${req.file.size} bytes), language: ${language}`);
       
-      // Use SeaLion for post-processing and language correction
-      const processedTranscription = await sealionService.generateResponse({
-        messages: [{
-          role: 'user',
-          content: `Correct and improve this transcription in ${language}: "${mockTranscription}". 
-          Fix any errors, improve grammar, and ensure it's natural. 
-          Return only the corrected text, no explanations.`
-        }],
-        maxTokens: 500,
-        temperature: 0.2
+      // Read audio file as buffer
+      const audioBuffer = fs.readFileSync(audioPath);
+      
+      // Use real OpenAI Whisper for transcription
+      const openaiService = getOpenAIService();
+      const transcriptionResult = await openaiService.transcribeAudio(audioBuffer, {
+        language: language.split('-')[0], // OpenAI expects language codes like 'en', not 'en-US'
+        model,
+        temperature: 0.0,
+        response_format: 'verbose_json'
       });
+
+      console.log(`✅ Transcription successful: "${transcriptionResult.text.substring(0, 100)}..."`);
 
       const sttResponse = {
         success: true,
-        transcription: processedTranscription,
-        originalTranscription: mockTranscription,
-        language,
+        transcription: transcriptionResult.text,
+        originalTranscription: transcriptionResult.text,
+        language: transcriptionResult.language || language,
         model,
-        confidence: 0.95, // Placeholder
-        duration: req.file.size / 1000, // Rough estimate
+        confidence: 0.95, // OpenAI doesn't provide confidence scores
+        duration: transcriptionResult.duration || req.file.size / 1000,
+        segments: transcriptionResult.segments,
         timestamp: new Date().toISOString()
       };
 
       res.json(sttResponse);
     } finally {
       // Clean up uploaded file
-      fs.unlinkSync(audioPath);
+      if (fs.existsSync(audioPath)) {
+        fs.unlinkSync(audioPath);
+      }
     }
   } catch (error) {
-    console.error('STT Error:', error);
+    console.error('❌ STT Error:', error);
     res.status(500).json({ 
       error: 'STT processing failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
+    
+    // Clean up file on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
   }
 });
 

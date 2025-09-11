@@ -1,19 +1,15 @@
 /**
- * Whisper.cpp WebAssembly Service
- * Provides offline speech-to-text capabilities as fallback for Web Speech API
+ * OpenAI Whisper Service
+ * Provides real speech-to-text capabilities using OpenAI Whisper API via backend
  */
+
+import { apiRequest } from '@/lib/queryClient';
 
 interface WhisperModel {
   name: string;
   size: string;
   url: string;
   languages: string[];
-}
-
-interface WhisperWasmInstance {
-  init: (modelBuffer: ArrayBuffer) => Promise<void>;
-  transcribe: (audioBuffer: Float32Array) => Promise<string>;
-  free: () => void;
 }
 
 interface TranscriptionOptions {
@@ -23,115 +19,120 @@ interface TranscriptionOptions {
   wordTimestamps?: boolean;
 }
 
-class WhisperWasmService {
-  private instance: WhisperWasmInstance | null = null;
-  private modelLoaded = false;
-  private isLoading = false;
+interface TranscriptionResult {
+  success: boolean;
+  transcription: string;
+  originalTranscription: string;
+  language: string;
+  model: string;
+  confidence: number;
+  duration: number;
+  segments?: any[];
+  timestamp: string;
+  error?: string;
+}
+
+class WhisperService {
+  private initialized = false;
   private currentModel: WhisperModel | null = null;
 
-  // Available Whisper models (smaller models for web deployment)
+  // Available Whisper models (from OpenAI)
   private readonly models: WhisperModel[] = [
     {
-      name: 'whisper-tiny',
-      size: '37MB',
-      url: 'https://cdn.jsdelivr.net/gh/ggerganov/whisper.cpp@master/models/ggml-tiny.bin',
-      languages: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'th', 'vi', 'ms', 'id']
-    },
-    {
-      name: 'whisper-base',
-      size: '141MB', 
-      url: 'https://cdn.jsdelivr.net/gh/ggerganov/whisper.cpp@master/models/ggml-base.bin',
-      languages: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'th', 'vi', 'ms', 'id']
+      name: 'whisper-1',
+      size: 'OpenAI hosted',
+      url: 'openai-api',
+      languages: ['en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh', 'th', 'vi', 'ms', 'id', 'fil', 'my', 'km', 'lo']
     }
   ];
 
-  private readonly wasmUrl = 'https://cdn.jsdelivr.net/npm/@xenova/transformers@latest/dist/whisper.wasm';
-
   /**
-   * Check if Whisper.cpp WASM is supported in current browser
+   * Check if OpenAI Whisper is supported (always true if we have network)
    */
   isSupported(): boolean {
     return (
-      typeof WebAssembly !== 'undefined' &&
-      typeof SharedArrayBuffer !== 'undefined' &&
-      typeof Worker !== 'undefined'
+      typeof fetch !== 'undefined' &&
+      typeof FormData !== 'undefined' &&
+      typeof Blob !== 'undefined'
     );
   }
 
   /**
-   * Initialize Whisper WASM with specified model
+   * Initialize Whisper service (OpenAI API doesn't require model loading)
    */
-  async initialize(modelName: string = 'whisper-tiny'): Promise<boolean> {
-    if (this.modelLoaded) return true;
-    if (this.isLoading) return false;
+  async initialize(modelName: string = 'whisper-1'): Promise<boolean> {
+    if (this.initialized) return true;
     if (!this.isSupported()) {
-      console.warn('Whisper WASM not supported in this browser');
+      console.warn('OpenAI Whisper not supported in this environment');
       return false;
     }
 
-    this.isLoading = true;
-
     try {
+      console.log(`Initializing OpenAI Whisper service with model: ${modelName}`);
+
       // Find requested model
-      const model = this.models.find(m => m.name === modelName);
-      if (!model) {
-        throw new Error(`Model ${modelName} not found`);
-      }
-
-      console.log(`Loading Whisper model: ${model.name} (${model.size})`);
-
-      // Load WASM module
-      const wasmModule = await this.loadWasmModule();
-      if (!wasmModule) {
-        throw new Error('Failed to load WASM module');
-      }
-
-      // Load model data
-      const modelBuffer = await this.downloadModel(model);
-      
-      // Initialize Whisper instance
-      this.instance = await this.createWhisperInstance(wasmModule, modelBuffer);
-      await this.instance.init(modelBuffer);
-
+      const model = this.models.find(m => m.name === modelName) || this.models[0];
       this.currentModel = model;
-      this.modelLoaded = true;
+      this.initialized = true;
       
-      console.log(`Whisper model ${model.name} loaded successfully`);
+      console.log(`OpenAI Whisper service initialized successfully with model: ${model.name}`);
       return true;
 
     } catch (error) {
-      console.error('Failed to initialize Whisper WASM:', error);
+      console.error('Failed to initialize OpenAI Whisper service:', error);
       return false;
-    } finally {
-      this.isLoading = false;
     }
   }
 
   /**
-   * Transcribe audio using Whisper WASM
+   * Transcribe audio using OpenAI Whisper API via backend
    */
   async transcribe(audioData: Float32Array, options: TranscriptionOptions = {}): Promise<string> {
-    if (!this.modelLoaded || !this.instance) {
-      throw new Error('Whisper WASM not initialized. Call initialize() first.');
+    if (!this.initialized || !this.currentModel) {
+      throw new Error('OpenAI Whisper service not initialized. Call initialize() first.');
     }
 
     try {
-      // Ensure audio is in the correct format (16kHz mono)
-      const processedAudio = this.preprocessAudio(audioData);
+      console.log(`🎤 Starting OpenAI Whisper transcription (${audioData.length} samples)`);
       
-      // Transcribe using Whisper
-      const result = await this.instance.transcribe(processedAudio);
+      // Convert Float32Array to audio blob
+      const audioBlob = await this.audioDataToBlob(audioData);
       
-      return result.trim();
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.wav');
+      formData.append('language', options.language || 'en');
+      formData.append('model', this.currentModel.name);
+
+      // Call backend STT endpoint
+      const response = await fetch('/api/voice-services/stt', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(`HTTP ${response.status}: ${errorData.error || 'Transcription request failed'}`);
+      }
+
+      const result: TranscriptionResult = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Transcription failed');
+      }
+
+      console.log(`✅ OpenAI Whisper transcription successful: "${result.transcription.substring(0, 100)}..."`);
+      return result.transcription;
 
     } catch (error) {
-      console.error('Whisper transcription error:', error);
+      console.error('❌ OpenAI Whisper transcription error:', error);
       throw new Error(`Transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   /**
-   * Get available models for current language
+   * Get available models
    */
   getAvailableModels(language?: string): WhisperModel[] {
     if (!language) return this.models;
@@ -150,125 +151,95 @@ class WhisperWasmService {
   }
 
   /**
-   * Check if model is loaded
+   * Check if model is loaded (always true for API-based service)
    */
   isModelLoaded(): boolean {
-    return this.modelLoaded;
+    return this.initialized;
   }
 
   /**
-   * Get loading status
+   * Get loading status (always false for API-based service)
    */
   isModelLoading(): boolean {
-    return this.isLoading;
+    return false;
   }
 
   /**
-   * Clean up resources
+   * Clean up resources (no cleanup needed for API-based service)
    */
   cleanup(): void {
-    if (this.instance) {
-      this.instance.free();
-      this.instance = null;
-    }
-    this.modelLoaded = false;
+    this.initialized = false;
     this.currentModel = null;
+    console.log('OpenAI Whisper service cleaned up');
   }
 
   /**
-   * Convert audio buffer to format expected by Whisper
+   * Convert Float32Array audio data to WAV blob for API upload
    */
-  private preprocessAudio(audioData: Float32Array): Float32Array {
-    // Whisper expects 16kHz sample rate
-    const targetSampleRate = 16000;
-    
-    // For now, return as-is. In production, you'd implement resampling
-    // This is a simplified implementation
-    return audioData;
-  }
-
-  /**
-   * Load WASM module
-   */
-  private async loadWasmModule(): Promise<any> {
+  private async audioDataToBlob(audioData: Float32Array): Promise<Blob> {
     try {
-      // In a real implementation, you'd load the actual Whisper.cpp WASM module
-      // This is a placeholder for the WASM loading logic
+      const sampleRate = 16000; // OpenAI Whisper expects 16kHz
+      const numChannels = 1; // Mono
+      const bytesPerSample = 2; // 16-bit
       
-      // For now, return a mock module
-      console.log('Loading Whisper WASM module...');
+      // Create WAV header
+      const header = this.createWavHeader(audioData.length, sampleRate, numChannels, bytesPerSample);
       
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return {
-        // Mock WASM module
-        ready: true
-      };
-
-    } catch (error) {
-      console.error('Error loading WASM module:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Download model from CDN
-   */
-  private async downloadModel(model: WhisperModel): Promise<ArrayBuffer> {
-    try {
-      console.log(`Downloading model ${model.name} (${model.size})...`);
-      
-      // In production, you'd actually download the model
-      // For now, return mock data
-      const mockModelSize = model.name === 'whisper-tiny' ? 37 * 1024 * 1024 : 141 * 1024 * 1024;
-      
-      // Simulate download with progress
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Return mock ArrayBuffer
-      return new ArrayBuffer(mockModelSize);
-
-    } catch (error) {
-      console.error('Error downloading model:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Create Whisper instance
-   */
-  private async createWhisperInstance(wasmModule: any, modelBuffer: ArrayBuffer): Promise<WhisperWasmInstance> {
-    // Mock Whisper instance for development
-    // In production, this would create actual Whisper.cpp WASM instance
-    
-    return {
-      init: async (buffer: ArrayBuffer) => {
-        console.log('Initializing Whisper instance...');
-        await new Promise(resolve => setTimeout(resolve, 500));
-      },
-      
-      transcribe: async (audioBuffer: Float32Array): Promise<string> => {
-        // Mock transcription - returns placeholder text
-        // In production, this would call the actual Whisper transcription
-        console.log('Transcribing audio with Whisper WASM...');
-        
-        // Simulate processing time
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Return mock transcription
-        return "This is a mock transcription from Whisper WASM. In production, this would be the actual transcribed text.";
-      },
-      
-      free: () => {
-        console.log('Freeing Whisper resources...');
+      // Convert Float32Array to 16-bit PCM
+      const pcmData = new Int16Array(audioData.length);
+      for (let i = 0; i < audioData.length; i++) {
+        pcmData[i] = Math.max(-32768, Math.min(32767, audioData[i] * 32768));
       }
-    };
+      
+      // Combine header and data
+      const wavBuffer = new ArrayBuffer(header.length + pcmData.length * 2);
+      const wavView = new Uint8Array(wavBuffer);
+      
+      wavView.set(header, 0);
+      wavView.set(new Uint8Array(pcmData.buffer), header.length);
+      
+      return new Blob([wavBuffer], { type: 'audio/wav' });
+
+    } catch (error) {
+      console.error('Error converting audio data to blob:', error);
+      throw new Error(`Audio conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Create WAV file header
+   */
+  private createWavHeader(numSamples: number, sampleRate: number, numChannels: number, bytesPerSample: number): Uint8Array {
+    const header = new ArrayBuffer(44);
+    const view = new DataView(header);
+    
+    const dataLength = numSamples * numChannels * bytesPerSample;
+    
+    // RIFF chunk descriptor
+    view.setUint32(0, 0x52494646, false); // "RIFF"
+    view.setUint32(4, 36 + dataLength, true); // File size - 8
+    view.setUint32(8, 0x57415645, false); // "WAVE"
+    
+    // fmt sub-chunk
+    view.setUint32(12, 0x666d7420, false); // "fmt "
+    view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+    view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+    view.setUint16(22, numChannels, true); // NumChannels
+    view.setUint32(24, sampleRate, true); // SampleRate
+    view.setUint32(28, sampleRate * numChannels * bytesPerSample, true); // ByteRate
+    view.setUint16(32, numChannels * bytesPerSample, true); // BlockAlign
+    view.setUint16(34, bytesPerSample * 8, true); // BitsPerSample
+    
+    // data sub-chunk
+    view.setUint32(36, 0x64617461, false); // "data"
+    view.setUint32(40, dataLength, true); // Subchunk2Size
+    
+    return new Uint8Array(header);
   }
 }
 
 // Export singleton instance
-export const whisperWasm = new WhisperWasmService();
+export const whisperWasm = new WhisperService();
 
 // Export types for use in other files
 export type { WhisperModel, TranscriptionOptions };

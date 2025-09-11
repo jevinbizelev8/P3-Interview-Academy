@@ -77,6 +77,59 @@ export class OpenAIService {
     }
   }
 
+  // Audio transcription using OpenAI Whisper
+  async transcribeAudio(audioFile: Buffer | File, options: {
+    language?: string;
+    model?: string;
+    prompt?: string;
+    temperature?: number;
+    response_format?: 'json' | 'text' | 'srt' | 'verbose_json' | 'vtt';
+  } = {}): Promise<{
+    text: string;
+    language?: string;
+    duration?: number;
+    segments?: any[];
+  }> {
+    try {
+      // Handle Buffer vs File for OpenAI API
+      let fileToUpload: any = audioFile;
+      if (Buffer.isBuffer(audioFile)) {
+        // For Node.js, we can pass Buffer directly but need to add filename property
+        const bufferWithName = audioFile as any;
+        bufferWithName.name = 'audio.wav';
+        bufferWithName.type = 'audio/wav';
+        fileToUpload = bufferWithName;
+      }
+
+      const transcription = await this.client.audio.transcriptions.create({
+        file: fileToUpload,
+        model: options.model || 'whisper-1',
+        language: options.language,
+        prompt: options.prompt,
+        temperature: options.temperature || 0.0,
+        response_format: options.response_format || 'verbose_json'
+      });
+
+      // Handle different response formats
+      if (options.response_format === 'text') {
+        return { text: typeof transcription === 'string' ? transcription : transcription.text ?? '' };
+      }
+
+      // For verbose_json format
+      const verboseResponse = transcription as any;
+      return {
+        text: verboseResponse.text || '',
+        language: verboseResponse.language,
+        duration: verboseResponse.duration,
+        segments: verboseResponse.segments
+      };
+
+    } catch (error) {
+      console.error('OpenAI audio transcription error:', error);
+      throw new Error(`Audio transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   // Method to check OpenAI service health
   async healthCheck(): Promise<{ healthy: boolean; model: string; latency?: number }> {
     const startTime = Date.now();
