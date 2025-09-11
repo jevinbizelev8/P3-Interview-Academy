@@ -483,7 +483,6 @@ STAGE FOCUS - Executive/Final Round Interview:
       'th': 'Thai business culture prioritizes respect (kreng jai), hierarchy awareness, and maintaining harmonious relationships.',
       'vi': 'Vietnamese business culture values respect for seniority, collective decision-making, and building trust over time.',
       'tl': 'Filipino business culture emphasizes personal relationships (pakikipagkapwa), respect for authority, and collaborative teamwork.',
-      'my': 'Myanmar business culture values patience, respect for elders, and consensus-building in decision-making.',
       'en': 'ASEAN business culture generally values relationship-building, respect for hierarchy, and collaborative approaches to problem-solving.'
     };
     
@@ -709,9 +708,6 @@ STAGE FOCUS - Executive/Final Round Interview:
       'th': 'Thai',
       'vi': 'Vietnamese',
       'tl': 'Filipino',
-      'my': 'Myanmar',
-      'km': 'Khmer',
-      'lo': 'Lao',
       'jv': 'Javanese',
       'su': 'Sundanese'
     };

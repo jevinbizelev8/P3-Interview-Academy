@@ -23,9 +23,6 @@ export const SUPPORTED_LANGUAGES = {
   'th': 'ไทย (Thai)',
   'vi': 'Tiếng Việt (Vietnamese)',
   'fil': 'Filipino',
-  'my': 'မြန်မာ (Myanmar)',
-  'km': 'ខ្មែរ (Khmer)',
-  'lo': 'ລາວ (Lao)',
   'zh-sg': '中文 (Chinese - Singapore)'
 } as const;
 

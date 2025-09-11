@@ -98,42 +98,6 @@ class EnhancedTTSService {
       fallbackLanguages: ['en'],
       rtl: false
     },
-    {
-      code: 'my',
-      name: 'Burmese',
-      localName: 'မြန်မာဘာသာ',
-      flag: '🇲🇲',
-      preferredVoices: ['Google မြန်မာ'],
-      fallbackLanguages: ['en'],
-      rtl: false
-    },
-    {
-      code: 'km',
-      name: 'Khmer',
-      localName: 'ភាសាខ្មែរ',
-      flag: '🇰🇭',
-      preferredVoices: ['Google ខ្មែរ'],
-      fallbackLanguages: ['en'],
-      rtl: false
-    },
-    {
-      code: 'lo',
-      name: 'Lao',
-      localName: 'ພາສາລາວ',
-      flag: '🇱🇦',
-      preferredVoices: ['Google ລາວ'],
-      fallbackLanguages: ['th', 'en'],
-      rtl: false
-    },
-    {
-      code: 'bn',
-      name: 'Bengali',
-      localName: 'বাংলা',
-      flag: '🇧🇩',
-      preferredVoices: ['Google বাংলা (ভারত)', 'Microsoft Bashkar - Bengali (India)'],
-      fallbackLanguages: ['en'],
-      rtl: false
-    }
   ];
 
   private onSpeakStart?: () => void;
@@ -402,10 +366,6 @@ class EnhancedTTSService {
       'th': 'สวัสดี! นี่คือการทดสอบระบบเสียงพูด',
       'vi': 'Xin chào! Đây là bài kiểm tra hệ thống chuyển văn bản thành giọng nói.',
       'tl': 'Kumusta! Ito ay pagsubok ng text-to-speech system.',
-      'my': 'မဂၤလာပါ! ၎င်းမှာ စာသား-မှ-အသံ စနစ်၏ စမ်းသပ်မှုတစ်ခုဖြစ်သည်။',
-      'km': 'សួស្តី! នេះគឺជាការសាកល្បងនៃប្រព័ន្ធអត្ថបទទៅជាសំឡេង។',
-      'lo': 'ສະບາຍດີ! ນີ້ແມ່ນການທົດສອບຂອງລະບົບເວົ້າຂໍ້ຄວາມ.',
-      'bn': 'হ্যালো! এটি টেক্সট-টু-স্পিচ সিস্টেমের একটি পরীক্ষা।'
     };
 
     const langCode = language.split('-')[0];

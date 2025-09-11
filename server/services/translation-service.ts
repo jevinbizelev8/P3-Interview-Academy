@@ -202,9 +202,6 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       'th': 'Thai language (ภาษาไทย)',
       'vi': 'Vietnamese (Tiếng Việt)',
       'fil': 'Filipino language',
-      'my': 'Myanmar language (မြန်မာဘာသာ)',
-      'km': 'Khmer language (ភាសាខ្មែរ)',
-      'lo': 'Lao language (ພາສາລາວ)',
       'zh-sg': 'Simplified Chinese (简体中文)',
       'en': 'English'
     };
@@ -218,9 +215,6 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       'th': 'Thai',
       'vi': 'Vietnamese',
       'fil': 'Filipino',
-      'my': 'Myanmar',
-      'km': 'Khmer',
-      'lo': 'Lao',
       'zh-sg': 'Chinese',
       'en': 'English'
     };
@@ -234,9 +228,6 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       'th': 'คุณชื่ออะไร?',
       'vi': 'Tên bạn là gì?',
       'fil': 'Ano ang pangalan mo?',
-      'my': 'သင့်နာမည်ဘာလဲ?',
-      'km': 'តើ​អ្នក​ឈ្មោះ​អ្វី?',
-      'lo': 'ເຈົ້າຊື່ຫຍັງ?',
       'zh-sg': '你叫什么名字？',
       'en': 'What is your name?'
     };

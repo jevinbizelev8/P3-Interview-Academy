@@ -14,8 +14,6 @@ export const ASEAN_LANGUAGES: Language[] = [
   { code: 'th', name: 'ไทย', displayName: 'ไทย (Thai)' },
   { code: 'vi', name: 'Tiếng Việt', displayName: 'Tiếng Việt (Vietnamese)' },
   { code: 'tl', name: 'Filipino', displayName: 'Filipino' },
-  { code: 'my', name: 'မြန်မာ', displayName: 'မြန်မာ (Myanmar)' },
-  { code: 'km', name: 'ខ្មែរ', displayName: 'ខ្មែរ (Khmer)' },
   { code: 'zh-sg', name: '中文', displayName: '中文 (Chinese - Singapore)' },
 ];
 
