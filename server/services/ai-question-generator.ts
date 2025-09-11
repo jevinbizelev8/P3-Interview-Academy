@@ -308,12 +308,12 @@ Response Format (JSON):
    * Parse non-JSON text response
    */
   private parseTextResponse(response: string, request: QuestionGenerationRequest, service: 'openai' | 'sealion' = 'sealion'): GeneratedQuestion {
-    const lines = response.split('\n').filter(line => line.trim());
-    const questionText = lines.find(line => line.includes('?')) || lines[0] || 'Generated question';
+    // Extract clean interview question from AI response that may contain reasoning
+    const cleanedQuestion = this.extractCleanQuestion(response);
     
     return {
-      questionText: questionText.trim(),
-      questionTextTranslated: this.translateQuestion(questionText, request.preferredLanguage),
+      questionText: cleanedQuestion,
+      questionTextTranslated: this.translateQuestion(cleanedQuestion, request.preferredLanguage),
       questionCategory: this.extractCategory(response) || 'behavioral',
       questionType: 'behavioral',
       difficultyLevel: request.difficultyLevel,
@@ -322,6 +322,85 @@ Response Format (JSON):
       starMethodRelevant: true,
       generatedBy: service
     };
+  }
+
+  /**
+   * Extract clean interview question from AI response that may contain reasoning
+   */
+  private extractCleanQuestion(response: string): string {
+    console.log('🔍 Extracting clean question from response:', response.substring(0, 200) + '...');
+    
+    // Remove thinking tags and content
+    let cleaned = response.replace(/<think>.*?<\/think>/gs, '').trim();
+    
+    // Look for quoted questions first (most reliable)
+    const quotedQuestions = cleaned.match(/"([^"]*\?[^"]*)"/g);
+    if (quotedQuestions && quotedQuestions.length > 0) {
+      // Find the longest quoted question (likely the main one)
+      const mainQuestion = quotedQuestions
+        .map(q => q.replace(/"/g, '').trim())
+        .reduce((longest, current) => current.length > longest.length ? current : longest);
+      
+      if (mainQuestion.length > 10) {
+        console.log('✅ Found quoted question:', mainQuestion);
+        return mainQuestion;
+      }
+    }
+    
+    // Split by common separators and look for the actual question
+    const lines = cleaned.split(/\n+/).map(line => line.trim()).filter(line => line.length > 0);
+    
+    // Look for patterns that indicate the start of an actual interview question
+    const questionStarters = [
+      'Bagaimana', 'Ceritakan', 'Berikan', 'Jelaskan', 'Apa', 'Mengapa',
+      'How', 'Tell', 'Describe', 'What', 'Why', 'Can you',
+      'Selamat', 'Welcome', 'Good morning', 'Hello'
+    ];
+    
+    // Find the line that looks like an actual interview question
+    let questionLine = '';
+    
+    // Look for a line that starts with typical question patterns and contains a question mark
+    for (const line of lines) {
+      const startsWithQuestionWord = questionStarters.some(starter => 
+        line.toLowerCase().startsWith(starter.toLowerCase())
+      );
+      
+      if (startsWithQuestionWord || line.includes('?')) {
+        // If this looks like a question, take from here to the end or next obvious break
+        const fromThisLine = lines.slice(lines.indexOf(line)).join(' ');
+        
+        // Extract just the question part (stop at next obvious break like "This allows...")
+        const questionEnd = fromThisLine.match(/(.*?[?.!])\s*(?:This |The |It |For |Consider |Remember |Note )/);
+        questionLine = questionEnd ? questionEnd[1] : fromThisLine;
+        break;
+      }
+    }
+    
+    // If no clear question found, take the last meaningful line
+    if (!questionLine) {
+      questionLine = lines.reverse().find(line => 
+        line.includes('?') || 
+        line.length > 30 ||
+        questionStarters.some(starter => line.toLowerCase().includes(starter.toLowerCase()))
+      ) || lines[0] || 'Generated question not available';
+    }
+    
+    // Clean up extra whitespace and ensure it's a complete question
+    questionLine = questionLine.replace(/\s+/g, ' ').trim();
+    
+    // If it doesn't end with proper punctuation, add a question mark if it seems like a question
+    if (!questionLine.match(/[.!?]$/)) {
+      const seemsLikeQuestion = questionStarters.some(starter => 
+        questionLine.toLowerCase().includes(starter.toLowerCase())
+      );
+      if (seemsLikeQuestion) {
+        questionLine += '?';
+      }
+    }
+    
+    console.log('✅ Extracted clean question:', questionLine);
+    return questionLine || 'Generated question not available';
   }
 
   /**

@@ -546,17 +546,11 @@ export default function InterviewPractice() {
                               <span className="font-medium text-sm">
                                 {msg.messageType === 'ai_question' ? 'AI Interviewer' : 'You'}
                               </span>
-                              {msg.inputMethod === 'voice' && (
-                                <Badge variant="outline" className="text-xs">
-                                  <Mic className="w-3 h-3 mr-1" />
-                                  Voice
-                                </Badge>
-                              )}
                             </div>
                             <div className="flex items-center space-x-2">
                               <span className="text-xs text-gray-500 flex items-center">
                                 <Clock className="w-3 h-3 mr-1" />
-                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
                               </span>
                               {msg.messageType === 'ai_question' && voiceEnabled && (
                                 <Button
