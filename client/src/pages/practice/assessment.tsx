@@ -1,12 +1,14 @@
+import { useState } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   CheckCircle2, 
   AlertTriangle, 
@@ -27,9 +29,13 @@ import {
   PieChart,
   Brain,
   Users,
-  Zap
+  Zap,
+  Globe,
+  Trophy,
+  FileText
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAssessmentTranslation } from "@/hooks/useAssessmentTranslation";
 import InterviewScoreCharts from "@/components/InterviewScoreCharts";
 import { StructuredFeedbackCard } from "@/components/StructuredFeedbackCard";
 import type { PracticeReport } from "@shared/schema";
@@ -37,14 +43,6 @@ import type { PracticeReport } from "@shared/schema";
 interface AssessmentData extends PracticeReport {
   // Extended data from comprehensive evaluation
   overallRating?: string;
-  relevanceScore?: string;
-  starStructureScore?: string;
-  specificEvidenceScore?: string;
-  roleAlignmentScore?: string;
-  outcomeOrientedScore?: string;
-  problemSolvingScore?: string;
-  culturalFitScore?: string;
-  learningAgilityScore?: string;
   criteriaVersion?: string;
   sessionLanguage?: string;
   totalResponses?: number;
@@ -55,6 +53,16 @@ export default function PracticeAssessment() {
   const { sessionId } = useParams();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("overview");
+  const {
+    currentLanguage,
+    t,
+    changeLanguage,
+    getTranslatedField,
+    getCurrentLanguageInfo,
+    isTranslating,
+    supportedLanguages
+  } = useAssessmentTranslation();
 
   // Fetch assessment data
   const { data: assessment, isLoading, error } = useQuery<{ success: boolean; data: AssessmentData }>({
@@ -126,7 +134,7 @@ export default function PracticeAssessment() {
   const recommendedActions = Array.isArray(report.recommendedActions) ? report.recommendedActions : [];
   
   // Session statistics
-  const totalResponses = report.totalResponses || session?.messages?.filter(m => m.messageType === 'user_response').length || 0;
+  const totalResponses = report.totalResponses || session?.messages?.filter((m: any) => m.messageType === 'user_response').length || 0;
   const sessionDuration = report.sessionDuration || 0;
   const sessionLanguage = report.sessionLanguage || session?.preferredLanguage || 'en';
   
@@ -247,205 +255,341 @@ export default function PracticeAssessment() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Header Section */}
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Interview Assessment Report</h1>
-            <p className="text-gray-600">Comprehensive evaluation based on 9-criteria scoring rubric</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {t('title')}
+            </h1>
+            <p className="text-gray-600">
+              {session?.userJobPosition} at {session?.userCompanyName}
+            </p>
           </div>
-          <div className="flex space-x-2">
-            <Button onClick={handleDownloadReport} variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              Download
+          <div className="flex items-center space-x-3">
+            {/* Language Selector */}
+            <div className="flex items-center space-x-2 mr-4">
+              <Globe className="w-4 h-4 text-gray-500" />
+              <Select value={currentLanguage} onValueChange={(value) => changeLanguage(value as any, assessment?.data)}>
+                <SelectTrigger className="w-[180px]" data-testid="language-selector">
+                  <SelectValue>
+                    <span className="flex items-center space-x-2">
+                      <span>{getCurrentLanguageInfo().displayName}</span>
+                      {isTranslating && (
+                        <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {supportedLanguages.map((language) => (
+                    <SelectItem key={language.code} value={language.code}>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{language.displayName}</span>
+                        {language.code === 'en' && (
+                          <span className="text-xs text-green-600 ml-2">✓</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <Button onClick={handleViewDashboard} variant="outline" data-testid="back-dashboard">
+              <Home className="w-4 h-4 mr-2" />
+              {t('backToDashboard')}
             </Button>
-            <Button onClick={handleShareResults} variant="outline" size="sm">
-              <Share2 className="w-4 h-4 mr-2" />
-              Share
+            <Button onClick={handleStartNewPractice} data-testid="start-practice">
+              {t('startNewPractice')}
+            </Button>
+            <Button onClick={handleDownloadReport} variant="outline" data-testid="export-report">
+              <Download className="w-4 h-4 mr-2" />
+              {t('exportReport')}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Overall Score Banner */}
-      <Card className={`mb-8 border-2 ${isPassed ? 'border-green-200 bg-gradient-to-r from-green-50 to-emerald-50' : 'border-yellow-200 bg-gradient-to-r from-yellow-50 to-amber-50'}`}>
-        <CardHeader className="pb-4">
+      {/* Enhanced Overall Score Card */}
+      <Card className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white mb-8">
+        <CardContent className="p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isPassed ? 'bg-green-100' : 'bg-yellow-100'}`}>
-                {isPassed ? (
-                  <CheckCircle2 className="w-8 h-8 text-green-600" />
-                ) : (
-                  <AlertTriangle className="w-8 h-8 text-yellow-600" />
+            <div>
+              <h2 className="text-2xl font-bold mb-2">{t('overallPerformance')}</h2>
+              <p className="text-purple-100 text-lg">{overallRating}</p>
+              <div className="flex items-center space-x-4 mt-4">
+                <div className="flex items-center space-x-2">
+                  <Trophy className="w-5 h-5" />
+                  <span>{t('score')}: {overallScore.toFixed(1)}/5.0</span>
+                </div>
+                {isPassed && (
+                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                    <Award className="w-4 h-4 mr-2" />
+                    {t('pass')}
+                  </Badge>
                 )}
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Overall Score: {overallScore}/5.0</h2>
-                <div className="flex items-center space-x-2 mt-1">
-                  <Badge className={`${getScoreBadgeColor(overallRating)} font-medium`}>
-                    {overallRating}
-                  </Badge>
-                  <span className="text-sm text-gray-600">
-                    {isPassed ? '✅ Meets interview standards' : '⚠️ Additional practice recommended'}
-                  </span>
-                </div>
-              </div>
             </div>
-            
             <div className="text-right">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-purple-600">{totalResponses}</div>
-                  <div className="text-xs text-gray-500">Questions</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-blue-600">{formatDuration(sessionDuration)}</div>
-                  <div className="text-xs text-gray-500">Duration</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-indigo-600">{getLanguageDisplayName(sessionLanguage)}</div>
-                  <div className="text-xs text-gray-500">Language</div>
-                </div>
+              <div className="text-4xl font-bold mb-2">{Math.round((overallScore / 5) * 100)}%</div>
+              <Progress value={(overallScore / 5) * 100} className="w-32 bg-white/20" />
+              <div className="text-sm text-purple-200 mt-1">
+                {t('passThreshold')} • {t('borderlineRange')}
               </div>
             </div>
           </div>
-          
-          {/* Progress Bar */}
-          <div className="mt-4">
-            <div className="flex justify-between text-sm text-gray-600 mb-1">
-              <span>Performance Level</span>
-              <span>{Math.round((overallScore / 5) * 100)}%</span>
-            </div>
-            <Progress 
-              value={(overallScore / 5) * 100} 
-              className="h-3"
-            />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Needs Improvement</span>
-              <span>Borderline</span>
-              <span>Pass</span>
-            </div>
-          </div>
-        </CardHeader>
+        </CardContent>
       </Card>
 
-      {/* Detailed Assessment Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview" className="flex items-center">
-            <BarChart3 className="w-4 h-4 mr-2" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="criteria" className="flex items-center">
-            <Target className="w-4 h-4 mr-2" />
-            9 Criteria
-          </TabsTrigger>
-          <TabsTrigger value="feedback" className="flex items-center">
-            <Lightbulb className="w-4 h-4 mr-2" />
-            Feedback
-          </TabsTrigger>
-          <TabsTrigger value="insights" className="flex items-center">
-            <Brain className="w-4 h-4 mr-2" />
-            Insights
-          </TabsTrigger>
+      {/* Session Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <MessageSquare className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">{t('questions')}</p>
+                <p className="text-2xl font-bold text-gray-900">{totalResponses}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Clock className="w-5 h-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">{t('duration')}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatDuration(sessionDuration)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <Globe className="w-5 h-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">{t('language')}</p>
+                <p className="text-2xl font-bold text-gray-900">{getLanguageDisplayName(sessionLanguage)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-amber-500">
+          <CardContent className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <BarChart3 className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600">{t('status')}</p>
+                <p className="text-lg font-bold text-gray-900 capitalize">{t('completed')}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Enhanced Assessment Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview" data-testid="tab-overview">{t('overview')}</TabsTrigger>
+          <TabsTrigger value="analytics" data-testid="tab-analytics">{t('analytics')}</TabsTrigger>
+          <TabsTrigger value="feedback" data-testid="tab-feedback">{t('detailedFeedback')}</TabsTrigger>
+          <TabsTrigger value="practice" data-testid="tab-practice">{t('practice')}</TabsTrigger>
+          <TabsTrigger value="reflect" data-testid="tab-reflect">{t('reflect')}</TabsTrigger>
         </TabsList>
 
-        {/* Overview Tab */}
+        {/* Enhanced Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
+          {/* Enhanced Strengths and Improvements */}
           <div className="grid lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <PieChart className="w-5 h-5 mr-2" />
-                  Performance Charts
+            {/* Strengths Card */}
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg mr-3">
+                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <span className="text-green-800">{t('keyStrengths')}</span>
+                    <p className="text-sm font-normal text-green-600 mt-1">
+                      {t('strengthsSubtitle')}
+                    </p>
+                  </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <InterviewScoreCharts evaluation={chartData as any} />
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  {(() => {
+                    const displayStrengths = getTranslatedField ? getTranslatedField('strengths', strengths) : strengths;
+                    return displayStrengths && Array.isArray(displayStrengths) && displayStrengths.length > 0 ? (
+                      displayStrengths.map((strength: string, index: number) => (
+                        <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-green-100 shadow-sm">
+                          <div className="p-1 bg-green-100 rounded-full mt-0.5">
+                            <Zap className="w-3 h-3 text-green-600" />
+                          </div>
+                          <p className="text-gray-800 leading-relaxed flex-1">{strength}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <Brain className="w-12 h-12 text-green-300 mx-auto mb-3" />
+                        <p className="text-green-600 font-medium">{t('buildingStrengths')}</p>
+                        <p className="text-sm text-green-500 mt-1">{t('buildingStrengthsDesc')}</p>
+                      </div>
+                    );
+                  })()} 
+                </div>
               </CardContent>
             </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Award className="w-5 h-5 mr-2" />
-                  Key Highlights
+
+            {/* Improvement Areas Card */}
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                    <Target className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <span className="text-blue-800">{t('growthOpportunities')}</span>
+                    <p className="text-sm font-normal text-blue-600 mt-1">
+                      {t('growthSubtitle')}
+                    </p>
+                  </div>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Top Strengths */}
-                <div>
-                  <h4 className="font-medium text-green-600 mb-2 flex items-center">
-                    <CheckCircle2 className="w-4 h-4 mr-1" />
-                    Top Strengths
-                  </h4>
-                  <ul className="space-y-1">
-                    {strengths.slice(0, 3).map((strength, index) => (
-                      <li key={index} className="text-sm text-gray-600 flex items-start">
-                        <span className="text-green-500 mr-2">•</span>
-                        {strength}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                
-                <Separator />
-                
-                {/* Priority Improvements */}
-                <div>
-                  <h4 className="font-medium text-amber-600 mb-2 flex items-center">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    Priority Improvements
-                  </h4>
-                  <ul className="space-y-1">
-                    {improvements.slice(0, 3).map((improvement, index) => (
-                      <li key={index} className="text-sm text-gray-600 flex items-start">
-                        <span className="text-amber-500 mr-2">•</span>
-                        {improvement}
-                      </li>
-                    ))}
-                  </ul>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  {(() => {
+                    const displayImprovements = getTranslatedField ? getTranslatedField('improvementAreas', improvements) : improvements;
+                    return displayImprovements && Array.isArray(displayImprovements) && displayImprovements.length > 0 ? (
+                      displayImprovements.map((area: string, index: number) => (
+                        <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-blue-100 shadow-sm">
+                          <div className="p-1 bg-blue-100 rounded-full mt-0.5">
+                            <AlertTriangle className="w-3 h-3 text-blue-600" />
+                          </div>
+                          <p className="text-gray-800 leading-relaxed flex-1">{area}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <Target className="w-12 h-12 text-blue-300 mx-auto mb-3" />
+                        <p className="text-blue-600 font-medium">{t('identifyingGrowth')}</p>
+                        <p className="text-sm text-blue-500 mt-1">{t('identifyingGrowthDesc')}</p>
+                      </div>
+                    );
+                  })()}
                 </div>
               </CardContent>
             </Card>
           </div>
+
+          {/* Enhanced Qualitative Observations */}
+          <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center">
+                <div className="p-2 bg-gray-100 rounded-lg mr-3">
+                  <FileText className="w-6 h-6 text-gray-600" />
+                </div>
+                <div>
+                  <span className="text-gray-800">{t('aiAssessmentNotes')}</span>
+                  <p className="text-sm font-normal text-gray-600 mt-1">
+                    {t('aiNotesSubtitle')}
+                  </p>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-white rounded-lg border border-gray-100 p-6">
+                {(() => {
+                  const observations = getTranslatedField ? getTranslatedField('qualitativeObservations', report.detailedFeedback) : report.detailedFeedback;
+                  return observations && observations.trim() ? (
+                    <div className="prose prose-gray max-w-none">
+                      <p className="text-gray-700 leading-relaxed text-base mb-0">
+                        {observations}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 font-medium mb-2">{t('generatingAnalysis')}</p>
+                      <p className="text-sm text-gray-400">
+                        {t('generatingAnalysisDesc')}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
-        {/* 9-Criteria Detailed Tab */}
-        <TabsContent value="criteria" className="space-y-6">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Object.entries(criteriaScores).map(([criterion, score]) => (
-              <Card key={criterion} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-gray-900 text-sm">
-                      {getCriterionDisplayName(criterion)}
-                    </h3>
-                    <Badge variant="outline" className={getScoreColor(score)}>
-                      {score}/5
-                    </Badge>
-                  </div>
-                  <Progress value={(score / 5) * 100} className="h-2 mb-3" />
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{getCriterionWeight(criterion)}% weight</span>
-                    <span>{getScoreLabel(score)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        {/* Performance Analytics Tab */}
+        <TabsContent value="analytics" className="space-y-6">
+          <InterviewScoreCharts evaluation={chartData as any} t={t as any} />
         </TabsContent>
 
         {/* Detailed Feedback Tab */}
         <TabsContent value="feedback" className="space-y-6">
           <StructuredFeedbackCard 
             feedback={structuredFeedback}
-            questionText="Overall Interview Performance"
-            responseText={`Completed ${totalResponses} questions in ${formatDuration(sessionDuration)}`}
+            questionText={t('interviewPerformanceScore')}
+            responseText={`${t('completed')} ${totalResponses} ${t('questions').toLowerCase()} in ${formatDuration(sessionDuration)}`}
             language={sessionLanguage}
           />
         </TabsContent>
 
-        {/* Insights & Next Steps Tab */}
-        <TabsContent value="insights" className="space-y-6">
+        {/* Practice Drills Tab */}
+        <TabsContent value="practice" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Target className="w-5 h-5 mr-2" />
+                Personalized Practice Recommendations
+              </CardTitle>
+              <CardDescription>
+                Targeted exercises to improve your interview performance
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recommendedActions && Array.isArray(recommendedActions) && recommendedActions.length > 0 ? (
+                  recommendedActions.map((action: string, index: number) => (
+                    <div key={index} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <p className="text-gray-800">{action}</p>
+                        <Button variant="outline" size="sm">
+                          {t('practice')}
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Target className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium mb-2">Personalized Practice Coming Soon</p>
+                    <p className="text-sm text-gray-400">
+                      Complete more practice sessions to get tailored recommendations.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Reflection Tab */}
+        <TabsContent value="reflect" className="space-y-6">
           <div className="grid lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -457,14 +601,22 @@ export default function PracticeAssessment() {
               <CardContent>
                 <ScrollArea className="h-64">
                   <div className="space-y-3">
-                    {keyInsights.map((insight, index) => (
-                      <div key={index} className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
-                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                    {keyInsights && keyInsights.length > 0 ? (
+                      keyInsights.map((insight, index) => (
+                        <div key={index} className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                          <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <span className="text-xs font-medium text-blue-600">{index + 1}</span>
+                          </div>
+                          <p className="text-sm text-gray-700">{insight}</p>
                         </div>
-                        <p className="text-sm text-gray-700">{insight}</p>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <Brain className="w-12 h-12 text-blue-300 mx-auto mb-3" />
+                        <p className="text-blue-600 font-medium">Building Your Insights</p>
+                        <p className="text-sm text-blue-500 mt-1">Complete more sessions to generate deeper insights.</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>
@@ -480,14 +632,22 @@ export default function PracticeAssessment() {
               <CardContent>
                 <ScrollArea className="h-64">
                   <div className="space-y-3">
-                    {recommendedActions.map((action, index) => (
-                      <div key={index} className="flex items-start space-x-3 p-3 bg-purple-50 rounded-lg">
-                        <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Lightbulb className="w-3 h-3 text-purple-600" />
+                    {recommendedActions && recommendedActions.length > 0 ? (
+                      recommendedActions.map((action, index) => (
+                        <div key={index} className="flex items-start space-x-3 p-3 bg-purple-50 rounded-lg">
+                          <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <Lightbulb className="w-3 h-3 text-purple-600" />
+                          </div>
+                          <p className="text-sm text-gray-700">{action}</p>
                         </div>
-                        <p className="text-sm text-gray-700">{action}</p>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <Zap className="w-12 h-12 text-purple-300 mx-auto mb-3" />
+                        <p className="text-purple-600 font-medium">Generating Recommendations</p>
+                        <p className="text-sm text-purple-500 mt-1">Your personalized action items will appear after evaluation.</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </ScrollArea>
               </CardContent>
