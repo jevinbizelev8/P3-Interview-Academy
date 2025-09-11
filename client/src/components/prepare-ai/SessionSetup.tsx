@@ -91,22 +91,8 @@ interface SessionConfig {
   industry?: string;
 }
 
-// Backend API expects this format
-interface BackendSessionConfig {
-  jobPosition: string;
-  companyName?: string;
-  interviewStage: string;
-  experienceLevel: 'entry' | 'intermediate' | 'senior' | 'expert';
-  preferredLanguage: string;
-  voiceEnabled: boolean;
-  speechRate: string;
-  difficultyLevel: 'beginner' | 'intermediate' | 'advanced' | 'adaptive';
-  focusAreas: string[];
-  questionCategories: string[];
-}
-
 interface SessionSetupProps {
-  onStartSession: (config: BackendSessionConfig) => void;
+  onStartSession: (config: SessionConfig) => void;
   isLoading?: boolean;
   initialConfig?: Partial<SessionConfig>;
 }
@@ -142,10 +128,10 @@ export default function SessionSetup({
     }
     
     // Map frontend config to backend schema
-    const backendConfig: BackendSessionConfig = {
+    const backendConfig = {
       jobPosition: config.jobTitle,
       companyName: config.companyName || undefined,
-      interviewStage: config.interviewStage as any, // Will be validated by backend
+      interviewStage: config.interviewStage,
       experienceLevel: "intermediate" as const, // Default to intermediate
       preferredLanguage: config.language,
       voiceEnabled: config.voiceEnabled,
