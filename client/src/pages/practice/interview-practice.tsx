@@ -53,12 +53,13 @@ export default function InterviewPractice() {
   const voiceInitializedRef = useRef(false);
 
   // Fetch session data
-  const { data: session, isLoading: sessionLoading } = useQuery<InterviewSessionWithScenario>({
+  const { data: sessionResponse, isLoading: sessionLoading } = useQuery<{ success: boolean; data: InterviewSessionWithScenario }>({
     queryKey: [`/api/practice/sessions/${sessionId}`],
     enabled: !!sessionId,
   });
 
-  // Fetch messages - using the existing API that returns messages in session.messages
+  // Extract session and messages from API response
+  const session = sessionResponse?.data;
   const messages = session?.messages || [];
 
   // Update maxQuestions from session data

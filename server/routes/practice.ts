@@ -359,7 +359,7 @@ router.post('/sessions/:id/complete', async (req, res) => {
     // Session context for evaluation
     const sessionContext = {
       jobPosition: session.jobPosition || 'Professional',
-      companyName: session.companyName,
+      companyName: session.companyName || undefined,
       experienceLevel: session.difficultyLevel || 'intermediate',
       responseLanguage: session.preferredLanguage || 'en',
       culturalContext: session.preferredLanguage && session.preferredLanguage !== 'en' ? 'ASEAN' : undefined
