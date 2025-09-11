@@ -720,6 +720,80 @@ export default function InterviewPractice() {
 
         {/* Sidebar */}
         <div className="space-y-6">
+          {/* Voice Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Voice Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Voice Enable/Disable Toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Voice Mode</span>
+                <Button
+                  variant={voiceEnabled ? "default" : "outline"}
+                  size="sm"
+                  onClick={handleToggleVoice}
+                  className="h-8 px-3"
+                  data-testid="button-toggle-voice"
+                >
+                  {voiceEnabled ? "On" : "Off"}
+                </Button>
+              </div>
+
+              {voiceEnabled && (
+                <>
+                  {/* Speech Rate */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Speech Speed</span>
+                      <span className="text-xs text-gray-500">{speechRate}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.5"
+                      max="2"
+                      step="0.1"
+                      value={speechRate}
+                      onChange={(e) => handleSpeechRateChange(parseFloat(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+                      data-testid="slider-speech-rate"
+                    />
+                  </div>
+
+                  {/* Voice Selection */}
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium">Voice</span>
+                    <select
+                      value={selectedVoice}
+                      onChange={(e) => handleVoiceChange(e.target.value)}
+                      className="w-full p-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      data-testid="select-voice"
+                    >
+                      <option value="">Default Voice</option>
+                      {typeof window !== 'undefined' && window.speechSynthesis?.getVoices().map((voice) => (
+                        <option key={voice.name} value={voice.name}>
+                          {voice.name} ({voice.lang})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Test Voice Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTestVoice}
+                    disabled={isSpeaking}
+                    className="w-full"
+                    data-testid="button-test-voice"
+                  >
+                    {isSpeaking ? "Speaking..." : "Test Voice"}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Interview Context</CardTitle>
