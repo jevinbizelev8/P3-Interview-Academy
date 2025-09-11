@@ -522,34 +522,66 @@ export default function InterviewPractice() {
                     </div>
                   )}
                   
-                  {messages.map((msg: InterviewMessage) => (
-                    <div
-                      key={msg.id}
-                      className={`flex ${msg.messageType === "user_response" ? "justify-end" : "justify-start"}`}
-                    >
-                      <div
-                        className={`max-w-[70%] rounded-lg px-4 py-3 ${
-                          msg.messageType === "user_response"
-                            ? "bg-purple-600 text-white"
-                            : "bg-gray-100 text-gray-900"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 mb-1">
-                          {msg.messageType === "user_response" ? (
-                            <User className="w-4 h-4" />
-                          ) : (
-                            <Bot className="w-4 h-4" />
-                          )}
-                          <span className="text-xs opacity-75">
-                            {msg.messageType === "user_response" ? "You" : "AI Interviewer"}
-                          </span>
-                          {msg.questionNumber && (
-                            <Badge variant="outline" className="text-xs">
-                              Q{msg.questionNumber}
-                            </Badge>
-                          )}
+                  {/* Display conversation messages */}
+                  {messages.map((msg, index) => (
+                    <div key={`${msg.id}-${index}`} className="space-y-4">
+                      <div className={`flex ${msg.messageType === 'user_response' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[85%] rounded-lg p-4 ${
+                          msg.messageType === 'ai_question'
+                            ? 'bg-blue-50 border border-blue-200'
+                            : 'bg-green-50 border border-green-200'
+                        }`}>
+                          {/* Message Header */}
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                                msg.messageType === 'ai_question' ? 'bg-blue-500' : 'bg-green-500'
+                              }`}>
+                                {msg.messageType === 'ai_question' ? (
+                                  <Bot className="w-4 h-4 text-white" />
+                                ) : (
+                                  <User className="w-4 h-4 text-white" />
+                                )}
+                              </div>
+                              <span className="font-medium text-sm">
+                                {msg.messageType === 'ai_question' ? 'AI Interviewer' : 'You'}
+                              </span>
+                              {msg.inputMethod === 'voice' && (
+                                <Badge variant="outline" className="text-xs">
+                                  <Mic className="w-3 h-3 mr-1" />
+                                  Voice
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-500 flex items-center">
+                                <Clock className="w-3 h-3 mr-1" />
+                                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              {msg.messageType === 'ai_question' && voiceEnabled && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => speakAIResponse(msg.content)}
+                                  data-testid={`button-play-question-${index}`}
+                                >
+                                  <Volume2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Message Content */}
+                          <div className="text-gray-800 leading-relaxed">
+                            {msg.questionNumber && (
+                              <div className="text-xs text-gray-500 mb-2">
+                                Question {msg.questionNumber}
+                              </div>
+                            )}
+                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                          </div>
                         </div>
-                        <p className="whitespace-pre-wrap">{msg.content}</p>
                       </div>
                     </div>
                   ))}
