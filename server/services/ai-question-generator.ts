@@ -417,7 +417,7 @@ Response Format (JSON):
    * Check if SeaLion should be used for this language
    */
   private shouldUseSeaLion(language: string): boolean {
-    const seaLionLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'jv', 'su'];
+    const seaLionLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'jv', 'su', 'zh-cn', 'zh-tw', 'zh-hk', 'zh-sg'];
     return seaLionLanguages.includes(language) || language === 'en';
   }
 

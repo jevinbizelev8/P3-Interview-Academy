@@ -14,7 +14,9 @@ export const ASEAN_LANGUAGES: Language[] = [
   { code: 'th', name: 'ไทย', displayName: 'ไทย (Thai)' },
   { code: 'vi', name: 'Tiếng Việt', displayName: 'Tiếng Việt (Vietnamese)' },
   { code: 'tl', name: 'Filipino', displayName: 'Filipino' },
-  { code: 'zh-sg', name: '中文', displayName: '中文 (Chinese - Singapore)' },
+  { code: 'zh-cn', name: '简体中文', displayName: '简体中文 (Simplified Chinese)' },
+  { code: 'zh-tw', name: '繁體中文', displayName: '繁體中文 (Traditional Chinese)' },
+  { code: 'zh-hk', name: '中文 (香港)', displayName: '中文 (香港) [Hong Kong Chinese]' },
 ];
 
 interface LanguageSelectorProps {

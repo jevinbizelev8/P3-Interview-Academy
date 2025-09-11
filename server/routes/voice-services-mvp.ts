@@ -64,7 +64,9 @@ router.get('/config', async (req, res) => {
         { code: 'my', name: 'Myanmar', localName: 'မြန်မာ', browserSupport: false },
         { code: 'km', name: 'Khmer', localName: 'ខ្មែរ', browserSupport: false },
         { code: 'lo', name: 'Lao', localName: 'ລາວ', browserSupport: false },
-        { code: 'zh-sg', name: 'Chinese Singapore', localName: '中文', browserSupport: true }
+        { code: 'zh-cn', name: 'Simplified Chinese', localName: '简体中文', browserSupport: true },
+        { code: 'zh-tw', name: 'Traditional Chinese', localName: '繁體中文', browserSupport: true },
+        { code: 'zh-hk', name: 'Chinese (Hong Kong)', localName: '中文 (香港)', browserSupport: true }
       ],
       ttsVoices: {
         en: ['en-US-Standard-A', 'en-US-Standard-B', 'en-US-Standard-C', 'en-US-Standard-D'],
@@ -73,7 +75,9 @@ router.get('/config', async (req, res) => {
         th: ['th-TH-Standard-A', 'th-TH-Standard-B'],
         vi: ['vi-VN-Standard-A', 'vi-VN-Standard-B'],
         fil: ['fil-PH-Standard-A', 'fil-PH-Standard-B'],
-        'zh-sg': ['zh-SG-Standard-A', 'zh-SG-Standard-B']
+        'zh-cn': ['zh-CN-Standard-A', 'zh-CN-Standard-B', 'zh-CN-Standard-C', 'zh-CN-Standard-D'],
+        'zh-tw': ['zh-TW-Standard-A', 'zh-TW-Standard-B', 'zh-TW-Standard-C'],
+        'zh-hk': ['zh-HK-Standard-A', 'zh-HK-Standard-B']
       },
       browserVoices: {
         en: ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop'],
@@ -82,7 +86,9 @@ router.get('/config', async (req, res) => {
         th: ['Google ไทย', 'Microsoft Pattara Desktop'],
         vi: ['Google Tiếng Việt', 'Microsoft An Desktop'],
         fil: ['Google Filipino', 'Microsoft Angelo Desktop'],
-        'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
+        'zh-cn': ['Google 普通话 (中国大陆)', 'Microsoft Yaoyao Desktop', 'Microsoft Kangkang Desktop'],
+        'zh-tw': ['Google 國語 (台灣)', 'Microsoft Zhiwei Desktop', 'Microsoft Yating Desktop'],
+        'zh-hk': ['Google 粵語 (香港)', 'Microsoft Tracy Desktop', 'Microsoft Danny Desktop']
       },
       sttModels: ['browser-speech-api', 'whisper-1'],
       maxFileSize: '10MB',
@@ -345,7 +351,9 @@ function getBrowserVoices(language: string): string[] {
     'th': ['Google ไทย', 'Microsoft Pattara Desktop'],
     'vi': ['Google Tiếng Việt', 'Microsoft An Desktop'],
     'fil': ['Google Filipino', 'Microsoft Angelo Desktop'],
-    'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
+    'zh-cn': ['Google 普通话 (中国大陆)', 'Microsoft Yaoyao Desktop', 'Microsoft Kangkang Desktop'],
+    'zh-tw': ['Google 國語 (台灣)', 'Microsoft Zhiwei Desktop', 'Microsoft Yating Desktop'],
+    'zh-hk': ['Google 粵語 (香港)', 'Microsoft Tracy Desktop', 'Microsoft Danny Desktop']
   };
   return voiceMap[language] || ['Default Voice'];
 }
@@ -409,6 +417,21 @@ function generateQualityRecommendations(audioMetrics: any, language: string): st
       "Nói rõ ràng và chậm rãi",
       "Sử dụng phát âm đúng cho thuật ngữ kỹ thuật",
       "Tạm dừng giữa các câu"
+    ],
+    'zh-cn': [
+      "说话清楚，语速适中",
+      "专业术语需要准确发音",
+      "句子之间要有短暂停顿"
+    ],
+    'zh-tw': [
+      "說話清楚，語速適中",
+      "專業術語需要準確發音",
+      "句子之間要有短暫停頓"
+    ],
+    'zh-hk': [
+      "講話清楚，語速適中",
+      "專業術語需要準確發音",
+      "句子之間要有短暫停頓"
     ]
   };
   
