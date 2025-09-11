@@ -24,9 +24,10 @@ import { apiRequest } from "@/lib/queryClient";
 
 interface MainNavProps {
   currentModule?: string;
+  hideModuleNav?: boolean;
 }
 
-export default function MainNav({ currentModule }: MainNavProps) {
+export default function MainNav({ currentModule, hideModuleNav }: MainNavProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
 
   const handleLogout = async () => {
@@ -86,7 +87,8 @@ export default function MainNav({ currentModule }: MainNavProps) {
           </Link>
           
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          {!hideModuleNav && (
+            <div className="hidden md:flex items-center space-x-1">
             {modules.map((module) => {
               const Icon = module.icon;
               const isActive = currentModule === module.id;
@@ -104,7 +106,8 @@ export default function MainNav({ currentModule }: MainNavProps) {
                 </Link>
               );
             })}
-          </div>
+            </div>
+          )}
 
           {/* User Section */}
           <div className="flex items-center space-x-4">
