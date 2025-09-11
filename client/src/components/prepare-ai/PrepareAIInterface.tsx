@@ -93,6 +93,12 @@ export default function PrepareAIInterface({
     timestamp: Date;
   }>>([]);
 
+  // Session progress tracking state
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0); // in seconds
+  const [totalQuestionsLimit, setTotalQuestionsLimit] = useState(15); // Default 15 questions
+  const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
+
   // Helper function to get language display name
   const getLanguageName = (code: string) => {
     const languageNames: Record<string, string> = {
@@ -695,6 +701,39 @@ export default function PrepareAIInterface({
       createSession({});
     }
   }, [sessionConfig]);
+
+  // Session timer and auto-completion logic
+  useEffect(() => {
+    if (!session || sessionStatus !== 'active') return;
+
+    // Initialize session start time when first question is generated
+    if (!sessionStartTime && messages.filter(m => m.type === 'question').length === 1) {
+      setSessionStartTime(new Date());
+    }
+
+    // Timer interval
+    const timerInterval = setInterval(() => {
+      if (sessionStartTime) {
+        const now = new Date();
+        const elapsed = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
+        setElapsedTime(elapsed);
+      }
+    }, 1000);
+
+    // Auto-completion check
+    const questionCount = messages.filter(m => m.type === 'question').length;
+    if (questionCount >= totalQuestionsLimit && sessionStatus !== 'completed') {
+      console.log(`✅ Session auto-completing: ${questionCount} questions reached limit of ${totalQuestionsLimit}`);
+      setSessionStatus('completed');
+      
+      // Show completion message
+      setTimeout(() => {
+        alert(`Excellent work! You've completed ${questionCount} questions in your interview preparation session. You can review your feedback and performance.`);
+      }, 500);
+    }
+
+    return () => clearInterval(timerInterval);
+  }, [session, sessionStatus, messages, sessionStartTime, totalQuestionsLimit]);
 
   // Restart session
   const handleRestartSession = () => {
