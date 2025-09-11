@@ -51,6 +51,15 @@ import { apiRequest } from "@/lib/queryClient";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useState } from "react";
 
+// Session thresholds for different features
+const THRESHOLDS = {
+  STRENGTHS_ANALYSIS: 3, // Need 3+ Practice sessions for strengths
+  IMPROVEMENT_AREAS: 2,  // Need 2+ Practice sessions for improvement areas
+  SKILLS_BREAKDOWN: 3,   // Need 3+ total sessions for skills breakdown
+  PROGRESS_TRENDS: 5,    // Need 5+ total sessions for progress trends
+  AI_INSIGHTS: 2         // Need 2+ total sessions for AI insights
+} as const;
+
 interface DashboardStats {
   // Combined metrics (Interview + Practice)
   totalSessions: number;
@@ -173,6 +182,26 @@ export default function Dashboard() {
     const mins = minutes % 60;
     return hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
   };
+
+  // Helper functions to calculate remaining sessions needed
+  const getSessionsNeeded = (currentCount: number, threshold: number) => {
+    return Math.max(0, threshold - currentCount);
+  };
+
+  const getSessionsMessage = (current: number, threshold: number, sessionType: 'Practice' | 'total', feature: string) => {
+    const needed = getSessionsNeeded(current, threshold);
+    if (needed === 0) return null; // Feature is already unlocked
+    
+    const sessionText = needed === 1 ? 'session' : 'sessions';
+    const actionText = sessionType === 'Practice' ? 
+      `Complete ${needed} more Practice ${sessionText}` : 
+      `Complete ${needed} more ${sessionText}`;
+    
+    return `${actionText} to unlock ${feature}`;
+  };
+
+  const practiceSessionsCount = dashboardStats.practiceSessions || 0;
+  const totalSessionsCount = dashboardStats.totalSessions || 0;
 
   return (
     <ProtectedRoute>
@@ -305,7 +334,13 @@ export default function Dashboard() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">Complete sessions to identify your strengths</p>
+                <div className="text-center py-2">
+                  <p className="text-sm text-gray-600 font-medium mb-1">Strengths Analysis Locked</p>
+                  <p className="text-xs text-gray-500">
+                    {getSessionsMessage(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS, 'Practice', 'strengths analysis') ||
+                     'Complete more Practice sessions to identify your strengths'}
+                  </p>
+                </div>
               )}
             </div>
           </CardContent>
@@ -334,7 +369,13 @@ export default function Dashboard() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-gray-500">We'll identify areas for improvement after your first sessions</p>
+                <div className="text-center py-2">
+                  <p className="text-sm text-gray-600 font-medium mb-1">Focus Areas Analysis Locked</p>
+                  <p className="text-xs text-gray-500">
+                    {getSessionsMessage(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS, 'Practice', 'improvement areas analysis') ||
+                     'Complete more Practice sessions to identify areas for improvement'}
+                  </p>
+                </div>
               )}
             </div>
           </CardContent>
@@ -522,7 +563,17 @@ export default function Dashboard() {
               <div className="text-center py-8 text-gray-500">
                 <Brain className="w-12 h-12 mx-auto mb-4 opacity-30" />
                 <p className="text-lg mb-2">No sessions yet</p>
-                <p className="text-sm mb-4">Complete interview practice sessions to see your performance analytics here</p>
+                <p className="text-sm mb-4">
+                  Start your first Practice session to begin tracking your interview performance
+                </p>
+                <div className="bg-blue-50 rounded-lg p-4 mt-4 border border-blue-200">
+                  <p className="text-xs text-blue-600 font-medium mb-1">Quick Start:</p>
+                  <p className="text-xs text-blue-700">
+                    • 2+ Practice sessions → Unlock improvement areas analysis<br/>
+                    • 3+ Practice sessions → Unlock strengths analysis<br/>
+                    • 5+ total sessions → Unlock progress trends
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -595,7 +646,13 @@ export default function Dashboard() {
                   ) : (
                     <div className="text-center py-4">
                       <Brain className="w-8 h-8 text-green-300 mx-auto mb-2" />
-                      <p className="text-green-600 text-sm">Complete more sessions to identify strengths</p>
+                      <p className="text-green-600 text-sm font-medium mb-1">
+                        {getSessionsNeeded(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS) === 0 ?
+                          'Strengths will appear after analysis' :
+                          `${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS)} more Practice ${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS) === 1 ? 'session' : 'sessions'} needed`
+                        }
+                      </p>
+                      <p className="text-xs text-green-500">Practice sessions unlock strengths analysis</p>
                     </div>
                   )}
                 </div>
@@ -621,7 +678,13 @@ export default function Dashboard() {
                   ) : (
                     <div className="text-center py-4">
                       <Target className="w-8 h-8 text-blue-300 mx-auto mb-2" />
-                      <p className="text-blue-600 text-sm">Complete more sessions to identify areas for improvement</p>
+                      <p className="text-blue-600 text-sm font-medium mb-1">
+                        {getSessionsNeeded(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS) === 0 ?
+                          'Areas will appear after analysis' :
+                          `${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS)} more Practice ${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS) === 1 ? 'session' : 'sessions'} needed`
+                        }
+                      </p>
+                      <p className="text-xs text-blue-500">Practice sessions unlock improvement areas analysis</p>
                     </div>
                   )}
                 </div>
@@ -710,8 +773,18 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="text-center py-8">
                 <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">Skills breakdown and improvement recommendations will appear after completing practice sessions.</p>
-                <p className="text-sm text-gray-500">Complete at least 3 practice sessions to see detailed skills analysis.</p>
+                <p className="text-gray-600 mb-2 font-medium">Skills Analysis Locked</p>
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <p className="text-sm text-blue-700 mb-2">
+                    {totalSessionsCount < THRESHOLDS.SKILLS_BREAKDOWN ?
+                      `Complete ${getSessionsNeeded(totalSessionsCount, THRESHOLDS.SKILLS_BREAKDOWN)} more ${getSessionsNeeded(totalSessionsCount, THRESHOLDS.SKILLS_BREAKDOWN) === 1 ? 'session' : 'sessions'} to unlock detailed skills analysis` :
+                      'Skills analysis will appear after processing your sessions'
+                    }
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    Skills breakdown includes: Situation, Task, Action, Result scoring with trends
+                  </p>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -782,7 +855,18 @@ export default function Dashboard() {
               ) : (
                 <div className="text-center py-8">
                   <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-600">Complete more sessions to track your improvement trends over time.</p>
+                  <p className="text-gray-600 font-medium mb-3">Progress Trends Locked</p>
+                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200 max-w-md mx-auto">
+                    <p className="text-sm text-purple-700 mb-2">
+                      {totalSessionsCount < THRESHOLDS.PROGRESS_TRENDS ?
+                        `Complete ${getSessionsNeeded(totalSessionsCount, THRESHOLDS.PROGRESS_TRENDS)} more ${getSessionsNeeded(totalSessionsCount, THRESHOLDS.PROGRESS_TRENDS) === 1 ? 'session' : 'sessions'} to unlock progress trends` :
+                        'Progress trends will appear after processing your sessions'
+                      }
+                    </p>
+                    <p className="text-xs text-purple-600">
+                      Track score improvements, identify patterns, and see your growth over time
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -932,8 +1016,20 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="text-center py-8">
                 <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 mb-4">Get AI-powered recommendations for improving your interview performance.</p>
-                <p className="text-sm text-gray-500">Complete a few practice sessions to receive personalized insights and recommendations.</p>
+                <p className="text-gray-600 mb-4 font-medium">AI Insights Locked</p>
+                <div className="bg-indigo-50 rounded-lg p-6 border border-indigo-200 max-w-lg mx-auto">
+                  <p className="text-sm text-indigo-700 mb-3">
+                    {totalSessionsCount < THRESHOLDS.AI_INSIGHTS ?
+                      `Complete ${getSessionsNeeded(totalSessionsCount, THRESHOLDS.AI_INSIGHTS)} more ${getSessionsNeeded(totalSessionsCount, THRESHOLDS.AI_INSIGHTS) === 1 ? 'session' : 'sessions'} to unlock AI-powered insights` :
+                      'AI insights will appear after analyzing your sessions'
+                    }
+                  </p>
+                  <div className="text-xs text-indigo-600 space-y-1">
+                    <p>• Personalized improvement recommendations</p>
+                    <p>• Performance analysis with specific tips</p>
+                    <p>• Tailored action items based on your strengths and weaknesses</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
