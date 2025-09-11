@@ -5,6 +5,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { Server as HTTPServer } from "http";
 import { PrepareAIService } from "./prepare-ai-service.js";
 import { FreeVoiceService } from "./free-voice-service.js";
+import { registerPrepareIO } from "./realtime-gateway.js";
 
 interface SocketUserData {
   userId: string;
@@ -61,6 +62,9 @@ export class PrepareWebSocketService {
     this.audioBuffers = new Map();
 
     this.setupSocketHandlers();
+    
+    // Register this Socket.IO server with the RealtimeGateway
+    registerPrepareIO(this.io);
     
     console.log("🔌 WebSocket Service initialized for AI Prepare Module");
   }
