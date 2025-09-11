@@ -437,7 +437,7 @@ export default function PreInterviewBriefing() {
           interviewStage: scenario?.interviewStage || "behavioral", // Use scenario stage or default
           difficultyLevel: "intermediate",
           preferredLanguage: jobContext.interviewLanguage || 'en',
-          totalQuestions: 15,
+          totalQuestions: 25,
         }),
       });
 
