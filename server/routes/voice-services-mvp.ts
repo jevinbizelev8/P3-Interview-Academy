@@ -177,11 +177,12 @@ router.post('/stt', requireAuth, upload.single('audio'), async (req, res) => {
         
         console.log('🔍 STT ENDPOINT: Calling OpenAI Whisper API...');
         
-        // Read the uploaded file
-        const audioBuffer = fs.readFileSync(req.file.path);
+        // Use the file path directly for OpenAI API - more reliable than Buffer conversion
+        const { createReadStream } = await import('fs');
+        const fileStream = createReadStream(req.file.path);
         
         // Use OpenAI Whisper for transcription
-        const transcription = await getOpenAIService().transcribeAudio(audioBuffer, {
+        const transcription = await getOpenAIService().transcribeAudio(fileStream, {
           language: language,
           model: model,
           filename: req.file.originalname || 'recording.wav'

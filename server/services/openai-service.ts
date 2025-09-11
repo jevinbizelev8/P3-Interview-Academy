@@ -78,12 +78,13 @@ export class OpenAIService {
   }
 
   // Audio transcription using OpenAI Whisper
-  async transcribeAudio(audioFile: Buffer | File, options: {
+  async transcribeAudio(audioFile: Buffer | File | NodeJS.ReadableStream, options: {
     language?: string;
     model?: string;
     prompt?: string;
     temperature?: number;
     response_format?: 'json' | 'text' | 'srt' | 'verbose_json' | 'vtt';
+    filename?: string;
   } = {}): Promise<{
     text: string;
     language?: string;
@@ -91,14 +92,22 @@ export class OpenAIService {
     segments?: any[];
   }> {
     try {
-      // Handle Buffer vs File for OpenAI API
+      // Handle different input types for OpenAI API
       let fileToUpload: any = audioFile;
+      
       if (Buffer.isBuffer(audioFile)) {
-        // For Node.js, we can pass Buffer directly but need to add filename property
-        const bufferWithName = audioFile as any;
-        bufferWithName.name = 'audio.wav';
-        bufferWithName.type = 'audio/wav';
-        fileToUpload = bufferWithName;
+        // In Node.js, create a ReadableStream from Buffer for OpenAI API
+        const filename = options.filename || 'audio.wav';
+        const { Readable } = await import('stream');
+        fileToUpload = Readable.from(audioFile);
+        // Add filename property for OpenAI API
+        (fileToUpload as any).name = filename;
+        (fileToUpload as any).type = 'audio/wav';
+      } else if ('readable' in audioFile) {
+        // It's already a stream, add filename if provided
+        const filename = options.filename || 'audio.wav';
+        (fileToUpload as any).name = filename;
+        (fileToUpload as any).type = 'audio/wav';
       }
 
       const transcription = await this.client.audio.transcriptions.create({
