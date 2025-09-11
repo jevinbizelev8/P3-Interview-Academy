@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import ScenarioSelection from "./practice/scenario-selection";
 import PreInterviewBriefing from "./practice/pre-interview-briefing";
 import InterviewPractice from "./practice/interview-practice";
-import PostInterviewAssessment from "./practice/post-interview-assessment";
+import PracticeAssessment from "./practice/assessment";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function Practice() {
@@ -20,7 +20,7 @@ export default function Practice() {
           <Route path="/practice" component={ScenarioSelection} />
           <Route path="/practice/briefing/:scenarioId" component={PreInterviewBriefing} />
           <Route path="/practice/interview/:sessionId" component={InterviewPractice} />
-          <Route path="/practice/assessment/:sessionId" component={PostInterviewAssessment} />
+          <Route path="/practice/assessment/:sessionId" component={PracticeAssessment} />
           <Route path="/" component={ScenarioSelection} />
           <Route component={ScenarioSelection} />
         </Switch>

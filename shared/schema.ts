@@ -269,15 +269,22 @@ export const practiceReports = pgTable("practice_reports", {
   // Overall Evaluation
   overallScore: numeric("overall_score", { precision: 5, scale: 2 }),
   
-  // STAR Method Scoring (1-5 scale)
+  // 9-Criteria Official Rubric Scores (1-5 scale)
+  relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),              // 15% - Direct, focused answers
+  starStructureScore: numeric("star_structure_score", { precision: 5, scale: 2 }),    // 15% - STAR method organization
+  specificEvidenceScore: numeric("specific_evidence_score", { precision: 5, scale: 2 }), // 15% - Concrete examples with metrics
+  roleAlignmentScore: numeric("role_alignment_score", { precision: 5, scale: 2 }),    // 15% - Job/company relevance
+  outcomeOrientedScore: numeric("outcome_oriented_score", { precision: 5, scale: 2 }), // 15% - Measurable results focus
+  communicationScore: numeric("communication_score", { precision: 5, scale: 2 }),     // 10% - Clear, professional tone
+  problemSolvingScore: numeric("problem_solving_score", { precision: 5, scale: 2 }),  // 10% - Analytical thinking
+  culturalFitScore: numeric("cultural_fit_score", { precision: 5, scale: 2 }),        // 5% - Teamwork, adaptability
+  learningAgilityScore: numeric("learning_agility_score", { precision: 5, scale: 2 }), // 5% - Growth orientation
+  
+  // Legacy STAR Method Scoring (for backward compatibility)
   situationScore: numeric("situation_score", { precision: 5, scale: 2 }),
   taskScore: numeric("task_score", { precision: 5, scale: 2 }),
   actionScore: numeric("action_score", { precision: 5, scale: 2 }),
   resultScore: numeric("result_score", { precision: 5, scale: 2 }),
-  
-  // Additional Metrics
-  communicationScore: numeric("communication_score", { precision: 5, scale: 2 }),
-  relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),
   
   // Qualitative Feedback
   strengths: jsonb("strengths").default("[]"), // array of strings
