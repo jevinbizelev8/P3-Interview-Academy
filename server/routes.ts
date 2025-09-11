@@ -6,7 +6,8 @@ import { AIService } from "./services/ai-service";
 // import { prepareService } from "./services/prepare-service"; // QUARANTINED - moved to legacy-quarantine/
 import { questionBankService } from "./services/question-bank-service";
 import { 
-  requireAdmin 
+  requireAdmin,
+  requireAuth as requireAuthWithBypass
 } from "./middleware/auth-middleware";
 import { 
   insertInterviewScenarioSchema, 
@@ -2157,7 +2158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // AI-POWERED PREPARE MODULE ROUTES
   // ================================
   
-  app.use('/api/prepare-ai', requireAuth, prepareAIRouter);
+  app.use('/api/prepare-ai', requireAuthWithBypass, prepareAIRouter);
   
   // Voice services routes
   app.use('/api/voice', voiceServicesRouter);

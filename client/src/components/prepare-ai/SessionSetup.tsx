@@ -413,7 +413,7 @@ export default function SessionSetup({
         <Button
           onClick={handleStartSession}
           size="lg"
-          disabled={isLoading || !config.jobTitle.trim() || !config.companyName.trim()}
+          disabled={isLoading || !config.jobTitle.trim()}
           className="px-8 py-3 text-lg"
         >
           {isLoading ? (
