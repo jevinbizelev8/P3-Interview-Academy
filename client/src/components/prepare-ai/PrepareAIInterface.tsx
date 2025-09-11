@@ -532,12 +532,12 @@ export default function PrepareAIInterface({
       if (result.success && result.data) {
         const evaluationData = result.data;
         
-        // Set evaluation state directly instead of adding to messages
+        // Set evaluation state directly instead of adding to messages  
         setLatestEvaluation({
           starScore: evaluationData.starScores?.overall || 0,
-          feedback: evaluationData.detailedFeedback?.feedback || '',
+          feedback: evaluationData.detailedFeedback?.weaknesses?.join('. ') || 'Your response shows engagement with the question.',
           strengths: evaluationData.detailedFeedback?.strengths || [],
-          improvements: evaluationData.detailedFeedback?.improvements || evaluationData.detailedFeedback?.suggestions || []
+          improvements: evaluationData.detailedFeedback?.suggestions || evaluationData.detailedFeedback?.improvements || []
         });
         
         // Set model answer state directly instead of adding to messages
@@ -591,9 +591,9 @@ export default function PrepareAIInterface({
         // Set evaluation state directly instead of adding to messages
         setLatestEvaluation({
           starScore: evaluationData.starScores?.overall || 0,
-          feedback: evaluationData.detailedFeedback?.feedback || '',
+          feedback: evaluationData.detailedFeedback?.weaknesses?.join('. ') || 'Your response shows engagement with the question.',
           strengths: evaluationData.detailedFeedback?.strengths || [],
-          improvements: evaluationData.detailedFeedback?.improvements || evaluationData.detailedFeedback?.suggestions || []
+          improvements: evaluationData.detailedFeedback?.suggestions || evaluationData.detailedFeedback?.improvements || []
         });
         
         // Set model answer state directly instead of adding to messages
