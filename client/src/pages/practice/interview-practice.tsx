@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Mic, MicOff, User, Bot, Award, Clock, CheckCircle, Phone, Users, Bus, ServerCog, Crown, Volume2, VolumeX, AlertTriangle, Target, TrendingUp } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { InterviewSessionWithScenario, InterviewMessage } from "@shared/schema";
+import type { PracticeSessionWithMessages, PracticeMessage } from "@shared/schema";
 import { integratedVoiceService, type VoiceServiceStatus, type TranscriptionResult, type TTSResult } from "@/services/integrated-voice-service";
 import VoiceControls from "@/components/prepare-ai/VoiceControls";
 
@@ -53,7 +53,7 @@ export default function InterviewPractice() {
   const voiceInitializedRef = useRef(false);
 
   // Fetch session data
-  const { data: sessionResponse, isLoading: sessionLoading } = useQuery<{ success: boolean; data: InterviewSessionWithScenario }>({
+  const { data: sessionResponse, isLoading: sessionLoading } = useQuery<{ success: boolean; data: PracticeSessionWithMessages }>({
     queryKey: [`/api/practice/sessions/${sessionId}`],
     enabled: !!sessionId,
   });
@@ -71,7 +71,7 @@ export default function InterviewPractice() {
 
   // Auto-generate first question when session loads with no messages (only once)
   useEffect(() => {
-    if (session && messages.length === 0 && session.status !== 'completed' && !generateAiResponseMutation.isPending && session.currentQuestion === 1) {
+    if (session && messages.length === 0 && session.status !== 'completed' && !generateAiResponseMutation.isPending && session.currentQuestionNumber === 1) {
       console.log('🎯 Auto-generating first AI question for new session');
       generateAiResponseMutation.mutate();
     }
@@ -145,7 +145,7 @@ export default function InterviewPractice() {
         speakAIResponse(data.content);
       }
       
-      const questionCount = session?.currentQuestion || currentQuestionNumber;
+      const questionCount = session?.currentQuestionNumber || currentQuestionNumber;
       
       if (data.isCompleted || questionCount >= maxQuestions) {
         setIsCompleted(true);
@@ -196,7 +196,7 @@ export default function InterviewPractice() {
     },
     onSuccess: (data) => {
       setIsCompleted(true);
-      const questionCount = session?.currentQuestion || currentQuestionNumber;
+      const questionCount = session?.currentQuestionNumber || currentQuestionNumber;
       toast({
         title: "Interview Ended Early!",
         description: `Session completed with ${questionCount} questions. Generating comprehensive AI evaluation...`,
@@ -290,7 +290,7 @@ export default function InterviewPractice() {
   };
   
   const handleTestVoice = async () => {
-    const language = session?.interviewLanguage || 'en';
+    const language = session?.preferredLanguage || 'en';
     await integratedVoiceService.testVoice(language === 'en' ? 'en-US' : `${language}-MY`);
   };
   
@@ -299,7 +299,7 @@ export default function InterviewPractice() {
     if (!voiceEnabled || isSpeaking) return;
     
     setIsSpeaking(true);
-    const language = session?.interviewLanguage || 'en';
+    const language = session?.preferredLanguage || 'en';
     const voiceLanguage = language === 'en' ? 'en-US' : `${language}-MY`;
     
     try {
@@ -339,7 +339,7 @@ export default function InterviewPractice() {
       voiceInitializedRef.current = true;
       
       // Configure voice service for the session language
-      const language = session?.interviewLanguage || 'en';
+      const language = session?.preferredLanguage || 'en';
       const voiceLanguage = language === 'en' ? 'en-US' : `${language}-MY`;
       
       integratedVoiceService.updateConfig({
@@ -357,7 +357,7 @@ export default function InterviewPractice() {
         onError: handleVoiceError
       });
     }
-  }, [session?.interviewLanguage]);
+  }, [session?.preferredLanguage]);
   
   // Generate initial AI question if no messages exist
   useEffect(() => {
@@ -406,6 +406,22 @@ export default function InterviewPractice() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const getLanguageName = (code: string) => {
+    const languages: { [key: string]: string } = {
+      'en': 'English',
+      'ms': 'Malay',
+      'id': 'Indonesian', 
+      'th': 'Thai',
+      'vi': 'Vietnamese',
+      'tl': 'Filipino',
+      'my': 'Burmese',
+      'km': 'Khmer',
+      'lo': 'Lao',
+      'si': 'Sinhala'
+    };
+    return languages[code] || code.toUpperCase();
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Header */}
@@ -427,7 +443,7 @@ export default function InterviewPractice() {
                 </Badge>
                 {session?.preferredLanguage && (
                   <Badge variant="outline" className="bg-white">
-                    {session.preferredLanguage.toUpperCase()}
+                    {getLanguageName(session.preferredLanguage)}
                   </Badge>
                 )}
               </div>
@@ -807,30 +823,30 @@ export default function InterviewPractice() {
             <CardContent className="space-y-3 text-sm">
               <div>
                 <span className="font-medium text-gray-600">Scenario:</span>
-                <p>{session?.scenario?.title || 'Interview Practice'}</p>
+                <p>{session?.scenarioId || 'Interview Practice'}</p>
               </div>
-              {session?.scenario?.interviewStage && (
+              {session?.interviewStage && (
                 <div>
                   <span className="font-medium text-gray-600">Stage:</span>
-                  <p>{session.scenario.interviewStage.replace('-', ' ')}</p>
+                  <p>{session.interviewStage.replace('-', ' ')}</p>
                 </div>
               )}
-              {session?.userJobPosition && (
+              {session?.jobPosition && (
                 <div>
                   <span className="font-medium text-gray-600">Position:</span>
-                  <p>{session.userJobPosition}</p>
+                  <p>{session.jobPosition}</p>
                 </div>
               )}
-              {session?.userCompanyName && (
+              {session?.companyName && (
                 <div>
                   <span className="font-medium text-gray-600">Company:</span>
-                  <p>{session.userCompanyName}</p>
+                  <p>{session.companyName}</p>
                 </div>
               )}
-              {session?.interviewLanguage && (
+              {session?.preferredLanguage && (
                 <div>
                   <span className="font-medium text-gray-600">Language:</span>
-                  <p>{session.interviewLanguage.toUpperCase()}</p>
+                  <p>{getLanguageName(session.preferredLanguage)}</p>
                 </div>
               )}
             </CardContent>
