@@ -752,7 +752,7 @@ ASEAN BUSINESS CONTEXT:
       overallRating,
       starScores,
       detailedFeedback,
-      modelAnswer: `For this ${request.questionCategory} question about ${request.jobPosition}, structure your response using STAR method: describe the specific Situation, your Task/responsibility, the Actions you took, and the measurable Results achieved. Include specific metrics and connect to role requirements.`,
+      modelAnswer: this.generateModelAnswer(request.questionCategory, request.jobPosition, request.questionText),
       completenessScore: Number(weightedOverallScore.toFixed(1)),
       evaluatedBy: 'rule-based'
     };
@@ -780,5 +780,44 @@ ASEAN BUSINESS CONTEXT:
       action: "Detailed steps taken to address the situation",
       result: "Measurable outcomes and impact achieved"
     };
+  }
+
+  private generateModelAnswer(questionCategory: string, jobPosition: string, questionText: string): string {
+    // Generate role-specific STAR method examples instead of instructions
+    const roleSpecificExamples: Record<string, string> = {
+      'Marketing Manager': `**Situation:** While leading a product launch campaign for our mobile app, I noticed our team of 8 members from different cultural backgrounds (US, Singapore, Malaysia, India) had conflicting opinions on messaging strategy, creating tension and delays.
+
+**Task:** As Marketing Manager, I needed to unite the team around a cohesive campaign strategy while ensuring all cultural perspectives were valued and incorporated into our approach.
+
+**Action:** I organized structured brainstorming sessions where each team member presented their market insights. I implemented a collaborative decision-making framework, created cultural focus groups to test messaging, and established clear communication protocols with weekly check-ins and shared documentation.
+
+**Result:** The campaign launched on time and exceeded KPIs by 35% - we saw 2.3M app downloads in the first month and 28% higher engagement rates across all target markets. Team satisfaction scores improved from 6.2 to 8.7/10, and we established this collaborative process as our standard for future campaigns.`,
+
+      'Software Engineer': `**Situation:** Our e-commerce platform was experiencing 40% slower page load times due to database queries, and our diverse development team of 6 engineers couldn't agree on the technical solution approach.
+
+**Task:** As Senior Developer, I needed to lead the performance optimization while ensuring all team members' technical expertise was utilized and respected throughout the problem-solving process.
+
+**Action:** I conducted individual code reviews with each developer, organized architecture planning sessions, implemented performance monitoring tools, and created a collaborative testing environment where everyone could contribute and validate solutions.
+
+**Result:** We reduced page load times by 60% within 3 weeks, increasing user satisfaction scores by 25%. Our collaborative approach led to a reusable performance optimization framework that saved 40+ development hours on subsequent projects and improved our team's technical decision-making process.`,
+
+      'Data Scientist': `**Situation:** Our analytics team of 7 data scientists from different backgrounds were working on a customer segmentation project with conflicting methodologies, leading to inconsistent results and missed deadlines.
+
+**Task:** As Lead Data Scientist, I needed to align the team on a unified analytical approach while incorporating everyone's domain expertise and ensuring scientifically sound results.
+
+**Action:** I facilitated methodology review sessions, established shared data validation protocols, created collaborative Jupyter notebooks for transparency, and implemented peer review processes where each analysis was validated by 2 team members.
+
+**Result:** We delivered the customer segmentation model 2 weeks ahead of schedule with 92% accuracy. The collaborative approach identified 15% more customer segments than individual efforts, leading to $2.1M additional revenue through targeted campaigns and improved team knowledge sharing practices.`,
+
+      'default': `**Situation:** During a critical project with tight deadlines, our diverse team of 6 professionals had different approaches to problem-solving, which initially created confusion and slowed our progress.
+
+**Task:** I needed to facilitate effective collaboration while ensuring everyone's expertise was utilized and all team members felt heard and valued in our decision-making process.
+
+**Action:** I organized structured team meetings with clear agendas, implemented collaborative planning sessions, established regular check-ins, and created shared documentation systems to ensure transparency and accountability.
+
+**Result:** We completed the project 10% ahead of schedule with 95% stakeholder satisfaction. Our collaborative approach led to innovative solutions and improved team dynamics, with team satisfaction scores increasing from 7.2 to 9.1/10.`
+    };
+
+    return roleSpecificExamples[jobPosition] || roleSpecificExamples['default'];
   }
 }

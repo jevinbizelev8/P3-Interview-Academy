@@ -256,12 +256,20 @@ export default function PrepareAIInterface({
       nextQuestionId?: string;
       modelAnswer?: string;
     }) => {
-      // Update feedback panel state instead of chat messages
-      setLatestEvaluation(data.evaluation);
-      
-      // Set model answer for panel if available
-      if (data.modelAnswer) {
-        setModelAnswer(data.modelAnswer);
+      // Add to evaluation history instead of replacing
+      if (data.evaluation) {
+        const historyEntry = {
+          questionId: session?.currentQuestionId || 'unknown',
+          questionNumber: messages.filter(m => m.type === 'question').length,
+          starScore: data.evaluation.starScore || 0,
+          feedback: data.evaluation.feedback || '',
+          strengths: data.evaluation.strengths || [],
+          improvements: data.evaluation.improvements || [],
+          modelAnswer: data.modelAnswer || 'No model answer provided.',
+          timestamp: new Date()
+        };
+        
+        setEvaluationHistory(prev => [...prev, historyEntry]);
       }
 
       // Add next question if available
