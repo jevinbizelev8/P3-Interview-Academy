@@ -106,16 +106,19 @@ interface SessionSetupProps {
 export default function SessionSetup({ 
   onStartSession, 
   isLoading = false,
-  initialConfig = {}
+  initialConfig
 }: SessionSetupProps) {
+  // Safe handling of initialConfig prop
+  const safeInitialConfig = initialConfig || {};
+  
   const [config, setConfig] = useState<SessionConfig>({
-    jobTitle: initialConfig.jobTitle || '',
-    companyName: initialConfig.companyName || '',
-    interviewStage: initialConfig.interviewStage || 'behavioral',
-    language: initialConfig.language || 'en',
-    voiceEnabled: initialConfig.voiceEnabled ?? true,
-    difficulty: initialConfig.difficulty || 'intermediate',
-    industry: initialConfig.industry || ''
+    jobTitle: safeInitialConfig.jobTitle || '',
+    companyName: safeInitialConfig.companyName || '',
+    interviewStage: safeInitialConfig.interviewStage || 'behavioral',
+    language: safeInitialConfig.language || 'en',
+    voiceEnabled: safeInitialConfig.voiceEnabled ?? true,
+    difficulty: safeInitialConfig.difficulty || 'intermediate',
+    industry: safeInitialConfig.industry || ''
   });
 
   const [showAdvanced, setShowAdvanced] = useState(false);

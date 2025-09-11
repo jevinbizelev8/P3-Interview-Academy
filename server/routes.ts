@@ -5,7 +5,6 @@ import { sealionService } from "./services/sealion";
 import { AIService } from "./services/ai-service";
 // import { prepareService } from "./services/prepare-service"; // QUARANTINED - moved to legacy-quarantine/
 import { questionBankService } from "./services/question-bank-service";
-import { setupAuth, isAuthenticated } from "./replit-auth";
 import { 
   requireAdmin 
 } from "./middleware/auth-middleware";
