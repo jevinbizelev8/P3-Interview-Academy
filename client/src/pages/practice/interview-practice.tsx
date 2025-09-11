@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Mic, MicOff, User, Bot, Award, Clock, CheckCircle, Phone, Users, Bus, ServerCog, Crown, Volume2, VolumeX } from "lucide-react";
+import { Send, Mic, MicOff, User, Bot, Award, Clock, CheckCircle, Phone, Users, Bus, ServerCog, Crown, Volume2, VolumeX, AlertTriangle, Target, TrendingUp } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { InterviewSessionWithScenario, InterviewMessage } from "@shared/schema";
@@ -23,7 +23,7 @@ const STAGE_ICONS = {
 
 interface ChatMessage {
   id: string;
-  messageType: "ai" | "user";
+  messageType: "ai_question" | "user_response";
   content: string;
   timestamp: Date;
   questionNumber?: number;
@@ -38,6 +38,8 @@ export default function InterviewPractice() {
   const [message, setMessage] = useState("");
   const [currentQuestionNumber, setCurrentQuestionNumber] = useState(1);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [maxQuestions, setMaxQuestions] = useState(25); // Dynamic based on session config
+  const [showEndInterviewWarning, setShowEndInterviewWarning] = useState(false);
   
   // Voice-related state
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -59,6 +61,13 @@ export default function InterviewPractice() {
   // Fetch messages - using the existing API that returns messages in session.messages
   const messages = session?.messages || [];
 
+  // Update maxQuestions from session data
+  useEffect(() => {
+    if (session?.totalQuestions) {
+      setMaxQuestions(session.totalQuestions);
+    }
+  }, [session?.totalQuestions]);
+
   // Send message mutation (adapted to work with existing Practice API)
   const sendMessageMutation = useMutation({
     mutationFn: async ({ content, voiceMetadata }: { content: string; voiceMetadata?: any }) => {
@@ -68,7 +77,8 @@ export default function InterviewPractice() {
         credentials: "include",
         body: JSON.stringify({ 
           content,
-          questionContext: messages.filter(m => m.messageType === 'ai').slice(-1)[0]?.content || "",
+          questionNumber: currentQuestionNumber,
+          questionContext: messages.filter(m => m.messageType === 'ai_question').slice(-1)[0]?.content || "",
           inputMethod: voiceMetadata ? 'voice' : 'text',
           voiceMetadata: voiceMetadata ? {
             transcriptionMethod: voiceMetadata.method,
@@ -126,18 +136,29 @@ export default function InterviewPractice() {
         speakAIResponse(data.content);
       }
       
-      if (data.isCompleted || (session?.currentQuestion || 1) >= 15) {
+      const questionCount = session?.currentQuestion || currentQuestionNumber;
+      
+      if (data.isCompleted || questionCount >= maxQuestions) {
         setIsCompleted(true);
         toast({
           title: "Interview Completed!",
-          description: "Your AI evaluation is being generated. You'll be redirected shortly.",
+          description: `You answered ${questionCount} questions. Your comprehensive AI evaluation is being generated...`,
         });
         // Redirect to assessment after a short delay
         setTimeout(() => {
           window.location.href = `/practice/assessment/${sessionId}`;
-        }, 2000);
+        }, 3000);
       } else {
         setCurrentQuestionNumber(prev => prev + 1);
+        
+        // Show warning when approaching end
+        if (questionCount >= maxQuestions - 5) {
+          toast({
+            title: "Nearly Finished!",
+            description: `Only ${maxQuestions - questionCount} questions remaining.`,
+            variant: "default",
+          });
+        }
       }
     },
     onError: () => {
@@ -164,15 +185,16 @@ export default function InterviewPractice() {
       
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       setIsCompleted(true);
+      const questionCount = session?.currentQuestion || currentQuestionNumber;
       toast({
-        title: "Interview Completed!",
-        description: "Generating your comprehensive AI evaluation...",
+        title: "Interview Ended Early!",
+        description: `Session completed with ${questionCount} questions. Generating comprehensive AI evaluation...`,
       });
       setTimeout(() => {
         window.location.href = `/practice/assessment/${sessionId}`;
-      }, 2000);
+      }, 3000);
     },
     onError: () => {
       toast({
@@ -339,7 +361,7 @@ export default function InterviewPractice() {
   useEffect(() => {
     if (voiceEnabled && messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
-      if (latestMessage.messageType === 'ai' && !isSpeaking) {
+      if (latestMessage.messageType === 'ai_question' && !isSpeaking) {
         // Add a small delay to ensure the UI has updated
         setTimeout(() => {
           speakAIResponse(latestMessage.content);
@@ -390,8 +412,9 @@ export default function InterviewPractice() {
                   <Award className="w-4 h-4 mr-1" />
                   {session?.userJobPosition || 'Interview Practice'} {session?.userCompanyName && `at ${session.userCompanyName}`}
                 </span>
-                <Badge variant="outline" className="bg-white">
-                  Question {session?.currentQuestion || currentQuestionNumber}
+                <Badge variant="outline" className="bg-white flex items-center">
+                  <Target className="w-3 h-3 mr-1" />
+                  Question {session?.currentQuestion || currentQuestionNumber} of {maxQuestions}
                 </Badge>
                 {session?.interviewLanguage && (
                   <Badge variant="outline" className="bg-white">
@@ -400,22 +423,70 @@ export default function InterviewPractice() {
                 )}
               </div>
             </div>
-            <div className="text-right">
-              <Button
-                variant="outline"
-                onClick={() => completeInterviewMutation.mutate()}
-                disabled={completeInterviewMutation.isPending || isCompleted}
-                className="mb-2"
-              >
-                {isCompleted ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Completed
-                  </>
-                ) : (
-                  "Complete Interview"
-                )}
-              </Button>
+            <div className="text-right space-y-2">
+              {/* Progress Indicator */}
+              <div className="flex items-center justify-end space-x-2 mb-2">
+                <div className="flex items-center text-xs text-gray-500">
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  Progress: {Math.round(((session?.currentQuestion || currentQuestionNumber) / maxQuestions) * 100)}%
+                </div>
+                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-300"
+                    style={{ width: `${Math.min(((session?.currentQuestion || currentQuestionNumber) / maxQuestions) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+              
+              {/* End Interview Button */}
+              {!showEndInterviewWarning ? (
+                <Button
+                  variant={currentQuestionNumber >= 5 ? "destructive" : "outline"}
+                  size="sm"
+                  onClick={() => setShowEndInterviewWarning(true)}
+                  disabled={completeInterviewMutation.isPending || isCompleted}
+                  className="mb-2"
+                  data-testid="button-end-interview"
+                >
+                  {isCompleted ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Completed
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="w-4 h-4 mr-2" />
+                      End Interview Early
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                    ⚠️ End interview now? You'll get evaluation based on {currentQuestionNumber} questions.
+                  </div>
+                  <div className="flex space-x-1">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => completeInterviewMutation.mutate()}
+                      disabled={completeInterviewMutation.isPending}
+                      data-testid="button-confirm-end"
+                    >
+                      Yes, End Now
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowEndInterviewWarning(false)}
+                      data-testid="button-cancel-end"
+                    >
+                      Continue
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
               <div className="text-sm text-gray-500">
                 <Clock className="w-4 h-4 inline mr-1" />
                 {formatTime(Math.floor((Date.now() - new Date(session?.startedAt || Date.now()).getTime()) / 1000))}
@@ -446,23 +517,23 @@ export default function InterviewPractice() {
                   {messages.map((msg: InterviewMessage) => (
                     <div
                       key={msg.id}
-                      className={`flex ${msg.messageType === "user" ? "justify-end" : "justify-start"}`}
+                      className={`flex ${msg.messageType === "user_response" ? "justify-end" : "justify-start"}`}
                     >
                       <div
                         className={`max-w-[70%] rounded-lg px-4 py-3 ${
-                          msg.messageType === "user"
+                          msg.messageType === "user_response"
                             ? "bg-purple-600 text-white"
                             : "bg-gray-100 text-gray-900"
                         }`}
                       >
                         <div className="flex items-center space-x-2 mb-1">
-                          {msg.messageType === "user" ? (
+                          {msg.messageType === "user_response" ? (
                             <User className="w-4 h-4" />
                           ) : (
                             <Bot className="w-4 h-4" />
                           )}
                           <span className="text-xs opacity-75">
-                            {msg.messageType === "user" ? "You" : "AI Interviewer"}
+                            {msg.messageType === "user_response" ? "You" : "AI Interviewer"}
                           </span>
                           {msg.questionNumber && (
                             <Badge variant="outline" className="text-xs">

@@ -24,7 +24,7 @@ const createSessionSchema = z.object({
   interviewStage: z.string().min(1, "Interview stage is required"),
   difficultyLevel: z.enum(["beginner", "intermediate", "advanced"]).default("intermediate"),
   preferredLanguage: z.string().default("en"),
-  totalQuestions: z.number().min(1).max(20).default(10),
+  totalQuestions: z.number().min(1).max(30).default(20),
 });
 
 const userResponseSchema = z.object({
@@ -338,96 +338,158 @@ router.post('/sessions/:id/complete', async (req, res) => {
       });
     }
 
-    // Generate comprehensive evaluation using Response Evaluation Service
-    let overallScore = 0;
-    let situationScore = 0;
-    let taskScore = 0;
-    let actionScore = 0;
-    let resultScore = 0;
-    let communicationScore = 0;
-    let relevanceScore = 0;
+    // Generate comprehensive evaluation using enhanced Response Evaluation Service
+    console.log(`📋 Starting comprehensive evaluation for ${userMessages.length} responses`);
     
-    const strengths: string[] = [];
-    const weaknesses: string[] = [];
-    const improvements: string[] = [];
-    let detailedFeedback = "";
+    // Prepare responses for evaluation
+    const responsesToEvaluate = userMessages.map((msg, index) => ({
+      questionText: session.scenario?.description || `Interview question ${msg.questionNumber || index + 1}`,
+      responseText: msg.content,
+      questionCategory: session.scenario?.interviewStage || 'behavioral',
+      questionType: 'behavioral'
+    }));
+    
+    // Session context for evaluation
+    const sessionContext = {
+      jobPosition: session.userJobPosition || 'Professional',
+      companyName: session.userCompanyName,
+      experienceLevel: session.difficultyLevel || 'intermediate',
+      responseLanguage: session.preferredLanguage || 'en',
+      culturalContext: session.interviewLanguage && session.interviewLanguage !== 'en' ? 'ASEAN' : undefined
+    };
+
+    let evaluationResults;
+    let overallScore: number;
+    let strengths: string[];
+    let weaknesses: string[];
+    let improvements: string[];
+    let detailedFeedback: string;
+    
+    // 9-Criteria scores
+    let relevanceScore: number;
+    let starStructureScore: number;
+    let specificEvidenceScore: number;
+    let roleAlignmentScore: number;
+    let outcomeOrientedScore: number;
+    let communicationScore: number;
+    let problemSolvingScore: number;
+    let culturalFitScore: number;
+    let learningAgilityScore: number;
+    let overallRating: string;
 
     try {
-      // Simplified evaluation for now (until evaluation service is properly typed)
-      for (const userMsg of userMessages) {
-        try {
-          // Use basic scoring for now
-          overallScore += 3.5; // Default good score
-          situationScore += 3.5;
-          taskScore += 3.5;
-          actionScore += 3.5;
-          resultScore += 3.5;
-          communicationScore += 3.5;
-          relevanceScore += 3.5;
-
-          // Add basic feedback
-          strengths.push("Provided thoughtful response", "Engaged with the question");
-          improvements.push("Consider using STAR method", "Add more specific examples");
-          detailedFeedback += `Response ${userMsg.questionNumber}: Good effort on providing a comprehensive answer. `;
-        } catch (evalError) {
-          console.warn('⚠️ Individual response evaluation error:', evalError);
-          // Continue with other responses
-        }
-      }
-
-      // Calculate averages
-      const responseCount = userMessages.length;
-      overallScore = overallScore / responseCount;
-      situationScore = situationScore / responseCount;
-      taskScore = taskScore / responseCount;
-      actionScore = actionScore / responseCount;
-      resultScore = resultScore / responseCount;
-      communicationScore = communicationScore / responseCount;
-      relevanceScore = relevanceScore / responseCount;
+      // Use comprehensive evaluation service
+      evaluationResults = await evaluationService.evaluateSessionResponses(
+        responsesToEvaluate,
+        sessionContext
+      );
+      
+      const overallScores = evaluationResults.overallScores;
+      
+      // Extract comprehensive scores
+      overallScore = overallScores.weightedOverallScore;
+      relevanceScore = overallScores.relevanceScore;
+      starStructureScore = overallScores.starStructureScore;
+      specificEvidenceScore = overallScores.specificEvidenceScore;
+      roleAlignmentScore = overallScores.roleAlignmentScore;
+      outcomeOrientedScore = overallScores.outcomeOrientedScore;
+      communicationScore = overallScores.communicationScore;
+      problemSolvingScore = overallScores.problemSolvingScore;
+      culturalFitScore = overallScores.culturalFitScore;
+      learningAgilityScore = overallScores.learningAgilityScore;
+      overallRating = overallScores.overallRating;
+      
+      // Extract feedback
+      strengths = overallScores.detailedFeedback.strengths;
+      weaknesses = overallScores.detailedFeedback.weaknesses;
+      improvements = overallScores.detailedFeedback.suggestions;
+      
+      // Generate summary feedback
+      const summary = evaluationResults.sessionSummary;
+      detailedFeedback = `Session completed with ${summary.totalResponses} responses. Overall performance: ${overallRating} (${overallScore}/5.0). ${summary.keyStrengths.length > 0 ? 'Key strengths: ' + summary.keyStrengths.join(', ') + '. ' : ''}${summary.criticalImprovements.length > 0 ? 'Focus areas: ' + summary.criticalImprovements.join(', ') + '.' : ''}`;
+      
+      console.log(`✅ Comprehensive evaluation completed: ${overallRating} (${overallScore}/5.0)`);
 
     } catch (evalError) {
-      console.warn('⚠️ Evaluation service error, using fallback scores:', evalError);
-      // Fallback scores
-      overallScore = 3.5;
-      situationScore = 3.5;
-      taskScore = 3.5;
-      actionScore = 3.5;
-      resultScore = 3.5;
-      communicationScore = 3.5;
-      relevanceScore = 3.5;
+      console.error('❌ Comprehensive evaluation failed, using fallback:', evalError);
       
-      strengths.push("Completed practice session", "Demonstrated engagement");
-      improvements.push("Continue practicing interview skills", "Focus on structured responses");
-      detailedFeedback = "Practice session completed successfully. Continue practicing to improve your interview skills.";
+      // Fallback to basic scoring
+      overallScore = 3.5;
+      relevanceScore = 3.5;
+      starStructureScore = 3.5;
+      specificEvidenceScore = 3.5;
+      roleAlignmentScore = 3.5;
+      outcomeOrientedScore = 3.5;
+      communicationScore = 3.5;
+      problemSolvingScore = 3.5;
+      culturalFitScore = 3.5;
+      learningAgilityScore = 3.5;
+      overallRating = 'Borderline';
+      
+      strengths = ["Completed practice session", "Demonstrated engagement with questions"];
+      weaknesses = ["Technical evaluation unavailable"];
+      improvements = ["Continue practicing interview skills", "Focus on structured STAR responses", "Include specific metrics in examples"];
+      detailedFeedback = `Session completed with ${userMessages.length} responses. Technical evaluation temporarily unavailable, but you've demonstrated good engagement with the interview practice.`;
     }
 
-    // Create evaluation report
+    // Create comprehensive evaluation report with 9-criteria scores
     const reportData = {
       sessionId: req.params.id,
       userId: req.user.id,
+      
+      // Overall scoring
       overallScore: overallScore.toString(),
-      situationScore: situationScore.toString(),
-      taskScore: taskScore.toString(),
-      actionScore: actionScore.toString(),
-      resultScore: resultScore.toString(),
-      communicationScore: communicationScore.toString(),
+      overallRating: overallRating,
+      
+      // 9-Criteria detailed scores
       relevanceScore: relevanceScore.toString(),
-      strengths: JSON.stringify(strengths.slice(0, 5)), // Limit to 5
+      starStructureScore: starStructureScore.toString(),
+      specificEvidenceScore: specificEvidenceScore.toString(),
+      roleAlignmentScore: roleAlignmentScore.toString(),
+      outcomeOrientedScore: outcomeOrientedScore.toString(),
+      communicationScore: communicationScore.toString(),
+      problemSolvingScore: problemSolvingScore.toString(),
+      culturalFitScore: culturalFitScore.toString(),
+      learningAgilityScore: learningAgilityScore.toString(),
+      
+      // Legacy STAR scores for backward compatibility
+      situationScore: starStructureScore.toString(),
+      taskScore: starStructureScore.toString(),
+      actionScore: starStructureScore.toString(),
+      resultScore: outcomeOrientedScore.toString(),
+      
+      // Feedback and insights
+      strengths: JSON.stringify(strengths.slice(0, 5)),
       weaknesses: JSON.stringify(weaknesses.slice(0, 5)),
       improvements: JSON.stringify(improvements.slice(0, 5)),
       detailedFeedback,
+      
+      // Session statistics and insights
       keyInsights: JSON.stringify([
-        `Completed ${userMessages.length} questions`,
-        `Session duration: ${Math.floor(duration / 60)} minutes`,
-        `Average response quality: ${overallScore.toFixed(1)}/5.0`
+        `Completed ${userMessages.length} questions in ${Math.floor(duration / 60)} minutes`,
+        `Overall performance: ${overallRating} (${overallScore}/5.0)`,
+        `Pass threshold: ${overallScore >= 3.5 ? '✅ ACHIEVED' : '❌ Not reached (need ≥3.5)'}`,
+        ...(evaluationResults?.sessionSummary.keyStrengths.slice(0, 2) || [])
       ]),
+      
+      // Actionable recommendations based on evaluation
       recommendedActions: JSON.stringify([
-        "Review feedback and focus on improvement areas",
-        "Practice more sessions to build confidence",
-        "Work on structured STAR method responses"
+        ...(evaluationResults?.sessionSummary.nextSteps.slice(0, 3) || [
+          "Review detailed feedback for each criterion",
+          "Practice structured STAR method responses",
+          "Focus on including specific metrics and outcomes"
+        ]),
+        "Schedule follow-up practice sessions to track improvement",
+        "Consider role-specific interview preparation"
       ]),
-      evaluatedBy: "ai",
+      
+      // Enhanced metadata
+      evaluatedBy: "comprehensive-ai",
       evaluationCompleted: true,
+      criteriaVersion: "9-criteria-v1.0",
+      sessionLanguage: sessionContext.responseLanguage,
+      totalResponses: userMessages.length,
+      sessionDuration: duration
     };
 
     const report = await storage.createPracticeReport(reportData);

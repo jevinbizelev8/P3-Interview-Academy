@@ -1,5 +1,5 @@
 // Response Evaluation Service
-// Comprehensive AI-powered evaluation using STAR method and cultural context
+// Comprehensive AI-powered evaluation using official 9-criteria interview scoring rubric
 
 import { SeaLionService } from "./sealion.js";
 
@@ -31,12 +31,26 @@ interface DetailedFeedback {
 }
 
 interface EvaluationResult {
+  // 9-Criteria Official Rubric Scores (1-5 scale)
+  relevanceScore: number;              // 15% - Direct, focused answers
+  starStructureScore: number;          // 15% - STAR method organization
+  specificEvidenceScore: number;       // 15% - Concrete examples with metrics
+  roleAlignmentScore: number;          // 15% - Job/company relevance
+  outcomeOrientedScore: number;        // 15% - Measurable results focus
+  communicationScore: number;          // 10% - Clear, professional tone
+  problemSolvingScore: number;         // 10% - Analytical thinking
+  culturalFitScore: number;            // 5% - Teamwork, adaptability
+  learningAgilityScore: number;        // 5% - Growth orientation
+  
+  // Calculated scores
+  weightedOverallScore: number;        // Weighted average
+  overallRating: 'Pass' | 'Borderline' | 'Needs Improvement';
+  
+  // Legacy STAR scores for backward compatibility
   starScores: StarScores;
   detailedFeedback: DetailedFeedback;
   modelAnswer: string;
-  relevanceScore: number;        // 1-5 how relevant to question
-  communicationScore: number;    // 1-5 communication clarity
-  completenessScore: number;     // 1-5 response completeness
+  completenessScore: number;           // 1-5 response completeness
   evaluatedBy: 'sealion' | 'openai' | 'rule-based';
 }
 
@@ -50,7 +64,7 @@ export class ResponseEvaluationService {
   }
 
   /**
-   * Evaluate user response with comprehensive scoring
+   * Evaluate user response with comprehensive 9-criteria scoring
    */
   async evaluateResponse(request: EvaluationRequest): Promise<EvaluationResult> {
     try {
@@ -74,9 +88,251 @@ export class ResponseEvaluationService {
       throw new Error(`Failed to evaluate response: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+  
+  /**
+   * Evaluate multiple responses and generate comprehensive session report
+   */
+  async evaluateSessionResponses(
+    responses: Array<{
+      questionText: string;
+      responseText: string;
+      questionCategory: string;
+      questionType: string;
+    }>,
+    sessionContext: {
+      jobPosition: string;
+      companyName?: string;
+      experienceLevel: string;
+      responseLanguage: string;
+      culturalContext?: string;
+    }
+  ): Promise<{
+    overallScores: EvaluationResult;
+    responseEvaluations: EvaluationResult[];
+    sessionSummary: {
+      totalResponses: number;
+      averageScores: Record<string, number>;
+      keyStrengths: string[];
+      criticalImprovements: string[];
+      nextSteps: string[];
+    };
+  }> {
+    console.log(`📊 Evaluating ${responses.length} responses for comprehensive session report`);
+    
+    const responseEvaluations: EvaluationResult[] = [];
+    
+    // Evaluate each response individually
+    for (const response of responses) {
+      const evaluation = await this.evaluateResponse({
+        questionText: response.questionText,
+        questionCategory: response.questionCategory,
+        questionType: response.questionType,
+        responseText: response.responseText,
+        responseLanguage: sessionContext.responseLanguage,
+        culturalContext: sessionContext.culturalContext,
+        jobPosition: sessionContext.jobPosition,
+        experienceLevel: sessionContext.experienceLevel,
+        starMethodRelevant: true // All behavioral questions should use STAR
+      });
+      
+      responseEvaluations.push(evaluation);
+    }
+    
+    // Calculate overall session scores
+    const overallScores = this.calculateOverallSessionScores(responseEvaluations);
+    
+    // Generate session summary
+    const sessionSummary = this.generateSessionSummary(responseEvaluations, sessionContext);
+    
+    return {
+      overallScores,
+      responseEvaluations,
+      sessionSummary
+    };
+  }
+  
+  /**
+   * Calculate weighted overall scores from individual response evaluations
+   */
+  private calculateOverallSessionScores(evaluations: EvaluationResult[]): EvaluationResult {
+    if (evaluations.length === 0) {
+      throw new Error('No evaluations to calculate overall scores');
+    }
+    
+    // Average all criteria scores across responses
+    const avgRelevance = evaluations.reduce((sum, e) => sum + e.relevanceScore, 0) / evaluations.length;
+    const avgStarStructure = evaluations.reduce((sum, e) => sum + e.starStructureScore, 0) / evaluations.length;
+    const avgSpecificEvidence = evaluations.reduce((sum, e) => sum + e.specificEvidenceScore, 0) / evaluations.length;
+    const avgRoleAlignment = evaluations.reduce((sum, e) => sum + e.roleAlignmentScore, 0) / evaluations.length;
+    const avgOutcomeOriented = evaluations.reduce((sum, e) => sum + e.outcomeOrientedScore, 0) / evaluations.length;
+    const avgCommunication = evaluations.reduce((sum, e) => sum + e.communicationScore, 0) / evaluations.length;
+    const avgProblemSolving = evaluations.reduce((sum, e) => sum + e.problemSolvingScore, 0) / evaluations.length;
+    const avgCulturalFit = evaluations.reduce((sum, e) => sum + e.culturalFitScore, 0) / evaluations.length;
+    const avgLearningAgility = evaluations.reduce((sum, e) => sum + e.learningAgilityScore, 0) / evaluations.length;
+    
+    // Calculate weighted overall score using official rubric weights
+    const weightedScore = (
+      (avgRelevance * 0.15) +
+      (avgStarStructure * 0.15) +
+      (avgSpecificEvidence * 0.15) +
+      (avgRoleAlignment * 0.15) +
+      (avgOutcomeOriented * 0.15) +
+      (avgCommunication * 0.10) +
+      (avgProblemSolving * 0.10) +
+      (avgCulturalFit * 0.05) +
+      (avgLearningAgility * 0.05)
+    );
+    
+    // Determine overall rating based on threshold
+    let overallRating: 'Pass' | 'Borderline' | 'Needs Improvement';
+    if (weightedScore >= 3.5) {
+      overallRating = 'Pass';
+    } else if (weightedScore >= 3.0) {
+      overallRating = 'Borderline';
+    } else {
+      overallRating = 'Needs Improvement';
+    }
+    
+    // Aggregate feedback
+    const allStrengths = evaluations.flatMap(e => e.detailedFeedback.strengths);
+    const allWeaknesses = evaluations.flatMap(e => e.detailedFeedback.weaknesses);
+    const allSuggestions = evaluations.flatMap(e => e.detailedFeedback.suggestions);
+    
+    return {
+      relevanceScore: Number(avgRelevance.toFixed(1)),
+      starStructureScore: Number(avgStarStructure.toFixed(1)),
+      specificEvidenceScore: Number(avgSpecificEvidence.toFixed(1)),
+      roleAlignmentScore: Number(avgRoleAlignment.toFixed(1)),
+      outcomeOrientedScore: Number(avgOutcomeOriented.toFixed(1)),
+      communicationScore: Number(avgCommunication.toFixed(1)),
+      problemSolvingScore: Number(avgProblemSolving.toFixed(1)),
+      culturalFitScore: Number(avgCulturalFit.toFixed(1)),
+      learningAgilityScore: Number(avgLearningAgility.toFixed(1)),
+      weightedOverallScore: Number(weightedScore.toFixed(1)),
+      overallRating,
+      
+      // Legacy STAR scores (using weighted average)
+      starScores: {
+        situation: Number(avgStarStructure.toFixed(0)),
+        task: Number(avgStarStructure.toFixed(0)),
+        action: Number(avgStarStructure.toFixed(0)),
+        result: Number(avgOutcomeOriented.toFixed(0)),
+        overall: Number(weightedScore.toFixed(0))
+      },
+      
+      detailedFeedback: {
+        strengths: Array.from(new Set(allStrengths)).slice(0, 5),
+        weaknesses: Array.from(new Set(allWeaknesses)).slice(0, 3),
+        suggestions: Array.from(new Set(allSuggestions)).slice(0, 5),
+        culturalRelevance: evaluations.find(e => e.detailedFeedback.culturalRelevance)?.detailedFeedback.culturalRelevance
+      },
+      
+      modelAnswer: `Based on your ${evaluations.length} responses, focus on: ${allSuggestions.slice(0, 3).join(', ')}.`,
+      completenessScore: Number(weightedScore.toFixed(1)),
+      evaluatedBy: evaluations[0]?.evaluatedBy || 'rule-based'
+    };
+  }
+  
+  /**
+   * Generate comprehensive session summary with actionable insights
+   */
+  private generateSessionSummary(
+    evaluations: EvaluationResult[],
+    context: { jobPosition: string; experienceLevel: string; responseLanguage: string }
+  ) {
+    const averageScores = {
+      relevance: evaluations.reduce((sum, e) => sum + e.relevanceScore, 0) / evaluations.length,
+      starStructure: evaluations.reduce((sum, e) => sum + e.starStructureScore, 0) / evaluations.length,
+      specificEvidence: evaluations.reduce((sum, e) => sum + e.specificEvidenceScore, 0) / evaluations.length,
+      roleAlignment: evaluations.reduce((sum, e) => sum + e.roleAlignmentScore, 0) / evaluations.length,
+      outcomeOriented: evaluations.reduce((sum, e) => sum + e.outcomeOrientedScore, 0) / evaluations.length,
+      communication: evaluations.reduce((sum, e) => sum + e.communicationScore, 0) / evaluations.length,
+      problemSolving: evaluations.reduce((sum, e) => sum + e.problemSolvingScore, 0) / evaluations.length,
+      culturalFit: evaluations.reduce((sum, e) => sum + e.culturalFitScore, 0) / evaluations.length,
+      learningAgility: evaluations.reduce((sum, e) => sum + e.learningAgilityScore, 0) / evaluations.length
+    };
+    
+    // Identify strengths (scores >= 4.0)
+    const keyStrengths = Object.entries(averageScores)
+      .filter(([_, score]) => score >= 4.0)
+      .map(([criterion, score]) => `${this.getCriterionDisplayName(criterion)} (${score.toFixed(1)}/5)`)
+      .slice(0, 3);
+    
+    // Identify critical improvements (scores < 3.0)
+    const criticalImprovements = Object.entries(averageScores)
+      .filter(([_, score]) => score < 3.0)
+      .sort(([, a], [, b]) => a - b) // Sort by score, lowest first
+      .map(([criterion, score]) => `${this.getCriterionDisplayName(criterion)} (${score.toFixed(1)}/5)`)
+      .slice(0, 3);
+    
+    // Generate next steps based on lowest scoring criteria
+    const nextSteps = this.generateNextSteps(averageScores, context);
+    
+    return {
+      totalResponses: evaluations.length,
+      averageScores,
+      keyStrengths,
+      criticalImprovements,
+      nextSteps
+    };
+  }
+  
+  private getCriterionDisplayName(criterion: string): string {
+    const displayNames: Record<string, string> = {
+      relevance: 'Response Relevance',
+      starStructure: 'STAR Structure',
+      specificEvidence: 'Specific Evidence',
+      roleAlignment: 'Role Alignment',
+      outcomeOriented: 'Outcome Focus',
+      communication: 'Communication',
+      problemSolving: 'Problem-Solving',
+      culturalFit: 'Cultural Fit',
+      learningAgility: 'Learning Agility'
+    };
+    return displayNames[criterion] || criterion;
+  }
+  
+  private generateNextSteps(
+    averageScores: Record<string, number>,
+    context: { jobPosition: string; experienceLevel: string }
+  ): string[] {
+    const steps: string[] = [];
+    
+    // Add steps based on lowest scoring areas
+    const sortedScores = Object.entries(averageScores).sort(([, a], [, b]) => a - b);
+    
+    for (const [criterion, score] of sortedScores.slice(0, 3)) {
+      if (score < 3.5) {
+        steps.push(this.getImprovementStep(criterion, score));
+      }
+    }
+    
+    // Add role-specific recommendations
+    if (context.jobPosition.toLowerCase().includes('senior') || context.experienceLevel === 'advanced') {
+      steps.push('Focus on leadership and strategic thinking examples in your responses');
+    }
+    
+    return steps.slice(0, 5);
+  }
+  
+  private getImprovementStep(criterion: string, score: number): string {
+    const improvementSteps: Record<string, string> = {
+      relevance: 'Practice staying on-topic and directly answering the question asked',
+      starStructure: 'Master the STAR method: Situation, Task, Action, Result structure',
+      specificEvidence: 'Include specific metrics and quantifiable results in your examples',
+      roleAlignment: 'Research the role deeply and connect your experience to job requirements',
+      outcomeOriented: 'Always conclude with measurable business impact or results achieved',
+      communication: 'Practice clear, concise communication without filler words',
+      problemSolving: 'Demonstrate analytical thinking and creative problem-solving approaches',
+      culturalFit: 'Show collaboration skills and alignment with company values',
+      learningAgility: 'Highlight examples of quickly learning new skills or adapting to change'
+    };
+    
+    return improvementSteps[criterion] || `Improve your ${criterion} skills through targeted practice`;
+  }
 
   /**
-   * Evaluate response using SeaLion AI
+   * Evaluate response using SeaLion AI with 9-criteria rubric
    */
   private async evaluateWithSeaLion(request: EvaluationRequest): Promise<EvaluationResult | null> {
     try {
@@ -84,8 +340,8 @@ export class ResponseEvaluationService {
       
       const response = await this.seaLionService.generateResponse({
         messages: [{ role: 'user', content: prompt }],
-        maxTokens: 1500,
-        temperature: 0.3
+        maxTokens: 2000, // Increased for comprehensive evaluation
+        temperature: 0.2  // Lower temperature for consistent scoring
       });
 
       return this.parseEvaluationResponse(response, request);
@@ -97,13 +353,12 @@ export class ResponseEvaluationService {
   }
 
   /**
-   * Build comprehensive evaluation prompt
+   * Build comprehensive 9-criteria evaluation prompt
    */
   private buildEvaluationPrompt(request: EvaluationRequest): string {
     const culturalGuidance = this.getCulturalEvaluationGuidance(request.responseLanguage);
-    const starGuidance = request.starMethodRelevant ? this.getStarEvaluationGuidance() : '';
 
-    return `You are an expert interview coach specializing in Southeast Asian business contexts. Evaluate this interview response comprehensively.
+    return `You are an expert interview coach specializing in Southeast Asian business contexts. Evaluate this interview response using the official 9-criteria scoring rubric.
 
 INTERVIEW CONTEXT:
 Question: "${request.questionText}"
@@ -115,19 +370,73 @@ Response Language: ${request.responseLanguage}
 USER RESPONSE:
 "${request.responseText}"
 
-EVALUATION CRITERIA:
-${starGuidance}
+OFFICIAL 9-CRITERIA EVALUATION RUBRIC:
+
+1. RELEVANCE OF RESPONSE (15% weight)
+   - 1 = Goes off-topic, rambles, fails to answer directly
+   - 3 = Partially addresses question, some irrelevant content
+   - 5 = Fully addresses question, concise and focused throughout
+
+2. STAR METHOD STRUCTURE (15% weight)
+   - 1 = Rambling, disorganized, hard to follow
+   - 3 = Some structure, occasional jumps in logic
+   - 5 = Highly structured, clear STAR flow (Situation, Task, Action, Result)
+
+3. SPECIFIC EVIDENCE USAGE (15% weight)
+   - 1 = No examples, vague statements only
+   - 3 = Some examples but lacks detail or measurable outcomes
+   - 5 = Specific, measurable, illustrative examples with metrics
+
+4. ROLE ALIGNMENT (15% weight)
+   - 1 = Unrelated experience, no enthusiasm for role
+   - 3 = Some relevant skills mentioned, weak connection
+   - 5 = Clearly articulates match to job requirements, genuine enthusiasm
+
+5. OUTCOME-ORIENTED (15% weight)
+   - 1 = No results mentioned, process-focused only
+   - 3 = Some outcomes but lacks quantification
+   - 5 = Consistently highlights measurable business impact
+
+6. COMMUNICATION SKILLS (10% weight)
+   - 1 = Difficult to understand, poor grammar, lacks confidence
+   - 3 = Generally clear, minor lapses or hesitancy
+   - 5 = Highly articulate, confident, professional tone
+
+7. PROBLEM-SOLVING/CRITICAL THINKING (10% weight)
+   - 1 = No analytical thinking, relies on assumptions
+   - 3 = Basic solutions, identifies main issues
+   - 5 = Excellent analysis, innovation, strategic insight
+
+8. CULTURAL FIT/VALUES ALIGNMENT (5% weight)
+   - 1 = Poor alignment, disruptive attitude
+   - 3 = Some alignment, acceptable behavior
+   - 5 = Excellent cultural alignment, promotes teamwork
+
+9. LEARNING AGILITY/ADAPTABILITY (5% weight)
+   - 1 = Resists change, struggles to adapt
+   - 3 = Some willingness to learn, may need support
+   - 5 = Proactively seeks knowledge, adapts seamlessly
+
 ${culturalGuidance}
 
 SCORING GUIDELINES:
-1 = Poor: Below expectations, needs significant improvement
-2 = Needs Work: Some issues, room for improvement  
-3 = Average: Meets basic expectations, adequate performance
-4 = Good: Above average, strong performance
-5 = Excellent: Exceeds expectations, exemplary performance
+- Score each criterion 1-5 based on rubric descriptions above
+- Provide specific evidence from the response for each score
+- Be constructive and culturally sensitive
 
 PROVIDE EVALUATION IN JSON FORMAT:
 {
+  "relevanceScore": 1-5,
+  "starStructureScore": 1-5,
+  "specificEvidenceScore": 1-5,
+  "roleAlignmentScore": 1-5,
+  "outcomeOrientedScore": 1-5,
+  "communicationScore": 1-5,
+  "problemSolvingScore": 1-5,
+  "culturalFitScore": 1-5,
+  "learningAgilityScore": 1-5,
+  "weightedOverallScore": "calculated weighted average",
+  "overallRating": "Pass/Borderline/Needs Improvement",
   "starScores": {
     "situation": 1-5,
     "task": 1-5,
@@ -136,18 +445,16 @@ PROVIDE EVALUATION IN JSON FORMAT:
     "overall": 1-5
   },
   "detailedFeedback": {
-    "strengths": ["strength 1", "strength 2", "strength 3"],
-    "weaknesses": ["weakness 1", "weakness 2"],
-    "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"],
+    "strengths": ["specific strength 1", "specific strength 2", "specific strength 3"],
+    "weaknesses": ["specific weakness 1", "specific weakness 2"],
+    "suggestions": ["actionable suggestion 1", "actionable suggestion 2", "actionable suggestion 3"],
     "culturalRelevance": "Cultural context assessment"
   },
-  "modelAnswer": "Example of strong response following STAR method...",
-  "relevanceScore": 1-5,
-  "communicationScore": 1-5,
+  "modelAnswer": "Example of strong response for this question using STAR method...",
   "completenessScore": 1-5
 }
 
-Focus on constructive feedback that helps the candidate improve while being culturally sensitive.`;
+Focus on actionable, specific feedback that helps the candidate systematically improve using the rubric criteria.`;
   }
 
   /**
@@ -200,290 +507,270 @@ ASEAN BUSINESS CONTEXT:
     return guidanceMap[language] || guidanceMap['en'];
   }
 
-  /**
-   * Parse AI evaluation response
-   */
-  private parseEvaluationResponse(response: string, request: EvaluationRequest): EvaluationResult {
+  private parseEvaluationResponse(response: string, request: EvaluationRequest): EvaluationResult | null {
     try {
-      // Try to extract JSON from response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-        return {
-          starScores: this.validateStarScores(parsed.starScores),
-          detailedFeedback: this.validateDetailedFeedback(parsed.detailedFeedback),
-          modelAnswer: parsed.modelAnswer || this.generateModelAnswer(request),
-          relevanceScore: this.validateScore(parsed.relevanceScore),
-          communicationScore: this.validateScore(parsed.communicationScore),
-          completenessScore: this.validateScore(parsed.completenessScore),
-          evaluatedBy: 'sealion'
-        };
+      const jsonResponse = JSON.parse(response);
+      
+      // Extract 9-criteria scores
+      const relevanceScore = jsonResponse.relevanceScore || 3;
+      const starStructureScore = jsonResponse.starStructureScore || 3;
+      const specificEvidenceScore = jsonResponse.specificEvidenceScore || 3;
+      const roleAlignmentScore = jsonResponse.roleAlignmentScore || 3;
+      const outcomeOrientedScore = jsonResponse.outcomeOrientedScore || 3;
+      const communicationScore = jsonResponse.communicationScore || 3;
+      const problemSolvingScore = jsonResponse.problemSolvingScore || 3;
+      const culturalFitScore = jsonResponse.culturalFitScore || 3;
+      const learningAgilityScore = jsonResponse.learningAgilityScore || 3;
+      
+      // Calculate weighted overall score
+      const weightedOverallScore = (
+        (relevanceScore * 0.15) +
+        (starStructureScore * 0.15) +
+        (specificEvidenceScore * 0.15) +
+        (roleAlignmentScore * 0.15) +
+        (outcomeOrientedScore * 0.15) +
+        (communicationScore * 0.10) +
+        (problemSolvingScore * 0.10) +
+        (culturalFitScore * 0.05) +
+        (learningAgilityScore * 0.05)
+      );
+      
+      // Determine overall rating
+      let overallRating: 'Pass' | 'Borderline' | 'Needs Improvement';
+      if (weightedOverallScore >= 3.5) {
+        overallRating = 'Pass';
+      } else if (weightedOverallScore >= 3.0) {
+        overallRating = 'Borderline';
+      } else {
+        overallRating = 'Needs Improvement';
       }
-
-      // Fallback to text parsing
-      return this.parseTextEvaluation(response, request);
-
+      
+      return {
+        relevanceScore: Number(relevanceScore.toFixed(1)),
+        starStructureScore: Number(starStructureScore.toFixed(1)),
+        specificEvidenceScore: Number(specificEvidenceScore.toFixed(1)),
+        roleAlignmentScore: Number(roleAlignmentScore.toFixed(1)),
+        outcomeOrientedScore: Number(outcomeOrientedScore.toFixed(1)),
+        communicationScore: Number(communicationScore.toFixed(1)),
+        problemSolvingScore: Number(problemSolvingScore.toFixed(1)),
+        culturalFitScore: Number(culturalFitScore.toFixed(1)),
+        learningAgilityScore: Number(learningAgilityScore.toFixed(1)),
+        weightedOverallScore: Number(weightedOverallScore.toFixed(1)),
+        overallRating,
+        
+        // Legacy STAR scores for backward compatibility
+        starScores: jsonResponse.starScores || {
+          situation: Math.round(starStructureScore),
+          task: Math.round(starStructureScore),
+          action: Math.round(starStructureScore),
+          result: Math.round(outcomeOrientedScore),
+          overall: Math.round(weightedOverallScore)
+        },
+        
+        detailedFeedback: jsonResponse.detailedFeedback || {
+          strengths: ['Engaged with the question'],
+          weaknesses: ['Could be more specific'],
+          suggestions: ['Use STAR method', 'Add specific metrics', 'Connect to role requirements'],
+          culturalRelevance: 'Response shows professional communication style'
+        },
+        
+        modelAnswer: jsonResponse.modelAnswer || 'Provide specific examples using STAR method with measurable results',
+        completenessScore: jsonResponse.completenessScore || weightedOverallScore,
+        evaluatedBy: 'sealion'
+      };
     } catch (error) {
-      console.warn("⚠️ Error parsing AI evaluation, using rule-based fallback");
-      return this.evaluateWithRules(request);
+      console.error("❌ Failed to parse evaluation response:", error);
+      return null;
     }
   }
 
-  /**
-   * Parse non-JSON evaluation text
-   */
-  private parseTextEvaluation(response: string, request: EvaluationRequest): EvaluationResult {
-    const lines = response.split('\n').map(line => line.trim()).filter(line => line);
-    
-    // Extract basic scores (simple parsing)
-    const overallScore = this.extractScoreFromText(response, 'overall') || 3;
-    
-    return {
-      starScores: {
-        situation: this.extractScoreFromText(response, 'situation') || overallScore,
-        task: this.extractScoreFromText(response, 'task') || overallScore,
-        action: this.extractScoreFromText(response, 'action') || overallScore,
-        result: this.extractScoreFromText(response, 'result') || overallScore,
-        overall: overallScore
-      },
-      detailedFeedback: {
-        strengths: this.extractFeedbackItems(response, 'strengths') || ['Clear communication'],
-        weaknesses: this.extractFeedbackItems(response, 'weaknesses') || ['Could be more specific'],
-        suggestions: this.extractFeedbackItems(response, 'suggestions') || ['Provide more concrete examples']
-      },
-      modelAnswer: this.generateModelAnswer(request),
-      relevanceScore: overallScore,
-      communicationScore: overallScore,
-      completenessScore: overallScore,
-      evaluatedBy: 'sealion'
-    };
-  }
-
-  /**
-   * Rule-based evaluation fallback
-   */
   private evaluateWithRules(request: EvaluationRequest): EvaluationResult {
-    const responseLength = request.responseText.length;
+    console.log(`🔧 Using rule-based evaluation for ${request.responseLanguage} response`);
+
+    const response = request.responseText.toLowerCase();
     const wordCount = request.responseText.split(/\s+/).length;
     
-    // Basic scoring based on response characteristics
-    const baseScore = this.calculateBaseScore(request.responseText, wordCount);
-    const starScores = request.starMethodRelevant 
-      ? this.evaluateStarMethodRuleBased(request.responseText)
-      : { situation: baseScore, task: baseScore, action: baseScore, result: baseScore, overall: baseScore };
-
+    // Initialize all 9-criteria scores with default values
+    let relevanceScore = 3;
+    let starStructureScore = 3;
+    let specificEvidenceScore = 3;
+    let roleAlignmentScore = 3;
+    let outcomeOrientedScore = 3;
+    let communicationScore = 3;
+    let problemSolvingScore = 3;
+    let culturalFitScore = 3;
+    let learningAgilityScore = 3;
+    
+    // 1. RELEVANCE ANALYSIS
+    if (this.containsQuestionKeywords(request.questionText, response)) {
+      relevanceScore = 4;
+    }
+    if (wordCount < 30) {
+      relevanceScore = Math.max(relevanceScore - 1, 1);
+    }
+    
+    // 2. STAR STRUCTURE ANALYSIS
+    let starComponents = 0;
+    if (response.includes('situation') || response.includes('when') || response.includes('context')) {
+      starComponents++;
+    }
+    if (response.includes('task') || response.includes('responsible') || response.includes('goal')) {
+      starComponents++;
+    }
+    if (response.includes('action') || response.includes('did') || response.includes('implemented')) {
+      starComponents++;
+    }
+    if (response.includes('result') || response.includes('outcome') || response.includes('achieved')) {
+      starComponents++;
+    }
+    starStructureScore = Math.min(starComponents + 1, 5);
+    
+    // 3. SPECIFIC EVIDENCE ANALYSIS
+    const hasNumbers = /\d+/.test(response);
+    const hasPercentages = /%/.test(response);
+    const hasMetrics = /\$|increase|decrease|improve|reduce/.test(response);
+    
+    if (hasNumbers && hasPercentages) specificEvidenceScore = 5;
+    else if (hasNumbers || hasMetrics) specificEvidenceScore = 4;
+    else if (response.includes('example') || response.includes('specifically')) specificEvidenceScore = 3;
+    else specificEvidenceScore = 2;
+    
+    // 4. ROLE ALIGNMENT ANALYSIS
+    const jobKeywords = request.jobPosition.toLowerCase().split(' ');
+    const hasJobKeywords = jobKeywords.some(keyword => response.includes(keyword));
+    if (hasJobKeywords) roleAlignmentScore = 4;
+    
+    // 5. OUTCOME-ORIENTED ANALYSIS
+    if (hasMetrics || response.includes('impact') || response.includes('delivered')) {
+      outcomeOrientedScore = 4;
+    }
+    if (hasPercentages || /improved|increased|decreased|saved/.test(response)) {
+      outcomeOrientedScore = 5;
+    }
+    
+    // 6. COMMUNICATION ANALYSIS
+    if (wordCount >= 50 && wordCount <= 150) {
+      communicationScore = 4; // Good length
+    } else if (wordCount > 200) {
+      communicationScore = 3; // Too verbose
+    } else if (wordCount < 30) {
+      communicationScore = 2; // Too brief
+    }
+    
+    // 7. PROBLEM-SOLVING ANALYSIS
+    if (response.includes('problem') || response.includes('challenge') || response.includes('solution')) {
+      problemSolvingScore = 4;
+    }
+    if (response.includes('analyzed') || response.includes('identified') || response.includes('strategy')) {
+      problemSolvingScore = 5;
+    }
+    
+    // 8. CULTURAL FIT ANALYSIS
+    if (response.includes('team') || response.includes('collaboration') || response.includes('together')) {
+      culturalFitScore = 4;
+    }
+    
+    // 9. LEARNING AGILITY ANALYSIS
+    if (response.includes('learn') || response.includes('adapt') || response.includes('new')) {
+      learningAgilityScore = 4;
+    }
+    
+    // Calculate weighted overall score
+    const weightedOverallScore = (
+      (relevanceScore * 0.15) +
+      (starStructureScore * 0.15) +
+      (specificEvidenceScore * 0.15) +
+      (roleAlignmentScore * 0.15) +
+      (outcomeOrientedScore * 0.15) +
+      (communicationScore * 0.10) +
+      (problemSolvingScore * 0.10) +
+      (culturalFitScore * 0.05) +
+      (learningAgilityScore * 0.05)
+    );
+    
+    // Determine overall rating
+    let overallRating: 'Pass' | 'Borderline' | 'Needs Improvement';
+    if (weightedOverallScore >= 3.5) {
+      overallRating = 'Pass';
+    } else if (weightedOverallScore >= 3.0) {
+      overallRating = 'Borderline';
+    } else {
+      overallRating = 'Needs Improvement';
+    }
+    
+    // Generate targeted feedback
+    const strengths: string[] = [];
+    const weaknesses: string[] = [];
+    const suggestions: string[] = [];
+    
+    if (starStructureScore >= 4) strengths.push('Good use of structured storytelling');
+    if (specificEvidenceScore >= 4) strengths.push('Included specific examples');
+    if (communicationScore >= 4) strengths.push('Clear and concise communication');
+    
+    if (starStructureScore < 3) {
+      weaknesses.push('Response lacks clear structure');
+      suggestions.push('Use STAR method: Situation, Task, Action, Result');
+    }
+    if (specificEvidenceScore < 3) {
+      weaknesses.push('Limited specific evidence provided');
+      suggestions.push('Include specific metrics, numbers, and measurable outcomes');
+    }
+    if (outcomeOrientedScore < 3) {
+      suggestions.push('Focus more on the business impact and results achieved');
+    }
+    
+    // Legacy STAR scores for backward compatibility
+    const starScores: StarScores = {
+      situation: Math.min(starComponents >= 1 ? 4 : 2, 5),
+      task: Math.min(starComponents >= 2 ? 4 : 2, 5),
+      action: Math.min(starComponents >= 3 ? 4 : 2, 5),
+      result: Math.min(starComponents >= 4 ? 4 : 2, 5),
+      overall: Math.round(weightedOverallScore)
+    };
+    
+    const detailedFeedback: DetailedFeedback = {
+      strengths: strengths.length > 0 ? strengths : ['Engaged with the question'],
+      weaknesses: weaknesses.length > 0 ? weaknesses : ['Could be more detailed'],
+      suggestions: suggestions.length > 0 ? suggestions : [
+        'Use the STAR method to structure responses',
+        'Include specific metrics and outcomes',
+        'Connect experience to role requirements'
+      ]
+    };
+    
     return {
+      relevanceScore: Number(relevanceScore.toFixed(1)),
+      starStructureScore: Number(starStructureScore.toFixed(1)),
+      specificEvidenceScore: Number(specificEvidenceScore.toFixed(1)),
+      roleAlignmentScore: Number(roleAlignmentScore.toFixed(1)),
+      outcomeOrientedScore: Number(outcomeOrientedScore.toFixed(1)),
+      communicationScore: Number(communicationScore.toFixed(1)),
+      problemSolvingScore: Number(problemSolvingScore.toFixed(1)),
+      culturalFitScore: Number(culturalFitScore.toFixed(1)),
+      learningAgilityScore: Number(learningAgilityScore.toFixed(1)),
+      weightedOverallScore: Number(weightedOverallScore.toFixed(1)),
+      overallRating,
       starScores,
-      detailedFeedback: this.generateRuleBasedFeedback(request, wordCount),
-      modelAnswer: this.generateModelAnswer(request),
-      relevanceScore: baseScore,
-      communicationScore: this.evaluateCommunication(request.responseText),
-      completenessScore: this.evaluateCompleteness(request.responseText, wordCount),
+      detailedFeedback,
+      modelAnswer: `For this ${request.questionCategory} question about ${request.jobPosition}, structure your response using STAR method: describe the specific Situation, your Task/responsibility, the Actions you took, and the measurable Results achieved. Include specific metrics and connect to role requirements.`,
+      completenessScore: Number(weightedOverallScore.toFixed(1)),
       evaluatedBy: 'rule-based'
     };
   }
-
-  /**
-   * Calculate base score from response characteristics
-   */
-  private calculateBaseScore(responseText: string, wordCount: number): number {
-    let score = 3; // Start with average
-
-    // Adjust based on length
-    if (wordCount < 20) score -= 1;
-    else if (wordCount > 100) score += 0.5;
-
-    // Adjust based on structure
-    if (responseText.includes('situation') || responseText.includes('when')) score += 0.3;
-    if (responseText.includes('result') || responseText.includes('outcome')) score += 0.3;
-    if (responseText.match(/\d+/)) score += 0.2; // Contains numbers/metrics
-
-    return Math.min(Math.max(Math.round(score * 10) / 10, 1), 5);
-  }
-
-  /**
-   * Rule-based STAR method evaluation
-   */
-  private evaluateStarMethodRuleBased(responseText: string): StarScores {
-    const text = responseText.toLowerCase();
+  
+  private containsQuestionKeywords(question: string, response: string): boolean {
+    const questionWords = question.toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(word => word.length > 3);
     
-    const situation = this.scoreStarComponent(text, ['situation', 'when', 'where', 'context', 'background']);
-    const task = this.scoreStarComponent(text, ['task', 'responsibility', 'goal', 'objective', 'needed']);
-    const action = this.scoreStarComponent(text, ['action', 'did', 'implemented', 'created', 'developed']);
-    const result = this.scoreStarComponent(text, ['result', 'outcome', 'achieved', 'improved', 'increased']);
-    
-    const overall = (situation + task + action + result) / 4;
-    
-    return {
-      situation: Math.round(situation),
-      task: Math.round(task),
-      action: Math.round(action),
-      result: Math.round(result),
-      overall: Math.round(overall * 10) / 10
-    };
-  }
-
-  /**
-   * Score individual STAR component
-   */
-  private scoreStarComponent(text: string, keywords: string[]): number {
-    const hasKeyword = keywords.some(keyword => text.includes(keyword));
-    const keywordDensity = keywords.reduce((count, keyword) => 
-      count + (text.match(new RegExp(keyword, 'g')) || []).length, 0);
-    
-    let score = 2; // Base score
-    if (hasKeyword) score += 1;
-    if (keywordDensity > 1) score += 0.5;
-    if (keywordDensity > 2) score += 0.5;
-    
-    return Math.min(score, 5);
-  }
-
-  /**
-   * Evaluate communication quality
-   */
-  private evaluateCommunication(responseText: string): number {
-    let score = 3;
-    
-    const sentences = responseText.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    const avgSentenceLength = responseText.length / sentences.length;
-    
-    // Penalize very short or very long sentences
-    if (avgSentenceLength < 30 || avgSentenceLength > 150) score -= 0.5;
-    
-    // Check for clear structure
-    if (sentences.length >= 3) score += 0.3;
-    if (responseText.includes(',') && responseText.includes('.')) score += 0.2;
-    
-    return Math.min(Math.max(Math.round(score * 10) / 10, 1), 5);
-  }
-
-  /**
-   * Evaluate response completeness
-   */
-  private evaluateCompleteness(responseText: string, wordCount: number): number {
-    let score = 3;
-    
-    // Score based on word count
-    if (wordCount < 30) score = 2;
-    else if (wordCount < 50) score = 2.5;
-    else if (wordCount > 150) score = 4.5;
-    else if (wordCount > 100) score = 4;
-    
-    // Check for specific details
-    if (responseText.match(/\d+/)) score += 0.3; // Contains numbers
-    if (responseText.includes('%')) score += 0.2; // Contains percentages
-    
-    return Math.min(Math.max(Math.round(score * 10) / 10, 1), 5);
-  }
-
-  /**
-   * Generate rule-based feedback
-   */
-  private generateRuleBasedFeedback(request: EvaluationRequest, wordCount: number): DetailedFeedback {
-    const strengths = [];
-    const weaknesses = [];
-    const suggestions = [];
-    
-    // Analyze response characteristics
-    if (wordCount > 80) strengths.push('Provided detailed response');
-    else if (wordCount < 40) weaknesses.push('Response could be more detailed');
-    
-    if (request.responseText.match(/\d+/)) strengths.push('Included specific metrics or numbers');
-    else suggestions.push('Include quantifiable results or metrics');
-    
-    if (request.starMethodRelevant) {
-      const text = request.responseText.toLowerCase();
-      if (text.includes('situation') || text.includes('when')) strengths.push('Clear situation setup');
-      else suggestions.push('Start with clear situation description');
-      
-      if (text.includes('result') || text.includes('outcome')) strengths.push('Mentioned outcomes');
-      else suggestions.push('Conclude with measurable results');
-    }
-    
-    // Default suggestions
-    if (suggestions.length === 0) {
-      suggestions.push('Provide more specific examples');
-      suggestions.push('Include measurable outcomes');
-    }
-    
-    return {
-      strengths: strengths.length > 0 ? strengths : ['Addressed the question directly'],
-      weaknesses: weaknesses.length > 0 ? weaknesses : ['Could provide more context'],
-      suggestions
-    };
-  }
-
-  /**
-   * Generate model answer
-   */
-  private generateModelAnswer(request: EvaluationRequest): string {
-    const jobPosition = request.jobPosition;
-    const category = request.questionCategory;
-    
-    const templates: Record<string, string> = {
-      'leadership': `SITUATION: In my role as ${jobPosition}, I was leading a cross-functional team of 6 people on a critical project with a tight deadline. TASK: My responsibility was to ensure project delivery within 4 weeks while maintaining quality standards and team morale. ACTION: I implemented daily stand-ups, created clear task assignments, and established regular check-ins with stakeholders. When we encountered obstacles, I facilitated problem-solving sessions and reallocated resources. RESULT: We delivered the project 3 days early, achieving 98% quality metrics and receiving positive feedback from all stakeholders.`,
-      
-      'problem-solving': `SITUATION: As a ${jobPosition}, I encountered a complex technical issue that was causing system downtime affecting 500+ users. TASK: I needed to identify the root cause and implement a solution within 2 hours to minimize business impact. ACTION: I systematically analyzed logs, collaborated with the infrastructure team, and implemented a staged rollback while developing a permanent fix. RESULT: I reduced downtime from 2 hours to 45 minutes and prevented future occurrences, saving the company an estimated $15,000 in lost productivity.`,
-      
-      'teamwork': `SITUATION: In my ${jobPosition} role, I was part of a diverse team working on a product launch, but we had conflicting opinions on the approach. TASK: I needed to help the team reach consensus while ensuring everyone's expertise was valued. ACTION: I organized structured brainstorming sessions, created comparison matrices for different approaches, and facilitated compromise solutions. RESULT: We launched successfully, 10% ahead of schedule, and team satisfaction scores increased by 25% through better collaboration.`
-    };
-    
-    return templates[category] || `As a ${jobPosition}, I would approach this by first understanding the situation clearly, defining my specific responsibilities, taking systematic action steps, and measuring the results to ensure success.`;
-  }
-
-  /**
-   * Utility methods for validation and parsing
-   */
-  private validateStarScores(scores: any): StarScores {
-    return {
-      situation: this.validateScore(scores?.situation),
-      task: this.validateScore(scores?.task),
-      action: this.validateScore(scores?.action),
-      result: this.validateScore(scores?.result),
-      overall: this.validateScore(scores?.overall)
-    };
-  }
-
-  private validateScore(score: any): number {
-    const numScore = Number(score);
-    return isNaN(numScore) ? 3 : Math.min(Math.max(numScore, 1), 5);
-  }
-
-  private validateDetailedFeedback(feedback: any): DetailedFeedback {
-    return {
-      strengths: Array.isArray(feedback?.strengths) ? feedback.strengths : ['Clear communication'],
-      weaknesses: Array.isArray(feedback?.weaknesses) ? feedback.weaknesses : ['Could be more specific'],
-      suggestions: Array.isArray(feedback?.suggestions) ? feedback.suggestions : ['Provide concrete examples'],
-      culturalRelevance: feedback?.culturalRelevance || undefined
-    };
+    return questionWords.some(word => response.includes(word));
   }
 
   private shouldUseSeaLion(language: string): boolean {
-    const seaLionLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'jv', 'su', 'en'];
-    return seaLionLanguages.includes(language);
-  }
-
-  private extractScoreFromText(text: string, component: string): number | null {
-    const pattern = new RegExp(`${component}[:\\s]*([1-5])`, 'i');
-    const match = text.match(pattern);
-    return match ? parseInt(match[1]) : null;
-  }
-
-  private extractFeedbackItems(text: string, section: string): string[] | null {
-    const lines = text.split('\n');
-    const sectionIndex = lines.findIndex(line => line.toLowerCase().includes(section));
-    if (sectionIndex === -1) return null;
-    
-    const items = [];
-    for (let i = sectionIndex + 1; i < lines.length && i < sectionIndex + 4; i++) {
-      const line = lines[i]?.trim();
-      if (line && (line.startsWith('-') || line.startsWith('•') || line.match(/^\d+\./))) {
-        items.push(line.replace(/^[-•\d.]\s*/, ''));
-      }
-    }
-    return items.length > 0 ? items : null;
+    // Use SeaLion for ASEAN languages and cultural contexts
+    const aseanLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'bn', 'hi', 'zh', 'ta'];
+    return aseanLanguages.includes(language.toLowerCase());
   }
 
   private initializeStarCriteria(): Record<string, string> {

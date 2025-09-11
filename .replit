@@ -44,12 +44,12 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 36241
-externalPort = 3002
+localPort = 34247
+externalPort = 3000
 
 [[ports]]
-localPort = 45767
-externalPort = 3003
+localPort = 36241
+externalPort = 3002
 
 [agent]
 integrations = ["javascript_anthropic==1.0.0", "javascript_log_in_with_replit==1.0.0", "javascript_openai==1.0.0", "javascript_database==1.0.0"]
