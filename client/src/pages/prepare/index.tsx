@@ -234,38 +234,6 @@ export default function Prepare() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
-          <Card className="border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors cursor-pointer" onClick={handleStartNewSession}>
-            <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Play className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-blue-900 mb-2">Start New Session</h3>
-              <p className="text-blue-700">Begin AI-powered interview practice with personalized questions</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-green-200 bg-green-50 hover:bg-green-100 transition-colors cursor-pointer" onClick={handleViewDashboard}>
-            <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <BarChart3 className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-green-900 mb-2">View Performance</h3>
-              <p className="text-green-700">Track progress and analyze performance in Perform module</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-purple-200 bg-purple-50">
-            <CardContent className="p-6 text-center">
-              <div className="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold text-purple-900 mb-2">Phase 3 Complete!</h3>
-              <p className="text-purple-700">Full AI interview system with voice support ready</p>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Success Guide for Students */}
         <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50">
