@@ -260,9 +260,11 @@ export default function PracticeAssessment() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {t('title')}
             </h1>
-            <p className="text-gray-600">
-              {session?.userJobPosition} at {session?.userCompanyName}
-            </p>
+            {session?.userJobPosition && session?.userCompanyName && (
+              <p className="text-gray-600">
+                {session.userJobPosition} at {session.userCompanyName}
+              </p>
+            )}
           </div>
           <div className="flex items-center space-x-3">
             {/* Language Selector */}
