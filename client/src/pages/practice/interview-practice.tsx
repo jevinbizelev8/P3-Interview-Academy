@@ -236,10 +236,8 @@ export default function InterviewPractice() {
     
     if (result.text.trim()) {
       console.log(`✅ INTERVIEW-PRACTICE: Valid transcription text found: "${result.text.trim()}"`);
-      console.log('🔍 INTERVIEW-PRACTICE: Setting message state and calling sendVoiceMessage');
-      setMessage(result.text);
-      // Auto-submit voice transcription with metadata
-      sendVoiceMessage(result.text.trim(), result);
+      console.log('🔍 INTERVIEW-PRACTICE: Setting message state for user review (no auto-submit)');
+      setMessage(result.text.trim());
     } else {
       console.warn('❌ INTERVIEW-PRACTICE: No valid transcription text found');
     }
@@ -642,37 +640,56 @@ export default function InterviewPractice() {
                 </div>
               </ScrollArea>
               
-              {/* Speech-First Input Interface */}
+              {/* Text-First Input Interface */}
               <div className="border-t p-4 space-y-4">
-                {voiceEnabled ? (
+                {/* Primary Text Input */}
+                <form onSubmit={handleSendMessage} className="flex space-x-2">
+                  <Input
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your response here..."
+                    disabled={sendMessageMutation.isPending || isCompleted}
+                    className="flex-1"
+                    data-testid="input-message"
+                  />
+                  <Button
+                    type="submit"
+                    disabled={!message.trim() || sendMessageMutation.isPending || isCompleted}
+                    data-testid="button-send-message"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </form>
+
+                {voiceEnabled && (
                   <>
-                    {/* Primary Voice Input */}
+                    {/* Voice Dictation Helper */}
                     <div className="text-center">
                       <Button
-                        variant={isRecording ? "destructive" : "default"}
+                        variant={isRecording ? "destructive" : "outline"}
                         size="lg"
                         onMouseDown={handleStartRecording}
                         onMouseUp={handleStopRecording}
                         onTouchStart={handleStartRecording}
                         onTouchEnd={handleStopRecording}
                         disabled={sendMessageMutation.isPending || isCompleted || isSpeaking}
-                        className="px-8 py-6 text-lg font-medium min-w-[280px]"
-                        data-testid="button-voice-record"
+                        className="px-8 py-4 text-base font-medium min-w-[280px]"
+                        data-testid="button-voice-dictate"
                       >
                         {isRecording ? (
                           <>
-                            <MicOff className="w-6 h-6 mr-3 animate-pulse" />
+                            <MicOff className="w-5 h-5 mr-3 animate-pulse" />
                             Release to Stop Recording
                           </>
                         ) : transcriptionActive ? (
                           <>
-                            <div className="w-6 h-6 mr-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                            <div className="w-5 h-5 mr-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
                             Processing Speech...
                           </>
                         ) : (
                           <>
-                            <Mic className="w-6 h-6 mr-3" />
-                            Hold to Speak Your Response
+                            <Mic className="w-5 h-5 mr-3" />
+                            Hold to Dictate (fills text field)
                           </>
                         )}
                       </Button>
@@ -711,51 +728,10 @@ export default function InterviewPractice() {
                       </div>
                     )}
                     
-                    {/* Fallback Text Input */}
-                    <details className="group">
-                      <summary className="cursor-pointer text-sm text-gray-500 hover:text-gray-700 text-center">
-                        Having trouble with voice? Use text input instead
-                      </summary>
-                      <div className="mt-2">
-                        <form onSubmit={handleSendMessage} className="flex space-x-2">
-                          <Input
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                            placeholder="Type your response here..."
-                            disabled={sendMessageMutation.isPending || isCompleted}
-                            className="flex-1"
-                            data-testid="input-text-message"
-                          />
-                          <Button
-                            type="submit"
-                            disabled={!message.trim() || sendMessageMutation.isPending || isCompleted}
-                            data-testid="button-send-text"
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        </form>
-                      </div>
-                    </details>
+                    <p className="text-sm text-gray-500 text-center">
+                      Voice dictation will fill the text field above for review before submitting
+                    </p>
                   </>
-                ) : (
-                  /* Text Input When Voice Disabled */
-                  <form onSubmit={handleSendMessage} className="flex space-x-2">
-                    <Input
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      placeholder="Type your response here..."
-                      disabled={sendMessageMutation.isPending || isCompleted}
-                      className="flex-1"
-                      data-testid="input-text-message"
-                    />
-                    <Button
-                      type="submit"
-                      disabled={!message.trim() || sendMessageMutation.isPending || isCompleted}
-                      data-testid="button-send-text"
-                    >
-                      <Send className="w-4 h-4" />
-                    </Button>
-                  </form>
                 )}
               </div>
             </CardContent>
