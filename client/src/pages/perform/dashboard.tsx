@@ -20,7 +20,12 @@ import {
   ArrowUp,
   ArrowDown,
   Activity,
-  Lightbulb
+  Lightbulb,
+  CheckCircle2,
+  Zap,
+  AlertTriangle,
+  Mic,
+  MessageSquare
 } from "lucide-react";
 import { 
   LineChart, 
@@ -534,59 +539,404 @@ export default function Dashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Enhanced Overall Performance Card */}
+          <Card className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Overall Performance</h2>
+                  <p className="text-purple-100 text-lg">
+                    {dashboardStats.averageScore >= 3.5 ? 'Pass' : 
+                     dashboardStats.averageScore >= 3.0 ? 'Borderline' : 
+                     'Needs Improvement'}
+                  </p>
+                  <div className="flex items-center space-x-4 mt-4">
+                    <div className="flex items-center space-x-2">
+                      <Trophy className="w-5 h-5" />
+                      <span>Score: {dashboardStats.averageScore.toFixed(1)}/5.0</span>
+                    </div>
+                    {dashboardStats.averageScore >= 3.5 && (
+                      <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
+                        <Award className="w-4 h-4 mr-2" />
+                        Pass
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-4xl font-bold mb-2">{Math.round((dashboardStats.averageScore / 5) * 100)}%</div>
+                  <Progress value={(dashboardStats.averageScore / 5) * 100} className="w-32 bg-white/20" />
+                  <div className="text-sm text-purple-200 mt-1">
+                    Pass Threshold: ≥ 3.5 • Borderline: 3.0 - 3.4
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Consolidated Session Statistics */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center text-green-800">
+                  <CheckCircle2 className="w-6 h-6 mr-3 text-green-600" />
+                  Strengths Identified
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {dashboardStats.strongestSkills && dashboardStats.strongestSkills.length > 0 ? (
+                    dashboardStats.strongestSkills.slice(0, 3).map((strength: string, index: number) => (
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-green-100">
+                        <Zap className="w-4 h-4 text-green-600 mt-0.5" />
+                        <p className="text-gray-800 text-sm">{strength}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <Brain className="w-8 h-8 text-green-300 mx-auto mb-2" />
+                      <p className="text-green-600 text-sm">Complete more sessions to identify strengths</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center text-blue-800">
+                  <Target className="w-6 h-6 mr-3 text-blue-600" />
+                  Growth Opportunities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {dashboardStats.improvementAreas && dashboardStats.improvementAreas.length > 0 ? (
+                    dashboardStats.improvementAreas.slice(0, 3).map((area: string, index: number) => (
+                      <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-blue-100">
+                        <AlertTriangle className="w-4 h-4 text-blue-600 mt-0.5" />
+                        <p className="text-gray-800 text-sm">{area}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4">
+                      <Target className="w-8 h-8 text-blue-300 mx-auto mb-2" />
+                      <p className="text-blue-600 text-sm">Complete more sessions to identify areas for improvement</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="skills" className="space-y-6">
+          {dashboardStats.skillBreakdown && dashboardStats.skillBreakdown.length > 0 ? (
+            <>
+              {/* Skills Performance Breakdown */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Skills Performance Analysis</CardTitle>
+                  <CardDescription>Your performance across key interview criteria (1-5 scale)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {dashboardStats.skillBreakdown.map((skill: any, index: number) => (
+                      <div key={index} className="p-4 border rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-900">{skill.skill}</span>
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-lg font-bold ${
+                              skill.score >= 4 ? 'text-green-600' : 
+                              skill.score >= 3 ? 'text-yellow-600' : 
+                              'text-red-600'
+                            }`}>
+                              {skill.score.toFixed(1)}/5
+                            </span>
+                            {skill.trend === 'up' && <TrendingUp className="w-4 h-4 text-green-500" />}
+                            {skill.trend === 'down' && <ArrowDown className="w-4 h-4 text-red-500" />}
+                          </div>
+                        </div>
+                        <Progress 
+                          value={(skill.score / 5) * 100} 
+                          className={`h-2 ${
+                            skill.score >= 4 ? '[&>[data-state="complete"]:bg-green-500' : 
+                            skill.score >= 3 ? '[&>[data-state="complete"]:bg-yellow-500' : 
+                            '[&>[data-state="complete"]:bg-red-500'
+                          }`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Skills Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Skills Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="text-2xl font-bold text-green-600 mb-1">
+                        {dashboardStats.skillBreakdown.filter((s: any) => s.score >= 4).length}
+                      </div>
+                      <p className="text-sm text-green-700">Strong Skills</p>
+                      <p className="text-xs text-green-600">Score ≥ 4.0</p>
+                    </div>
+                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <div className="text-2xl font-bold text-yellow-600 mb-1">
+                        {dashboardStats.skillBreakdown.filter((s: any) => s.score >= 3 && s.score < 4).length}
+                      </div>
+                      <p className="text-sm text-yellow-700">Developing Skills</p>
+                      <p className="text-xs text-yellow-600">Score 3.0-3.9</p>
+                    </div>
+                    <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                      <div className="text-2xl font-bold text-red-600 mb-1">
+                        {dashboardStats.skillBreakdown.filter((s: any) => s.score < 3).length}
+                      </div>
+                      <p className="text-sm text-red-700">Focus Areas</p>
+                      <p className="text-xs text-red-600">Score &lt; 3.0</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Skills Analysis</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 mb-2">Skills breakdown and improvement recommendations will appear after completing practice sessions.</p>
+                <p className="text-sm text-gray-500">Complete at least 3 practice sessions to see detailed skills analysis.</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+        
+        <TabsContent value="progress" className="space-y-6">
+          {/* Progress Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="text-center p-4">
+              <div className="text-2xl font-bold text-blue-600 mb-1">{dashboardStats.totalSessions}</div>
+              <p className="text-sm text-gray-600">Total Sessions</p>
+              <p className="text-xs text-gray-500">Practice + Interview</p>
+            </Card>
+            <Card className="text-center p-4">
+              <div className="text-2xl font-bold text-green-600 mb-1">{dashboardStats.completedSessions}</div>
+              <p className="text-sm text-gray-600">Completed</p>
+              <p className="text-xs text-gray-500">{((dashboardStats.completedSessions / dashboardStats.totalSessions) * 100).toFixed(0)}% completion rate</p>
+            </Card>
+            <Card className="text-center p-4">
+              <div className="text-2xl font-bold text-purple-600 mb-1">{dashboardStats.totalQuestions || 0}</div>
+              <p className="text-sm text-gray-600">Questions Practiced</p>
+              <p className="text-xs text-gray-500">Across all sessions</p>
+            </Card>
+            <Card className="text-center p-4">
+              <div className="text-2xl font-bold text-orange-600 mb-1">{formatTime(dashboardStats.totalPracticeTime || 0)}</div>
+              <p className="text-sm text-gray-600">Practice Time</p>
+              <p className="text-xs text-gray-500">Total invested</p>
+            </Card>
+          </div>
+
+          {/* Progress Trends */}
           <Card>
             <CardHeader>
-              <CardTitle>Performance Overview</CardTitle>
-              <CardDescription>Comprehensive view of your interview preparation progress</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">
-                {dashboardStats.totalSessions > 0 ? 
-                  `You've completed ${dashboardStats.completedSessions} out of ${dashboardStats.totalSessions} sessions with an average score of ${dashboardStats.averageScore.toFixed(1)}/5.` :
-                  'Start practicing to see your comprehensive performance analytics here.'
+              <CardTitle>Performance Trends</CardTitle>
+              <CardDescription>
+                {dashboardStats.improvementRate > 0 ? 
+                  `Improving at ${Math.abs(dashboardStats.improvementRate).toFixed(1)}% rate` :
+                  dashboardStats.improvementRate < 0 ?
+                  `Declining at ${Math.abs(dashboardStats.improvementRate).toFixed(1)}% rate` :
+                  'Performance stable - consistent results'
                 }
-              </p>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dashboardStats.performanceTrends && dashboardStats.performanceTrends.length > 0 ? (
+                <div className="space-y-3">
+                  {dashboardStats.performanceTrends.slice(0, 5).map((trend: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm font-medium">{trend.date}</span>
+                        <span className="text-xs text-gray-500">{trend.sessionType || 'Session'}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <span className={`text-sm font-medium ${
+                          trend.score >= 4 ? 'text-green-600' : 
+                          trend.score >= 3 ? 'text-yellow-600' : 
+                          'text-red-600'
+                        }`}>
+                          {trend.score ? trend.score.toFixed(1) : '0.0'}/5
+                        </span>
+                        {trend.trend === 'up' && <TrendingUp className="w-4 h-4 text-green-500" />}
+                        {trend.trend === 'down' && <ArrowDown className="w-4 h-4 text-red-500" />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">Complete more sessions to track your improvement trends over time.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Voice Usage Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Practice Methods</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-indigo-600 mb-2">{dashboardStats.voiceUsagePercent || 0}%</div>
+                  <p className="text-sm text-gray-600 mb-1">Voice Practice Usage</p>
+                  <Progress value={dashboardStats.voiceUsagePercent || 0} className="h-2" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 flex items-center">
+                      <Mic className="w-4 h-4 mr-2" />
+                      Voice Sessions
+                    </span>
+                    <span className="font-medium">{Math.round((dashboardStats.voiceUsagePercent || 0) / 100 * dashboardStats.totalSessions)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 flex items-center">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Text Sessions
+                    </span>
+                    <span className="font-medium">{dashboardStats.totalSessions - Math.round((dashboardStats.voiceUsagePercent || 0) / 100 * dashboardStats.totalSessions)}</span>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="skills">
-          <Card>
-            <CardHeader>
-              <CardTitle>Skills Analysis</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">
-                Skills breakdown and improvement recommendations will appear after completing practice sessions.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="progress">
-          <Card>
-            <CardHeader>
-              <CardTitle>Progress Tracking</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">
-                Track your improvement over time with detailed progress charts and trends.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="recommendations">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personalized Insights</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">
-                Get AI-powered recommendations for improving your interview performance.
-              </p>
-            </CardContent>
-          </Card>
+        <TabsContent value="recommendations" className="space-y-6">
+          {dashboardStats.strongestSkills && dashboardStats.strongestSkills.length > 0 ? (
+            <>
+              {/* AI-Powered Recommendations */}
+              <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-purple-800">
+                    <Brain className="w-6 h-6 mr-3 text-purple-600" />
+                    AI-Powered Insights
+                  </CardTitle>
+                  <CardDescription className="text-purple-600">
+                    Based on your consolidated performance across {dashboardStats.completedSessions} sessions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-white rounded-lg p-4 border border-purple-100">
+                    <p className="text-gray-700 leading-relaxed">
+                      {dashboardStats.averageScore >= 3.5 ?
+                        `Excellent work! You're consistently performing above the pass threshold with a ${dashboardStats.averageScore.toFixed(1)}/5 average. Focus on maintaining this high standard while fine-tuning your weaker areas for exceptional performance.` :
+                        dashboardStats.averageScore >= 3.0 ?
+                        `You're in the borderline range with room for improvement. Your ${dashboardStats.averageScore.toFixed(1)}/5 average shows solid foundation but needs consistency. Focus on structured responses and specific examples to push into the pass range.` :
+                        `Your current ${dashboardStats.averageScore.toFixed(1)}/5 average indicates significant room for improvement. Focus on the STAR method structure, providing specific examples, and practicing regularly to build confidence and competency.`
+                      }
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Next Steps */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Target className="w-5 h-5 mr-2 text-green-600" />
+                    Recommended Next Steps
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {dashboardStats.averageScore < 3.0 && (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-start space-x-3">
+                          <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-red-800 mb-1">Priority: Master the STAR Method</h4>
+                            <p className="text-sm text-red-700">Structure your responses with Situation, Task, Action, Result for clearer, more impactful answers.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {dashboardStats.averageScore >= 3.0 && dashboardStats.averageScore < 3.5 && (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div className="flex items-start space-x-3">
+                          <Zap className="w-5 h-5 text-yellow-600 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-yellow-800 mb-1">Focus: Add Specific Evidence</h4>
+                            <p className="text-sm text-yellow-700">Include concrete metrics, numbers, and measurable outcomes to strengthen your responses and reach pass level.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {dashboardStats.averageScore >= 3.5 && (
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-start space-x-3">
+                          <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-green-800 mb-1">Excellence: Refine Your Storytelling</h4>
+                            <p className="text-sm text-green-700">Continue practicing diverse scenarios and refine your storytelling to maintain consistently high performance.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Clock className="w-4 h-4 text-blue-600" />
+                            <span className="font-medium">Practice Consistency</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">Aim for regular practice sessions to maintain and improve your skills.</p>
+                      </div>
+                      
+                      <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Mic className="w-4 h-4 text-purple-600" />
+                            <span className="font-medium">Voice Practice</span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">
+                          {(dashboardStats.voiceUsagePercent || 0) > 50 ?
+                            'Great use of voice practice! Continue to build verbal confidence.' :
+                            'Try voice practice to improve your verbal communication skills.'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Personalized Insights</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 mb-4">Get AI-powered recommendations for improving your interview performance.</p>
+                <p className="text-sm text-gray-500">Complete a few practice sessions to receive personalized insights and recommendations.</p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
