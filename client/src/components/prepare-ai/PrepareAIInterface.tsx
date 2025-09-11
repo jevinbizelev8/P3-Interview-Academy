@@ -309,28 +309,45 @@ export default function PrepareAIInterface({
 
   // Process voice response
   const processVoiceResponse = async (audioBlob: Blob) => {
-    if (!session?.id) return;
+    if (!session?.id || !session?.currentQuestionId) return;
 
     setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('audio', audioBlob);
-      formData.append('sessionId', session.id);
+      // For voice responses, we need to send proper JSON data, not FormData
+      // Convert audio to base64 for JSON transmission
+      const audioBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(audioBlob);
+      });
 
       const response = await fetch(`/api/prepare-ai/sessions/${session.id}/respond`, {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          questionId: session.currentQuestionId,
+          responseText: '[Voice Response]', // Placeholder until transcribed
+          responseLanguage: session.preferredLanguage || 'en',
+          inputMethod: 'voice',
+          audioDuration: audioBlob.size, // Rough estimate
+          audioData: audioBase64 // Include audio for transcription
+        })
       });
 
-      if (!response.ok) throw new Error('Failed to process voice response');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Voice response submission failed:', errorData);
+        throw new Error(`Failed to process voice response: ${errorData.error}`);
+      }
       
       const result = await response.json();
+      console.log('✅ Voice response processed successfully:', result);
       
-      // Add response message
+      // Add response message with transcription
       const responseMessage: Message = {
         id: crypto.randomUUID(),
         type: 'response',
-        content: result.transcription || 'Voice response processed',
+        content: result.transcription || result.data?.transcription || 'Voice response processed',
         timestamp: new Date(),
         isAudio: true
       };
@@ -346,7 +363,7 @@ export default function PrepareAIInterface({
 
   // Text response submission
   const submitTextResponse = async () => {
-    if (!currentResponse.trim() || !session?.id) return;
+    if (!currentResponse.trim() || !session?.id || !session?.currentQuestionId) return;
 
     const responseMessage: Message = {
       id: crypto.randomUUID(),
@@ -364,12 +381,21 @@ export default function PrepareAIInterface({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          response: currentResponse,
-          responseMethod: 'text'
+          questionId: session.currentQuestionId,
+          responseText: currentResponse,
+          responseLanguage: session.preferredLanguage || 'en',
+          inputMethod: 'text'
         })
       });
 
-      if (!response.ok) throw new Error('Failed to submit response');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Response submission failed:', errorData);
+        throw new Error(`Failed to submit response: ${errorData.error}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Response submitted successfully:', result);
       
       setCurrentResponse('');
     } catch (error) {
