@@ -115,7 +115,7 @@ class IntegratedVoiceService {
       enableQualityMonitoring: true,
       enableAudioProcessing: true,
       autoSelectTTSVoice: true,
-      whisperModel: 'whisper-tiny',
+      whisperModel: 'base', // Use Whisper base model for better multilingual support
       ...config
     };
     
@@ -201,8 +201,22 @@ class IntegratedVoiceService {
         }
       }
 
-      // Try Web Speech API first
-      console.log('🔍 INTEGRATED-VOICE: Trying Web Speech API first...');
+      // For non-English languages, prefer OpenAI Whisper over Web Speech API
+      const langCode = this.config.language.split('-')[0];
+      const useWhisperDirectly = langCode !== 'en';
+      
+      if (useWhisperDirectly && this.config.enableWhisperFallback) {
+        console.log(`🔍 INTEGRATED-VOICE: Non-English language detected (${this.config.language}), using OpenAI Whisper directly...`);
+        const manualRecordingStarted = this.startManualRecording();
+        if (manualRecordingStarted) {
+          this.isRecording = true;
+          console.log('✅ INTEGRATED-VOICE: Using OpenAI Whisper for better multilingual transcription');
+          return true;
+        }
+      }
+
+      // Try Web Speech API for English only
+      console.log('🔍 INTEGRATED-VOICE: Trying Web Speech API...');
       const webSpeechStarted = this.startWebSpeechRecognition();
       console.log(`🔍 INTEGRATED-VOICE: Web Speech started: ${webSpeechStarted}`);
       if (webSpeechStarted) {
