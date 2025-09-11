@@ -345,24 +345,6 @@ export default function Prepare() {
               </div>
             </div>
             
-            <div className="text-center mt-8 p-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 text-white rounded-lg">
-              <p className="font-bold text-lg mb-2">
-                🏆 Ready to Transform Your Interview Skills?
-              </p>
-              <p className="text-yellow-50 mb-4">
-                Join thousands of students who've landed their dream jobs after practicing with our AI coach. Start your journey to interview confidence today!
-              </p>
-              <div className="flex justify-center space-x-4">
-                <Button onClick={handleStartNewSession} className="bg-white text-orange-600 hover:bg-orange-50 font-semibold">
-                  <Play className="w-4 h-4 mr-2" />
-                  Start Learning Now
-                </Button>
-                <Button variant="outline" onClick={handleViewDashboard} className="border-white text-white hover:bg-white hover:text-orange-600">
-                  <BarChart3 className="w-4 h-4 mr-2" />
-                  View Performance Analytics
-                </Button>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>
