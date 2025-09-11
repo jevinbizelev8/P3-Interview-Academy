@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { 
@@ -23,7 +25,10 @@ import {
   MessageSquare,
   Star,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Clock,
+  X,
+  BarChart3
 } from 'lucide-react';
 import { io, type Socket } from 'socket.io-client';
 
@@ -98,6 +103,23 @@ export default function PrepareAIInterface({
   const [elapsedTime, setElapsedTime] = useState(0); // in seconds
   const [totalQuestionsLimit, setTotalQuestionsLimit] = useState(15); // Default 15 questions
   const [showEndSessionDialog, setShowEndSessionDialog] = useState(false);
+  
+  // Timeout refs for cleanup
+  const pendingTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+  
+  // Refs for current state to prevent stale closures in WebSocket handlers
+  const sessionStatusRef = useRef(sessionStatus);
+  const messagesRef = useRef(messages);
+  const totalQuestionsLimitRef = useRef(totalQuestionsLimit);
+  const hasJoinedSessionRef = useRef(hasJoinedSession);
+  const isGeneratingQuestionRef = useRef(isGeneratingQuestion);
+  
+  // Update refs on every render to prevent stale closures
+  sessionStatusRef.current = sessionStatus;
+  messagesRef.current = messages;
+  totalQuestionsLimitRef.current = totalQuestionsLimit;
+  hasJoinedSessionRef.current = hasJoinedSession;
+  isGeneratingQuestionRef.current = isGeneratingQuestion;
 
   // Helper function to get language display name
   const getLanguageName = (code: string) => {
@@ -207,7 +229,7 @@ export default function PrepareAIInterface({
             break;
           case 'joined-session':
             console.log('✅ Joined session room, ready for questions');
-            if (!hasJoinedSession && !isGeneratingQuestion && messages.length === 0) {
+            if (!hasJoinedSessionRef.current && !isGeneratingQuestionRef.current && messagesRef.current.length === 0) {
               setHasJoinedSession(true);
               setIsGeneratingQuestion(true);
               // Generate first question only if no questions exist
@@ -238,6 +260,19 @@ export default function PrepareAIInterface({
     socket.on('question-generated', (data: { question: string; questionId: string }) => {
       console.log('✅ Received question via WebSocket:', data);
       
+      // Guard against adding questions after completion (using refs to prevent stale closures)
+      if (sessionStatusRef.current !== 'active') {
+        console.log('🛑 Blocking question reception: session not active');
+        return;
+      }
+      
+      // Check if we would exceed the limit (using refs for fresh state)
+      const currentCount = messagesRef.current.filter(m => m.type === 'question').length;
+      if (currentCount >= totalQuestionsLimitRef.current) {
+        console.log(`🛑 Blocking question reception: at limit of ${totalQuestionsLimitRef.current}`);
+        return;
+      }
+      
       const newMessage: Message = {
         id: crypto.randomUUID(),
         type: 'question',
@@ -248,6 +283,11 @@ export default function PrepareAIInterface({
       setMessages(prev => [...prev, newMessage]);
       setSession(prev => prev ? { ...prev, currentQuestionId: data.questionId } : null);
       setIsGeneratingQuestion(false); // Mark generation as complete
+      
+      // Initialize session start time for the very first question
+      if (currentCount === 0 && !sessionStartTime) {
+        setSessionStartTime(new Date());
+      }
       
       // Speak question if voice enabled
       if (voiceEnabled && session.voiceEnabled) {
@@ -278,8 +318,20 @@ export default function PrepareAIInterface({
         setEvaluationHistory(prev => [...prev, historyEntry]);
       }
 
-      // Add next question if available
+      // Add next question if available (with completion guard using refs)
       if (data.nextQuestion) {
+        // Guard against adding questions after completion (using refs to prevent stale closures)
+        if (sessionStatusRef.current !== 'active') {
+          console.log('🛑 Blocking next question: session not active');
+          return;
+        }
+        
+        const currentCount = messagesRef.current.filter(m => m.type === 'question').length;
+        if (currentCount >= totalQuestionsLimitRef.current) {
+          console.log(`🛑 Blocking next question: at limit of ${totalQuestionsLimitRef.current}`);
+          return;
+        }
+        
         const nextMessage: Message = {
           id: crypto.randomUUID(),
           type: 'question',
@@ -567,10 +619,16 @@ export default function PrepareAIInterface({
         
         setEvaluationHistory(prev => [...prev, historyEntry]);
         
-        // Generate next question after showing evaluation
-        setTimeout(() => {
-          generateNextQuestion();
+        // Generate next question after showing evaluation (with completion guard using refs)
+        const timeoutId = setTimeout(() => {
+          const currentCount = messagesRef.current.filter(m => m.type === 'question').length;
+          if (sessionStatusRef.current === 'active' && currentCount < totalQuestionsLimitRef.current) {
+            generateNextQuestion();
+          }
         }, 2000);
+        
+        // Store timeout for cleanup
+        pendingTimeoutsRef.current.push(timeoutId);
       } else {
         console.log('❌ DEBUG: No evaluation data - result.success:', result.success, 'result.data:', !!result.data);
       }
@@ -626,10 +684,16 @@ export default function PrepareAIInterface({
         
         setEvaluationHistory(prev => [...prev, historyEntry]);
         
-        // Generate next question after showing evaluation
-        setTimeout(() => {
-          generateNextQuestion();
+        // Generate next question after showing evaluation (with completion guard using refs)
+        const timeoutId = setTimeout(() => {
+          const currentCount = messagesRef.current.filter(m => m.type === 'question').length;
+          if (sessionStatusRef.current === 'active' && currentCount < totalQuestionsLimitRef.current) {
+            generateNextQuestion();
+          }
         }, 2000);
+        
+        // Store timeout for cleanup
+        pendingTimeoutsRef.current.push(timeoutId);
       }
       
     } catch (error) {
@@ -657,9 +721,54 @@ export default function PrepareAIInterface({
     return contexts[sessionData.preferredLanguage] || contexts['en'];
   };
 
+  // Helper functions for UI display
+  const formatElapsedTime = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getCurrentQuestionCount = (): number => {
+    return messages.filter(m => m.type === 'question').length;
+  };
+
+  const getProgressPercentage = (): number => {
+    const current = getCurrentQuestionCount();
+    return Math.min((current / totalQuestionsLimit) * 100, 100);
+  };
+
+  // End session handler
+  const handleEndSession = () => {
+    setShowEndSessionDialog(true);
+  };
+
+  const confirmEndSession = () => {
+    // Clear pending timeouts first
+    pendingTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+    pendingTimeoutsRef.current = [];
+    
+    setSessionStatus('completed');
+    setShowEndSessionDialog(false);
+    
+    // Stop any ongoing audio/recording
+    if (isSpeaking) {
+      stopSpeech();
+    }
+    if (isRecording) {
+      stopRecording();
+    }
+  };
+
   // Generate next question
   const generateNextQuestion = async () => {
-    if (!session?.id || isGeneratingQuestion) return;
+    if (!session?.id || isGeneratingQuestion || sessionStatus !== 'active') return;
+    
+    // Check if we've reached the question limit
+    const questionCount = getCurrentQuestionCount();
+    if (questionCount >= totalQuestionsLimit) {
+      console.log(`🛑 Blocking question generation: reached limit of ${totalQuestionsLimit} questions`);
+      return;
+    }
     
     setIsGeneratingQuestion(true);
     try {
@@ -702,38 +811,67 @@ export default function PrepareAIInterface({
     }
   }, [sessionConfig]);
 
-  // Session timer and auto-completion logic
+  // Session timer - separate from completion logic
+  useEffect(() => {
+    if (!session || sessionStatus !== 'active' || !sessionStartTime) return;
+
+    const timerInterval = setInterval(() => {
+      const now = new Date();
+      const elapsed = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
+      setElapsedTime(elapsed);
+    }, 1000);
+
+    return () => clearInterval(timerInterval);
+  }, [session, sessionStatus, sessionStartTime]);
+
+  // Auto-completion logic - separate from timer
   useEffect(() => {
     if (!session || sessionStatus !== 'active') return;
 
-    // Initialize session start time when first question is generated
-    if (!sessionStartTime && messages.filter(m => m.type === 'question').length === 1) {
-      setSessionStartTime(new Date());
-    }
-
-    // Timer interval
-    const timerInterval = setInterval(() => {
-      if (sessionStartTime) {
-        const now = new Date();
-        const elapsed = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
-        setElapsedTime(elapsed);
-      }
-    }, 1000);
-
-    // Auto-completion check
     const questionCount = messages.filter(m => m.type === 'question').length;
-    if (questionCount >= totalQuestionsLimit && sessionStatus !== 'completed') {
+    if (questionCount >= totalQuestionsLimit) {
       console.log(`✅ Session auto-completing: ${questionCount} questions reached limit of ${totalQuestionsLimit}`);
       setSessionStatus('completed');
       
-      // Show completion message
-      setTimeout(() => {
-        alert(`Excellent work! You've completed ${questionCount} questions in your interview preparation session. You can review your feedback and performance.`);
-      }, 500);
+      // Stop any ongoing audio/recording
+      if (isSpeaking) {
+        stopSpeech();
+      }
+      if (isRecording) {
+        stopRecording();
+      }
     }
+  }, [session, sessionStatus, messages, totalQuestionsLimit, isSpeaking, isRecording]);
+
+  // Timer interval effect - updates elapsed time when session is active
+  useEffect(() => {
+    if (sessionStatus !== 'active' || !sessionStartTime) return;
+
+    const timerInterval = setInterval(() => {
+      const now = new Date();
+      const elapsed = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
+      setElapsedTime(elapsed);
+    }, 1000);
 
     return () => clearInterval(timerInterval);
-  }, [session, sessionStatus, messages, sessionStartTime, totalQuestionsLimit]);
+  }, [sessionStatus, sessionStartTime]);
+
+  // Comprehensive session status watcher - cleanup when session becomes inactive
+  useEffect(() => {
+    if (sessionStatus !== 'active') {
+      // Clear all pending timeouts
+      pendingTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      pendingTimeoutsRef.current = [];
+      
+      // Stop any ongoing audio/recording
+      if (isSpeaking) {
+        stopSpeech();
+      }
+      if (isRecording) {
+        stopRecording();
+      }
+    }
+  }, [sessionStatus, isSpeaking, isRecording]);
 
   // Restart session
   const handleRestartSession = () => {
@@ -744,6 +882,11 @@ export default function PrepareAIInterface({
     setSession(null);
     setHasJoinedSession(false);
     setIsGeneratingQuestion(false);
+    
+    // Reset timer state
+    setSessionStartTime(null);
+    setElapsedTime(0);
+    
     stopSpeech();
   };
 
@@ -780,33 +923,76 @@ export default function PrepareAIInterface({
       {/* Session Header */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">{session.jobPosition}</CardTitle>
-                <p className="text-gray-600">
-                  {session.companyName} • {session.interviewStage}
-                  {session.preferredLanguage && session.preferredLanguage !== 'en' && (
-                    <span className="ml-2">
-                      • <span className="text-blue-600 font-medium">
-                        {getLanguageName(session.preferredLanguage)}
+          <div className="space-y-4">
+            {/* Top Row: Basic Session Info */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                  <Brain className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">{session.jobPosition}</CardTitle>
+                  <p className="text-gray-600">
+                    {session.companyName} • {session.interviewStage}
+                    {session.preferredLanguage && session.preferredLanguage !== 'en' && (
+                      <span className="ml-2">
+                        • <span className="text-blue-600 font-medium">
+                          {getLanguageName(session.preferredLanguage)}
+                        </span>
                       </span>
-                    </span>
-                  )}
-                </p>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant={sessionStatus === 'active' ? 'default' : 'secondary'} data-testid="badge-session-status">
+                  {sessionStatus}
+                </Badge>
+                <Button variant="outline" size="sm" onClick={handleRestartSession} data-testid="button-restart-session">
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Restart
+                </Button>
+                {sessionStatus === 'active' && (
+                  <Button variant="destructive" size="sm" onClick={handleEndSession} data-testid="button-end-session">
+                    <X className="w-4 h-4 mr-2" />
+                    End Session
+                  </Button>
+                )}
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Badge variant={sessionStatus === 'active' ? 'default' : 'secondary'}>
-                {sessionStatus}
-              </Badge>
-              <Button variant="outline" size="sm" onClick={handleRestartSession}>
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Restart
-              </Button>
+
+            {/* Progress Tracking Row */}
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+              <div className="flex items-center space-x-6">
+                {/* Progress Bar */}
+                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  <BarChart3 className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300" data-testid="text-progress-label">
+                        Progress: {getCurrentQuestionCount()} of {totalQuestionsLimit} questions
+                      </span>
+                      <span className="text-sm text-gray-500" data-testid="text-progress-percentage">
+                        {Math.round(getProgressPercentage())}%
+                      </span>
+                    </div>
+                    <Progress value={getProgressPercentage()} className="w-full" data-testid="progress-questions" />
+                  </div>
+                </div>
+
+                {/* Session Timer */}
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  <Clock className="w-4 h-4 text-green-600" />
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300" data-testid="text-session-timer">
+                      {formatElapsedTime(elapsedTime)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Session Time
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -1103,6 +1289,32 @@ export default function PrepareAIInterface({
           </CardContent>
         </Card>
       )}
+
+      {/* End Session Confirmation Dialog */}
+      <Dialog open={showEndSessionDialog} onOpenChange={setShowEndSessionDialog}>
+        <DialogContent data-testid="dialog-end-session">
+          <DialogHeader>
+            <DialogTitle>End Session</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-600">
+              Are you sure you want to end this session? You have completed{' '}
+              <span className="font-semibold">{getCurrentQuestionCount()} out of {totalQuestionsLimit} questions</span>.
+            </p>
+            <p className="text-gray-600 mt-2">
+              Your progress and feedback will be saved, and you can review your performance.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEndSessionDialog(false)} data-testid="button-cancel-end">
+              Continue Session
+            </Button>
+            <Button variant="destructive" onClick={confirmEndSession} data-testid="button-confirm-end">
+              End Session
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
