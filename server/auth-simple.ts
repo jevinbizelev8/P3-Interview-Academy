@@ -14,6 +14,10 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
+  // Fix for Replit iframe context: use SameSite=None with Secure in production
+  const isHttps = process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS === 'true';
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -23,9 +27,9 @@ export function getSession() {
     rolling: true, // Reset expiration on each request for active users
     cookie: {
       httpOnly: true, // Prevent XSS attacks
-      secure: process.env.NODE_ENV === 'production', // HTTPS in production
+      secure: isHttps, // HTTPS in production
       maxAge: sessionTtl, // 7 days but resets with rolling
-      sameSite: 'lax', // CSRF protection
+      sameSite: isHttps ? 'none' : 'lax', // 'none' for iframe contexts, 'lax' for localhost
       domain: undefined, // Let browser handle domain
     },
     // Enhanced security: clean up expired sessions
