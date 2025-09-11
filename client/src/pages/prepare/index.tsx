@@ -16,7 +16,6 @@ import MainNav from '@/components/navigation/main-nav';
 // AI Prepare Components
 import PrepareAIInterface from '@/components/prepare-ai/PrepareAIInterface';
 import SessionSetup from '@/components/prepare-ai/SessionSetup';
-import SessionDashboard from '@/components/prepare-ai/SessionDashboard';
 
 interface SessionConfig {
   jobTitle: string;
@@ -29,7 +28,7 @@ interface SessionConfig {
 }
 
 export default function Prepare() {
-  const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'setup' | 'session'>('landing');
+  const [currentView, setCurrentView] = useState<'landing' | 'setup' | 'session'>('landing');
   const [currentSession, setCurrentSession] = useState<any>(null);
   const [sessionConfig, setSessionConfig] = useState<any>(null);
 
@@ -44,7 +43,8 @@ export default function Prepare() {
   };
 
   const handleViewDashboard = () => {
-    setCurrentView('dashboard');
+    // Redirect to Perform module for dashboard functionality
+    window.location.href = '/perform';
   };
 
   const handleBackToLanding = () => {
@@ -82,32 +82,6 @@ export default function Prepare() {
     );
   }
 
-  if (currentView === 'dashboard') {
-    return (
-      <>
-        <MainNav currentModule="prepare" />
-        <div className="container mx-auto py-8">
-          <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Your AI Prepare Dashboard</h1>
-            <Button variant="outline" onClick={handleBackToLanding}>
-              ← Back to Home
-            </Button>
-          </div>
-          <SessionDashboard 
-            onStartNewSession={handleStartNewSession}
-            onResumeSession={(sessionId) => {
-              // Load session and switch to session view
-              setCurrentView('session');
-            }}
-            onViewSession={(sessionId) => {
-              // Load session details
-              console.log('View session:', sessionId);
-            }}
-          />
-        </div>
-      </>
-    );
-  }
 
   return (
     <>
@@ -240,8 +214,8 @@ export default function Prepare() {
               <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <BarChart3 className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-semibold text-green-900 mb-2">View Dashboard</h3>
-              <p className="text-green-700">Track progress, review sessions, and analyze performance</p>
+              <h3 className="text-xl font-semibold text-green-900 mb-2">View Performance</h3>
+              <p className="text-green-700">Track progress and analyze performance in Perform module</p>
             </CardContent>
           </Card>
 
@@ -380,7 +354,7 @@ export default function Prepare() {
                 </Button>
                 <Button variant="outline" onClick={handleViewDashboard} className="border-white text-white hover:bg-white hover:text-orange-600">
                   <BarChart3 className="w-4 h-4 mr-2" />
-                  View My Progress
+                  View Performance Analytics
                 </Button>
               </div>
             </div>

@@ -8,6 +8,17 @@ P³ Interview Academy is a comprehensive AI-powered interview preparation platfo
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+- **Dashboard Consolidation (September 2025)**: Removed static dashboard from Prepare module and consolidated all performance analytics under Perform module where it logically belongs for better user experience
+- **Enhanced Perform Dashboard**: Added comprehensive metrics including Questions Practiced, Average STAR Score, Practice Time, voice usage statistics, Recent Sessions, Top Skills, and Focus Areas
+- **Routing Updates**: Modified Prepare module to redirect dashboard requests to Perform module, ensuring consistent analytics location across the platform
+- **UI Improvements**: Cleaned up duplicate dashboard functionality and streamlined user flow for accessing performance data
+- Fixed duplicate question generation issue by adding idempotency checks and proper WebSocket state management for reconnection scenarios
+- Enhanced language localization for feedback panel labels across 6 languages (en/id/ms/th/vi/tl)
+- Moved interview introduction from chat interface to static section above voice controls, eliminating TTS conflicts
+- Implemented right-side feedback panel displaying evaluation results and model answers outside chat interface
+
 ## System Architecture
 
 ### Frontend Architecture
