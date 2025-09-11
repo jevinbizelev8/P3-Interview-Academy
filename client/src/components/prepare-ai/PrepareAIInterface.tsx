@@ -28,7 +28,8 @@ import {
   AlertCircle,
   Clock,
   X,
-  BarChart3
+  BarChart3,
+  Globe
 } from 'lucide-react';
 import { io, type Socket } from 'socket.io-client';
 
@@ -975,9 +976,17 @@ export default function PrepareAIInterface({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200" data-testid="text-progress-label">
-                          Question {getCurrentQuestionCount()} of {totalQuestionsLimit}
-                        </h4>
+                        <div className="flex items-center space-x-3">
+                          <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200" data-testid="text-progress-label">
+                            Question {getCurrentQuestionCount()} of {totalQuestionsLimit}
+                          </h4>
+                          {session.preferredLanguage && session.preferredLanguage !== 'en' && (
+                            <div className="flex items-center space-x-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 px-2 py-1 rounded-full text-xs font-medium" data-testid="badge-language">
+                              <Globe className="w-3 h-3" />
+                              <span>{getLanguageName(session.preferredLanguage)}</span>
+                            </div>
+                          )}
+                        </div>
                         <div className="flex items-center space-x-3">
                           <span className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-progress-percentage">
                             {Math.round(getProgressPercentage())}%
