@@ -648,8 +648,8 @@ export default function Dashboard() {
                       <Brain className="w-8 h-8 text-green-300 mx-auto mb-2" />
                       <p className="text-green-600 text-sm font-medium mb-1">
                         {getSessionsNeeded(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS) === 0 ?
-                          'Strengths will appear after analysis' :
-                          `${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS)} more Practice ${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS) === 1 ? 'session' : 'sessions'} needed`
+                          'Analyzing your strengths from completed sessions...' :
+                          `Complete ${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS)} more Practice ${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.STRENGTHS_ANALYSIS) === 1 ? 'session' : 'sessions'} to identify strengths`
                         }
                       </p>
                       <p className="text-xs text-green-500">Practice sessions unlock strengths analysis</p>
@@ -680,8 +680,8 @@ export default function Dashboard() {
                       <Target className="w-8 h-8 text-blue-300 mx-auto mb-2" />
                       <p className="text-blue-600 text-sm font-medium mb-1">
                         {getSessionsNeeded(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS) === 0 ?
-                          'Areas will appear after analysis' :
-                          `${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS)} more Practice ${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS) === 1 ? 'session' : 'sessions'} needed`
+                          'Analyzing improvement areas from your sessions...' :
+                          `Complete ${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS)} more Practice ${getSessionsNeeded(practiceSessionsCount, THRESHOLDS.IMPROVEMENT_AREAS) === 1 ? 'session' : 'sessions'} to identify areas for improvement`
                         }
                       </p>
                       <p className="text-xs text-blue-500">Practice sessions unlock improvement areas analysis</p>
