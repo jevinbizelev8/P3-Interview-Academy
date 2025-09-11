@@ -720,24 +720,6 @@ export default function InterviewPractice() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Voice Controls */}
-          <VoiceControls
-            isRecording={isRecording}
-            isListening={isListening}
-            isSpeaking={isSpeaking}
-            voiceEnabled={voiceEnabled}
-            speechRate={speechRate}
-            selectedVoice={selectedVoice}
-            language={session?.interviewLanguage || 'en'}
-            onStartRecording={handleStartRecording}
-            onStopRecording={handleStopRecording}
-            onToggleVoice={handleToggleVoice}
-            onSpeechRateChange={handleSpeechRateChange}
-            onVoiceChange={handleVoiceChange}
-            onStopSpeech={handleStopSpeech}
-            onTestVoice={handleTestVoice}
-          />
-          
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Interview Context</CardTitle>

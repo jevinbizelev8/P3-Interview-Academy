@@ -343,19 +343,19 @@ router.post('/sessions/:id/complete', async (req, res) => {
     
     // Prepare responses for evaluation
     const responsesToEvaluate = userMessages.map((msg, index) => ({
-      questionText: session.scenario?.description || `Interview question ${msg.questionNumber || index + 1}`,
+      questionText: session.scenarioId || `Interview question ${msg.questionNumber || index + 1}`,
       responseText: msg.content,
-      questionCategory: session.scenario?.interviewStage || 'behavioral',
+      questionCategory: session.scenarioId || 'behavioral',
       questionType: 'behavioral'
     }));
     
     // Session context for evaluation
     const sessionContext = {
-      jobPosition: session.userJobPosition || 'Professional',
-      companyName: session.userCompanyName,
+      jobPosition: session.jobPosition || 'Professional',
+      companyName: session.companyName,
       experienceLevel: session.difficultyLevel || 'intermediate',
       responseLanguage: session.preferredLanguage || 'en',
-      culturalContext: session.interviewLanguage && session.interviewLanguage !== 'en' ? 'ASEAN' : undefined
+      culturalContext: session.preferredLanguage && session.preferredLanguage !== 'en' ? 'ASEAN' : undefined
     };
 
     let evaluationResults;
