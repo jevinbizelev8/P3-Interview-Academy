@@ -79,6 +79,7 @@ export default function PrepareAIInterface({
   const [speechRate, setSpeechRate] = useState(1.0);
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [hasJoinedSession, setHasJoinedSession] = useState(false);
+  const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false);
 
   // Feedback panel state
   const [latestEvaluation, setLatestEvaluation] = useState<Message['evaluation'] | null>(null);
@@ -192,9 +193,10 @@ export default function PrepareAIInterface({
             break;
           case 'joined-session':
             console.log('✅ Joined session room, ready for questions');
-            if (!hasJoinedSession) {
+            if (!hasJoinedSession && !isGeneratingQuestion && messages.length === 0) {
               setHasJoinedSession(true);
-              // Generate first question after successfully joining session
+              setIsGeneratingQuestion(true);
+              // Generate first question only if no questions exist
               setTimeout(() => generateFirstQuestion(session.id), 100);
             }
             break;
@@ -231,6 +233,7 @@ export default function PrepareAIInterface({
       
       setMessages(prev => [...prev, newMessage]);
       setSession(prev => prev ? { ...prev, currentQuestionId: data.questionId } : null);
+      setIsGeneratingQuestion(false); // Mark generation as complete
       
       // Speak question if voice enabled
       if (voiceEnabled && session.voiceEnabled) {
@@ -336,6 +339,7 @@ export default function PrepareAIInterface({
   // Generate first question
   const generateFirstQuestion = async (sessionId: string) => {
     try {
+      console.log('🎯 Generating first question for session:', sessionId);
       const response = await fetch(`/api/prepare-ai/sessions/${sessionId}/question`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
@@ -344,6 +348,8 @@ export default function PrepareAIInterface({
       if (!response.ok) throw new Error('Failed to generate question');
     } catch (error) {
       console.error('Error generating first question:', error);
+    } finally {
+      setIsGeneratingQuestion(false);
     }
   };
 
@@ -628,9 +634,11 @@ export default function PrepareAIInterface({
 
   // Generate next question
   const generateNextQuestion = async () => {
-    if (!session?.id) return;
+    if (!session?.id || isGeneratingQuestion) return;
     
+    setIsGeneratingQuestion(true);
     try {
+      console.log('🎯 Generating next question for session:', session.id);
       const response = await fetch(`/api/prepare-ai/sessions/${session.id}/question`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
@@ -644,6 +652,8 @@ export default function PrepareAIInterface({
       console.log('✅ Next question generation requested');
     } catch (error) {
       console.error('Error generating next question:', error);
+    } finally {
+      setIsGeneratingQuestion(false);
     }
   };
 
@@ -675,6 +685,8 @@ export default function PrepareAIInterface({
     setModelAnswer(null);
     setSessionStatus('idle');
     setSession(null);
+    setHasJoinedSession(false);
+    setIsGeneratingQuestion(false);
     stopSpeech();
   };
 
