@@ -135,9 +135,19 @@ class WhisperService {
         throw new Error(result.error || 'Transcription failed');
       }
 
-      console.log(`✅ OpenAI Whisper transcription successful: "${result.transcription.substring(0, 100)}..."`);
-      console.log(`🎯 RETURNING TRANSCRIPTION: "${result.transcription}"`);
-      return result.transcription;
+      // Handle both string and object responses from server
+      let transcriptionText = '';
+      if (typeof result.transcription === 'string') {
+        transcriptionText = result.transcription;
+      } else if (typeof result.transcription === 'object' && result.transcription !== null && 'text' in result.transcription) {
+        transcriptionText = (result.transcription as any).text;
+      } else {
+        transcriptionText = String(result.transcription);
+      }
+      
+      console.log(`✅ OpenAI Whisper transcription successful: "${transcriptionText.substring(0, 100)}..."`);
+      console.log(`🎯 RETURNING TRANSCRIPTION: "${transcriptionText}"`);
+      return transcriptionText;
 
     } catch (error) {
       console.error('❌ OpenAI Whisper transcription error:', error);
