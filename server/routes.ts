@@ -472,11 +472,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const evaluations = await storage.getBatchEvaluationResults(sessionIds);
       console.log(`⏱️  getBatchEvaluationResults took: ${Date.now() - evaluationStart}ms, found ${evaluations.length} evaluations`);
 
-      // Get aggregated strengths and improvement areas from evaluations
+      // Get aggregated strengths and improvement areas from evaluations AND practice reports
       const strongestSkills = [];
       const improvementAreas = [];
       
       try {
+        // Extract from interview session evaluations
         for (const session of completedSessions.slice(0, 10)) { // Check last 10 sessions
           try {
             const evaluation = evaluations.find(e => e.sessionId === session.id);
@@ -493,8 +494,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
         }
+        
+        // Extract from practice session reports
+        for (const session of completedPracticeSessions.slice(0, 10)) { // Check last 10 practice sessions
+          try {
+            const report = practiceReports.get(session.id);
+            if (report) {
+              // Extract strengths from practice reports
+              if (report.strengths && Array.isArray(report.strengths)) {
+                strongestSkills.push(...report.strengths);
+              }
+              
+              // Extract improvement areas from practice reports (improvements + weaknesses)
+              if (report.improvements && Array.isArray(report.improvements)) {
+                improvementAreas.push(...report.improvements);
+              }
+              if (report.weaknesses && Array.isArray(report.weaknesses)) {
+                improvementAreas.push(...report.weaknesses);
+              }
+            }
+          } catch (reportError) {
+            // Skip if practice report not found for this session
+            continue;
+          }
+        }
       } catch (error) {
-        console.log("Could not fetch all evaluations:", error);
+        console.log("Could not fetch all evaluations and practice reports:", error);
       }
       
       // Get unique strengths and improvement areas (top 5 each)
