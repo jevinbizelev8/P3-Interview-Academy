@@ -285,17 +285,28 @@ export default function InterviewPractice() {
       console.log('🛑 STOPPING recording...');
       setIsListening(false);
       await integratedVoiceService.stopRecording();
+      // Force reset all states
       setIsRecording(false);
-    } else {
-      // Start recording
-      if (transcriptionActive) {
-        console.warn('⚠️ Transcription still active, skipping start...');
-        return;
-      }
-      
-      console.log('🎤 STARTING recording...');
-      // Reset states before starting
+      setTranscriptionActive(false);
       setInterimTranscript('');
+      console.log('✅ Recording stopped and states reset');
+    } else {
+      // Start recording - force cleanup first
+      console.log('🎤 STARTING recording...');
+      
+      // Force stop any previous recording first
+      await integratedVoiceService.stopRecording();
+      
+      // Reset all states completely
+      setIsRecording(false);
+      setTranscriptionActive(false);
+      setIsListening(false);
+      setInterimTranscript('');
+      
+      // Small delay to ensure cleanup completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Now start fresh
       setTranscriptionActive(true);
       setIsListening(true);
       
@@ -639,7 +650,10 @@ export default function InterviewPractice() {
                             <div className="text-gray-800 leading-relaxed">
                               {message.questionNumber && (
                                 <div className="text-xs text-gray-500 mb-2">
-                                  Question {message.questionNumber}
+                                  {message.messageType === 'ai_question' 
+                                    ? `Question ${message.questionNumber}`
+                                    : `Response to Question ${message.questionNumber - 1}`
+                                  }
                                 </div>
                               )}
                               {message.content}
