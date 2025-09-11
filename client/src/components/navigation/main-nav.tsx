@@ -1,14 +1,51 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Target, Award, Home, Mic, Settings } from "lucide-react";
+import { 
+  BookOpen, 
+  Target, 
+  Award, 
+  Home, 
+  Mic, 
+  Settings,
+  User,
+  LogOut,
+  BarChart3
+} from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { apiRequest } from "@/lib/queryClient";
 
 interface MainNavProps {
   currentModule?: string;
-  showBackToHome?: boolean;
-  showActions?: boolean;
 }
 
-export default function MainNav({ currentModule, showBackToHome = true, showActions = false }: MainNavProps) {
+export default function MainNav({ currentModule }: MainNavProps) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
   const modules = [
     {
       id: "prepare",
@@ -69,26 +106,71 @@ export default function MainNav({ currentModule, showBackToHome = true, showActi
             })}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center space-x-2">
-            {showActions && (
-              <>
-                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
-                  <Mic className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-600">
-                  <Settings className="w-4 h-4" />
-                </Button>
-              </>
-            )}
-            
-            {showBackToHome && (
-              <Link href="/">
-                <Button variant="outline" size="sm" className="ml-2">
-                  <Home className="w-4 h-4 mr-2" />
-                  <span className="hidden sm:inline">Home</span>
-                </Button>
-              </Link>
+          {/* User Section */}
+          <div className="flex items-center space-x-4">
+            {isLoading ? (
+              <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+            ) : isAuthenticated && user ? (
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email || 'User'} />
+                    <AvatarFallback className="bg-blue-600 text-white text-xs">
+                      {user.firstName && user.lastName 
+                        ? getInitials(`${user.firstName} ${user.lastName}`) 
+                        : user.email ? user.email.charAt(0).toUpperCase() : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm font-medium text-gray-700 hidden sm:inline">
+                    {user.firstName && user.lastName 
+                      ? `${user.firstName} ${user.lastName}` 
+                      : user.email ? user.email.split('@')[0] : 'User'}
+                  </span>
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="p-1">
+                      <User className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <div className="px-3 py-2">
+                      <p className="text-sm font-medium">
+                        {user.firstName && user.lastName 
+                          ? `${user.firstName} ${user.lastName}` 
+                          : user.email ? user.email.split('@')[0] : 'User'}
+                      </p>
+                      <p className="text-xs text-gray-500">{user.email || 'No email'}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/perform" className="flex items-center w-full">
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        My Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="flex items-center">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link href="/auth/login">
+                  <Button variant="ghost" size="sm">
+                    Login
+                  </Button>
+                </Link>
+                <Link href="/auth/signup">
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                    Get Started
+                  </Button>
+                </Link>
+              </div>
             )}
           </div>
         </div>
