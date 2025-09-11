@@ -68,6 +68,14 @@ export default function InterviewPractice() {
     }
   }, [session?.totalQuestions]);
 
+  // Auto-generate first question when session loads with no messages
+  useEffect(() => {
+    if (session && messages.length === 0 && session.status !== 'completed' && !generateAiResponseMutation.isPending) {
+      console.log('🎯 Auto-generating first AI question for new session');
+      generateAiResponseMutation.mutate();
+    }
+  }, [session, messages.length]);
+
   // Send message mutation (adapted to work with existing Practice API)
   const sendMessageMutation = useMutation({
     mutationFn: async ({ content, voiceMetadata }: { content: string; voiceMetadata?: any }) => {
