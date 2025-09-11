@@ -85,11 +85,16 @@ router.post('/sessions', async (req, res) => {
  */
 router.get('/sessions/:id', async (req, res) => {
   try {
+    console.log(`🔍 GET /sessions/${req.params.id} - User: ${req.user?.id}`);
+    
     if (!req.user?.id) {
+      console.log('❌ No user ID in session');
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
+    console.log('📡 Calling storage.getPracticeSession...');
     const session = await storage.getPracticeSession(req.params.id);
+    console.log(`📊 Session retrieved:`, session ? 'Found' : 'Not found', session ? `Messages: ${session.messages?.length || 0}` : '');
     
     if (!session) {
       return res.status(404).json({ error: 'Practice session not found' });
@@ -100,6 +105,7 @@ router.get('/sessions/:id', async (req, res) => {
       return res.status(403).json({ error: 'Access denied to this session' });
     }
 
+    console.log('✅ Returning session data with', session.messages?.length || 0, 'messages');
     res.json({
       success: true,
       data: session
@@ -145,34 +151,6 @@ router.get('/sessions', async (req, res) => {
   }
 });
 
-/**
- * GET /sessions/:id
- * Get individual practice session with messages
- */
-router.get('/sessions/:id', async (req, res) => {
-  try {
-    if (!req.user?.id) {
-      return res.status(401).json({ error: 'User not authenticated' });
-    }
-
-    const session = await storage.getPracticeSession(req.params.id);
-    if (!session) {
-      return res.status(404).json({ error: 'Practice session not found' });
-    }
-    if (session.userId !== req.user.id) {
-      return res.status(403).json({ error: 'Access denied to this session' });
-    }
-
-    res.json(session);
-
-  } catch (error) {
-    console.error('❌ Get practice session error:', error);
-    res.status(500).json({
-      error: 'Failed to retrieve session',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
 
 // ================================
 // SESSION INTERACTION ENDPOINTS
