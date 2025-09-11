@@ -227,7 +227,7 @@ export const practiceSessions = pgTable("practice_sessions", {
   // Session State
   status: varchar("status", { length: 20 }).default("active"), // active, completed, abandoned
   currentQuestionNumber: integer("current_question_number").default(1),
-  totalQuestions: integer("total_questions").default(10),
+  totalQuestions: integer("total_questions").default(25),
   
   // Session Timing
   startedAt: timestamp("started_at").defaultNow(),
