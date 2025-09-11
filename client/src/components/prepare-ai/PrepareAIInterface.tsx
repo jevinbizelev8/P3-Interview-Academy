@@ -75,6 +75,22 @@ export default function PrepareAIInterface({
   const [speechRate, setSpeechRate] = useState(1.0);
   const [selectedVoice, setSelectedVoice] = useState<string>('');
 
+  // Helper function to get language display name
+  const getLanguageName = (code: string) => {
+    const languageNames: Record<string, string> = {
+      'ms': 'Bahasa Malaysia',
+      'id': 'Bahasa Indonesia', 
+      'th': 'ภาษาไทย',
+      'vi': 'Tiếng Việt',
+      'tl': 'Filipino',
+      'my': 'မြန်မာဘာသာ',
+      'km': 'ភាសាខ្មែរ',
+      'lo': 'ພາສາລາວ',
+      'bn': 'বাংলা'
+    };
+    return languageNames[code] || code.toUpperCase();
+  };
+
   // WebSocket and audio refs
   const socketRef = useRef<Socket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -653,7 +669,16 @@ export default function PrepareAIInterface({
               </div>
               <div>
                 <CardTitle className="text-xl">{session.jobPosition}</CardTitle>
-                <p className="text-gray-600">{session.companyName} • {session.interviewStage}</p>
+                <p className="text-gray-600">
+                  {session.companyName} • {session.interviewStage}
+                  {session.preferredLanguage && session.preferredLanguage !== 'en' && (
+                    <span className="ml-2">
+                      • <span className="text-blue-600 font-medium">
+                        {getLanguageName(session.preferredLanguage)}
+                      </span>
+                    </span>
+                  )}
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
