@@ -26,6 +26,142 @@ const languageNames = {
 
 const getLanguageName = (code: string) => languageNames[code as keyof typeof languageNames] || 'English';
 
+// Translations for the briefing interface
+const translations = {
+  'en': {
+    title: 'Interview Preparation Session',
+    subtitle: "You're about to begin a subject interview simulation. Take your time and respond naturally.",
+    scenarioBrief: 'Scenario Brief',
+    personalizedInterview: 'Personalized Interview',
+    position: 'Position:',
+    company: 'Company:',
+    interviewStage: 'Interview Stage:',
+    duration: 'Duration:',
+    dynamicGeneration: 'Dynamic Generation:',
+    dynamicGenerationText: 'Questions will be generated in real-time specifically for this {role} role at {company}. Each question adapts to your responses and focuses on actual job requirements and company culture.',
+    yourBackground: 'Your Background',
+    experiencedProfessional: 'Experienced professional',
+    keyObjectives: 'Key Objectives',
+    assessCandidate: 'Assess candidate suitability for {role} role at {company}',
+    yourInterviewer: 'Your Interviewer',
+    aiInterviewer: 'AI Interviewer',
+    professionalAssistant: 'Professional Interview Assistant',
+    interviewStyle: 'Interview Style:',
+    professionalEngaging: 'Professional and engaging',
+    personality: 'Personality:',
+    thoughtfulSupportive: 'Thoughtful and supportive',
+    sessionInformation: 'Session Information',
+    questions: 'Questions:',
+    estimatedTime: 'Estimated time:',
+    interviewLanguage: 'Interview Language:',
+    autoSave: 'Auto-save:',
+    enabled: 'Enabled',
+    interviewLanguageLabel: 'Interview Language',
+    startInterview: 'Start Interview',
+    backToScenarios: 'Back to Scenarios',
+    minutes: 'minutes'
+  },
+  'ms': {
+    title: 'Sesi Persediaan Temuduga',
+    subtitle: 'Anda akan memulakan simulasi temuduga subjek. Luangkan masa anda dan jawab secara semula jadi.',
+    scenarioBrief: 'Ringkasan Senario',
+    personalizedInterview: 'Temuduga Dipersonalisasi',
+    position: 'Jawatan:',
+    company: 'Syarikat:',
+    interviewStage: 'Peringkat Temuduga:',
+    duration: 'Tempoh:',
+    dynamicGeneration: 'Penjanaan Dinamik:',
+    dynamicGenerationText: 'Soalan akan dijana secara masa nyata khusus untuk peranan {role} di {company}. Setiap soalan disesuaikan dengan jawapan anda dan memberi tumpuan kepada keperluan kerja sebenar dan budaya syarikat.',
+    yourBackground: 'Latar Belakang Anda',
+    experiencedProfessional: 'Profesional berpengalaman',
+    keyObjectives: 'Objektif Utama',
+    assessCandidate: 'Menilai kesesuaian calon untuk peranan {role} di {company}',
+    yourInterviewer: 'Penemuduga Anda',
+    aiInterviewer: 'Penemuduga AI',
+    professionalAssistant: 'Pembantu Temuduga Profesional',
+    interviewStyle: 'Gaya Temuduga:',
+    professionalEngaging: 'Profesional dan menarik',
+    personality: 'Personaliti:',
+    thoughtfulSupportive: 'Berfikir dan menyokong',
+    sessionInformation: 'Maklumat Sesi',
+    questions: 'Soalan:',
+    estimatedTime: 'Anggaran masa:',
+    interviewLanguage: 'Bahasa Temuduga:',
+    autoSave: 'Auto-simpan:',
+    enabled: 'Diaktifkan',
+    interviewLanguageLabel: 'Bahasa Temuduga',
+    startInterview: 'Mulakan Temuduga',
+    backToScenarios: 'Kembali ke Senario',
+    minutes: 'minit'
+  },
+  'th': {
+    title: 'เซสชันเตรียมตัวสัมภาษณ์',
+    subtitle: 'คุณกำลังจะเริ่มการจำลองการสัมภาษณ์งาน กรุณาใช้เวลาของคุณและตอบอย่างเป็นธรรมชาติ',
+    scenarioBrief: 'สรุปสถานการณ์',
+    personalizedInterview: 'การสัมภาษณ์ที่ปรับเปลี่ยนได้',
+    position: 'ตำแหน่ง:',
+    company: 'บริษัท:',
+    interviewStage: 'ขั้นตอนการสัมภาษณ์:',
+    duration: 'ระยะเวลา:',
+    dynamicGeneration: 'การสร้างแบบไดนามิก:',
+    dynamicGenerationText: 'คำถามจะถูกสร้างขึ้นแบบเรียลไทม์โดยเฉพาะสำหรับตำแหน่ง {role} ที่ {company} คำถามแต่ละข้อจะปรับตามคำตอบของคุณและมุ่งเน้นไปที่ความต้องการงานจริงและวัฒนธรรมบริษัท',
+    yourBackground: 'ประวัติของคุณ',
+    experiencedProfessional: 'ผู้เชี่ยวชาญที่มีประสบการณ์',
+    keyObjectives: 'วัตถุประสงค์หลัก',
+    assessCandidate: 'ประเมินความเหมาะสมของผู้สมัครสำหรับตำแหน่ง {role} ที่ {company}',
+    yourInterviewer: 'ผู้สัมภาษณ์ของคุณ',
+    aiInterviewer: 'ผู้สัมภาษณ์ AI',
+    professionalAssistant: 'ผู้ช่วยการสัมภาษณ์มืออาชีพ',
+    interviewStyle: 'สไตล์การสัมภาษณ์:',
+    professionalEngaging: 'เป็นมืออาชีพและน่าสนใจ',
+    personality: 'บุคลิกภาพ:',
+    thoughtfulSupportive: 'ใส่ใจและให้การสนับสนุน',
+    sessionInformation: 'ข้อมูลเซสชัน',
+    questions: 'คำถาม:',
+    estimatedTime: 'เวลาโดยประมาณ:',
+    interviewLanguage: 'ภาษาการสัมภาษณ์:',
+    autoSave: 'บันทึกอัตโนมัติ:',
+    enabled: 'เปิดใช้งาน',
+    interviewLanguageLabel: 'ภาษาการสัมภาษณ์',
+    startInterview: 'เริ่มการสัมภาษณ์',
+    backToScenarios: 'กลับไปยังสถานการณ์',
+    minutes: 'นาที'
+  },
+  'id': {
+    title: 'Sesi Persiapan Wawancara',
+    subtitle: 'Anda akan memulai simulasi wawancara subjek. Luangkan waktu Anda dan jawab secara alami.',
+    scenarioBrief: 'Ringkasan Skenario',
+    personalizedInterview: 'Wawancara yang Dipersonalisasi',
+    position: 'Posisi:',
+    company: 'Perusahaan:',
+    interviewStage: 'Tahap Wawancara:',
+    duration: 'Durasi:',
+    dynamicGeneration: 'Generasi Dinamis:',
+    dynamicGenerationText: 'Pertanyaan akan dihasilkan secara real-time khusus untuk peran {role} di {company}. Setiap pertanyaan menyesuaikan dengan jawaban Anda dan berfokus pada persyaratan kerja aktual dan budaya perusahaan.',
+    yourBackground: 'Latar Belakang Anda',
+    experiencedProfessional: 'Profesional berpengalaman',
+    keyObjectives: 'Tujuan Utama',
+    assessCandidate: 'Menilai kesesuaian kandidat untuk peran {role} di {company}',
+    yourInterviewer: 'Pewawancara Anda',
+    aiInterviewer: 'Pewawancara AI',
+    professionalAssistant: 'Asisten Wawancara Profesional',
+    interviewStyle: 'Gaya Wawancara:',
+    professionalEngaging: 'Profesional dan menarik',
+    personality: 'Kepribadian:',
+    thoughtfulSupportive: 'Perhatian dan mendukung',
+    sessionInformation: 'Informasi Sesi',
+    questions: 'Pertanyaan:',
+    estimatedTime: 'Estimasi waktu:',
+    interviewLanguage: 'Bahasa Wawancara:',
+    autoSave: 'Simpan otomatis:',
+    enabled: 'Diaktifkan',
+    interviewLanguageLabel: 'Bahasa Wawancara',
+    startInterview: 'Mulai Wawancara',
+    backToScenarios: 'Kembali ke Skenario',
+    minutes: 'menit'
+  }
+};
+
 export default function PreInterviewBriefing() {
   const { scenarioId } = useParams<{ scenarioId: string }>();
   const [, setLocation] = useLocation();
@@ -34,8 +170,12 @@ export default function PreInterviewBriefing() {
   // Get job context from session storage
   const [jobContext, setJobContext] = useState(() => {
     const jobContextStr = sessionStorage.getItem('jobContext');
-    return jobContextStr ? JSON.parse(jobContextStr) : { jobPosition: '', companyName: '' };
+    return jobContextStr ? JSON.parse(jobContextStr) : { jobPosition: '', companyName: '', interviewLanguage: 'en' };
   });
+
+  // Get current language and translations
+  const currentLanguage = jobContext.interviewLanguage || 'en';
+  const t = translations[currentLanguage as keyof typeof translations] || translations['en'];
   
   console.log('PreInterviewBriefing rendering with scenarioId:', scenarioId);
 
@@ -173,10 +313,9 @@ export default function PreInterviewBriefing() {
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-primary to-primary/90 rounded-xl p-8 text-primary-foreground mb-8">
         <div className="max-w-2xl">
-          <h2 className="text-3xl font-bold mb-4">Interview Preparation Session</h2>
+          <h2 className="text-3xl font-bold mb-4">{t.title}</h2>
           <p className="text-lg opacity-90">
-            You're about to begin a {scenario.interviewStage.replace('-', ' ')} interview simulation. 
-            Take your time and respond naturally.
+            {t.subtitle}
           </p>
         </div>
       </div>
@@ -188,36 +327,36 @@ export default function PreInterviewBriefing() {
             <CardContent className="p-6">
               <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
                 <Briefcase className="w-5 h-5 text-primary mr-2" />
-                Scenario Brief
+                {t.scenarioBrief}
               </h3>
               <div className="prose prose-sm text-gray-700 max-w-none">
                 {/* Show personalized job context if available, otherwise show scenario defaults */}
                 {jobContext.jobPosition || jobContext.companyName ? (
                   <>
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                      <h4 className="text-green-800 font-medium mb-2">✓ Personalized Interview</h4>
-                      <p><strong>Position:</strong> {jobContext.jobPosition || scenario.jobRole}</p>
-                      <p><strong>Company:</strong> {jobContext.companyName || 'Not specified'}</p>
-                      <p><strong>Interview Stage:</strong> {scenario.interviewStage.replace('-', ' ')}</p>
-                      <p><strong>Duration:</strong> 15-20 minutes</p>
+                      <h4 className="text-green-800 font-medium mb-2">✓ {t.personalizedInterview}</h4>
+                      <p><strong>{t.position}</strong> {jobContext.jobPosition || scenario.jobRole}</p>
+                      <p><strong>{t.company}</strong> {jobContext.companyName || 'Not specified'}</p>
+                      <p><strong>{t.interviewStage}</strong> {scenario.interviewStage.replace('-', ' ')}</p>
+                      <p><strong>{t.duration}</strong> 15-20 {t.minutes}</p>
                       <p className="text-sm text-green-700 mt-2">
-                        <strong>✨ Dynamic Generation:</strong> Questions will be generated in real-time specifically for this {jobContext.jobPosition} role at {jobContext.companyName}. Each question adapts to your responses and focuses on actual job requirements and company culture.
+                        <strong>✨ {t.dynamicGeneration}</strong> {t.dynamicGenerationText.replace('{role}', jobContext.jobPosition).replace('{company}', jobContext.companyName)}
                       </p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <p><strong>Position:</strong> {scenario.jobRole}</p>
-                    <p><strong>Company:</strong> {scenario.companyBackground}</p>
-                    <p><strong>Interview Stage:</strong> {scenario.interviewStage.replace('-', ' ')}</p>
-                    <p><strong>Duration:</strong> 15-20 minutes</p>
+                    <p><strong>{t.position}</strong> {scenario.jobRole}</p>
+                    <p><strong>{t.company}</strong> {scenario.companyBackground}</p>
+                    <p><strong>{t.interviewStage}</strong> {scenario.interviewStage.replace('-', ' ')}</p>
+                    <p><strong>{t.duration}</strong> 15-20 {t.minutes}</p>
                   </>
                 )}
                 
-                <h4 className="text-lg font-medium text-gray-900 mt-4 mb-2">Your Background</h4>
+                <h4 className="text-lg font-medium text-gray-900 mt-4 mb-2">{t.yourBackground}</h4>
                 <p>{scenario.candidateBackground}</p>
                 
-                <h4 className="text-lg font-medium text-gray-900 mt-4 mb-2">Key Objectives</h4>
+                <h4 className="text-lg font-medium text-gray-900 mt-4 mb-2">{t.keyObjectives}</h4>
                 <div dangerouslySetInnerHTML={{
                   __html: scenario.keyObjectives
                     .split('\n')
@@ -268,7 +407,7 @@ export default function PreInterviewBriefing() {
           {/* Interviewer Profile */}
           <Card>
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Interviewer</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t.yourInterviewer}</h3>
               <div className="flex items-center mb-4">
                 <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center mr-4">
                   <span className="text-lg font-medium text-gray-600">
@@ -276,13 +415,13 @@ export default function PreInterviewBriefing() {
                   </span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-gray-900">{scenario.interviewerName || 'AI Interviewer'}</h4>
-                  <p className="text-sm text-gray-600">{scenario.interviewerTitle || 'Professional Interview Assistant'}</p>
+                  <h4 className="font-semibold text-gray-900">{scenario.interviewerName || t.aiInterviewer}</h4>
+                  <p className="text-sm text-gray-600">{scenario.interviewerTitle || t.professionalAssistant}</p>
                 </div>
               </div>
               <div className="space-y-2 text-sm text-gray-700">
-                <p><strong>Interview Style:</strong> {scenario.interviewerStyle || 'Professional and engaging'}</p>
-                <p><strong>Personality:</strong> {scenario.personalityTraits || 'Thoughtful and supportive'}</p>
+                <p><strong>{t.interviewStyle}</strong> {scenario.interviewerStyle || t.professionalEngaging}</p>
+                <p><strong>{t.personality}</strong> {scenario.personalityTraits || t.thoughtfulSupportive}</p>
               </div>
             </CardContent>
           </Card>
@@ -290,23 +429,23 @@ export default function PreInterviewBriefing() {
           {/* Session Controls */}
           <Card>
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Session Information</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t.sessionInformation}</h3>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Questions:</span>
+                  <span className="text-gray-600">{t.questions}</span>
                   <span className="font-medium">15 questions</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Estimated time:</span>
-                  <span className="font-medium">15-20 minutes</span>
+                  <span className="text-gray-600">{t.estimatedTime}</span>
+                  <span className="font-medium">15-20 {t.minutes}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Interview Language:</span>
+                  <span className="text-gray-600">{t.interviewLanguage}</span>
                   <span className="font-medium">{getLanguageName(jobContext.interviewLanguage || 'en')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Auto-save:</span>
-                  <span className="font-medium text-green-600">Enabled</span>
+                  <span className="text-gray-600">{t.autoSave}</span>
+                  <span className="font-medium text-green-600">{t.enabled}</span>
                 </div>
               </div>
               
@@ -315,7 +454,7 @@ export default function PreInterviewBriefing() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 flex items-center">
                     <Globe className="w-4 h-4 mr-2" />
-                    Interview Language
+                    {t.interviewLanguageLabel}
                   </label>
                   <Select 
                     value={jobContext.interviewLanguage || 'en'}
@@ -351,7 +490,7 @@ export default function PreInterviewBriefing() {
                   size="lg"
                 >
                   <Play className="w-4 h-4 mr-2" />
-                  Start Interview
+                  {t.startInterview}
                 </Button>
                 <Button
                   variant="outline"
@@ -359,7 +498,7 @@ export default function PreInterviewBriefing() {
                   className="w-full"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Choose Different Scenario
+                  {t.backToScenarios}
                 </Button>
               </div>
             </CardContent>
