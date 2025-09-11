@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/use-auth';
 import { 
   Mic, 
   MicOff, 
@@ -56,6 +58,9 @@ export default function PrepareAIInterface({
   onSessionChange,
   sessionConfig
 }: PrepareAIInterfaceProps) {
+  // Get current authenticated user
+  const { user } = useAuth();
+  
   // Core state
   const [session, setSession] = useState<SessionData | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -81,18 +86,36 @@ export default function PrepareAIInterface({
   useEffect(() => {
     if (!session) return;
 
-    const socket = io('/', {
-      query: { sessionId: session.id }
-    });
-
+    const socket = io('/');
     socketRef.current = socket;
 
     // Socket event listeners
     socket.on('connect', () => {
       console.log('WebSocket connected for AI prepare session');
+      
+      // Step 1: Authenticate with the WebSocket service
+      if (user?.id) {
+        socket.emit('prepare:authenticate', { 
+          userId: user.id
+        });
+      } else {
+        console.error('❌ No user ID available for WebSocket authentication');
+      }
+    });
+
+    socket.on('prepare:message', (message: any) => {
+      if (message.type === 'system' && message.data.status === 'authenticated') {
+        console.log('✅ WebSocket authenticated, joining session...');
+        // Step 2: Join the session room
+        socket.emit('prepare:join-session', { sessionId: session.id });
+      } else if (message.type === 'system' && message.data.status === 'joined-session') {
+        console.log('✅ Joined session room, ready for questions');
+      }
     });
 
     socket.on('question-generated', (data: { question: string; questionId: string }) => {
+      console.log('✅ Received question via WebSocket:', data);
+      
       const newMessage: Message = {
         id: crypto.randomUUID(),
         type: 'question',

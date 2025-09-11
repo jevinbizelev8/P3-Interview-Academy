@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { PrepareAIService } from "../services/prepare-ai-service.js";
+import { emitToSession } from "../services/realtime-gateway.js";
 
 const router = Router();
 const prepareAIService = new PrepareAIService();
@@ -146,6 +147,12 @@ router.post('/sessions/:sessionId/question', async (req, res) => {
       sessionId: req.params.sessionId,
       userId: req.user.id,
       adaptiveDifficulty: req.body.adaptiveDifficulty !== false
+    });
+
+    // Emit the question to WebSocket clients in the session room
+    emitToSession(req.params.sessionId, 'question-generated', {
+      question: question.questionText,
+      questionId: question.id
     });
 
     res.json({
