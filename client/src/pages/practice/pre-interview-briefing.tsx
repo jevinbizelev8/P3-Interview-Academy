@@ -67,7 +67,7 @@ export default function PreInterviewBriefing() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = "/";
       }, 500);
     }
   }, [error, toast]);

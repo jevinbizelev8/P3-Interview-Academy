@@ -81,7 +81,7 @@ export default function ProtectedRoute({
                 <p>✅ View your performance history</p>
               </div>
               <Button 
-                onClick={() => window.location.href = '/api/login'} 
+                onClick={() => window.location.href = '/'} 
                 className="w-full"
                 size="lg"
               >
@@ -93,7 +93,7 @@ export default function ProtectedRoute({
       );
     } else {
       // Redirect to login without showing prompt
-      window.location.href = '/api/login';
+      window.location.href = '/';
       return (
         <div className="flex items-center justify-center min-h-screen">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
