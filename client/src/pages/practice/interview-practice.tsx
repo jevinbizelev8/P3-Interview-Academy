@@ -419,15 +419,15 @@ export default function InterviewPractice() {
               <div className="flex items-center space-x-4 text-sm text-gray-600">
                 <span className="flex items-center">
                   <Award className="w-4 h-4 mr-1" />
-                  {session?.userJobPosition || 'Interview Practice'} {session?.userCompanyName && `at ${session.userCompanyName}`}
+                  {session?.jobPosition || 'Interview Practice'} {session?.companyName && `at ${session.companyName}`}
                 </span>
                 <Badge variant="outline" className="bg-white flex items-center">
                   <Target className="w-3 h-3 mr-1" />
-                  Question {session?.currentQuestion || currentQuestionNumber} of {maxQuestions}
+                  Question {messages.filter(m => m.messageType === 'ai_question').length || 1} of {maxQuestions}
                 </Badge>
-                {session?.interviewLanguage && (
+                {session?.preferredLanguage && (
                   <Badge variant="outline" className="bg-white">
-                    {session.interviewLanguage.toUpperCase()}
+                    {session.preferredLanguage.toUpperCase()}
                   </Badge>
                 )}
               </div>
@@ -437,12 +437,12 @@ export default function InterviewPractice() {
               <div className="flex items-center justify-end space-x-2 mb-2">
                 <div className="flex items-center text-xs text-gray-500">
                   <TrendingUp className="w-3 h-3 mr-1" />
-                  Progress: {Math.round(((session?.currentQuestion || currentQuestionNumber) / maxQuestions) * 100)}%
+                  Progress: {Math.round(((messages.filter(m => m.messageType === 'ai_question').length || 1) / maxQuestions) * 100)}%
                 </div>
                 <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-300"
-                    style={{ width: `${Math.min(((session?.currentQuestion || currentQuestionNumber) / maxQuestions) * 100, 100)}%` }}
+                    style={{ width: `${Math.min(((messages.filter(m => m.messageType === 'ai_question').length || 1) / maxQuestions) * 100, 100)}%` }}
                   />
                 </div>
               </div>
