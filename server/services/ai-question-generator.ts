@@ -138,6 +138,7 @@ export class AIQuestionGenerator {
   private buildOpenAIPrompt(request: QuestionGenerationRequest): string {
     const culturalContext = this.getCulturalContext(request.preferredLanguage);
     const adaptiveContext = this.getAdaptiveContext(request);
+    const stageGuidance = this.getStageSpecificGuidance(request.interviewStage);
     const languageName = this.getLanguageName(request.preferredLanguage);
     const isNonEnglish = request.preferredLanguage !== 'en';
 
@@ -153,6 +154,8 @@ Context:
 - Focus Areas: ${request.focusAreas.join(', ')}
 - Categories: ${request.questionCategories.join(', ')}
 - Difficulty: ${request.difficultyLevel}
+
+${stageGuidance}
 
 ${culturalContext}
 ${adaptiveContext}
@@ -184,6 +187,7 @@ Response Format (JSON only, no other text):
   private buildSeaLionPrompt(request: QuestionGenerationRequest): string {
     const culturalContext = this.getCulturalContext(request.preferredLanguage);
     const adaptiveContext = this.getAdaptiveContext(request);
+    const stageGuidance = this.getStageSpecificGuidance(request.interviewStage);
 
     return `You are an AI interview coach specializing in Southeast Asian job markets. Generate a culturally-appropriate interview question.
 
@@ -197,6 +201,8 @@ Context:
 - Focus Areas: ${request.focusAreas.join(', ')}
 - Categories: ${request.questionCategories.join(', ')}
 - Difficulty: ${request.difficultyLevel}
+
+${stageGuidance}
 
 ${culturalContext}
 ${adaptiveContext}
@@ -412,6 +418,58 @@ Response Format (JSON):
   private shouldUseSeaLion(language: string): boolean {
     const seaLionLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'jv', 'su'];
     return seaLionLanguages.includes(language) || language === 'en';
+  }
+
+  /**
+   * Get stage-specific guidance for interview questions
+   */
+  private getStageSpecificGuidance(interviewStage: string): string {
+    const stageGuidance: Record<string, string> = {
+      'phone-screening': `
+STAGE FOCUS - Phone/Initial Screening:
+- Ask basic qualification questions and background verification
+- Focus on cultural fit, communication skills, and motivation
+- Keep questions conversational and rapport-building
+- Test basic competencies relevant to the role
+- Examples: "Tell me about yourself", "Why are you interested in this position?", "Walk me through your background"`,
+
+      'functional-team': `
+STAGE FOCUS - Functional/Team Interview:
+- Focus on collaboration, team integration, and working relationships
+- Ask about teamwork experience, communication style, and conflict resolution
+- Test interpersonal skills and team dynamics understanding
+- Examples: "How do you handle disagreements with team members?", "Describe your ideal team environment", "Tell me about a successful team project"`,
+
+      'hiring-manager': `
+STAGE FOCUS - Hiring Manager Interview:
+- Focus on role-specific competencies and performance expectations
+- Ask about relevant experience, achievements, and problem-solving abilities
+- Test job-specific skills and cultural alignment with management style
+- Examples: "Tell me about your experience with [specific skill]", "How would you approach [job-specific challenge]?", "Describe a time you exceeded expectations"`,
+
+      'subject-matter': `
+STAGE FOCUS - Subject-Matter Expertise Interview:
+- Focus on technical competencies, industry knowledge, and specialized skills
+- Ask detailed questions about methodologies, best practices, and problem-solving approaches
+- Test deep domain expertise and analytical thinking
+- Examples: "Walk me through your approach to [technical challenge]", "How would you solve [complex problem]?", "What's your experience with [specific tool/methodology]?"`,
+
+      'executive': `
+STAGE FOCUS - Executive/Final Round Interview:
+- Focus on strategic thinking, leadership potential, and long-term vision
+- Ask about leadership experience, decision-making under pressure, and organizational impact
+- Test cultural alignment, values fit, and senior-level competencies
+- Examples: "How would you approach the first 90 days in this role?", "Describe a difficult decision you made as a leader", "What's your vision for [relevant area]?"`,
+
+      'executive-final': `
+STAGE FOCUS - Executive/Final Round Interview:
+- Focus on strategic thinking, leadership potential, and long-term vision
+- Ask about leadership experience, decision-making under pressure, and organizational impact
+- Test cultural alignment, values fit, and senior-level competencies
+- Examples: "How would you approach the first 90 days in this role?", "Describe a difficult decision you made as a leader", "What's your vision for [relevant area]?"`
+    };
+
+    return stageGuidance[interviewStage] || stageGuidance['hiring-manager']; // Default to hiring-manager if stage not found
   }
 
   /**
