@@ -24,6 +24,7 @@ import type { AiEvaluationResult } from '@shared/schema';
 
 interface InterviewScoreChartsProps {
   evaluation: AiEvaluationResult;
+  t?: (key: string) => string; // Translation function
 }
 
 const SCORE_COLORS = {
@@ -45,59 +46,68 @@ const CRITERIA_WEIGHTS = {
   'Learning Agility': 5
 };
 
-export default function InterviewScoreCharts({ evaluation }: InterviewScoreChartsProps) {
-  // Prepare data for radar chart
+export default function InterviewScoreCharts({ evaluation, t = (key: string) => key }: InterviewScoreChartsProps) {
+  // Prepare data for radar chart with translated criteria names
   const radarData = [
     {
-      criteria: 'Relevance',
+      criteria: t('relevance'),
+      originalKey: 'Relevance',
       score: Number(evaluation.relevanceScore) || 3,
       maxScore: 5,
       weight: 15
     },
     {
-      criteria: 'STAR Structure',
+      criteria: t('starStructure'),
+      originalKey: 'STAR Structure',
       score: Number(evaluation.starStructureScore) || 3,
       maxScore: 5,
       weight: 15
     },
     {
-      criteria: 'Evidence',
+      criteria: t('evidence'),
+      originalKey: 'Evidence',
       score: Number(evaluation.specificEvidenceScore) || 3,
       maxScore: 5,
       weight: 15
     },
     {
-      criteria: 'Role Alignment',
+      criteria: t('roleAlignment'),
+      originalKey: 'Role Alignment',
       score: Number(evaluation.roleAlignmentScore) || 3,
       maxScore: 5,
       weight: 15
     },
     {
-      criteria: 'Outcomes',
+      criteria: t('outcomes'),
+      originalKey: 'Outcomes',
       score: Number(evaluation.outcomeOrientedScore) || 3,
       maxScore: 5,
       weight: 15
     },
     {
-      criteria: 'Communication',
+      criteria: t('communication'),
+      originalKey: 'Communication',
       score: Number(evaluation.communicationScore) || 3,
       maxScore: 5,
       weight: 10
     },
     {
-      criteria: 'Problem-Solving',
+      criteria: t('problemSolving'),
+      originalKey: 'Problem-Solving',
       score: Number(evaluation.problemSolvingScore) || 3,
       maxScore: 5,
       weight: 10
     },
     {
-      criteria: 'Cultural Fit',
+      criteria: t('culturalFit'),
+      originalKey: 'Cultural Fit',
       score: Number(evaluation.culturalFitScore) || 3,
       maxScore: 5,
       weight: 5
     },
     {
-      criteria: 'Learning Agility',
+      criteria: t('learningAgility'),
+      originalKey: 'Learning Agility',
       score: Number(evaluation.learningAgilityScore) || 3,
       maxScore: 5,
       weight: 5
@@ -117,8 +127,8 @@ export default function InterviewScoreCharts({ evaluation }: InterviewScoreChart
   
   // Pass/Fail threshold data
   const thresholdData = [
-    { name: 'Your Score', value: weightedOverallScore, fill: getScoreColor(weightedOverallScore) },
-    { name: 'Remaining', value: 5 - weightedOverallScore, fill: SCORE_COLORS.background }
+    { name: t('yourScore'), value: weightedOverallScore, fill: getScoreColor(weightedOverallScore) },
+    { name: t('remaining'), value: 5 - weightedOverallScore, fill: SCORE_COLORS.background }
   ];
 
   function getScoreColor(score: number): string {
@@ -135,18 +145,18 @@ export default function InterviewScoreCharts({ evaluation }: InterviewScoreChart
 
   function getScoreDescription(score: number): { label: string; description: string; color: string } {
     if (score >= 3.5) return { 
-      label: 'Pass', 
-      description: 'Exceeds expectations', 
+      label: t('pass'), 
+      description: t('exceedsExpectations'), 
       color: 'bg-green-100 text-green-800 border-green-200' 
     };
     if (score >= 3.0) return { 
-      label: 'Borderline', 
-      description: 'Meets basic expectations', 
+      label: t('borderline'), 
+      description: t('meetsBasicExpectations'), 
       color: 'bg-amber-100 text-amber-800 border-amber-200' 
     };
     return { 
-      label: 'Needs Improvement', 
-      description: 'Below expectations', 
+      label: t('needsImprovement'), 
+      description: t('belowExpectations'), 
       color: 'bg-red-100 text-red-800 border-red-200' 
     };
   }
@@ -160,7 +170,7 @@ export default function InterviewScoreCharts({ evaluation }: InterviewScoreChart
         <CardHeader>
           <CardTitle className="flex items-center space-x-3">
             {getScoreIcon(weightedOverallScore)}
-            <span>Interview Performance Score</span>
+            <span>{t('interviewPerformanceScore')}</span>
             <Badge className={scoreInfo.color}>
               {scoreInfo.label}
             </Badge>
@@ -196,10 +206,10 @@ export default function InterviewScoreCharts({ evaluation }: InterviewScoreChart
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Target className="w-5 h-5 text-blue-600" />
-              <span>Performance Radar</span>
+              <span>{t('performanceRadar')}</span>
             </CardTitle>
             <CardDescription>
-              Your score across all 9 evaluation criteria (1-5 scale)
+              {t('performanceRadarDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -237,10 +247,10 @@ export default function InterviewScoreCharts({ evaluation }: InterviewScoreChart
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <TrendingUp className="w-5 h-5 text-green-600" />
-              <span>Weighted Contribution</span>
+              <span>{t('weightedContribution')}</span>
             </CardTitle>
             <CardDescription>
-              How each criteria contributes to your overall score
+              {t('weightedContributionDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -261,7 +271,7 @@ export default function InterviewScoreCharts({ evaluation }: InterviewScoreChart
                 <Tooltip 
                   formatter={(value: number, name: string) => [
                     `${(Number(value) * 100).toFixed(1)}%`, 
-                    'Weighted Score'
+                    t('weightedScore')
                   ]}
                   labelFormatter={(label) => `${label} (${CRITERIA_WEIGHTS[label as keyof typeof CRITERIA_WEIGHTS]}% weight)`}
                 />
@@ -279,9 +289,9 @@ export default function InterviewScoreCharts({ evaluation }: InterviewScoreChart
       {/* Detailed Criteria Breakdown */}
       <Card>
         <CardHeader>
-          <CardTitle>Detailed Score Breakdown</CardTitle>
+          <CardTitle>{t('detailedScoreBreakdown')}</CardTitle>
           <CardDescription>
-            Individual scores and feedback for each evaluation criteria
+            {t('detailedScoreBreakdownDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -319,27 +329,27 @@ export default function InterviewScoreCharts({ evaluation }: InterviewScoreChart
         <Card className="border-green-200">
           <CardContent className="p-4 text-center">
             <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-            <div className="font-semibold text-green-700">Pass</div>
+            <div className="font-semibold text-green-700">{t('pass')}</div>
             <div className="text-sm text-green-600">≥ 3.5/5</div>
-            <div className="text-xs text-gray-500 mt-1">Exceeds expectations</div>
+            <div className="text-xs text-gray-500 mt-1">{t('exceedsExpectations')}</div>
           </CardContent>
         </Card>
         
         <Card className="border-amber-200">
           <CardContent className="p-4 text-center">
             <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-            <div className="font-semibold text-amber-700">Borderline</div>
+            <div className="font-semibold text-amber-700">{t('borderline')}</div>
             <div className="text-sm text-amber-600">3.0 - 3.4/5</div>
-            <div className="text-xs text-gray-500 mt-1">Meets basic expectations</div>
+            <div className="text-xs text-gray-500 mt-1">{t('meetsBasicExpectations')}</div>
           </CardContent>
         </Card>
         
         <Card className="border-red-200">
           <CardContent className="p-4 text-center">
             <XCircle className="w-8 h-8 text-red-500 mx-auto mb-2" />
-            <div className="font-semibold text-red-700">Needs Improvement</div>
+            <div className="font-semibold text-red-700">{t('needsImprovement')}</div>
             <div className="text-sm text-red-600">&lt; 3.0/5</div>
-            <div className="text-xs text-gray-500 mt-1">Below expectations</div>
+            <div className="text-xs text-gray-500 mt-1">{t('belowExpectations')}</div>
           </CardContent>
         </Card>
       </div>

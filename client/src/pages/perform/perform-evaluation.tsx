@@ -16,18 +16,38 @@ import {
   RefreshCcw,
   Star,
   Trophy,
-  ArrowLeft
+  ArrowLeft,
+  CheckCircle2,
+  AlertTriangle,
+  Clock,
+  Users,
+  Globe,
+  Brain,
+  BarChart3,
+  FileText,
+  Zap
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import InterviewScoreCharts from "@/components/InterviewScoreCharts";
 import DetailedFeedbackCards from "@/components/DetailedFeedbackCards";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAssessmentTranslation } from "@/hooks/useAssessmentTranslation";
 import type { AiEvaluationResult } from "@shared/schema";
 
 export default function PerformEvaluation() {
   const { sessionId } = useParams();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("overview");
+  const {
+    currentLanguage,
+    t,
+    changeLanguage,
+    getTranslatedField,
+    getCurrentLanguageInfo,
+    isTranslating,
+    supportedLanguages
+  } = useAssessmentTranslation();
 
   // Fetch evaluation results - try Practice API first, then Perform API as fallback
   const { data: evaluation, isLoading } = useQuery({
@@ -134,27 +154,56 @@ export default function PerformEvaluation() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Your AI Interview Performance Report
+              {t('title')}
             </h1>
             <p className="text-gray-600">
               {session?.userJobPosition} at {session?.userCompanyName}
             </p>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex items-center space-x-3">
+            {/* Language Selector */}
+            <div className="flex items-center space-x-2 mr-4">
+              <Globe className="w-4 h-4 text-gray-500" />
+              <Select value={currentLanguage} onValueChange={(value) => changeLanguage(value as any, evaluation)}>
+                <SelectTrigger className="w-[180px]" data-testid="language-selector">
+                  <SelectValue>
+                    <span className="flex items-center space-x-2">
+                      <span>{getCurrentLanguageInfo().displayName}</span>
+                      {isTranslating && (
+                        <div className="w-3 h-3 border border-gray-300 border-t-transparent rounded-full animate-spin" />
+                      )}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {supportedLanguages.map((language) => (
+                    <SelectItem key={language.code} value={language.code}>
+                      <div className="flex items-center justify-between w-full">
+                        <span>{language.displayName}</span>
+                        {language.code === 'en' && (
+                          <span className="text-xs text-green-600 ml-2">✓</span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             <Link href="/perform">
-              <Button variant="outline">
+              <Button variant="outline" data-testid="back-dashboard">
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Dashboard
+                {t('backToDashboard')}
               </Button>
             </Link>
             <Link href="/practice">
-              <Button>
-                Start New Practice
+              <Button data-testid="start-practice">
+                {t('startNewPractice')}
               </Button>
             </Link>
-            <Button variant="outline">
+            <Button variant="outline" data-testid="export-report">
               <Download className="w-4 h-4 mr-2" />
-              Export Report
+              {t('exportReport')}
             </Button>
           </div>
         </div>
@@ -164,12 +213,12 @@ export default function PerformEvaluation() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-2">Overall Performance</h2>
+                <h2 className="text-2xl font-bold mb-2">{t('overallPerformance')}</h2>
                 <p className="text-purple-100 text-lg">{evaluation.overallRating}</p>
                 <div className="flex items-center space-x-4 mt-4">
                   <div className="flex items-center space-x-2">
                     <Trophy className="w-5 h-5" />
-                    <span>Score: {weightedScore.toFixed(1)}/5.0</span>
+                    <span>{t('score')}: {weightedScore.toFixed(1)}/5.0</span>
                   </div>
                   {evaluation.badgeEarned && (
                     <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
@@ -189,7 +238,7 @@ export default function PerformEvaluation() {
                 <div className="text-4xl font-bold mb-2">{overallScorePercentage.toFixed(0)}%</div>
                 <Progress value={overallScorePercentage} className="w-32 bg-white/20" />
                 <div className="text-sm text-purple-200 mt-1">
-                  Pass: ≥70% • Borderline: 60-69%
+                  {t('pass')}: ≥70% • {t('borderline')}: 60-69%
                 </div>
               </div>
             </div>
@@ -200,78 +249,208 @@ export default function PerformEvaluation() {
       {/* Detailed Evaluation Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="kpis">Analytics</TabsTrigger>
-          <TabsTrigger value="insights">Detailed Feedback</TabsTrigger>
-          <TabsTrigger value="drills">Practice</TabsTrigger>
-          <TabsTrigger value="reflection">Reflect</TabsTrigger>
+          <TabsTrigger value="overview" data-testid="tab-overview">{t('overview')}</TabsTrigger>
+          <TabsTrigger value="kpis" data-testid="tab-analytics">{t('analytics')}</TabsTrigger>
+          <TabsTrigger value="insights" data-testid="tab-feedback">{t('detailedFeedback')}</TabsTrigger>
+          <TabsTrigger value="drills" data-testid="tab-practice">{t('practice')}</TabsTrigger>
+          <TabsTrigger value="reflection" data-testid="tab-reflect">{t('reflect')}</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
-                  Strengths
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {evaluation.strengths && Array.isArray(evaluation.strengths) ? (
-                    evaluation.strengths.map((strength: string, index: number) => (
-                      <div key={index} className="flex items-start space-x-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                        <p className="text-sm text-gray-700">{strength}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-sm">No specific strengths identified.</p>
-                  )}
+          {/* Session Summary Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <MessageCircle className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{t('questions')}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {session?.completedQuestions || 0}/{session?.totalQuestions || 0}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                  <Target className="w-5 h-5 mr-2 text-blue-600" />
-                  Areas for Improvement
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {evaluation.improvementAreas && Array.isArray(evaluation.improvementAreas) ? (
-                    evaluation.improvementAreas.map((area: string, index: number) => (
-                      <div key={index} className="flex items-start space-x-2">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                        <p className="text-sm text-gray-700">{area}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-sm">No specific improvement areas identified.</p>
-                  )}
+            <Card className="border-l-4 border-l-green-500">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Clock className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{t('duration')}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {session?.duration ? `${Math.round(session.duration / 60)}m` : '0m'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Globe className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{t('language')}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {session?.interviewLanguage?.toUpperCase() || 'EN'}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-amber-500">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <BarChart3 className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{t('status')}</p>
+                    <p className="text-lg font-bold text-gray-900 capitalize">
+                      {session?.status || 'completed'}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <Card>
+          {/* Enhanced Strengths and Improvements */}
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Strengths Card */}
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg mr-3">
+                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <span className="text-green-800">{t('keyStrengths')}</span>
+                    <p className="text-sm font-normal text-green-600 mt-1">
+                      {t('strengthsSubtitle')}
+                    </p>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  {(() => {
+                    const strengths = getTranslatedField('strengths', evaluation.strengths);
+                    return strengths && Array.isArray(strengths) && strengths.length > 0 ? (
+                      strengths.map((strength: string, index: number) => (
+                        <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-green-100 shadow-sm">
+                          <div className="p-1 bg-green-100 rounded-full mt-0.5">
+                            <Zap className="w-3 h-3 text-green-600" />
+                          </div>
+                          <p className="text-gray-800 leading-relaxed flex-1">{strength}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <Brain className="w-12 h-12 text-green-300 mx-auto mb-3" />
+                        <p className="text-green-600 font-medium">{t('buildingStrengths')}</p>
+                        <p className="text-sm text-green-500 mt-1">{t('buildingStrengthsDesc')}</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Improvement Areas Card */}
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-xl flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                    <Target className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <span className="text-blue-800">{t('growthOpportunities')}</span>
+                    <p className="text-sm font-normal text-blue-600 mt-1">
+                      {t('growthSubtitle')}
+                    </p>
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  {(() => {
+                    const improvementAreas = getTranslatedField('improvementAreas', evaluation.improvementAreas);
+                    return improvementAreas && Array.isArray(improvementAreas) && improvementAreas.length > 0 ? (
+                      improvementAreas.map((area: string, index: number) => (
+                        <div key={index} className="flex items-start space-x-3 p-3 bg-white rounded-lg border border-blue-100 shadow-sm">
+                          <div className="p-1 bg-blue-100 rounded-full mt-0.5">
+                            <AlertTriangle className="w-3 h-3 text-blue-600" />
+                          </div>
+                          <p className="text-gray-800 leading-relaxed flex-1">{area}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <Target className="w-12 h-12 text-blue-300 mx-auto mb-3" />
+                        <p className="text-blue-600 font-medium">{t('identifyingGrowth')}</p>
+                        <p className="text-sm text-blue-500 mt-1">{t('identifyingGrowthDesc')}</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Enhanced Qualitative Observations */}
+          <Card className="bg-gradient-to-br from-gray-50 to-slate-50 border-gray-200">
             <CardHeader>
-              <CardTitle>Qualitative Observations</CardTitle>
+              <CardTitle className="text-xl flex items-center">
+                <div className="p-2 bg-gray-100 rounded-lg mr-3">
+                  <FileText className="w-6 h-6 text-gray-600" />
+                </div>
+                <div>
+                  <span className="text-gray-800">{t('aiAssessmentNotes')}</span>
+                  <p className="text-sm font-normal text-gray-600 mt-1">
+                    {t('aiNotesSubtitle')}
+                  </p>
+                </div>
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-700 leading-relaxed">
-                {evaluation.qualitativeObservations || "No detailed observations available."}
-              </p>
+              <div className="bg-white rounded-lg border border-gray-100 p-6">
+                {(() => {
+                  const observations = getTranslatedField('qualitativeObservations', evaluation.qualitativeObservations);
+                  return observations && observations.trim() ? (
+                    <div className="prose prose-gray max-w-none">
+                      <p className="text-gray-700 leading-relaxed text-base mb-0">
+                        {observations}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500 font-medium mb-2">{t('generatingAnalysis')}</p>
+                      <p className="text-sm text-gray-400">
+                        {t('generatingAnalysisDesc')}
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
         {/* Performance Analytics Tab */}
         <TabsContent value="kpis" className="space-y-6">
-          <InterviewScoreCharts evaluation={evaluation} />
+          <InterviewScoreCharts evaluation={evaluation} t={t as any} />
         </TabsContent>
 
         {/* Detailed Feedback Tab */}
