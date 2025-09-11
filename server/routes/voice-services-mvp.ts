@@ -1,8 +1,29 @@
 import { Router } from 'express';
 import { sealionService } from '../services/sealion';
-import { requireAuth } from '../middleware/auth-middleware';
+import { requireAuth } from '../auth-simple';
+import multer from 'multer';
+import * as fs from 'fs';
 
 const router = Router();
+
+// Configure multer for file uploads
+const upload = multer({ 
+  dest: '/tmp/uploads/',
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['audio/wav', 'audio/webm', 'audio/mp3', 'audio/mp4', 'audio/ogg', 'audio/mpeg'];
+    if (allowedTypes.includes(file.mimetype) || file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid audio file type'));
+    }
+  }
+});
+
+// Ensure uploads directory exists
+if (!fs.existsSync('/tmp/uploads')) {
+  fs.mkdirSync('/tmp/uploads', { recursive: true });
+}
 
 // Voice service status
 router.get('/health', async (req, res) => {
@@ -134,33 +155,95 @@ router.post('/tts', requireAuth, async (req, res) => {
   }
 });
 
-// Speech-to-Text endpoint (provides configuration for browser STT)
-router.post('/stt', requireAuth, async (req, res) => {
+// Speech-to-Text endpoint (actual transcription using OpenAI Whisper)
+router.post('/stt', requireAuth, upload.single('audio'), async (req, res) => {
   try {
-    const { language = 'en', continuous = false, interimResults = true } = req.body;
+    console.log('🔍 STT ENDPOINT: Request received');
+    console.log('🔍 STT ENDPOINT: Content-Type:', req.headers['content-type']);
+    console.log('🔍 STT ENDPOINT: Body:', req.body);
+    console.log('🔍 STT ENDPOINT: File:', req.file ? `${req.file.filename} (${req.file.size} bytes)` : 'none');
 
-    const sttResponse = {
-      success: true,
-      language,
-      continuous,
-      interimResults,
-      method: 'browser-speech-api',
-      instructions: {
-        useBrowserSTT: true,
-        language: language,
-        continuous: continuous,
-        interimResults: interimResults,
-        maxAlternatives: 1
-      },
-      supportedLanguages: getSupportedSTTLanguages(),
-      timestamp: new Date().toISOString()
-    };
+    // Handle audio file upload
+    if (req.file) {
+      console.log('🎧 STT ENDPOINT: Audio file received');
+      const language = req.body.language || 'en';
+      const model = req.body.model || 'whisper-1';
+      
+      console.log(`🔍 STT ENDPOINT: File: ${req.file.originalname}, Size: ${req.file.size} bytes, Language: ${language}, Model: ${model}`);
+      
+      try {
+        // Import OpenAI service dynamically
+        const { getOpenAIService } = await import('../services/openai-service');
+        
+        console.log('🔍 STT ENDPOINT: Calling OpenAI Whisper API...');
+        
+        // Read the uploaded file
+        const audioBuffer = fs.readFileSync(req.file.path);
+        
+        // Use OpenAI Whisper for transcription
+        const transcription = await getOpenAIService().transcribeAudio(audioBuffer, {
+          language: language,
+          model: model,
+          filename: req.file.originalname || 'recording.wav'
+        });
+        
+        console.log(`✅ STT ENDPOINT: Whisper transcription successful: "${transcription}"`);
+        
+        // Clean up uploaded file
+        fs.unlinkSync(req.file.path);
+        
+        const sttResponse = {
+          success: true,
+          transcription: transcription,
+          originalTranscription: transcription,
+          language: language,
+          model: model,
+          confidence: 0.9, // OpenAI Whisper provides high confidence
+          duration: 0, // Would need to calculate from audio
+          method: 'openai-whisper',
+          timestamp: new Date().toISOString()
+        };
 
-    res.json(sttResponse);
+        res.json(sttResponse);
+      } catch (transcriptionError) {
+        console.error('❌ STT ENDPOINT: Transcription error:', transcriptionError);
+        
+        // Clean up uploaded file on error
+        if (req.file && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        
+        throw transcriptionError;
+      }
+    } else {
+      // Fallback: provide configuration for browser STT
+      console.log('🔍 STT ENDPOINT: No audio file, returning browser STT config');
+      const { language = 'en', continuous = false, interimResults = true } = req.body;
+
+      const sttResponse = {
+        success: true,
+        language,
+        continuous,
+        interimResults,
+        method: 'browser-speech-api',
+        instructions: {
+          useBrowserSTT: true,
+          language: language,
+          continuous: continuous,
+          interimResults: interimResults,
+          maxAlternatives: 1
+        },
+        supportedLanguages: getSupportedSTTLanguages(),
+        timestamp: new Date().toISOString()
+      };
+
+      res.json(sttResponse);
+    }
   } catch (error) {
-    console.error('STT Error:', error);
+    console.error('❌ STT ENDPOINT Error:', error);
     res.status(500).json({ 
-      error: 'STT configuration failed',
+      success: false,
+      error: 'STT processing failed',
       details: error instanceof Error ? error.message : 'Unknown error'
     });
   }

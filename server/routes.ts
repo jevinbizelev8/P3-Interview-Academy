@@ -1570,7 +1570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/practice', requireAuthWithBypass, practiceRouter);
   
   // Voice services routes
-  app.use('/api/voice', voiceServicesRouter);
+  app.use('/api/voice-services', voiceServicesRouter);
 
 
 
