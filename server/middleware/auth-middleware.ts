@@ -1,6 +1,6 @@
 import type { RequestHandler } from "express";
 import { storage } from "../storage";
-import { isAuthenticated } from "../replit-auth";
+import { requireAuth as simpleRequireAuth } from "../auth-simple";
 
 // Development flag - set to false for production
 const DEVELOPMENT_MODE = process.env.NODE_ENV === 'development';
@@ -22,8 +22,8 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     return next();
   }
 
-  // Use proper Replit authentication
-  return isAuthenticated(req, res, next);
+  // Use simple authentication system
+  return simpleRequireAuth(req, res, next);
 };
 
 /**
