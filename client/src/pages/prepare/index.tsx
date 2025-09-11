@@ -31,13 +31,15 @@ interface SessionConfig {
 export default function Prepare() {
   const [currentView, setCurrentView] = useState<'landing' | 'dashboard' | 'setup' | 'session'>('landing');
   const [currentSession, setCurrentSession] = useState<any>(null);
+  const [sessionConfig, setSessionConfig] = useState<any>(null);
 
   const handleStartNewSession = () => {
     setCurrentView('setup');
   };
 
   const handleCreateSession = (config: SessionConfig) => {
-    // This will be handled by the PrepareAIInterface component
+    // Store the session configuration to pass to PrepareAIInterface
+    setSessionConfig(config);
     setCurrentView('session');
   };
 
@@ -59,6 +61,7 @@ export default function Prepare() {
           <PrepareAIInterface 
             onSessionChange={setCurrentSession}
             initialSession={currentSession}
+            sessionConfig={sessionConfig}
           />
         </div>
       </>

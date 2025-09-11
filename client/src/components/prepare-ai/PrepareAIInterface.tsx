@@ -36,11 +36,11 @@ interface Message {
 }
 
 interface SessionData {
-  sessionId: string;
-  jobTitle: string;
+  id: string;
+  jobPosition: string;
   companyName: string;
   interviewStage: string;
-  language: string;
+  preferredLanguage: string;
   voiceEnabled: boolean;
   currentQuestionId?: string;
 }
@@ -48,11 +48,13 @@ interface SessionData {
 interface PrepareAIInterfaceProps {
   initialSession?: Partial<SessionData>;
   onSessionChange?: (session: SessionData) => void;
+  sessionConfig?: any;
 }
 
 export default function PrepareAIInterface({ 
   initialSession, 
-  onSessionChange 
+  onSessionChange,
+  sessionConfig
 }: PrepareAIInterfaceProps) {
   // Core state
   const [session, setSession] = useState<SessionData | null>(null);
@@ -79,8 +81,8 @@ export default function PrepareAIInterface({
   useEffect(() => {
     if (!session) return;
 
-    const socket = io('ws://localhost:3000', {
-      query: { sessionId: session.sessionId }
+    const socket = io('ws://localhost:3001', {
+      query: { sessionId: session.id }
     });
 
     socketRef.current = socket;
@@ -163,27 +165,36 @@ export default function PrepareAIInterface({
   const createSession = async (sessionData: Partial<SessionData>) => {
     setIsLoading(true);
     try {
+      // Use sessionConfig if available, otherwise fall back to sessionData or defaults
+      const config = sessionConfig || sessionData;
+      
       const response = await fetch('/api/prepare-ai/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          jobTitle: sessionData.jobTitle || 'Software Engineer',
-          companyName: sessionData.companyName || 'Tech Company',
-          interviewStage: sessionData.interviewStage || 'behavioral',
-          language: sessionData.language || 'en',
-          voiceEnabled: sessionData.voiceEnabled ?? true
+          jobPosition: config.jobPosition || config.jobTitle || 'Software Engineer',
+          companyName: config.companyName || 'Tech Company',
+          interviewStage: config.interviewStage || 'phone-screening',
+          experienceLevel: config.experienceLevel || 'intermediate',
+          preferredLanguage: config.preferredLanguage || config.language || 'en',
+          voiceEnabled: config.voiceEnabled ?? true,
+          speechRate: config.speechRate || '1.0',
+          difficultyLevel: config.difficultyLevel || 'intermediate',
+          focusAreas: config.focusAreas || ['behavioral', 'situational'],
+          questionCategories: config.questionCategories || ['general']
         })
       });
 
       if (!response.ok) throw new Error('Failed to create session');
       
-      const newSession = await response.json();
+      const result = await response.json();
+      const newSession = result.data || result; // Handle both wrapped and unwrapped responses
       setSession(newSession);
       setSessionStatus('active');
       onSessionChange?.(newSession);
 
       // Generate first question
-      await generateFirstQuestion(newSession.sessionId);
+      await generateFirstQuestion(newSession.id);
     } catch (error) {
       console.error('Error creating session:', error);
     } finally {
@@ -214,7 +225,7 @@ export default function PrepareAIInterface({
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = speechRate;
-    utterance.lang = session?.language === 'en' ? 'en-US' : session?.language || 'en-US';
+    utterance.lang = session?.preferredLanguage === 'en' ? 'en-US' : session?.preferredLanguage || 'en-US';
     
     if (selectedVoice) {
       const voices = speechSynthesis.current.getVoices();
@@ -275,15 +286,15 @@ export default function PrepareAIInterface({
 
   // Process voice response
   const processVoiceResponse = async (audioBlob: Blob) => {
-    if (!session?.sessionId) return;
+    if (!session?.id) return;
 
     setIsLoading(true);
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob);
-      formData.append('sessionId', session.sessionId);
+      formData.append('sessionId', session.id);
 
-      const response = await fetch(`/api/prepare-ai/sessions/${session.sessionId}/respond`, {
+      const response = await fetch(`/api/prepare-ai/sessions/${session.id}/respond`, {
         method: 'POST',
         body: formData
       });
@@ -312,7 +323,7 @@ export default function PrepareAIInterface({
 
   // Text response submission
   const submitTextResponse = async () => {
-    if (!currentResponse.trim() || !session?.sessionId) return;
+    if (!currentResponse.trim() || !session?.id) return;
 
     const responseMessage: Message = {
       id: crypto.randomUUID(),
@@ -326,7 +337,7 @@ export default function PrepareAIInterface({
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/prepare-ai/sessions/${session.sessionId}/respond`, {
+      const response = await fetch(`/api/prepare-ai/sessions/${session.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -350,13 +361,20 @@ export default function PrepareAIInterface({
     const defaultSession = {
       jobTitle: 'Software Engineer',
       companyName: 'Tech Company', 
-      interviewStage: 'behavioral',
+      interviewStage: 'phone-screening',
       language: 'en',
       voiceEnabled: true,
       ...initialSession
     };
     createSession(defaultSession);
   };
+
+  // Auto-start session if sessionConfig is provided
+  useEffect(() => {
+    if (sessionConfig && !session) {
+      createSession({});
+    }
+  }, [sessionConfig]);
 
   // Restart session
   const handleRestartSession = () => {
@@ -406,7 +424,7 @@ export default function PrepareAIInterface({
                 <Brain className="w-6 h-6 text-white" />
               </div>
               <div>
-                <CardTitle className="text-xl">{session.jobTitle}</CardTitle>
+                <CardTitle className="text-xl">{session.jobPosition}</CardTitle>
                 <p className="text-gray-600">{session.companyName} • {session.interviewStage}</p>
               </div>
             </div>

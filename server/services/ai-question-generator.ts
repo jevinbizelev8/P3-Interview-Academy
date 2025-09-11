@@ -1,7 +1,8 @@
 // AI Question Generator Service
-// Generates contextual interview questions using SeaLion AI for ASEAN cultural awareness
+// Generates contextual interview questions using OpenAI and SeaLion AI for ASEAN cultural awareness
 
 import { SeaLionService } from "./sealion.js";
+import { getOpenAIService, OpenAIService } from "./openai-service.js";
 
 interface QuestionGenerationRequest {
   jobPosition: string;
@@ -39,10 +40,16 @@ interface QuestionTemplate {
 
 export class AIQuestionGenerator {
   private seaLionService: SeaLionService;
+  private openaiService: OpenAIService;
   private questionTemplates: QuestionTemplate[];
 
   constructor() {
     this.seaLionService = new SeaLionService();
+    try {
+      this.openaiService = getOpenAIService();
+    } catch (error) {
+      console.warn("⚠️ OpenAI service not available, will use SeaLion and fallback only:", error instanceof Error ? error.message : 'Unknown error');
+    }
     this.questionTemplates = this.initializeQuestionTemplates();
   }
 
@@ -53,13 +60,23 @@ export class AIQuestionGenerator {
     try {
       console.log(`🎯 Generating question ${request.questionNumber} for ${request.jobPosition}`);
 
-      // Try SeaLion AI first for ASEAN languages and cultural context
+      // Try OpenAI first (prioritized as requested)
+      if (this.openaiService) {
+        try {
+          const openaiQuestion = await this.generateWithOpenAI(request);
+          if (openaiQuestion) return openaiQuestion;
+        } catch (error) {
+          console.warn("⚠️ OpenAI generation failed, trying SeaLion:", error instanceof Error ? error.message : 'Unknown error');
+        }
+      }
+
+      // Try SeaLion AI second for ASEAN languages and cultural context
       if (this.shouldUseSeaLion(request.preferredLanguage)) {
         try {
           const seaLionQuestion = await this.generateWithSeaLion(request);
           if (seaLionQuestion) return seaLionQuestion;
         } catch (error) {
-          console.warn("⚠️ SeaLion generation failed, falling back:", error instanceof Error ? error.message : 'Unknown error');
+          console.warn("⚠️ SeaLion generation failed, falling back to templates:", error instanceof Error ? error.message : 'Unknown error');
         }
       }
 
@@ -69,6 +86,27 @@ export class AIQuestionGenerator {
     } catch (error) {
       console.error("❌ Error generating question:", error);
       throw new Error(`Failed to generate question: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Generate question using OpenAI
+   */
+  private async generateWithOpenAI(request: QuestionGenerationRequest): Promise<GeneratedQuestion | null> {
+    try {
+      const prompt = this.buildOpenAIPrompt(request);
+      
+      const response = await this.openaiService.generateResponse({
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: 1000,
+        temperature: 0.7
+      });
+
+      return this.parseOpenAIResponse(response, request);
+
+    } catch (error) {
+      console.error("❌ OpenAI generation error:", error);
+      return null;
     }
   }
 
@@ -91,6 +129,50 @@ export class AIQuestionGenerator {
       console.error("❌ SeaLion generation error:", error);
       return null;
     }
+  }
+
+  /**
+   * Build OpenAI prompt for question generation  
+   */
+  private buildOpenAIPrompt(request: QuestionGenerationRequest): string {
+    const culturalContext = this.getCulturalContext(request.preferredLanguage);
+    const adaptiveContext = this.getAdaptiveContext(request);
+
+    return `You are an expert AI interview coach with deep knowledge of hiring practices and interview strategies. Generate a high-quality, culturally-appropriate interview question.
+
+Context:
+- Job Position: ${request.jobPosition}
+- Company: ${request.companyName || 'Tech company'}
+- Interview Stage: ${request.interviewStage}
+- Experience Level: ${request.experienceLevel}
+- Language: ${request.preferredLanguage}
+- Question Number: ${request.questionNumber}
+- Focus Areas: ${request.focusAreas.join(', ')}
+- Categories: ${request.questionCategories.join(', ')}
+- Difficulty: ${request.difficultyLevel}
+
+${culturalContext}
+${adaptiveContext}
+
+Requirements:
+1. Generate ONE excellent interview question for ${request.jobPosition}
+2. Make it culturally appropriate for ${this.getLanguageName(request.preferredLanguage)} speakers
+3. Include STAR method guidance if behavioral question
+4. Translate to ${request.preferredLanguage} if not English
+5. Specify expected answer time (60-300 seconds)
+6. Provide cultural context explanation
+
+Response Format (JSON only, no other text):
+{
+  "questionText": "English question text",
+  "questionTextTranslated": "Translated question (if applicable)",
+  "questionCategory": "leadership|problem-solving|teamwork|technical|cultural",
+  "questionType": "behavioral|situational|technical|cultural",
+  "difficultyLevel": "beginner|intermediate|advanced",
+  "expectedAnswerTime": 180,
+  "culturalContext": "Brief cultural context explanation",
+  "starMethodRelevant": true|false
+}`;
   }
 
   /**
@@ -161,6 +243,37 @@ Response Format (JSON):
   }
 
   /**
+   * Parse OpenAI response
+   */
+  private parseOpenAIResponse(response: string, request: QuestionGenerationRequest): GeneratedQuestion {
+    try {
+      // Try to extract JSON from response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          questionText: parsed.questionText || 'Generated question not available',
+          questionTextTranslated: parsed.questionTextTranslated || parsed.questionText,
+          questionCategory: parsed.questionCategory || 'general',
+          questionType: parsed.questionType || 'behavioral',
+          difficultyLevel: parsed.difficultyLevel || request.difficultyLevel,
+          expectedAnswerTime: parsed.expectedAnswerTime || 180,
+          culturalContext: parsed.culturalContext || this.getCulturalContext(request.preferredLanguage),
+          starMethodRelevant: parsed.starMethodRelevant ?? true,
+          generatedBy: 'openai'
+        };
+      }
+
+      // Fallback parsing for non-JSON response
+      return this.parseTextResponse(response, request, 'openai');
+
+    } catch (error) {
+      console.warn("⚠️ Error parsing OpenAI response, using text fallback");
+      return this.parseTextResponse(response, request, 'openai');
+    }
+  }
+
+  /**
    * Parse SeaLion AI response
    */
   private parseSeaLionResponse(response: string, request: QuestionGenerationRequest): GeneratedQuestion {
@@ -194,7 +307,7 @@ Response Format (JSON):
   /**
    * Parse non-JSON text response
    */
-  private parseTextResponse(response: string, request: QuestionGenerationRequest): GeneratedQuestion {
+  private parseTextResponse(response: string, request: QuestionGenerationRequest, service: 'openai' | 'sealion' = 'sealion'): GeneratedQuestion {
     const lines = response.split('\n').filter(line => line.trim());
     const questionText = lines.find(line => line.includes('?')) || lines[0] || 'Generated question';
     
@@ -207,7 +320,7 @@ Response Format (JSON):
       expectedAnswerTime: 180,
       culturalContext: this.getCulturalContext(request.preferredLanguage),
       starMethodRelevant: true,
-      generatedBy: 'sealion'
+      generatedBy: service
     };
   }
 
