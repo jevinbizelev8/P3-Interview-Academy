@@ -18,14 +18,18 @@ import PrepareAIInterface from '@/components/prepare-ai/PrepareAIInterface';
 import SessionSetup from '@/components/prepare-ai/SessionSetup';
 import SessionDashboard from '@/components/prepare-ai/SessionDashboard';
 
-interface SessionConfig {
-  jobTitle: string;
-  companyName: string;
+// Backend API expects this format
+interface BackendSessionConfig {
+  jobPosition: string;
+  companyName?: string;
   interviewStage: string;
-  language: string;
+  experienceLevel: 'entry' | 'intermediate' | 'senior' | 'expert';
+  preferredLanguage: string;
   voiceEnabled: boolean;
-  difficulty?: 'beginner' | 'intermediate' | 'advanced';
-  industry?: string;
+  speechRate: string;
+  difficultyLevel: 'beginner' | 'intermediate' | 'advanced' | 'adaptive';
+  focusAreas: string[];
+  questionCategories: string[];
 }
 
 export default function Prepare() {
@@ -36,8 +40,9 @@ export default function Prepare() {
     setCurrentView('setup');
   };
 
-  const handleCreateSession = (config: SessionConfig) => {
-    // This will be handled by the PrepareAIInterface component
+  const handleCreateSession = (config: BackendSessionConfig) => {
+    // Store the session config and move to session view
+    setCurrentSession(config);
     setCurrentView('session');
   };
 
