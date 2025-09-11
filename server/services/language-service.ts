@@ -306,9 +306,6 @@ Return one of these language codes:
 - th (Thai)
 - vi (Vietnamese)
 - fil (Filipino)
-- my (Myanmar)
-- km (Khmer)
-- lo (Lao)
 - zh-sg (Chinese - Singapore)
 
 Return only the language code, nothing else.`;
@@ -383,9 +380,6 @@ Requirements:
       'th': 'Thailand',
       'vi': 'Vietnam',
       'fil': 'Philippines',
-      'my': 'Myanmar',
-      'km': 'Cambodia',
-      'lo': 'Laos',
       'zh-sg': 'Singapore'
     };
 
