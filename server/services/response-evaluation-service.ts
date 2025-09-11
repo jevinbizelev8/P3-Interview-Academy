@@ -2,6 +2,7 @@
 // Comprehensive AI-powered evaluation using official 9-criteria interview scoring rubric
 
 import { SeaLionService } from "./sealion.js";
+import { getOpenAIService, type OpenAIService } from './openai-service.js';
 
 interface EvaluationRequest {
   questionText: string;
@@ -56,10 +57,17 @@ interface EvaluationResult {
 
 export class ResponseEvaluationService {
   private seaLionService: SeaLionService;
+  private openaiService: OpenAIService | null;
   private starCriteria: Record<string, string>;
 
   constructor() {
     this.seaLionService = new SeaLionService();
+    try {
+      this.openaiService = getOpenAIService();
+    } catch (error) {
+      console.warn("⚠️ OpenAI service not available for evaluation, using SeaLion only:", error instanceof Error ? error.message : 'Unknown error');
+      this.openaiService = null;
+    }
     this.starCriteria = this.initializeStarCriteria();
   }
 
@@ -70,13 +78,23 @@ export class ResponseEvaluationService {
     try {
       console.log(`🎯 Evaluating response for ${request.questionCategory} question`);
 
-      // Try SeaLion AI first for ASEAN cultural context
+      // Try OpenAI first (prioritized as requested)
+      if (this.openaiService) {
+        try {
+          const openaiEvaluation = await this.evaluateWithOpenAI(request);
+          if (openaiEvaluation) return openaiEvaluation;
+        } catch (error) {
+          console.warn("⚠️ OpenAI evaluation failed, trying SeaLion:", error instanceof Error ? error.message : 'Unknown error');
+        }
+      }
+
+      // Try SeaLion AI as fallback for ASEAN cultural context
       if (this.shouldUseSeaLion(request.responseLanguage)) {
         try {
           const seaLionEvaluation = await this.evaluateWithSeaLion(request);
           if (seaLionEvaluation) return seaLionEvaluation;
         } catch (error) {
-          console.warn("⚠️ SeaLion evaluation failed, falling back:", error instanceof Error ? error.message : 'Unknown error');
+          console.warn("⚠️ SeaLion evaluation failed, falling back to rules:", error instanceof Error ? error.message : 'Unknown error');
         }
       }
 
@@ -332,6 +350,27 @@ export class ResponseEvaluationService {
   }
 
   /**
+   * Evaluate response using OpenAI with 9-criteria rubric
+   */
+  private async evaluateWithOpenAI(request: EvaluationRequest): Promise<EvaluationResult | null> {
+    try {
+      const prompt = this.buildEvaluationPrompt(request);
+      
+      const response = await this.openaiService!.generateResponse({
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: 2000, // Increased for comprehensive evaluation
+        temperature: 0.2  // Lower temperature for consistent scoring
+      });
+
+      return this.parseEvaluationResponse(response, request);
+
+    } catch (error) {
+      console.error("❌ OpenAI evaluation error:", error);
+      return null;
+    }
+  }
+
+  /**
    * Evaluate response using SeaLion AI with 9-criteria rubric
    */
   private async evaluateWithSeaLion(request: EvaluationRequest): Promise<EvaluationResult | null> {
@@ -473,6 +512,47 @@ STAR METHOD EVALUATION:
 - Action (1-5): Did they detail the steps they took?
 - Result (1-5): Did they quantify outcomes and impact?
 - Overall (1-5): How well structured and compelling was the STAR response?`;
+  }
+
+  /**
+   * Translate feedback strings to appropriate language
+   */
+  private translateFeedback(key: string, language: string): string {
+    const translations: Record<string, Record<string, string>> = {
+      'en': {
+        goodStructure: 'Good use of structured storytelling',
+        specificExamples: 'Included specific examples',
+        clearCommunication: 'Clear and concise communication',
+        lacksStructure: 'Response lacks clear structure',
+        useStarMethod: 'Use STAR method: Situation, Task, Action, Result',
+        limitedEvidence: 'Limited specific evidence provided',
+        includeMetrics: 'Include specific metrics, numbers, and measurable outcomes',
+        focusOnImpact: 'Focus more on the business impact and results achieved',
+        engagedQuestion: 'Engaged with the question',
+        moreDetailed: 'Could be more detailed',
+        structureResponse: 'Use the STAR method to structure responses',
+        includeOutcomes: 'Include specific metrics and outcomes',
+        connectToRole: 'Connect experience to role requirements'
+      },
+      'id': {
+        goodStructure: 'Penggunaan struktur cerita yang baik',
+        specificExamples: 'Menyertakan contoh spesifik',
+        clearCommunication: 'Komunikasi yang jelas dan ringkas',
+        lacksStructure: 'Respons kurang memiliki struktur yang jelas',
+        useStarMethod: 'Gunakan metode STAR: Situasi, Tugas, Aksi, Hasil',
+        limitedEvidence: 'Bukti spesifik yang diberikan terbatas',
+        includeMetrics: 'Sertakan metrik, angka, dan hasil yang dapat diukur secara spesifik',
+        focusOnImpact: 'Fokus lebih pada dampak bisnis dan hasil yang dicapai',
+        engagedQuestion: 'Merespon pertanyaan dengan baik',
+        moreDetailed: 'Bisa lebih detail',
+        structureResponse: 'Gunakan metode STAR untuk menyusun jawaban',
+        includeOutcomes: 'Sertakan metrik dan hasil yang spesifik',
+        connectToRole: 'Hubungkan pengalaman dengan persyaratan posisi'
+      }
+    };
+
+    const languageTranslations = translations[language] || translations['en'];
+    return languageTranslations[key] || translations['en'][key] || key;
   }
 
   /**
@@ -703,25 +783,25 @@ ASEAN BUSINESS CONTEXT:
       overallRating = 'Needs Improvement';
     }
     
-    // Generate targeted feedback
+    // Generate targeted feedback (language-aware)
     const strengths: string[] = [];
     const weaknesses: string[] = [];
     const suggestions: string[] = [];
     
-    if (starStructureScore >= 4) strengths.push('Good use of structured storytelling');
-    if (specificEvidenceScore >= 4) strengths.push('Included specific examples');
-    if (communicationScore >= 4) strengths.push('Clear and concise communication');
+    if (starStructureScore >= 4) strengths.push(this.translateFeedback('goodStructure', request.responseLanguage));
+    if (specificEvidenceScore >= 4) strengths.push(this.translateFeedback('specificExamples', request.responseLanguage));
+    if (communicationScore >= 4) strengths.push(this.translateFeedback('clearCommunication', request.responseLanguage));
     
     if (starStructureScore < 3) {
-      weaknesses.push('Response lacks clear structure');
-      suggestions.push('Use STAR method: Situation, Task, Action, Result');
+      weaknesses.push(this.translateFeedback('lacksStructure', request.responseLanguage));
+      suggestions.push(this.translateFeedback('useStarMethod', request.responseLanguage));
     }
     if (specificEvidenceScore < 3) {
-      weaknesses.push('Limited specific evidence provided');
-      suggestions.push('Include specific metrics, numbers, and measurable outcomes');
+      weaknesses.push(this.translateFeedback('limitedEvidence', request.responseLanguage));
+      suggestions.push(this.translateFeedback('includeMetrics', request.responseLanguage));
     }
     if (outcomeOrientedScore < 3) {
-      suggestions.push('Focus more on the business impact and results achieved');
+      suggestions.push(this.translateFeedback('focusOnImpact', request.responseLanguage));
     }
     
     // Legacy STAR scores for backward compatibility
@@ -734,12 +814,12 @@ ASEAN BUSINESS CONTEXT:
     };
     
     const detailedFeedback: DetailedFeedback = {
-      strengths: strengths.length > 0 ? strengths : ['Engaged with the question'],
-      weaknesses: weaknesses.length > 0 ? weaknesses : ['Could be more detailed'],
+      strengths: strengths.length > 0 ? strengths : [this.translateFeedback('engagedQuestion', request.responseLanguage)],
+      weaknesses: weaknesses.length > 0 ? weaknesses : [this.translateFeedback('moreDetailed', request.responseLanguage)],
       suggestions: suggestions.length > 0 ? suggestions : [
-        'Use the STAR method to structure responses',
-        'Include specific metrics and outcomes',
-        'Connect experience to role requirements'
+        this.translateFeedback('structureResponse', request.responseLanguage),
+        this.translateFeedback('includeOutcomes', request.responseLanguage),
+        this.translateFeedback('connectToRole', request.responseLanguage)
       ]
     };
     
