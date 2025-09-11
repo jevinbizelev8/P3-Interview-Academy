@@ -20,10 +20,6 @@ import {
   ArrowUp,
   ArrowDown,
   Activity,
-  CheckCircle,
-  Database,
-  Trash2,
-  AlertCircle,
   Lightbulb
 } from "lucide-react";
 import { 
@@ -88,9 +84,6 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
-  const [demoMessage, setDemoMessage] = useState("");
-  const [demoError, setDemoError] = useState("");
 
   // Fetch dashboard analytics data
   const { data: stats, isLoading } = useQuery({
@@ -101,55 +94,6 @@ export default function Dashboard() {
     },
   });
 
-  // Generate demo data
-  const handleGenerateDemoData = async () => {
-    setIsDemoLoading(true);
-    setDemoMessage("");
-    setDemoError("");
-
-    try {
-      const response = await apiRequest("POST", "/api/perform/generate-demo-data");
-      const result = await response.json();
-      
-      setDemoMessage(`✅ ${result.message}`);
-      
-      // Refetch dashboard data to show new demo data
-      queryClient.invalidateQueries({ queryKey: ["/api/perform/dashboard"] });
-      
-      // Clear message after 5 seconds
-      setTimeout(() => setDemoMessage(""), 5000);
-    } catch (error: any) {
-      setDemoError(`❌ Failed to generate demo data: ${error.message}`);
-      setTimeout(() => setDemoError(""), 5000);
-    } finally {
-      setIsDemoLoading(false);
-    }
-  };
-
-  // Clear demo data
-  const handleClearDemoData = async () => {
-    setIsDemoLoading(true);
-    setDemoMessage("");
-    setDemoError("");
-
-    try {
-      const response = await apiRequest("POST", "/api/perform/clear-demo-data");
-      const result = await response.json();
-      
-      setDemoMessage(`✅ ${result.message}`);
-      
-      // Refetch dashboard data to reflect cleared data
-      queryClient.invalidateQueries({ queryKey: ["/api/perform/dashboard"] });
-      
-      // Clear message after 5 seconds
-      setTimeout(() => setDemoMessage(""), 5000);
-    } catch (error: any) {
-      setDemoError(`❌ Failed to clear demo data: ${error.message}`);
-      setTimeout(() => setDemoError(""), 5000);
-    } finally {
-      setIsDemoLoading(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -224,79 +168,117 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Demo Data Controls */}
-      <Card className="mb-8 border-dashed border-2 border-gray-300 bg-gray-50">
+      {/* STAR Framework Guide */}
+      <Card className="mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
         <CardHeader>
           <CardTitle className="text-lg flex items-center">
-            <Database className="w-5 h-5 mr-2 text-blue-600" />
-            Demo Data Controls
+            <Star className="w-5 h-5 mr-2 text-blue-600" />
+            Understanding STAR Method Evaluation
           </CardTitle>
           <CardDescription>
-            Generate realistic demo data to see how analytics and scoring metrics are displayed
+            Learn how our AI coaches assess your interview responses using the proven STAR framework
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4 mb-4">
-            <Button 
-              onClick={handleGenerateDemoData}
-              disabled={isDemoLoading}
-              className="flex items-center"
-              variant="outline"
-            >
-              {isDemoLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Database className="w-4 h-4 mr-2" />
-                  Generate Demo Data
-                </>
-              )}
-            </Button>
-            
-            <Button 
-              onClick={handleClearDemoData}
-              disabled={isDemoLoading}
-              variant="outline"
-              className="flex items-center text-red-600 border-red-300 hover:bg-red-50"
-            >
-              {isDemoLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 mr-2"></div>
-                  Clearing...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Clear Demo Data
-                </>
-              )}
-            </Button>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* STAR Framework Explanation */}
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold text-gray-900 mb-3">The STAR Method</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-blue-700">S</span>
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Situation</div>
+                    <div className="text-xs text-gray-600">Set the context and background</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-green-700">T</span>
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Task</div>
+                    <div className="text-xs text-gray-600">Explain your responsibility or challenge</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-amber-700">A</span>
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Action</div>
+                    <div className="text-xs text-gray-600">Describe the specific steps you took</div>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-purple-700">R</span>
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm">Result</div>
+                    <div className="text-xs text-gray-600">Share the positive outcomes achieved</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Scoring Criteria */}
+            <div className="space-y-4">
+              <h3 className="text-base font-semibold text-gray-900 mb-3">Scoring Criteria (1-5 Scale)</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-2 bg-green-50 rounded-lg">
+                  <span className="text-sm font-medium">Excellent (4.5-5.0)</span>
+                  <Badge variant="outline" className="text-green-700 border-green-200">Outstanding</Badge>
+                </div>
+                <div className="text-xs text-gray-600 ml-2">
+                  Complete STAR structure with compelling details, quantified results, and clear impact
+                </div>
+                
+                <div className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                  <span className="text-sm font-medium">Good (3.5-4.4)</span>
+                  <Badge variant="outline" className="text-blue-700 border-blue-200">Strong</Badge>
+                </div>
+                <div className="text-xs text-gray-600 ml-2">
+                  Well-structured response covering most STAR elements with good examples
+                </div>
+                
+                <div className="flex items-center justify-between p-2 bg-yellow-50 rounded-lg">
+                  <span className="text-sm font-medium">Average (2.5-3.4)</span>
+                  <Badge variant="outline" className="text-yellow-700 border-yellow-200">Developing</Badge>
+                </div>
+                <div className="text-xs text-gray-600 ml-2">
+                  Basic structure present but missing key details or clear outcomes
+                </div>
+                
+                <div className="flex items-center justify-between p-2 bg-red-50 rounded-lg">
+                  <span className="text-sm font-medium">Needs Work (1.0-2.4)</span>
+                  <Badge variant="outline" className="text-red-700 border-red-200">Improving</Badge>
+                </div>
+                <div className="text-xs text-gray-600 ml-2">
+                  Incomplete structure, vague details, or unclear connection to question
+                </div>
+              </div>
+            </div>
           </div>
 
-          {demoMessage && (
-            <Alert className="border-green-200 bg-green-50">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                {demoMessage}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {demoError && (
-            <Alert className="border-red-200 bg-red-50" variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                {demoError}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="text-xs text-gray-500 mt-4">
-            <p><strong>Generate Demo Data:</strong> Creates 8-12 realistic interview sessions with scores, evaluations, and analytics over the last 3 months</p>
-            <p><strong>Clear Demo Data:</strong> Removes all demo sessions (identifies them by scenario ID prefix "demo-")</p>
+          <div className="mt-6 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+            <div className="flex items-start space-x-3">
+              <Lightbulb className="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <div className="text-sm font-medium text-indigo-900 mb-1">Pro Tip</div>
+                <div className="text-xs text-indigo-700">
+                  Our AI coaches provide real-time feedback on each STAR component, helping you improve your storytelling and achieve higher scores. 
+                  Practice with specific examples from your experience to build confidence and clarity.
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
