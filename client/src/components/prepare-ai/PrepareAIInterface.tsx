@@ -81,9 +81,17 @@ export default function PrepareAIInterface({
   const [hasJoinedSession, setHasJoinedSession] = useState(false);
   const [isGeneratingQuestion, setIsGeneratingQuestion] = useState(false);
 
-  // Feedback panel state
-  const [latestEvaluation, setLatestEvaluation] = useState<Message['evaluation'] | null>(null);
-  const [modelAnswer, setModelAnswer] = useState<string | null>(null);
+  // Feedback panel state - store history of evaluations per question
+  const [evaluationHistory, setEvaluationHistory] = useState<Array<{
+    questionId: string;
+    questionNumber: number;
+    starScore: number;
+    feedback: string;
+    strengths: string[];
+    improvements: string[];
+    modelAnswer: string;
+    timestamp: Date;
+  }>>([]);
 
   // Helper function to get language display name
   const getLanguageName = (code: string) => {
@@ -531,23 +539,26 @@ export default function PrepareAIInterface({
       // Process the evaluation results from backend
       if (result.success && result.data) {
         const evaluationData = result.data;
-        // Set evaluation state directly instead of adding to messages  
-        setLatestEvaluation({
+        // Add to evaluation history instead of replacing
+        const historyEntry = {
+          questionId: session.currentQuestionId || 'unknown',
+          questionNumber: messages.filter(m => m.type === 'question').length,
           starScore: evaluationData.starScores?.overall || 0,
           feedback: evaluationData.detailedFeedback?.weaknesses?.join('. ') || 'Your response shows engagement with the question.',
           strengths: evaluationData.detailedFeedback?.strengths || [],
-          improvements: evaluationData.detailedFeedback?.suggestions || evaluationData.detailedFeedback?.improvements || []
-        });
+          improvements: evaluationData.detailedFeedback?.suggestions || evaluationData.detailedFeedback?.improvements || [],
+          modelAnswer: evaluationData.modelAnswer || 'No model answer provided.',
+          timestamp: new Date()
+        };
         
-        // Set model answer state directly instead of adding to messages
-        if (evaluationData.modelAnswer) {
-          setModelAnswer(evaluationData.modelAnswer);
-        }
+        setEvaluationHistory(prev => [...prev, historyEntry]);
         
         // Generate next question after showing evaluation
         setTimeout(() => {
           generateNextQuestion();
         }, 2000);
+      } else {
+        console.log('❌ DEBUG: No evaluation data - result.success:', result.success, 'result.data:', !!result.data);
       }
       
       setCurrentResponse('');
@@ -587,18 +598,19 @@ export default function PrepareAIInterface({
       if (result.success && result.data) {
         const evaluationData = result.data;
         
-        // Set evaluation state directly instead of adding to messages
-        setLatestEvaluation({
+        // Add to evaluation history for voice responses too
+        const historyEntry = {
+          questionId: questionId,
+          questionNumber: messages.filter(m => m.type === 'question').length,
           starScore: evaluationData.starScores?.overall || 0,
           feedback: evaluationData.detailedFeedback?.weaknesses?.join('. ') || 'Your response shows engagement with the question.',
           strengths: evaluationData.detailedFeedback?.strengths || [],
-          improvements: evaluationData.detailedFeedback?.suggestions || evaluationData.detailedFeedback?.improvements || []
-        });
+          improvements: evaluationData.detailedFeedback?.suggestions || evaluationData.detailedFeedback?.improvements || [],
+          modelAnswer: evaluationData.modelAnswer || 'No model answer provided.',
+          timestamp: new Date()
+        };
         
-        // Set model answer state directly instead of adding to messages
-        if (evaluationData.modelAnswer) {
-          setModelAnswer(evaluationData.modelAnswer);
-        }
+        setEvaluationHistory(prev => [...prev, historyEntry]);
         
         // Generate next question after showing evaluation
         setTimeout(() => {
@@ -680,8 +692,7 @@ export default function PrepareAIInterface({
   const handleRestartSession = () => {
     setMessages([]);
     setCurrentResponse('');
-    setLatestEvaluation(null);
-    setModelAnswer(null);
+    setEvaluationHistory([]);
     setSessionStatus('idle');
     setSession(null);
     setHasJoinedSession(false);
@@ -875,46 +886,47 @@ export default function PrepareAIInterface({
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[350px]">
-                {!latestEvaluation && !modelAnswer ? (
+                {evaluationHistory.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p className="text-sm">{getFeedbackLabels(session?.preferredLanguage || 'en').noFeedback}</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
-                    {/* STAR Score */}
-                    {latestEvaluation && (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-sm">{getFeedbackLabels(session?.preferredLanguage || 'en').starScore}</span>
+                  <div className="space-y-6">
+                    {evaluationHistory.slice().reverse().map((evaluation, index) => (
+                      <div key={evaluation.questionId} className="border-b pb-4 last:border-b-0">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm text-gray-600">
+                            Question {evaluation.questionNumber}
+                          </span>
                           <Badge 
-                            variant={latestEvaluation.starScore >= 4 ? 'default' : latestEvaluation.starScore >= 3 ? 'secondary' : 'destructive'}
-                            data-testid="score-star"
+                            variant={evaluation.starScore >= 4 ? 'default' : evaluation.starScore >= 3 ? 'secondary' : 'destructive'}
+                            data-testid={`score-star-${index}`}
                           >
-                            {latestEvaluation.starScore}/5
+                            {evaluation.starScore}/5
                           </Badge>
                         </div>
                         
                         {/* Feedback Text */}
-                        <div>
-                          <p className="text-sm text-gray-700 leading-relaxed" data-testid="text-feedback">
-                            {latestEvaluation.feedback}
-                          </p>
-                        </div>
-
-                        <Separator />
+                        {evaluation.feedback && (
+                          <div className="mb-3">
+                            <p className="text-sm text-gray-700 leading-relaxed" data-testid={`text-feedback-${index}`}>
+                              {evaluation.feedback}
+                            </p>
+                          </div>
+                        )}
                         
                         {/* Strengths */}
-                        {latestEvaluation.strengths.length > 0 && (
-                          <div>
-                            <div className="flex items-center mb-2">
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
-                              <p className="text-sm font-medium text-green-700">
+                        {evaluation.strengths.length > 0 && (
+                          <div className="mb-3">
+                            <div className="flex items-center mb-1">
+                              <CheckCircle className="w-3 h-3 mr-1 text-green-600" />
+                              <p className="text-xs font-medium text-green-700">
                                 {getFeedbackLabels(session?.preferredLanguage || 'en').strengths}
                               </p>
                             </div>
-                            <ul className="text-sm text-green-600 space-y-1 ml-6" data-testid="list-strengths">
-                              {latestEvaluation.strengths.map((strength, i) => (
+                            <ul className="text-xs text-green-600 space-y-1 ml-4" data-testid={`list-strengths-${index}`}>
+                              {evaluation.strengths.map((strength, i) => (
                                 <li key={i}>• {strength}</li>
                               ))}
                             </ul>
@@ -922,43 +934,40 @@ export default function PrepareAIInterface({
                         )}
                         
                         {/* Improvements */}
-                        {latestEvaluation.improvements.length > 0 && (
-                          <div>
-                            <div className="flex items-center mb-2">
-                              <AlertCircle className="w-4 h-4 mr-2 text-amber-600" />
-                              <p className="text-sm font-medium text-amber-700">
+                        {evaluation.improvements.length > 0 && (
+                          <div className="mb-3">
+                            <div className="flex items-center mb-1">
+                              <AlertCircle className="w-3 h-3 mr-1 text-amber-600" />
+                              <p className="text-xs font-medium text-amber-700">
                                 {getFeedbackLabels(session?.preferredLanguage || 'en').improvements}
                               </p>
                             </div>
-                            <ul className="text-sm text-amber-600 space-y-1 ml-6" data-testid="list-improvements">
-                              {latestEvaluation.improvements.map((improvement, i) => (
+                            <ul className="text-xs text-amber-600 space-y-1 ml-4" data-testid={`list-improvements-${index}`}>
+                              {evaluation.improvements.map((improvement, i) => (
                                 <li key={i}>• {improvement}</li>
                               ))}
                             </ul>
                           </div>
                         )}
+                        
+                        {/* Model Answer */}
+                        {evaluation.modelAnswer && (
+                          <div>
+                            <div className="flex items-center mb-1">
+                              <Brain className="w-3 h-3 mr-1 text-blue-600" />
+                              <p className="text-xs font-medium text-blue-700">
+                                {getFeedbackLabels(session?.preferredLanguage || 'en').modelAnswer}
+                              </p>
+                            </div>
+                            <div className="bg-blue-50 rounded p-2 border border-blue-200">
+                              <p className="text-xs text-blue-800 leading-relaxed" data-testid={`text-model-answer-${index}`}>
+                                {evaluation.modelAnswer}
+                              </p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                    {/* Model Answer */}
-                    {modelAnswer && (
-                      <>
-                        <Separator />
-                        <div>
-                          <div className="flex items-center mb-2">
-                            <Brain className="w-4 h-4 mr-2 text-blue-600" />
-                            <p className="text-sm font-medium text-blue-700">
-                              {getFeedbackLabels(session?.preferredLanguage || 'en').modelAnswer}
-                            </p>
-                          </div>
-                          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                            <p className="text-sm text-blue-800 leading-relaxed" data-testid="text-model-answer">
-                              {modelAnswer}
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                    ))}
                   </div>
                 )}
               </ScrollArea>
