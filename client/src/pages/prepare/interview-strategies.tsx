@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { BreadcrumbNavigation } from "@/components/prepare/breadcrumb-navigation";
 import { FooterNavigation } from "@/components/prepare/footer-navigation";
+import MainNav from '@/components/navigation/main-nav';
 import { 
   Target, 
   MessageSquare, 
@@ -19,6 +20,7 @@ export default function InterviewStrategies() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <MainNav currentModule="prepare" />
       <BreadcrumbNavigation currentPage="Interview Strategies" />
 
       {/* Header */}
