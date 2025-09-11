@@ -40,7 +40,7 @@ interface QuestionTemplate {
 
 export class AIQuestionGenerator {
   private seaLionService: SeaLionService;
-  private openaiService: OpenAIService;
+  private openaiService: OpenAIService | null;
   private questionTemplates: QuestionTemplate[];
 
   constructor() {
@@ -49,6 +49,7 @@ export class AIQuestionGenerator {
       this.openaiService = getOpenAIService();
     } catch (error) {
       console.warn("⚠️ OpenAI service not available, will use SeaLion and fallback only:", error instanceof Error ? error.message : 'Unknown error');
+      this.openaiService = null;
     }
     this.questionTemplates = this.initializeQuestionTemplates();
   }
@@ -331,7 +332,7 @@ Response Format (JSON):
     console.log('🔍 Extracting clean question from response:', response.substring(0, 200) + '...');
     
     // Remove thinking tags and content
-    let cleaned = response.replace(/<think>.*?<\/think>/gs, '').trim();
+    let cleaned = response.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
     
     // Look for quoted questions first (most reliable)
     const quotedQuestions = cleaned.match(/"([^"]*\?[^"]*)"/g);
