@@ -961,36 +961,99 @@ export default function PrepareAIInterface({
               </div>
             </div>
 
-            {/* Progress Tracking Row */}
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              <div className="flex items-center space-x-6">
-                {/* Progress Bar */}
-                <div className="flex items-center space-x-3 min-w-0 flex-1">
-                  <BarChart3 className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300" data-testid="text-progress-label">
-                        Progress: {getCurrentQuestionCount()} of {totalQuestionsLimit} questions
-                      </span>
-                      <span className="text-sm text-gray-500" data-testid="text-progress-percentage">
-                        {Math.round(getProgressPercentage())}%
-                      </span>
+            {/* Enhanced Progress Tracking Row */}
+            <div className="relative bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-700 rounded-xl p-6 border border-blue-100 dark:border-gray-600">
+              {/* Background Pattern */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 rounded-xl"></div>
+              
+              <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                {/* Progress Section - Left */}
+                <div className="md:col-span-2">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                      <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <Progress value={getProgressPercentage()} className="w-full" data-testid="progress-questions" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-200" data-testid="text-progress-label">
+                          Question {getCurrentQuestionCount()} of {totalQuestionsLimit}
+                        </h4>
+                        <div className="flex items-center space-x-3">
+                          <span className="text-2xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-progress-percentage">
+                            {Math.round(getProgressPercentage())}%
+                          </span>
+                          <div className="text-right">
+                            <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                              Complete
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="relative">
+                        <Progress 
+                          value={getProgressPercentage()} 
+                          className="w-full h-3 bg-white dark:bg-gray-600" 
+                          data-testid="progress-questions" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full opacity-20 pointer-events-none" 
+                             style={{ width: `${getProgressPercentage()}%` }}></div>
+                      </div>
+                      <div className="flex justify-between mt-2 text-xs text-gray-500">
+                        <span>Started</span>
+                        <span className="font-medium text-gray-600 dark:text-gray-400">
+                          {totalQuestionsLimit - getCurrentQuestionCount()} questions remaining
+                        </span>
+                        <span>Complete</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Session Timer */}
-                <div className="flex items-center space-x-2 flex-shrink-0">
-                  <Clock className="w-4 h-4 text-green-600" />
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300" data-testid="text-session-timer">
-                      {formatElapsedTime(elapsedTime)}
+                {/* Timer Section - Right */}
+                <div className="md:col-span-1">
+                  <div className="bg-white dark:bg-gray-700 rounded-lg p-4 shadow-sm border border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-2xl font-mono font-bold text-gray-800 dark:text-gray-200" data-testid="text-session-timer">
+                          {formatElapsedTime(elapsedTime)}
+                        </div>
+                        <div className="text-xs text-gray-500 uppercase tracking-wide font-medium">
+                          Session Time
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-gray-500">
-                      Session Time
+                    
+                    {/* Additional Stats */}
+                    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-600">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-gray-500">Avg per question</span>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">
+                          {getCurrentQuestionCount() > 0 
+                            ? formatElapsedTime(Math.round(elapsedTime / getCurrentQuestionCount()))
+                            : '--:--'}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Progress Milestone Indicators */}
+              <div className="mt-4 flex justify-center">
+                <div className="flex space-x-2">
+                  {Array.from({ length: Math.min(totalQuestionsLimit, 20) }, (_, i) => (
+                    <div
+                      key={i}
+                      className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+                        i < getCurrentQuestionCount()
+                          ? 'bg-blue-500 dark:bg-blue-400'
+                          : 'bg-gray-200 dark:bg-gray-600'
+                      }`}
+                    />
+                  ))}
                 </div>
               </div>
             </div>
