@@ -853,8 +853,8 @@ ASEAN BUSINESS CONTEXT:
   }
 
   private shouldUseSeaLion(language: string): boolean {
-    // Use SeaLion for ASEAN languages and cultural contexts
-    const aseanLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'bn', 'hi', 'zh', 'ta'];
+    // Use SeaLion for ASEAN languages, Chinese variants, and cultural contexts
+    const aseanLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'bn', 'hi', 'zh', 'zh-cn', 'zh-tw', 'zh-hk', 'zh-sg', 'ta'];
     return aseanLanguages.includes(language.toLowerCase());
   }
 

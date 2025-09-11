@@ -42,7 +42,7 @@ class EnhancedTTSService {
   private isSpeaking = false;
   private isPaused = false;
 
-  // ASEAN language configurations
+  // ASEAN+ language configurations (including Chinese)
   private readonly languageConfigs: LanguageConfig[] = [
     {
       code: 'en',
@@ -96,6 +96,33 @@ class EnhancedTTSService {
       flag: '🇵🇭',
       preferredVoices: ['Google Filipino', 'Microsoft Rosa - Filipino (Philippines)'],
       fallbackLanguages: ['en'],
+      rtl: false
+    },
+    {
+      code: 'zh-cn',
+      name: 'Simplified Chinese',
+      localName: '简体中文',
+      flag: '🇨🇳',
+      preferredVoices: ['Microsoft Yaoyao - Chinese (Simplified, PRC)', 'Google 普通话 (中国大陆)', 'Microsoft Kangkang - Chinese (Simplified, PRC)', 'Ting-Ting'],
+      fallbackLanguages: ['zh-tw', 'en'],
+      rtl: false
+    },
+    {
+      code: 'zh-tw',
+      name: 'Traditional Chinese',
+      localName: '繁體中文',
+      flag: '🇹🇼',
+      preferredVoices: ['Microsoft Zhiwei - Chinese (Traditional, Taiwan)', 'Google 國語 (台灣)', 'Microsoft Yating - Chinese (Traditional, Taiwan)', 'Mei-Jia'],
+      fallbackLanguages: ['zh-cn', 'en'],
+      rtl: false
+    },
+    {
+      code: 'zh-hk',
+      name: 'Chinese (Hong Kong)',
+      localName: '中文 (香港)',
+      flag: '🇭🇰',
+      preferredVoices: ['Microsoft Tracy - Chinese (Traditional, Hong Kong SAR)', 'Google 粵語 (香港)', 'Microsoft Danny - Chinese (Traditional, Hong Kong SAR)', 'Sin-ji'],
+      fallbackLanguages: ['zh-tw', 'zh-cn', 'en'],
       rtl: false
     },
   ];
@@ -366,6 +393,9 @@ class EnhancedTTSService {
       'th': 'สวัสดี! นี่คือการทดสอบระบบเสียงพูด',
       'vi': 'Xin chào! Đây là bài kiểm tra hệ thống chuyển văn bản thành giọng nói.',
       'tl': 'Kumusta! Ito ay pagsubok ng text-to-speech system.',
+      'zh-cn': '您好！这是语音合成系统的测试。',
+      'zh-tw': '您好！這是語音合成系統的測試。',
+      'zh-hk': '你好！呢個係語音合成系統嘅測試。',
     };
 
     const langCode = language.split('-')[0];
