@@ -424,6 +424,11 @@ SCORING GUIDELINES:
 - Provide specific evidence from the response for each score
 - Be constructive and culturally sensitive
 
+LANGUAGE REQUIREMENTS:
+- If the response language is NOT English (${request.responseLanguage}), provide ALL textual feedback (strengths, weaknesses, suggestions, modelAnswer, culturalRelevance) in ${request.responseLanguage}
+- Keep field names and structure labels in English for JSON parsing
+- Only the content values should be in the user's preferred language
+
 PROVIDE EVALUATION IN JSON FORMAT:
 {
   "relevanceScore": 1-5,
