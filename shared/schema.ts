@@ -207,6 +207,96 @@ export const aiEvaluationResults = pgTable("ai_evaluation_results", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// ===========================================
+// PRACTICE MODULE TABLES
+// ===========================================
+
+// Practice sessions for interactive practice interviews
+export const practiceSessions = pgTable("practice_sessions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  scenarioId: varchar("scenario_id").notNull(), // Reference to interview scenario
+  
+  // Session Configuration
+  jobPosition: varchar("job_position", { length: 200 }),
+  companyName: varchar("company_name", { length: 200 }),
+  interviewStage: varchar("interview_stage", { length: 100 }).notNull(),
+  difficultyLevel: varchar("difficulty_level", { length: 20 }).default("intermediate"),
+  preferredLanguage: varchar("preferred_language", { length: 10 }).default("en"),
+  
+  // Session State
+  status: varchar("status", { length: 20 }).default("active"), // active, completed, abandoned
+  currentQuestionNumber: integer("current_question_number").default(1),
+  totalQuestions: integer("total_questions").default(10),
+  
+  // Session Timing
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  lastActivityAt: timestamp("last_activity_at").defaultNow(),
+  totalDuration: integer("total_duration"), // in seconds
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Practice messages for conversation flow
+export const practiceMessages = pgTable("practice_messages", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").notNull().references(() => practiceSessions.id, { onDelete: "cascade" }),
+  
+  // Message Content
+  messageType: varchar("message_type", { length: 20 }).notNull(), // "ai_question", "user_response"
+  content: text("content").notNull(),
+  questionNumber: integer("question_number"),
+  
+  // Message Metadata
+  inputMethod: varchar("input_method", { length: 20 }).default("text"), // "text", "voice"
+  language: varchar("language", { length: 10 }).default("en"),
+  
+  // Timing
+  responseTime: integer("response_time"), // seconds for user responses
+  timestamp: timestamp("timestamp").defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Practice reports for end-of-session evaluation
+export const practiceReports = pgTable("practice_reports", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: uuid("session_id").notNull().references(() => practiceSessions.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  
+  // Overall Evaluation
+  overallScore: numeric("overall_score", { precision: 3, scale: 2 }),
+  
+  // STAR Method Scoring (1-5 scale)
+  situationScore: numeric("situation_score", { precision: 3, scale: 2 }),
+  taskScore: numeric("task_score", { precision: 3, scale: 2 }),
+  actionScore: numeric("action_score", { precision: 3, scale: 2 }),
+  resultScore: numeric("result_score", { precision: 3, scale: 2 }),
+  
+  // Additional Metrics
+  communicationScore: numeric("communication_score", { precision: 3, scale: 2 }),
+  relevanceScore: numeric("relevance_score", { precision: 3, scale: 2 }),
+  
+  // Qualitative Feedback
+  strengths: jsonb("strengths").default("[]"), // array of strings
+  weaknesses: jsonb("weaknesses").default("[]"), // array of strings
+  improvements: jsonb("improvements").default("[]"), // array of improvement suggestions
+  detailedFeedback: text("detailed_feedback"),
+  
+  // Performance Insights
+  keyInsights: jsonb("key_insights").default("[]"),
+  recommendedActions: jsonb("recommended_actions").default("[]"),
+  
+  // Report Metadata
+  evaluatedBy: varchar("evaluated_by", { length: 50 }).default("ai"), // "ai", "manual"
+  evaluationCompleted: boolean("evaluation_completed").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   createdScenarios: many(interviewScenarios),
@@ -1259,6 +1349,34 @@ export const aiPrepareAnalyticsRelations = relations(aiPrepareAnalytics, ({ one 
   }),
 }));
 
+// Practice module relations
+export const practiceSessionsRelations = relations(practiceSessions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [practiceSessions.userId],
+    references: [users.id],
+  }),
+  messages: many(practiceMessages),
+  report: one(practiceReports),
+}));
+
+export const practiceMessagesRelations = relations(practiceMessages, ({ one }) => ({
+  session: one(practiceSessions, {
+    fields: [practiceMessages.sessionId],
+    references: [practiceSessions.id],
+  }),
+}));
+
+export const practiceReportsRelations = relations(practiceReports, ({ one }) => ({
+  session: one(practiceSessions, {
+    fields: [practiceReports.sessionId],
+    references: [practiceSessions.id],
+  }),
+  user: one(users, {
+    fields: [practiceReports.userId],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas for AI Prepare Module
 export const insertAiPrepareSessionSchema = createInsertSchema(aiPrepareSessions).omit({
   id: true,
@@ -1278,6 +1396,24 @@ export const insertAiPrepareResponseSchema = createInsertSchema(aiPrepareRespons
 });
 
 export const insertAiPrepareAnalyticsSchema = createInsertSchema(aiPrepareAnalytics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Insert schemas for Practice Module
+export const insertPracticeSessionSchema = createInsertSchema(practiceSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPracticeMessageSchema = createInsertSchema(practiceMessages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPracticeReportSchema = createInsertSchema(practiceReports).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -1317,6 +1453,33 @@ export type AiPrepareSessionProgress = {
   strengthAreas: string[];
   improvementAreas: string[];
 };
+
+// Types for Practice Module
+export type PracticeSession = typeof practiceSessions.$inferSelect;
+export type InsertPracticeSession = z.infer<typeof insertPracticeSessionSchema>;
+export type PracticeMessage = typeof practiceMessages.$inferSelect;
+export type InsertPracticeMessage = z.infer<typeof insertPracticeMessageSchema>;
+export type PracticeReport = typeof practiceReports.$inferSelect;
+export type InsertPracticeReport = z.infer<typeof insertPracticeReportSchema>;
+
+// Extended types for API responses
+export type PracticeSessionWithMessages = PracticeSession & {
+  messages: PracticeMessage[];
+  report?: PracticeReport;
+};
+
+export type PracticeSessionOverview = {
+  totalSessions: number;
+  completedSessions: number;
+  averageScore: number;
+  recentSessions: PracticeSession[];
+  improvementTrends: {
+    category: string;
+    trend: 'improving' | 'declining' | 'stable';
+    score: number;
+  }[];
+};
+
 
 // Voice service types
 export type VoiceInputMethod = 'text' | 'voice' | 'hybrid';

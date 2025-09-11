@@ -23,6 +23,7 @@ import { errorLogger, logAPIError } from "./services/error-logger";
 // import { // coachingRouter } from "./routes/coaching"; // QUARANTINED
 // import { coachingEngineService } from "./services/coaching-engine-service"; // QUARANTINED
 import { prepareAIRouter } from "./routes/prepare-ai";
+import practiceRouter from "./routes/practice";
 import voiceServicesRouter from "./routes/voice-services-mvp";
 import testEndpoints from "./test-endpoints";
 
@@ -2159,6 +2160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ================================
   
   app.use('/api/prepare-ai', requireAuthWithBypass, prepareAIRouter);
+  app.use('/api/practice-sessions', requireAuthWithBypass, practiceRouter);
   
   // Voice services routes
   app.use('/api/voice', voiceServicesRouter);
@@ -2350,7 +2352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { language } = req.query;
       
-      const voices = getBrowserVoices(language || 'en');
+      const voices = getBrowserVoices((language as string) || 'en');
       
       res.json({
         success: true,
@@ -2369,8 +2371,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Helper functions
-  function getBrowserVoices(language) {
-    const voiceMap = {
+  function getBrowserVoices(language: string): string[] {
+    const voiceMap: Record<string, string[]> = {
       'en': ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop', 'Samantha'],
       'ms': ['Google Bahasa Malaysia', 'Microsoft Rizwan Desktop'],
       'id': ['Google Bahasa Indonesia', 'Microsoft Andika Desktop'],
@@ -2382,7 +2384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return voiceMap[language] || ['Default Voice'];
   }
 
-  function getSupportedSTTLanguages() {
+  function getSupportedSTTLanguages(): string[] {
     return [
       'en-US', 'en-GB', 'en-AU', 'en-CA', 'en-IN',
       'ms-MY', 'id-ID', 'th-TH', 'vi-VN', 'fil-PH',
@@ -2390,7 +2392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ];
   }
 
-  function estimateDuration(text) {
+  function estimateDuration(text: string): number {
     // Rough estimate: 150 words per minute
     const words = text.split(' ').length;
     return Math.ceil((words / 150) * 60);
@@ -2613,7 +2615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { language } = req.query;
       
-      const voices = getBrowserVoices(language || 'en');
+      const voices = getBrowserVoices((language as string) || 'en');
       
       res.json({
         success: true,
@@ -2631,34 +2633,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper functions
-  function getBrowserVoices(language) {
-    const voiceMap = {
-      'en': ['Google US English', 'Microsoft David Desktop', 'Microsoft Zira Desktop', 'Samantha'],
-      'ms': ['Google Bahasa Malaysia', 'Microsoft Rizwan Desktop'],
-      'id': ['Google Bahasa Indonesia', 'Microsoft Andika Desktop'],
-      'th': ['Google ไทย', 'Microsoft Pattara Desktop'],
-      'vi': ['Google Tiếng Việt', 'Microsoft An Desktop'],
-      'fil': ['Google Filipino', 'Microsoft Angelo Desktop'],
-      'zh-sg': ['Google 中文', 'Microsoft Huihui Desktop']
-    };
-    return voiceMap[language] || ['Default Voice'];
-  }
-
-  function getSupportedSTTLanguages() {
-    return [
-      'en-US', 'en-GB', 'en-AU', 'en-CA', 'en-IN',
-      'ms-MY', 'id-ID', 'th-TH', 'vi-VN', 'fil-PH',
-      'zh-CN', 'zh-TW', 'zh-HK', 'ja-JP', 'ko-KR'
-    ];
-  }
-
-  function estimateDuration(text) {
-    // Rough estimate: 150 words per minute
-    const words = text.split(' ').length;
-    return Math.ceil((words / 150) * 60);
-  }
-  
   // ================================
   // END DIRECT VOICE SERVICES ROUTES
   // ================================
