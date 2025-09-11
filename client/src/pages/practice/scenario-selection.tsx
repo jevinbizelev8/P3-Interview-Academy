@@ -5,7 +5,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import ScenarioCard from "@/components/practice/scenario-card";
-import ProgressTracker from "@/components/practice/progress-tracker";
 import { Clock, Eye, Globe, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
@@ -148,7 +147,6 @@ export default function ScenarioSelection() {
 
   return (
     <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <ProgressTracker currentStep="practice" />
 
       <div className="space-y-6">
         <Card>
