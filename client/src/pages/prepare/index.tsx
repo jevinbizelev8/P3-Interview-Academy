@@ -6,6 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Bot, Brain, Mic, Globe, Zap, CheckCircle, Play, BarChart3 } from 'lucide-react';
 
+// Import generated images
+import studentAICoaching from '@assets/generated_images/Student_AI_interview_coaching_bbfdc2fa.png';
+import learningPathway from '@assets/generated_images/Three_module_learning_pathway_3e9c7ef9.png';
+import preparationSteps from '@assets/generated_images/Interview_preparation_steps_guide_19dc5895.png';
+
 // AI Prepare Components
 import PrepareAIInterface from '@/components/prepare-ai/PrepareAIInterface';
 import SessionSetup from '@/components/prepare-ai/SessionSetup';
@@ -235,154 +240,154 @@ export default function Prepare() {
           </Card>
         </div>
 
-        {/* Implementation Status */}
-        <Card className="border-2 border-green-200 bg-green-50">
+        {/* Success Guide for Students */}
+        <Card className="border-2 border-blue-200 bg-gradient-to-r from-blue-50 to-purple-50">
           <CardHeader>
-            <CardTitle className="text-2xl text-center text-green-800">
-              🎉 Phase 3: Frontend Interface Complete!
+            <CardTitle className="text-2xl text-center text-blue-800">
+              🎯 Master Your Interview Skills with AI Coaching
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center">
-            <div className="space-y-4">
-              <p className="text-green-700 text-lg">
-                The complete AI-powered interview preparation system is now ready! 
-                Backend services, WebSocket integration, and frontend components are all operational.
+            <div className="space-y-6">
+              <p className="text-blue-700 text-lg">
+                Transform your interview confidence with personalized AI coaching designed for students and job seekers.
+                Practice anytime, get instant feedback, and land your dream job!
               </p>
               
-              <div className="grid md:grid-cols-2 gap-4 my-6">
-                <div className="bg-white p-4 rounded-lg shadow">
-                  <h4 className="font-semibold text-green-800 mb-2">✅ Backend (Phase 2)</h4>
-                  <ul className="text-sm text-green-700 space-y-1 text-left">
-                    <li>• PrepareAIService (session orchestration)</li>
-                    <li>• AIQuestionGenerator (SeaLion integration)</li>
-                    <li>• ResponseEvaluationService (STAR scoring)</li>
-                    <li>• WebSocket service (real-time communication)</li>
-                    <li>• FreeVoiceService (voice processing)</li>
-                    <li>• API routes (/api/prepare-ai/*)</li>
+              <div className="my-8">
+                <img 
+                  src={studentAICoaching} 
+                  alt="Student practicing with AI coach"
+                  className="w-full max-w-2xl mx-auto rounded-lg shadow-lg"
+                />
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-6 my-8">
+                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-500">
+                  <h4 className="font-bold text-green-800 mb-3 text-lg">✨ What You'll Get</h4>
+                  <ul className="text-sm text-gray-700 space-y-2 text-left">
+                    <li className="flex items-center"><span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>Real-time feedback on your answers</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>STAR method coaching & scoring</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>Voice practice with speech recognition</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>Personalized improvement suggestions</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>Progress tracking & analytics</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>Multi-language support (10+ languages)</li>
                   </ul>
                 </div>
                 
-                <div className="bg-white p-4 rounded-lg shadow">
-                  <h4 className="font-semibold text-green-800 mb-2">✅ Frontend (Phase 3)</h4>
-                  <ul className="text-sm text-green-700 space-y-1 text-left">
-                    <li>• PrepareAIInterface component</li>
-                    <li>• SessionSetup with job/company/language</li>
-                    <li>• VoiceControls & ChatInterface</li>
-                    <li>• SessionDashboard with analytics</li>
-                    <li>• WebSocket client integration</li>
-                    <li>• Custom React hooks (usePrepareAI)</li>
+                <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-purple-500">
+                  <h4 className="font-bold text-purple-800 mb-3 text-lg">🚀 Perfect For</h4>
+                  <ul className="text-sm text-gray-700 space-y-2 text-left">
+                    <li className="flex items-center"><span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>University students seeking internships</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>Fresh graduates entering job market</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>Career changers and professionals</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>Anyone wanting to improve interview skills</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>Non-native speakers practicing in English</li>
+                    <li className="flex items-center"><span className="w-2 h-2 bg-purple-500 rounded-full mr-3"></span>Students preparing for competitive roles</li>
                   </ul>
                 </div>
               </div>
 
-              <div className="bg-blue-100 p-4 rounded-lg">
-                <p className="text-blue-800 font-medium">
-                  🚀 System Ready: Full AI interview preparation platform
+              <div className="bg-gradient-to-r from-green-400 to-blue-500 text-white p-6 rounded-lg">
+                <p className="font-bold text-lg mb-2">
+                  🎉 Ready to Start Your Journey to Interview Success?
                 </p>
-                <p className="text-blue-700 mt-2">
-                  Voice-enabled AI coaching, real-time STAR evaluation, multi-language support, 
-                  session management, and comprehensive analytics - all components integrated and functional.
+                <p className="text-green-50">
+                  Join thousands of students and job seekers who've improved their interview confidence with our AI coach.
+                  Start practicing today and see immediate improvements in your communication skills!
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Technical Architecture */}
-        <Card className="mt-8 bg-gray-50">
+        {/* How to Use Guide */}
+        <Card className="mt-8 bg-gradient-to-br from-indigo-50 to-blue-50">
           <CardHeader>
-            <CardTitle className="text-center">🏗️ Technical Architecture</CardTitle>
+            <CardTitle className="text-center text-indigo-800">📝 How to Get Started: Your Path to Interview Success</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid md:grid-cols-3 gap-6 text-sm">
+            <div className="grid lg:grid-cols-2 gap-8 items-center mb-8">
               <div>
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <Brain className="w-4 h-4 mr-2" />
-                  AI Services
-                </h4>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    SeaLion LLM Integration
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    Dynamic Question Generation
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    STAR Method Evaluation
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    10 ASEAN Languages
-                  </li>
-                </ul>
+                <img 
+                  src={preparationSteps} 
+                  alt="Step-by-step interview preparation guide"
+                  className="w-full rounded-lg shadow-lg"
+                />
               </div>
-              
-              <div>
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <Mic className="w-4 h-4 mr-2" />
-                  Voice Features
-                </h4>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    Web Speech API
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    Real-time Transcription
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    TTS Question Delivery
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    Audio Level Monitoring
-                  </li>
-                </ul>
-              </div>
-              
-              <div>
-                <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                  <Zap className="w-4 h-4 mr-2" />
-                  Real-time Features
-                </h4>
-                <ul className="space-y-2 text-gray-600">
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    WebSocket Communication
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    Instant AI Feedback
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    Session Progress Sync
-                  </li>
-                  <li className="flex items-center">
-                    <CheckCircle className="w-3 h-3 mr-2 text-green-500" />
-                    Auto-reconnection
-                  </li>
-                </ul>
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-sm">1</div>
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-2">Set Your Interview Goals</h4>
+                    <p className="text-gray-600 text-sm">Choose your target job role, company, and interview type. Our AI will customize questions specifically for your career path.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-sm">2</div>
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-2">Practice with AI Coach</h4>
+                    <p className="text-gray-600 text-sm">Answer practice questions using voice or text. Get real-time feedback on your communication style and content quality.</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center font-bold text-sm">3</div>
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-2">Review & Improve</h4>
+                    <p className="text-gray-600 text-sm">Study detailed feedback, track your progress, and focus on areas needing improvement. Practice until you feel confident!</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-4">
+                  <div className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm">4</div>
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-2">Ace Your Real Interview</h4>
+                    <p className="text-gray-600 text-sm">Apply your improved skills in actual interviews with confidence. Use STAR method techniques you've mastered here!</p>
+                  </div>
+                </div>
               </div>
             </div>
             
-            <div className="text-center mt-6 pt-4 border-t">
-              <p className="text-gray-600 mb-2">
-                <strong>Ready to use:</strong> Complete AI-powered interview preparation system
+            <div className="bg-white p-6 rounded-lg shadow-inner border">
+              <h4 className="text-lg font-bold text-center text-gray-800 mb-4">🎆 Learning Pathway Overview</h4>
+              <img 
+                src={learningPathway} 
+                alt="Three module learning pathway"
+                className="w-full max-w-4xl mx-auto rounded-lg"
+              />
+              <div className="grid md:grid-cols-3 gap-4 mt-6">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <h5 className="font-semibold text-blue-800 mb-2">PREPARE Module</h5>
+                  <p className="text-sm text-blue-600">Learn fundamentals, practice STAR method, build confidence with AI coaching</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <h5 className="font-semibold text-green-800 mb-2">PRACTICE Module</h5>
+                  <p className="text-sm text-green-600">Simulate real interviews, test different scenarios, refine your responses</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <h5 className="font-semibold text-purple-800 mb-2">PERFORM Module</h5>
+                  <p className="text-sm text-purple-600">Final assessments, mock interviews, get interview-ready certification</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center mt-8 p-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 text-white rounded-lg">
+              <p className="font-bold text-lg mb-2">
+                🏆 Ready to Transform Your Interview Skills?
+              </p>
+              <p className="text-yellow-50 mb-4">
+                Join thousands of students who've landed their dream jobs after practicing with our AI coach. Start your journey to interview confidence today!
               </p>
               <div className="flex justify-center space-x-4">
-                <Button onClick={handleStartNewSession} className="bg-blue-600 hover:bg-blue-700">
+                <Button onClick={handleStartNewSession} className="bg-white text-orange-600 hover:bg-orange-50 font-semibold">
                   <Play className="w-4 h-4 mr-2" />
-                  Try It Now
+                  Start Learning Now
                 </Button>
-                <Button variant="outline" onClick={handleViewDashboard}>
+                <Button variant="outline" onClick={handleViewDashboard} className="border-white text-white hover:bg-white hover:text-orange-600">
                   <BarChart3 className="w-4 h-4 mr-2" />
-                  View Dashboard
+                  View My Progress
                 </Button>
               </div>
             </div>
