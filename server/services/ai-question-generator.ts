@@ -97,7 +97,7 @@ export class AIQuestionGenerator {
     try {
       const prompt = this.buildOpenAIPrompt(request);
       
-      const response = await this.openaiService.generateResponse({
+      const response = await this.openaiService!.generateResponse({
         messages: [{ role: 'user', content: prompt }],
         maxTokens: 1000,
         temperature: 0.7
@@ -138,6 +138,8 @@ export class AIQuestionGenerator {
   private buildOpenAIPrompt(request: QuestionGenerationRequest): string {
     const culturalContext = this.getCulturalContext(request.preferredLanguage);
     const adaptiveContext = this.getAdaptiveContext(request);
+    const languageName = this.getLanguageName(request.preferredLanguage);
+    const isNonEnglish = request.preferredLanguage !== 'en';
 
     return `You are an expert AI interview coach with deep knowledge of hiring practices and interview strategies. Generate a high-quality, culturally-appropriate interview question.
 
@@ -146,7 +148,7 @@ Context:
 - Company: ${request.companyName || 'Tech company'}
 - Interview Stage: ${request.interviewStage}
 - Experience Level: ${request.experienceLevel}
-- Language: ${request.preferredLanguage}
+- Target Language: ${languageName} (${request.preferredLanguage})
 - Question Number: ${request.questionNumber}
 - Focus Areas: ${request.focusAreas.join(', ')}
 - Categories: ${request.questionCategories.join(', ')}
@@ -155,23 +157,23 @@ Context:
 ${culturalContext}
 ${adaptiveContext}
 
-Requirements:
+CRITICAL REQUIREMENTS:
 1. Generate ONE excellent interview question for ${request.jobPosition}
-2. Make it culturally appropriate for ${this.getLanguageName(request.preferredLanguage)} speakers
-3. Include STAR method guidance if behavioral question
-4. Translate to ${request.preferredLanguage} if not English
+2. Make it culturally appropriate for ${languageName} speakers
+3. ${isNonEnglish ? `WRITE THE MAIN QUESTION IN ${languageName.toUpperCase()}, NOT ENGLISH` : 'Write the question in English'}
+4. Include STAR method guidance if behavioral question
 5. Specify expected answer time (60-300 seconds)
 6. Provide cultural context explanation
 
 Response Format (JSON only, no other text):
 {
-  "questionText": "English question text",
-  "questionTextTranslated": "Translated question (if applicable)",
+  "questionText": "${isNonEnglish ? `Main question text in ${languageName}` : 'Question text in English'}",
+  "questionTextTranslated": "${isNonEnglish ? 'English translation for reference' : 'Same as questionText'}",
   "questionCategory": "leadership|problem-solving|teamwork|technical|cultural",
-  "questionType": "behavioral|situational|technical|cultural",
+  "questionType": "behavioral|situational|technical|cultural", 
   "difficultyLevel": "beginner|intermediate|advanced",
   "expectedAnswerTime": 180,
-  "culturalContext": "Brief cultural context explanation",
+  "culturalContext": "Brief cultural context explanation in English",
   "starMethodRelevant": true|false
 }`;
   }

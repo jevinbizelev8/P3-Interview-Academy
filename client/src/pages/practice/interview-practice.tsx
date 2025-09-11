@@ -69,13 +69,13 @@ export default function InterviewPractice() {
     }
   }, [session?.totalQuestions]);
 
-  // Auto-generate first question when session loads with no messages
+  // Auto-generate first question when session loads with no messages (only once)
   useEffect(() => {
-    if (session && messages.length === 0 && session.status !== 'completed' && !generateAiResponseMutation.isPending) {
+    if (session && messages.length === 0 && session.status !== 'completed' && !generateAiResponseMutation.isPending && session.currentQuestion === 1) {
       console.log('🎯 Auto-generating first AI question for new session');
       generateAiResponseMutation.mutate();
     }
-  }, [session, messages.length]);
+  }, [session?.id]); // Only depend on session.id to prevent loops
 
   // Send message mutation (adapted to work with existing Practice API)
   const sendMessageMutation = useMutation({
@@ -546,7 +546,7 @@ export default function InterviewPractice() {
                                 <span className="font-medium text-sm">
                                   {message.messageType === 'ai_question' ? 'AI Interviewer' : 'You'}
                                 </span>
-                                {message.inputMethod === 'voice' && (
+                                {(message as any).inputMethod === 'voice' && (
                                   <Badge variant="outline" className="text-xs">
                                     <Mic className="w-3 h-3 mr-1" />
                                     Voice
