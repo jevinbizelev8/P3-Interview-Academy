@@ -103,10 +103,11 @@ export default function ScenarioSelection() {
     },
   });
 
-  const { data: sessions = [] } = useQuery<InterviewSession[]>({
+  const { data: sessionsResponse } = useQuery<{ success: boolean; data: InterviewSession[] }>({
     queryKey: ["/api/practice/sessions"],
   });
 
+  const sessions = sessionsResponse?.data || [];
   const recentSessions = sessions.slice(0, 2);
 
   // Delete session mutation
