@@ -74,6 +74,7 @@ export default function PrepareAIInterface({
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [speechRate, setSpeechRate] = useState(1.0);
   const [selectedVoice, setSelectedVoice] = useState<string>('');
+  const [hasJoinedSession, setHasJoinedSession] = useState(false);
 
   // Helper function to get language display name
   const getLanguageName = (code: string) => {
@@ -120,12 +121,38 @@ export default function PrepareAIInterface({
     });
 
     socket.on('prepare:message', (message: any) => {
-      if (message.type === 'system' && message.data.status === 'authenticated') {
-        console.log('✅ WebSocket authenticated, joining session...');
-        // Step 2: Join the session room
-        socket.emit('prepare:join-session', { sessionId: session.id });
-      } else if (message.type === 'system' && message.data.status === 'joined-session') {
-        console.log('✅ Joined session room, ready for questions');
+      if (message.type === 'system') {
+        switch (message.data.status) {
+          case 'authenticated':
+            console.log('✅ WebSocket authenticated, joining session...');
+            socket.emit('prepare:join-session', { sessionId: session.id });
+            break;
+          case 'joined-session':
+            console.log('✅ Joined session room, ready for questions');
+            if (!hasJoinedSession) {
+              setHasJoinedSession(true);
+              // Generate first question after successfully joining session
+              setTimeout(() => generateFirstQuestion(session.id), 100);
+            }
+            break;
+          case 'voice-transcription-complete':
+            const transcription = message.data.transcription;
+            console.log('✅ Voice transcription complete:', transcription);
+            
+            setMessages(prev => prev.map(msg => 
+              msg.content === 'Voice response (transcribing...)' 
+                ? { ...msg, content: transcription || 'Voice response transcribed' }
+                : msg
+            ));
+            
+            if (transcription && session?.currentQuestionId) {
+              submitVoiceResponseForEvaluation(transcription, session.currentQuestionId);
+            }
+            break;
+          case 'voice-processing':
+            console.log('🎤 Voice processing started...');
+            break;
+        }
       }
     });
 
@@ -148,34 +175,6 @@ export default function PrepareAIInterface({
       }
     });
 
-    // Handle voice transcription results
-    socket.on('prepare:message', (message: any) => {
-      if (message.type === 'system') {
-        if (message.data.status === 'authenticated') {
-          console.log('✅ WebSocket authenticated, joining session...');
-          socket.emit('prepare:join-session', { sessionId: session.id });
-        } else if (message.data.status === 'joined-session') {
-          console.log('✅ Joined session room, ready for questions');
-        } else if (message.data.status === 'voice-transcription-complete') {
-          // Update the transcribing message with actual transcription
-          const transcription = message.data.transcription;
-          console.log('✅ Voice transcription complete:', transcription);
-          
-          setMessages(prev => prev.map(msg => 
-            msg.content === 'Voice response (transcribing...)' 
-              ? { ...msg, content: transcription || 'Voice response transcribed' }
-              : msg
-          ));
-          
-          // Now submit the transcribed text via REST API for evaluation
-          if (transcription && session?.currentQuestionId) {
-            submitVoiceResponseForEvaluation(transcription, session.currentQuestionId);
-          }
-        } else if (message.data.status === 'voice-processing') {
-          console.log('🎤 Voice processing started...');
-        }
-      }
-    });
 
     socket.on('response-evaluated', (data: { 
       evaluation: Message['evaluation'];
@@ -219,6 +218,7 @@ export default function PrepareAIInterface({
 
     return () => {
       socket.disconnect();
+      setHasJoinedSession(false);
     };
   }, [session, voiceEnabled]);
 
@@ -261,13 +261,7 @@ export default function PrepareAIInterface({
       setSessionStatus('active');
       onSessionChange?.(newSession);
 
-      // Add interview introduction message
-      addInterviewIntroduction(newSession);
-
-      // Generate first question after introduction
-      setTimeout(() => {
-        generateFirstQuestion(newSession.id);
-      }, 2000);
+      // First question will be generated after WebSocket joins session room
     } catch (error) {
       console.error('Error creating session:', error);
     } finally {
@@ -584,68 +578,23 @@ export default function PrepareAIInterface({
     }
   };
 
-  // Add interview introduction message
-  const addInterviewIntroduction = (sessionData: any) => {
-    const languageIntro = getIntroductionMessage(sessionData);
-    
-    const introMessage: Message = {
-      id: crypto.randomUUID(),
-      type: 'question',
-      content: languageIntro,
-      timestamp: new Date()
-    };
-    
-    setMessages(prev => [...prev, introMessage]);
-    
-    // Speak the introduction if voice is enabled
-    if (voiceEnabled && sessionData.voiceEnabled) {
-      setTimeout(() => {
-        speakText(languageIntro);
-      }, 500);
-    }
-  };
-
-  // Get introduction message based on language
-  const getIntroductionMessage = (sessionData: any) => {
-    const introductions: Record<string, string> = {
-      'en': `Hello! Welcome to your interview preparation session for the ${sessionData.jobPosition} position at ${sessionData.companyName}. I'm your AI interviewer, and I'll be conducting your ${sessionData.interviewStage} interview today. 
-
-This will be a realistic interview simulation where I'll ask you relevant questions and provide detailed feedback on your responses. Feel free to answer in a natural, conversational way as you would in a real interview.
-
-Are you ready to begin?`,
+  // Get interview context introduction for static display
+  const getInterviewContext = (sessionData: any) => {
+    const contexts: Record<string, string> = {
+      'en': `I'm your AI interviewer conducting a ${sessionData.interviewStage} interview for ${sessionData.jobPosition} at ${sessionData.companyName}. I'll ask relevant questions and provide detailed feedback on your responses.`,
       
-      'id': `Halo! Selamat datang di sesi persiapan wawancara Anda untuk posisi ${sessionData.jobPosition} di ${sessionData.companyName}. Saya adalah pewawancara AI Anda, dan saya akan melakukan wawancara ${sessionData.interviewStage} Anda hari ini.
+      'id': `Saya pewawancara AI Anda yang melakukan wawancara ${sessionData.interviewStage} untuk posisi ${sessionData.jobPosition} di ${sessionData.companyName}. Saya akan mengajukan pertanyaan yang relevan dan memberikan umpan balik terperinci.`,
 
-Ini akan menjadi simulasi wawancara yang realistis di mana saya akan mengajukan pertanyaan yang relevan dan memberikan umpan balik terperinci tentang tanggapan Anda. Silakan menjawab dengan cara yang natural dan percakapan seperti yang Anda lakukan dalam wawancara sungguhan.
+      'ms': `Saya penemu duga AI anda yang menjalankan temu duga ${sessionData.interviewStage} untuk jawatan ${sessionData.jobPosition} di ${sessionData.companyName}. Saya akan bertanya soalan berkaitan dan memberikan maklum balas terperinci.`,
 
-Apakah Anda siap untuk memulai?`,
+      'th': `ฉันคือผู้สัมภาษณ์ AI ที่ดำเนินการสัมภาษณ์ ${sessionData.interviewStage} สำหรับตำแหน่ง ${sessionData.jobPosition} ที่ ${sessionData.companyName} ฉันจะถามคำถามที่เกี่ยวข้องและให้ข้อเสนอแนะโดยละเอียด`,
 
-      'ms': `Helo! Selamat datang ke sesi persediaan temu duga anda untuk jawatan ${sessionData.jobPosition} di ${sessionData.companyName}. Saya adalah penemu duga AI anda, dan saya akan menjalankan temu duga ${sessionData.interviewStage} anda hari ini.
+      'vi': `Tôi là người phỏng vấn AI tiến hành phỏng vấn ${sessionData.interviewStage} cho vị trí ${sessionData.jobPosition} tại ${sessionData.companyName}. Tôi sẽ đặt câu hỏi liên quan và cung cấp phản hồi chi tiết.`,
 
-Ini akan menjadi simulasi temu duga yang realistik di mana saya akan bertanya soalan yang berkaitan dan memberikan maklum balas terperinci tentang jawapan anda. Sila jawab dengan cara yang natural dan seperti perbualan seperti yang anda lakukan dalam temu duga sebenar.
-
-Adakah anda bersedia untuk bermula?`,
-
-      'th': `สวัสดี! ยินดีต้อนรับสู่เซสชันการเตรียมตัวสัมภาษณ์ของคุณสำหรับตำแหน่ง ${sessionData.jobPosition} ที่ ${sessionData.companyName} ฉันคือผู้สัมภาษณ์ AI ของคุณ และฉันจะดำเนินการสัมภาษณ์ ${sessionData.interviewStage} ของคุณวันนี้
-
-นี่จะเป็นการจำลองการสัมภาษณ์ที่สมจริง ซึ่งฉันจะถามคำถามที่เกี่ยวข้องและให้ข้อเสนอแนะโดยละเอียดเกี่ยวกับการตอบของคุณ กรุณาตอบในลักษณะธรรมชาติและเป็นการสนทนาเหมือนที่คุณทำในการสัมภาษณ์จริง
-
-คุณพร้อมที่จะเริ่มแล้วหรือยัง?`,
-
-      'vi': `Xin chào! Chào mừng bạn đến với phiên chuẩn bị phỏng vấn cho vị trí ${sessionData.jobPosition} tại ${sessionData.companyName}. Tôi là người phỏng vấn AI của bạn, và tôi sẽ tiến hành buổi phỏng vấn ${sessionData.interviewStage} của bạn hôm nay.
-
-Đây sẽ là một mô phỏng phỏng vấn thực tế nơi tôi sẽ đặt những câu hỏi liên quan và cung cấp phản hồi chi tiết về các câu trả lời của bạn. Hãy trả lời một cách tự nhiên, đàm thoại như bạn sẽ làm trong một cuộc phỏng vấn thực tế.
-
-Bạn đã sẵn sàng bắt đầu chưa?`,
-
-      'tl': `Kumusta! Maligayang pagdating sa inyong session ng paghahanda sa interview para sa posisyong ${sessionData.jobPosition} sa ${sessionData.companyName}. Ako ang inyong AI interviewer, at ako ang magkokonduct ng inyong ${sessionData.interviewStage} interview ngayong araw.
-
-Ito ay magiging realistic na interview simulation kung saan magtatanong ako ng mga relevant na katanungan at magbibigay ng detalyadong feedback sa inyong mga sagot. Mangyaring sumagot sa natural at conversational na paraan tulad ng ginagawa ninyo sa tunay na interview.
-
-Handa na ba kayong magsimula?`
+      'tl': `Ako ang inyong AI interviewer na magkokonduct ng ${sessionData.interviewStage} interview para sa posisyong ${sessionData.jobPosition} sa ${sessionData.companyName}. Magtatanong ako ng mga relevant na katanungan at magbibigay ng detalyadong feedback.`
     };
 
-    return introductions[sessionData.preferredLanguage] || introductions['en'];
+    return contexts[sessionData.preferredLanguage] || contexts['en'];
   };
 
   // Generate next question
@@ -761,6 +710,22 @@ Handa na ba kayong magsimula?`
             </div>
           </div>
         </CardHeader>
+      </Card>
+
+      {/* Interview Context */}
+      <Card>
+        <CardContent className="py-4">
+          <div className="flex items-start space-x-3">
+            <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {getInterviewContext(session)}
+              </p>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
       {/* Voice Controls */}
