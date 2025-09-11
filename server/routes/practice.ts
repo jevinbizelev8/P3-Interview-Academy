@@ -145,6 +145,35 @@ router.get('/sessions', async (req, res) => {
   }
 });
 
+/**
+ * GET /sessions/:id
+ * Get individual practice session with messages
+ */
+router.get('/sessions/:id', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const session = await storage.getPracticeSession(req.params.id);
+    if (!session) {
+      return res.status(404).json({ error: 'Practice session not found' });
+    }
+    if (session.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied to this session' });
+    }
+
+    res.json(session);
+
+  } catch (error) {
+    console.error('❌ Get practice session error:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve session',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // ================================
 // SESSION INTERACTION ENDPOINTS
 // ================================
