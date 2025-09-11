@@ -531,7 +531,6 @@ export default function PrepareAIInterface({
       // Process the evaluation results from backend
       if (result.success && result.data) {
         const evaluationData = result.data;
-        
         // Set evaluation state directly instead of adding to messages  
         setLatestEvaluation({
           starScore: evaluationData.starScores?.overall || 0,
