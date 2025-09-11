@@ -153,7 +153,7 @@ export default function ScenarioSelection() {
           <CardContent className="p-6">
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Interview Stage</h3>
             <p className="text-gray-600 mb-6">
-              Select the interview stage you'd like to practise. Each scenario includes 15 tailored questions.
+              Select the interview stage you'd like to practise. Each scenario includes 25 tailored questions.
             </p>
             
             {/* Job Context Form */}
