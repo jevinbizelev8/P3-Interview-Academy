@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/use-auth';
 import { 
@@ -19,7 +20,10 @@ import {
   VolumeX,
   Zap,
   Brain,
-  MessageSquare
+  MessageSquare,
+  Star,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { io, type Socket } from 'socket.io-client';
 
@@ -76,6 +80,10 @@ export default function PrepareAIInterface({
   const [selectedVoice, setSelectedVoice] = useState<string>('');
   const [hasJoinedSession, setHasJoinedSession] = useState(false);
 
+  // Feedback panel state
+  const [latestEvaluation, setLatestEvaluation] = useState<Message['evaluation'] | null>(null);
+  const [modelAnswer, setModelAnswer] = useState<string | null>(null);
+
   // Helper function to get language display name
   const getLanguageName = (code: string) => {
     const languageNames: Record<string, string> = {
@@ -90,6 +98,61 @@ export default function PrepareAIInterface({
       'bn': 'বাংলা'
     };
     return languageNames[code] || code.toUpperCase();
+  };
+
+  // Language localization for feedback labels
+  const getFeedbackLabels = (language: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      'en': {
+        feedback: 'Feedback',
+        starScore: 'STAR Score',
+        strengths: 'Strengths',
+        improvements: 'Improvements',
+        modelAnswer: 'Model Answer',
+        noFeedback: 'Submit a response to see feedback here'
+      },
+      'id': {
+        feedback: 'Umpan Balik',
+        starScore: 'Skor STAR',
+        strengths: 'Kekuatan',
+        improvements: 'Perbaikan',
+        modelAnswer: 'Jawaban Model',
+        noFeedback: 'Kirim respons untuk melihat umpan balik di sini'
+      },
+      'ms': {
+        feedback: 'Maklum Balas',
+        starScore: 'Skor STAR',
+        strengths: 'Kekuatan',
+        improvements: 'Penambahbaikan',
+        modelAnswer: 'Jawapan Model',
+        noFeedback: 'Hantar respons untuk melihat maklum balas di sini'
+      },
+      'th': {
+        feedback: 'ข้อเสนอแนะ',
+        starScore: 'คะแนน STAR',
+        strengths: 'จุดแข็ง',
+        improvements: 'ข้อปรับปรุง',
+        modelAnswer: 'ตัวอย่างคำตอบ',
+        noFeedback: 'ส่งคำตอบเพื่อดูข้อเสนอแนะที่นี่'
+      },
+      'vi': {
+        feedback: 'Phản hồi',
+        starScore: 'Điểm STAR',
+        strengths: 'Điểm mạnh',
+        improvements: 'Cải thiện',
+        modelAnswer: 'Câu trả lời mẫu',
+        noFeedback: 'Gửi phản hồi để xem nhận xét tại đây'
+      },
+      'tl': {
+        feedback: 'Feedback',
+        starScore: 'STAR Score',
+        strengths: 'Mga Lakas',
+        improvements: 'Mga Pagpapabuti',
+        modelAnswer: 'Sample na Sagot',
+        noFeedback: 'Magpadala ng tugon upang makita ang feedback dito'
+      }
+    };
+    return labels[language] || labels['en'];
   };
 
   // WebSocket and audio refs
@@ -180,14 +243,15 @@ export default function PrepareAIInterface({
       evaluation: Message['evaluation'];
       nextQuestion?: string;
       nextQuestionId?: string;
+      modelAnswer?: string;
     }) => {
-      // Update last response with evaluation
-      setMessages(prev => prev.map(msg => {
-        if (msg.type === 'response' && !msg.evaluation) {
-          return { ...msg, evaluation: data.evaluation };
-        }
-        return msg;
-      }));
+      // Update feedback panel state instead of chat messages
+      setLatestEvaluation(data.evaluation);
+      
+      // Set model answer for panel if available
+      if (data.modelAnswer) {
+        setModelAnswer(data.modelAnswer);
+      }
 
       // Add next question if available
       if (data.nextQuestion) {
@@ -462,34 +526,17 @@ export default function PrepareAIInterface({
       if (result.success && result.data) {
         const evaluationData = result.data;
         
-        // Add evaluation feedback as system message
-        const feedbackMessage: Message = {
-          id: crypto.randomUUID(),
-          type: 'response',
-          content: `Feedback: ${evaluationData.detailedFeedback?.feedback || 'Good response!'}`,
-          timestamp: new Date(),
-          evaluation: {
-            starScore: evaluationData.starScores?.overall || 0,
-            feedback: evaluationData.detailedFeedback?.feedback || '',
-            strengths: evaluationData.detailedFeedback?.strengths || [],
-            improvements: evaluationData.detailedFeedback?.suggestions || []
-          }
-        };
+        // Set evaluation state directly instead of adding to messages
+        setLatestEvaluation({
+          starScore: evaluationData.starScores?.overall || 0,
+          feedback: evaluationData.detailedFeedback?.feedback || '',
+          strengths: evaluationData.detailedFeedback?.strengths || [],
+          improvements: evaluationData.detailedFeedback?.improvements || evaluationData.detailedFeedback?.suggestions || []
+        });
         
-        setMessages(prev => [...prev, feedbackMessage]);
-        
-        // Add model answer
+        // Set model answer state directly instead of adding to messages
         if (evaluationData.modelAnswer) {
-          const modelAnswerMessage: Message = {
-            id: crypto.randomUUID(), 
-            type: 'question',
-            content: `Model Answer: ${evaluationData.modelAnswer}`,
-            timestamp: new Date()
-          };
-          
-          setTimeout(() => {
-            setMessages(prev => [...prev, modelAnswerMessage]);
-          }, 1000);
+          setModelAnswer(evaluationData.modelAnswer);
         }
         
         // Generate next question after showing evaluation
@@ -535,48 +582,30 @@ export default function PrepareAIInterface({
       if (result.success && result.data) {
         const evaluationData = result.data;
         
-        // Add evaluation feedback as system message
-        const feedbackMessage: Message = {
-          id: crypto.randomUUID(),
-          type: 'response',
-          content: `Feedback: ${evaluationData.detailedFeedback?.feedback || 'Good response!'}`,
-          timestamp: new Date(),
-          evaluation: {
-            starScore: evaluationData.starScores?.overall || 0,
-            feedback: evaluationData.detailedFeedback?.feedback || '',
-            strengths: evaluationData.detailedFeedback?.strengths || [],
-            improvements: evaluationData.detailedFeedback?.suggestions || []
-          }
-        };
+        // Set evaluation state directly instead of adding to messages
+        setLatestEvaluation({
+          starScore: evaluationData.starScores?.overall || 0,
+          feedback: evaluationData.detailedFeedback?.feedback || '',
+          strengths: evaluationData.detailedFeedback?.strengths || [],
+          improvements: evaluationData.detailedFeedback?.improvements || evaluationData.detailedFeedback?.suggestions || []
+        });
         
-        setTimeout(() => {
-          setMessages(prev => [...prev, feedbackMessage]);
-        }, 1000);
-        
-        // Add model answer
+        // Set model answer state directly instead of adding to messages
         if (evaluationData.modelAnswer) {
-          const modelAnswerMessage: Message = {
-            id: crypto.randomUUID(),
-            type: 'question', 
-            content: `Model Answer: ${evaluationData.modelAnswer}`,
-            timestamp: new Date()
-          };
-          
-          setTimeout(() => {
-            setMessages(prev => [...prev, modelAnswerMessage]);
-          }, 2000);
+          setModelAnswer(evaluationData.modelAnswer);
         }
         
         // Generate next question after showing evaluation
         setTimeout(() => {
           generateNextQuestion();
-        }, 3000);
+        }, 2000);
       }
       
     } catch (error) {
       console.error('Error evaluating voice response:', error);
     }
   };
+
 
   // Get interview context introduction for static display
   const getInterviewContext = (sessionData: any) => {
@@ -642,6 +671,8 @@ export default function PrepareAIInterface({
   const handleRestartSession = () => {
     setMessages([]);
     setCurrentResponse('');
+    setLatestEvaluation(null);
+    setModelAnswer(null);
     setSessionStatus('idle');
     setSession(null);
     stopSpeech();
@@ -676,7 +707,7 @@ export default function PrepareAIInterface({
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Session Header */}
       <Card>
         <CardHeader>
@@ -757,8 +788,11 @@ export default function PrepareAIInterface({
         </CardContent>
       </Card>
 
-      {/* Messages */}
-      <Card className="min-h-[400px]">
+      {/* Main Content Grid: Chat + Feedback Panel */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Chat Messages - Left Side (col-span-2) */}
+        <div className="md:col-span-2">
+          <Card className="min-h-[400px]">
         <CardHeader>
           <CardTitle className="flex items-center">
             <MessageSquare className="w-5 h-5 mr-2" />
@@ -799,43 +833,7 @@ export default function PrepareAIInterface({
                         {message.type === 'question' ? 'AI Interviewer' : 'You'}
                         {message.isAudio && ' (Voice)'}
                       </p>
-                      <p className="text-gray-800">{message.content}</p>
-                      
-                      {/* STAR Evaluation */}
-                      {message.evaluation && (
-                        <div className="mt-3 p-3 bg-white rounded border">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-sm">STAR Score</span>
-                            <Badge variant={message.evaluation.starScore >= 4 ? 'default' : 
-                                           message.evaluation.starScore >= 3 ? 'secondary' : 'destructive'}>
-                              {message.evaluation.starScore}/5
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">{message.evaluation.feedback}</p>
-                          
-                          {message.evaluation.strengths.length > 0 && (
-                            <div className="mb-2">
-                              <p className="text-sm font-medium text-green-700">Strengths:</p>
-                              <ul className="text-sm text-green-600 ml-4">
-                                {message.evaluation.strengths.map((strength, i) => (
-                                  <li key={i}>• {strength}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {message.evaluation.improvements.length > 0 && (
-                            <div>
-                              <p className="text-sm font-medium text-amber-700">Improvements:</p>
-                              <ul className="text-sm text-amber-600 ml-4">
-                                {message.evaluation.improvements.map((improvement, i) => (
-                                  <li key={i}>• {improvement}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      )}
+                      <p className="text-gray-800" data-testid={`text-message-${message.id}`}>{message.content}</p>
                     </div>
                   </div>
                 </div>
@@ -853,6 +851,110 @@ export default function PrepareAIInterface({
           )}
         </CardContent>
       </Card>
+        </div>
+
+        {/* Feedback Panel - Right Side (col-span-1) */}
+        <div className="md:col-span-1">
+          <Card className="min-h-[400px]">
+            <CardHeader>
+              <CardTitle className="flex items-center" data-testid="panel-feedback">
+                <Star className="w-5 h-5 mr-2" />
+                {getFeedbackLabels(session?.preferredLanguage || 'en').feedback}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[350px]">
+                {!latestEvaluation && !modelAnswer ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-sm">{getFeedbackLabels(session?.preferredLanguage || 'en').noFeedback}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* STAR Score */}
+                    {latestEvaluation && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-sm">{getFeedbackLabels(session?.preferredLanguage || 'en').starScore}</span>
+                          <Badge 
+                            variant={latestEvaluation.starScore >= 4 ? 'default' : latestEvaluation.starScore >= 3 ? 'secondary' : 'destructive'}
+                            data-testid="score-star"
+                          >
+                            {latestEvaluation.starScore}/5
+                          </Badge>
+                        </div>
+                        
+                        {/* Feedback Text */}
+                        <div>
+                          <p className="text-sm text-gray-700 leading-relaxed" data-testid="text-feedback">
+                            {latestEvaluation.feedback}
+                          </p>
+                        </div>
+
+                        <Separator />
+                        
+                        {/* Strengths */}
+                        {latestEvaluation.strengths.length > 0 && (
+                          <div>
+                            <div className="flex items-center mb-2">
+                              <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                              <p className="text-sm font-medium text-green-700">
+                                {getFeedbackLabels(session?.preferredLanguage || 'en').strengths}
+                              </p>
+                            </div>
+                            <ul className="text-sm text-green-600 space-y-1 ml-6" data-testid="list-strengths">
+                              {latestEvaluation.strengths.map((strength, i) => (
+                                <li key={i}>• {strength}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {/* Improvements */}
+                        {latestEvaluation.improvements.length > 0 && (
+                          <div>
+                            <div className="flex items-center mb-2">
+                              <AlertCircle className="w-4 h-4 mr-2 text-amber-600" />
+                              <p className="text-sm font-medium text-amber-700">
+                                {getFeedbackLabels(session?.preferredLanguage || 'en').improvements}
+                              </p>
+                            </div>
+                            <ul className="text-sm text-amber-600 space-y-1 ml-6" data-testid="list-improvements">
+                              {latestEvaluation.improvements.map((improvement, i) => (
+                                <li key={i}>• {improvement}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Model Answer */}
+                    {modelAnswer && (
+                      <>
+                        <Separator />
+                        <div>
+                          <div className="flex items-center mb-2">
+                            <Brain className="w-4 h-4 mr-2 text-blue-600" />
+                            <p className="text-sm font-medium text-blue-700">
+                              {getFeedbackLabels(session?.preferredLanguage || 'en').modelAnswer}
+                            </p>
+                          </div>
+                          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                            <p className="text-sm text-blue-800 leading-relaxed" data-testid="text-model-answer">
+                              {modelAnswer}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       {/* Response Input */}
       {sessionStatus === 'active' && (
