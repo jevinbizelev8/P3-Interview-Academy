@@ -92,12 +92,12 @@ export const interviewSessions = pgTable("interview_sessions", {
   startedAt: timestamp("started_at").defaultNow(),
   completedAt: timestamp("completed_at"),
   duration: integer("duration"), // in seconds
-  overallScore: numeric("overall_score", { precision: 3, scale: 2 }),
-  situationScore: numeric("situation_score", { precision: 3, scale: 2 }),
-  taskScore: numeric("task_score", { precision: 3, scale: 2 }),
-  actionScore: numeric("action_score", { precision: 3, scale: 2 }),
-  resultScore: numeric("result_score", { precision: 3, scale: 2 }),
-  flowScore: numeric("flow_score", { precision: 3, scale: 2 }),
+  overallScore: numeric("overall_score", { precision: 5, scale: 2 }),
+  situationScore: numeric("situation_score", { precision: 5, scale: 2 }),
+  taskScore: numeric("task_score", { precision: 5, scale: 2 }),
+  actionScore: numeric("action_score", { precision: 5, scale: 2 }),
+  resultScore: numeric("result_score", { precision: 5, scale: 2 }),
+  flowScore: numeric("flow_score", { precision: 5, scale: 2 }),
   qualitativeFeedback: text("qualitative_feedback"),
   strengths: jsonb("strengths"), // array of strings
   improvements: jsonb("improvements"), // array of strings
@@ -127,51 +127,51 @@ export const aiEvaluationResults = pgTable("ai_evaluation_results", {
   
   // New 9-Criteria Interview Scoring Rubric (1-5 scale)
   // 1. Relevance of Response (15%)
-  relevanceScore: numeric("relevance_score", { precision: 3, scale: 2 }),
+  relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),
   relevanceFeedback: text("relevance_feedback"),
   
   // 2. Structured using STAR Method (15%)
-  starStructureScore: numeric("star_structure_score", { precision: 3, scale: 2 }),
+  starStructureScore: numeric("star_structure_score", { precision: 5, scale: 2 }),
   starStructureFeedback: text("star_structure_feedback"),
   
   // 3. Specific Evidence Usage (15%)
-  specificEvidenceScore: numeric("specific_evidence_score", { precision: 3, scale: 2 }),
+  specificEvidenceScore: numeric("specific_evidence_score", { precision: 5, scale: 2 }),
   specificEvidenceFeedback: text("specific_evidence_feedback"),
   
   // 4. Aligned with Role (15%)
-  roleAlignmentScore: numeric("role_alignment_score", { precision: 3, scale: 2 }),
+  roleAlignmentScore: numeric("role_alignment_score", { precision: 5, scale: 2 }),
   roleAlignmentFeedback: text("role_alignment_feedback"),
   
   // 5. Outcome-Oriented (15%)
-  outcomeOrientedScore: numeric("outcome_oriented_score", { precision: 3, scale: 2 }),
+  outcomeOrientedScore: numeric("outcome_oriented_score", { precision: 5, scale: 2 }),
   outcomeOrientedFeedback: text("outcome_oriented_feedback"),
   
   // 6. Communication Skills (10%)
-  communicationScore: numeric("communication_score", { precision: 3, scale: 2 }),
+  communicationScore: numeric("communication_score", { precision: 5, scale: 2 }),
   communicationFeedback: text("communication_feedback"),
   
   // 7. Problem-Solving / Critical Thinking (10%)
-  problemSolvingScore: numeric("problem_solving_score", { precision: 3, scale: 2 }),
+  problemSolvingScore: numeric("problem_solving_score", { precision: 5, scale: 2 }),
   problemSolvingFeedback: text("problem_solving_feedback"),
   
   // 8. Cultural Fit / Values Alignment (5%)
-  culturalFitScore: numeric("cultural_fit_score", { precision: 3, scale: 2 }),
+  culturalFitScore: numeric("cultural_fit_score", { precision: 5, scale: 2 }),
   culturalFitFeedback: text("cultural_fit_feedback"),
   
   // 9. Learning Agility / Adaptability (5%)
-  learningAgilityScore: numeric("learning_agility_score", { precision: 3, scale: 2 }),
+  learningAgilityScore: numeric("learning_agility_score", { precision: 5, scale: 2 }),
   learningAgilityFeedback: text("learning_agility_feedback"),
   
   // Calculated weighted overall score (1-5 scale)
-  weightedOverallScore: numeric("weighted_overall_score", { precision: 3, scale: 2 }),
+  weightedOverallScore: numeric("weighted_overall_score", { precision: 5, scale: 2 }),
   overallRating: varchar("overall_rating", { length: 50 }), // "Pass", "Borderline", "Fail"
   
   // Legacy fields for backwards compatibility (now derived from new rubric)
-  empathyScore: numeric("empathy_score", { precision: 3, scale: 2 }),
-  culturalAlignmentScore: numeric("cultural_alignment_score", { precision: 3, scale: 2 }),
+  empathyScore: numeric("empathy_score", { precision: 5, scale: 2 }),
+  culturalAlignmentScore: numeric("cultural_alignment_score", { precision: 5, scale: 2 }),
   
   // Feature 1: Overall Performance Score (derived from weighted scores)
-  overallScore: numeric("overall_score", { precision: 3, scale: 2 }),
+  overallScore: numeric("overall_score", { precision: 5, scale: 2 }),
   
   // Feature 3: Qualitative Observations
   qualitativeObservations: text("qualitative_observations"),
@@ -267,17 +267,17 @@ export const practiceReports = pgTable("practice_reports", {
   userId: varchar("user_id").notNull().references(() => users.id),
   
   // Overall Evaluation
-  overallScore: numeric("overall_score", { precision: 3, scale: 2 }),
+  overallScore: numeric("overall_score", { precision: 5, scale: 2 }),
   
   // STAR Method Scoring (1-5 scale)
-  situationScore: numeric("situation_score", { precision: 3, scale: 2 }),
-  taskScore: numeric("task_score", { precision: 3, scale: 2 }),
-  actionScore: numeric("action_score", { precision: 3, scale: 2 }),
-  resultScore: numeric("result_score", { precision: 3, scale: 2 }),
+  situationScore: numeric("situation_score", { precision: 5, scale: 2 }),
+  taskScore: numeric("task_score", { precision: 5, scale: 2 }),
+  actionScore: numeric("action_score", { precision: 5, scale: 2 }),
+  resultScore: numeric("result_score", { precision: 5, scale: 2 }),
   
   // Additional Metrics
-  communicationScore: numeric("communication_score", { precision: 3, scale: 2 }),
-  relevanceScore: numeric("relevance_score", { precision: 3, scale: 2 }),
+  communicationScore: numeric("communication_score", { precision: 5, scale: 2 }),
+  relevanceScore: numeric("relevance_score", { precision: 5, scale: 2 }),
   
   // Qualitative Feedback
   strengths: jsonb("strengths").default("[]"), // array of strings
@@ -520,7 +520,7 @@ export const preparationProgress = pgTable("preparation_progress", {
   status: varchar("status", { length: 20 }).default("not_started"), // not_started, in_progress, completed
   progress: numeric("progress", { precision: 5, scale: 2 }).default("0"), // 0-100%
   timeSpent: integer("time_spent").default(0), // minutes spent
-  score: numeric("score", { precision: 3, scale: 2 }), // for assessments
+  score: numeric("score", { precision: 5, scale: 2 }), // for assessments
   notes: text("notes"), // user notes
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -538,7 +538,7 @@ export const practiceTests = pgTable("practice_tests", {
   questions: jsonb("questions").notNull(), // array of question objects
   totalQuestions: integer("total_questions").notNull(),
   timeLimit: integer("time_limit"), // minutes (null for untimed)
-  passingScore: numeric("passing_score", { precision: 3, scale: 2 }), // minimum score to pass
+  passingScore: numeric("passing_score", { precision: 5, scale: 2 }), // minimum score to pass
   difficulty: varchar("difficulty", { length: 20 }), // beginner, intermediate, advanced
   tags: jsonb("tags"), // array of tags
   isActive: boolean("is_active").default(true),
@@ -553,7 +553,7 @@ export const practiceTestResults = pgTable("practice_test_results", {
   userId: varchar("user_id").notNull().references(() => users.id),
   practiceTestId: uuid("practice_test_id").notNull().references(() => practiceTests.id, { onDelete: "cascade" }),
   preparationSessionId: uuid("preparation_session_id").references(() => preparationSessions.id, { onDelete: "cascade" }),
-  score: numeric("score", { precision: 3, scale: 2 }).notNull(),
+  score: numeric("score", { precision: 5, scale: 2 }).notNull(),
   totalQuestions: integer("total_questions").notNull(),
   correctAnswers: integer("correct_answers").notNull(),
   timeSpent: integer("time_spent"), // minutes
