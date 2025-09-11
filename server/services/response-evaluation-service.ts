@@ -783,41 +783,50 @@ ASEAN BUSINESS CONTEXT:
   }
 
   private generateModelAnswer(questionCategory: string, jobPosition: string, questionText: string): string {
-    // Generate role-specific STAR method examples instead of instructions
-    const roleSpecificExamples: Record<string, string> = {
-      'Marketing Manager': `**Situation:** While leading a product launch campaign for our mobile app, I noticed our team of 8 members from different cultural backgrounds (US, Singapore, Malaysia, India) had conflicting opinions on messaging strategy, creating tension and delays.
-
-**Task:** As Marketing Manager, I needed to unite the team around a cohesive campaign strategy while ensuring all cultural perspectives were valued and incorporated into our approach.
-
-**Action:** I organized structured brainstorming sessions where each team member presented their market insights. I implemented a collaborative decision-making framework, created cultural focus groups to test messaging, and established clear communication protocols with weekly check-ins and shared documentation.
-
-**Result:** The campaign launched on time and exceeded KPIs by 35% - we saw 2.3M app downloads in the first month and 28% higher engagement rates across all target markets. Team satisfaction scores improved from 6.2 to 8.7/10, and we established this collaborative process as our standard for future campaigns.`,
-
-      'Software Engineer': `**Situation:** Our e-commerce platform was experiencing 40% slower page load times due to database queries, and our diverse development team of 6 engineers couldn't agree on the technical solution approach.
-
-**Task:** As Senior Developer, I needed to lead the performance optimization while ensuring all team members' technical expertise was utilized and respected throughout the problem-solving process.
-
-**Action:** I conducted individual code reviews with each developer, organized architecture planning sessions, implemented performance monitoring tools, and created a collaborative testing environment where everyone could contribute and validate solutions.
-
-**Result:** We reduced page load times by 60% within 3 weeks, increasing user satisfaction scores by 25%. Our collaborative approach led to a reusable performance optimization framework that saved 40+ development hours on subsequent projects and improved our team's technical decision-making process.`,
-
-      'Data Scientist': `**Situation:** Our analytics team of 7 data scientists from different backgrounds were working on a customer segmentation project with conflicting methodologies, leading to inconsistent results and missed deadlines.
-
-**Task:** As Lead Data Scientist, I needed to align the team on a unified analytical approach while incorporating everyone's domain expertise and ensuring scientifically sound results.
-
-**Action:** I facilitated methodology review sessions, established shared data validation protocols, created collaborative Jupyter notebooks for transparency, and implemented peer review processes where each analysis was validated by 2 team members.
-
-**Result:** We delivered the customer segmentation model 2 weeks ahead of schedule with 92% accuracy. The collaborative approach identified 15% more customer segments than individual efforts, leading to $2.1M additional revenue through targeted campaigns and improved team knowledge sharing practices.`,
-
-      'default': `**Situation:** During a critical project with tight deadlines, our diverse team of 6 professionals had different approaches to problem-solving, which initially created confusion and slowed our progress.
-
-**Task:** I needed to facilitate effective collaboration while ensuring everyone's expertise was utilized and all team members felt heard and valued in our decision-making process.
-
-**Action:** I organized structured team meetings with clear agendas, implemented collaborative planning sessions, established regular check-ins, and created shared documentation systems to ensure transparency and accountability.
-
-**Result:** We completed the project 10% ahead of schedule with 95% stakeholder satisfaction. Our collaborative approach led to innovative solutions and improved team dynamics, with team satisfaction scores increasing from 7.2 to 9.1/10.`
-    };
-
-    return roleSpecificExamples[jobPosition] || roleSpecificExamples['default'];
+    // Generate a direct STAR method response to the specific question
+    return this.createStarResponse(questionText, jobPosition);
   }
+  
+  private createStarResponse(questionText: string, jobPosition: string): string {
+    const question = questionText.toLowerCase();
+    
+    // Extract key themes from the question
+    const isAboutTeamwork = question.includes('team') || question.includes('collaborate');
+    const isAboutDiversity = question.includes('diverse') || question.includes('cultural') || question.includes('different backgrounds');
+    const isAboutCampaign = question.includes('campaign') || question.includes('marketing');
+    const isAboutLeadership = question.includes('lead') || question.includes('manage');
+    const isAboutCommunication = question.includes('communication') || question.includes('align');
+    
+    // Create contextual STAR response based on the question content
+    let situation = "";
+    let task = "";
+    let action = "";
+    let result = "";
+    
+    if (isAboutCampaign && isAboutTeamwork && isAboutDiversity) {
+      situation = "I was leading a product launch campaign for our new mobile app that required coordination between our marketing team of 8 people from different cultural backgrounds - team members from Singapore, Malaysia, India, and the Philippines, each bringing different market perspectives and communication styles.";
+      task = "I needed to ensure effective communication and collaboration across these cultural differences while delivering a cohesive campaign message that would resonate with our diverse Southeast Asian target market within our 6-week timeline.";
+      action = "I organized cultural awareness sessions where each team member shared insights about their market, implemented a structured communication framework with daily stand-ups and shared documentation, established rotating meeting times to accommodate different time zones, and created inclusive decision-making processes where all voices were heard and valued.";
+      result = "The campaign launched successfully with 98% of deliverables completed on time. We saw 45% higher engagement rates across all target markets compared to previous campaigns, achieved 2.1M app downloads in the first month (35% above target), and team satisfaction scores improved from 7.2 to 9.1/10. The inclusive collaboration framework we developed was adopted by 3 other teams.";
+    } else if (isAboutCampaign && isAboutTeamwork) {
+      situation = "I was tasked with leading a cross-functional marketing campaign for a new product launch that required tight coordination between marketing, design, development, sales, and customer support teams - 5 different departments with distinct priorities and workflows.";
+      task = "I needed to ensure all teams were aligned on campaign objectives, messaging, timelines, and deliverables while managing competing priorities and maintaining quality standards for our high-stakes product launch.";
+      action = "I established weekly cross-functional meetings with clear agendas, created a shared project management dashboard with real-time updates, implemented regular checkpoint reviews, and established clear escalation paths for issues. I also organized team-building activities to improve collaboration.";
+      result = "The campaign launched on schedule with all teams delivering their components successfully. We exceeded our initial sales targets by 40% in the first quarter, improved inter-team collaboration scores by 30%, and reduced project delivery time by 25%. This framework became our standard approach for future launches.";
+    } else if (isAboutLeadership && isAboutTeamwork) {
+      situation = "I was promoted to lead a marketing team of 10 people working on multiple concurrent campaigns, where previous coordination challenges had resulted in missed deadlines and inconsistent messaging across projects.";
+      task = "I needed to restructure our team processes, improve collaboration efficiency, and ensure consistent quality delivery across all campaigns while maintaining team morale and individual growth opportunities.";
+      action = "I implemented weekly team coordination meetings, established clear project ownership and accountability systems, created standardized templates and processes, and introduced peer review sessions. I also set up individual coaching sessions to support team members' professional development.";
+      result = "Within 3 months, our team delivery rate improved by 50%, campaign consistency scores increased to 92%, and team engagement surveys showed satisfaction levels rising from 6.8 to 8.9/10. We also reduced project revision cycles by 35% and won the company's 'Team Excellence' award.";
+    } else {
+      // General professional response
+      situation = "I was leading a strategic marketing initiative that required coordination across multiple stakeholders with different priorities, timelines, and success metrics, while working under tight deadlines and budget constraints.";
+      task = "I needed to align all stakeholders around a common vision, establish clear processes for collaboration and decision-making, and ensure we delivered results that met everyone's core objectives within our constraints.";
+      action = "I conducted stakeholder mapping to understand everyone's priorities, organized structured planning sessions to build consensus, implemented regular progress reviews with clear metrics, and established communication protocols that kept everyone informed and engaged throughout the process.";
+      result = "We successfully delivered the initiative on time and 5% under budget, exceeded our primary success metrics by 25%, and received positive feedback from 95% of stakeholders. The collaborative framework we established was adopted as a best practice across the organization.";
+    }
+    
+    return `**Situation:** ${situation}\n\n**Task:** ${task}\n\n**Action:** ${action}\n\n**Result:** ${result}`;
+  }
+
 }
