@@ -15,3 +15,28 @@ vite.config.ts.*
 vt-svc-key.json
 gcp-credentials.json
 *-service-account.json
+
+# Archive directory (development files, docs, legacy code)
+archive/
+
+# Development and testing files
+test-*.js
+test-*.cjs
+test-*.ts
+test-*.html
+test-*.json
+verify-*.cjs
+fix-*.cjs
+clean-*.cjs
+*.sql
+
+# Cache and temp files
+.cache/
+.upm/
+.config/replit/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
