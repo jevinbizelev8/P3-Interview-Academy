@@ -628,7 +628,7 @@ export default function InterviewPractice() {
       {/* Chat Interface */}
       <div className="grid lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
-          <Card className="h-[600px] flex flex-col">
+          <Card className="flex flex-col" style={{ height: 'calc(100vh - 320px)' }}>
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">Interview Conversation</CardTitle>
             </CardHeader>
