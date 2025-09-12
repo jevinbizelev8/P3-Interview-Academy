@@ -548,6 +548,66 @@ STAR METHOD EVALUATION:
         structureResponse: 'Gunakan metode STAR untuk menyusun jawaban',
         includeOutcomes: 'Sertakan metrik dan hasil yang spesifik',
         connectToRole: 'Hubungkan pengalaman dengan persyaratan posisi'
+      },
+      'th': {
+        goodStructure: 'ใช้โครงสร้างการเล่าเรื่องที่ดี',
+        specificExamples: 'รวมตัวอย่างที่เฉพาะเจาะจง',
+        clearCommunication: 'การสื่อสารที่ชัดเจนและกระชับ',
+        lacksStructure: 'คำตอบขาดโครงสร้างที่ชัดเจน',
+        useStarMethod: 'ใช้วิธี STAR: สถานการณ์ งาน การกระทำ ผลลัพธ์',
+        limitedEvidence: 'หลักฐานเฉพาะที่ให้มามีจำกัด',
+        includeMetrics: 'รวมตัวชี้วัด ตัวเลข และผลลัพธ์ที่วัดได้เฉพาะเจาะจง',
+        focusOnImpact: 'เน้นผลกระทบทางธุรกิจและผลลัพธ์ที่ได้รับมากขึ้น',
+        engagedQuestion: 'มีส่วนร่วมกับคำถาม',
+        moreDetailed: 'สามารถรายละเอียดมากขึ้น',
+        structureResponse: 'ใช้วิธี STAR ในการจัดโครงสร้างคำตอบ',
+        includeOutcomes: 'รวมตัวชี้วัดและผลลัพธ์ที่เฉพาะเจาะจง',
+        connectToRole: 'เชื่อมโยงประสบการณ์กับข้อกำหนดของตำแหน่ง'
+      },
+      'ms': {
+        goodStructure: 'Penggunaan struktur penceritaan yang baik',
+        specificExamples: 'Menyertakan contoh-contoh khusus',
+        clearCommunication: 'Komunikasi yang jelas dan ringkas',
+        lacksStructure: 'Respons kurang struktur yang jelas',
+        useStarMethod: 'Gunakan kaedah STAR: Situasi, Tugas, Tindakan, Hasil',
+        limitedEvidence: 'Bukti khusus yang diberikan terhad',
+        includeMetrics: 'Sertakan metrik, nombor, dan hasil yang boleh diukur secara khusus',
+        focusOnImpact: 'Fokus lebih pada kesan perniagaan dan hasil yang dicapai',
+        engagedQuestion: 'Melibatkan diri dengan soalan',
+        moreDetailed: 'Boleh lebih terperinci',
+        structureResponse: 'Gunakan kaedah STAR untuk menyusun jawapan',
+        includeOutcomes: 'Sertakan metrik dan hasil yang khusus',
+        connectToRole: 'Hubungkan pengalaman dengan keperluan peranan'
+      },
+      'vi': {
+        goodStructure: 'Sử dụng cấu trúc kể chuyện tốt',
+        specificExamples: 'Bao gồm các ví dụ cụ thể',
+        clearCommunication: 'Giao tiếp rõ ràng và súc tích',
+        lacksStructure: 'Phản hồi thiếu cấu trúc rõ ràng',
+        useStarMethod: 'Sử dụng phương pháp STAR: Tình huống, Nhiệm vụ, Hành động, Kết quả',
+        limitedEvidence: 'Bằng chứng cụ thể được cung cấp có hạn',
+        includeMetrics: 'Bao gồm các số liệu, con số và kết quả có thể đo lường cụ thể',
+        focusOnImpact: 'Tập trung nhiều hơn vào tác động kinh doanh và kết quả đạt được',
+        engagedQuestion: 'Tham gia với câu hỏi',
+        moreDetailed: 'Có thể chi tiết hơn',
+        structureResponse: 'Sử dụng phương pháp STAR để cấu trúc câu trả lời',
+        includeOutcomes: 'Bao gồm các số liệu và kết quả cụ thể',
+        connectToRole: 'Kết nối kinh nghiệm với yêu cầu vai trò'
+      },
+      'tl': {
+        goodStructure: 'Mahusay na paggamit ng structured storytelling',
+        specificExamples: 'Kasama ang mga tukoy na halimbawa',
+        clearCommunication: 'Malinaw at maikli na komunikasyon',
+        lacksStructure: 'Kulang ang tugon sa malinaw na istraktura',
+        useStarMethod: 'Gamitin ang STAR method: Sitwasyon, Tungkulin, Aksyon, Resulta',
+        limitedEvidence: 'Limitadong tukoy na ebidensya ang ibinigay',
+        includeMetrics: 'Kasama ang mga tukoy na sukatan, numero, at nasusukat na resulta',
+        focusOnImpact: 'Mag-focus nang higit sa business impact at mga nakamit na resulta',
+        engagedQuestion: 'Nakipag-ugnayan sa tanong',
+        moreDetailed: 'Maaaring mas detalyado',
+        structureResponse: 'Gamitin ang STAR method para sa pagkakaayos ng sagot',
+        includeOutcomes: 'Kasama ang mga tukoy na sukatan at resulta',
+        connectToRole: 'Ikonekta ang karanasan sa mga pangangailangan ng tungkulin'
       }
     };
 
