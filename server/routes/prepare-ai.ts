@@ -150,10 +150,10 @@ router.post('/sessions/:sessionId/question', async (req, res) => {
     });
 
     // Emit the question to WebSocket clients in the session room
-    // Use translated question if available and language is not English
-    const questionToSend = session.preferredLanguage !== 'en' && question.questionTextTranslated 
-      ? question.questionTextTranslated 
-      : question.questionText;
+    // Use question in preferred language - questionText contains the target language version
+    const questionToSend = session.preferredLanguage !== 'en' 
+      ? question.questionText      // This contains the Thai/target language version
+      : question.questionTextTranslated || question.questionText; // Fallback to English if needed
       
     emitToSession(req.params.sessionId, 'question-generated', {
       question: questionToSend,
