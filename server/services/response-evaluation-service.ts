@@ -897,7 +897,7 @@ ASEAN BUSINESS CONTEXT:
       overallRating,
       starScores,
       detailedFeedback,
-      modelAnswer: this.generateModelAnswer(request.questionCategory, request.jobPosition, request.questionText),
+      modelAnswer: this.generateModelAnswer(request.questionCategory, request.jobPosition, request.questionText, request.responseLanguage),
       completenessScore: Number(weightedOverallScore.toFixed(1)),
       evaluatedBy: 'rule-based'
     };
@@ -927,12 +927,12 @@ ASEAN BUSINESS CONTEXT:
     };
   }
 
-  private generateModelAnswer(questionCategory: string, jobPosition: string, questionText: string): string {
+  private generateModelAnswer(questionCategory: string, jobPosition: string, questionText: string, language: string = 'en'): string {
     // Generate a direct STAR method response to the specific question
-    return this.createStarResponse(questionText, jobPosition);
+    return this.createStarResponse(questionText, jobPosition, language);
   }
   
-  private createStarResponse(questionText: string, jobPosition: string): string {
+  private createStarResponse(questionText: string, jobPosition: string, language: string = 'en'): string {
     const question = questionText.toLowerCase();
     
     // Extract key themes from the question
@@ -971,7 +971,59 @@ ASEAN BUSINESS CONTEXT:
       result = "We successfully delivered the initiative on time and 5% under budget, exceeded our primary success metrics by 25%, and received positive feedback from 95% of stakeholders. The collaborative framework we established was adopted as a best practice across the organization.";
     }
     
-    return `**Situation:** ${situation}\n\n**Task:** ${task}\n\n**Action:** ${action}\n\n**Result:** ${result}`;
+    // Return translated response based on language
+    if (language === 'th') {
+      return `**สถานการณ์:** ${this.translateModelAnswerText(situation, language)}\n\n**งาน:** ${this.translateModelAnswerText(task, language)}\n\n**การกระทำ:** ${this.translateModelAnswerText(action, language)}\n\n**ผลลัพธ์:** ${this.translateModelAnswerText(result, language)}`;
+    } else if (language === 'id') {
+      return `**Situasi:** ${this.translateModelAnswerText(situation, language)}\n\n**Tugas:** ${this.translateModelAnswerText(task, language)}\n\n**Aksi:** ${this.translateModelAnswerText(action, language)}\n\n**Hasil:** ${this.translateModelAnswerText(result, language)}`;
+    } else if (language === 'ms') {
+      return `**Situasi:** ${this.translateModelAnswerText(situation, language)}\n\n**Tugas:** ${this.translateModelAnswerText(task, language)}\n\n**Tindakan:** ${this.translateModelAnswerText(action, language)}\n\n**Hasil:** ${this.translateModelAnswerText(result, language)}`;
+    } else if (language === 'vi') {
+      return `**Tình huống:** ${this.translateModelAnswerText(situation, language)}\n\n**Nhiệm vụ:** ${this.translateModelAnswerText(task, language)}\n\n**Hành động:** ${this.translateModelAnswerText(action, language)}\n\n**Kết quả:** ${this.translateModelAnswerText(result, language)}`;
+    } else if (language === 'tl') {
+      return `**Sitwasyon:** ${this.translateModelAnswerText(situation, language)}\n\n**Tungkulin:** ${this.translateModelAnswerText(task, language)}\n\n**Aksyon:** ${this.translateModelAnswerText(action, language)}\n\n**Resulta:** ${this.translateModelAnswerText(result, language)}`;
+    } else {
+      return `**Situation:** ${situation}\n\n**Task:** ${task}\n\n**Action:** ${action}\n\n**Result:** ${result}`;
+    }
+  }
+
+  private translateModelAnswerText(text: string, language: string): string {
+    // For rule-based evaluation, use simple template translations
+    // This is a simplified approach since we're in fallback mode
+    const templates: Record<string, Record<string, string>> = {
+      'th': {
+        'I was leading a strategic marketing initiative': 'ฉันกำลังนำแผนการตลาดเชิงกลยุทธ์',
+        'coordination across multiple stakeholders': 'การประสานงานระหว่างผู้มีส่วนได้ส่วนเสียหลายฝ่าย',
+        'tight deadlines and budget constraints': 'กำหนดเวลาที่เข้มงวดและข้อจำกัดด้านงบประมาณ',
+        'align all stakeholders': 'จัดตำแหน่งผู้มีส่วนได้ส่วนเสียทั้งหมด',
+        'common vision': 'วิสัยทัศน์ร่วม',
+        'clear processes': 'กระบวนการที่ชัดเจน',
+        'delivered results': 'ส่งมอบผลลัพธ์',
+        'exceeded our primary success metrics by 25%': 'เกินตัวชี้วัดความสำเร็จหลักของเรา 25%',
+        'on time and 5% under budget': 'ตรงเวลาและต่ำกว่างบประมาณ 5%',
+        'positive feedback from 95% of stakeholders': 'ข้อเสนะแนะเชิงบวกจาก 95% ของผู้มีส่วนได้ส่วนเสีย'
+      }
+    };
+
+    if (language === 'th') {
+      let translated = text;
+      const thaiTemplates = templates['th'];
+      
+      // Replace common phrases with Thai translations
+      for (const [english, thai] of Object.entries(thaiTemplates)) {
+        translated = translated.replace(new RegExp(english, 'gi'), thai);
+      }
+      
+      // If no translations found, return a generic Thai template
+      if (translated === text) {
+        return 'ในบทบาทของฉันเป็นมืออาชีพ ฉันได้รับมอบหมายให้จัดการกับความท้าทายที่สำคัญซึ่งต้องใช้การคิดเชิงกลยุทธ์ ฉันได้วิเคราะห์สถานการณ์อย่างละเอียด กำหนดวัตถุประสงค์ที่ชัดเจน ดำเนินแผนที่มีโครงสร้างพร้อมเป้าหมายที่วัดได้ และส่งมอบผลลัพธ์ที่เกินความคาดหวัง 25%';
+      }
+      
+      return translated;
+    }
+    
+    // For other languages, return original English for now
+    return text;
   }
 
 }
