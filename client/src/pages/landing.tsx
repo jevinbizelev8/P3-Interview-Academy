@@ -16,12 +16,12 @@ const FEATURES = [
   {
     icon: Zap,
     title: "AI-Powered Coaching",
-    description: "Dynamic question generation powered by SeaLion AI, tailored to your specific job role and company"
+    description: "Dynamic question generation powered by SeaLion AI and OpenAI, tailored to your specific job role and company"
   },
   {
     icon: Globe,
     title: "Multi-Language Support",
-    description: "Practice in 10 Southeast Asian languages with culturally appropriate responses"
+    description: "Practice in 7 Southeast Asian languages with culturally appropriate responses"
   },
   {
     icon: Target,
@@ -86,7 +86,7 @@ const TARGET_AUDIENCES = [
   {
     title: "Southeast Asian Professionals",
     description: "Practicing in your native language",
-    benefits: ["Interview preparation in 10 local languages", "Culturally relevant business contexts", "Regional company-specific scenarios", "Local market insights and expectations"],
+    benefits: ["Interview preparation in 7 local languages", "Culturally relevant business contexts", "Regional company-specific scenarios", "Local market insights and expectations"],
     icon: "🌏",
     audience: "Professionals across Malaysia, Singapore, Thailand, Indonesia, and more"
   }
@@ -172,7 +172,7 @@ export default function Landing() {
             </div>
             <p className="text-sm text-gray-500 mt-4">
               <Shield className="inline w-4 h-4 mr-1" />
-              Secure login • Personal progress tracking • 10 Southeast Asian languages
+              Secure login • Personal progress tracking • 7 Southeast Asian languages
             </p>
           </div>
         </div>
@@ -251,7 +251,7 @@ export default function Landing() {
                 AI-Powered Coaching Technology
               </h2>
               <p className="text-lg text-gray-600 mb-6">
-                Experience the future of interview preparation with our advanced SeaLion AI technology. 
+                Experience the future of interview preparation with our advanced AI technology powered by SeaLion AI and OpenAI. 
                 Get personalized coaching that adapts to your learning style and career goals.
               </p>
               <div className="space-y-4">
@@ -261,7 +261,7 @@ export default function Landing() {
                 </div>
                 <div className="flex items-center">
                   <Globe className="w-5 h-5 text-purple-500 mr-3" />
-                  <span className="text-gray-700">10 Southeast Asian languages</span>
+                  <span className="text-gray-700">7 Southeast Asian languages</span>
                 </div>
                 <div className="flex items-center">
                   <Target className="w-5 h-5 text-green-500 mr-3" />

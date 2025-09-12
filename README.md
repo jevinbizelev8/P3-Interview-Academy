@@ -16,7 +16,7 @@ Transform your interview skills with personalized AI coaching, multi-language su
 - **📊 Perform**: Comprehensive analytics and performance tracking
 
 ### 🌍 **Multi-Language Support**
-- **10+ Southeast Asian Languages**: Thai, Indonesian, Malaysian, Vietnamese, Filipino, and more
+- **7 Southeast Asian Languages**: Thai, Indonesian, Malaysian, Vietnamese, Filipino, Chinese (Singapore), and English
 - **Voice Recognition**: Speech-to-text in multiple languages
 - **Text-to-Speech**: Natural voice feedback in your preferred language
 - **Cultural Context**: AI responses tailored to regional business practices
@@ -29,7 +29,7 @@ Transform your interview skills with personalized AI coaching, multi-language su
 
 ### 🎙️ **Voice Technology**
 - **Free Browser APIs**: No server costs for voice functionality
-- **Multi-language TTS/STT**: Seamless voice interaction in 10+ languages
+- **Multi-language TTS/STT**: Seamless voice interaction in 7 languages
 - **Voice Quality Detection**: Automatic audio optimization
 - **Browser Compatibility**: Works across modern browsers
 
@@ -54,8 +54,8 @@ Transform your interview skills with personalized AI coaching, multi-language su
 
 ### **AI & Language Services**
 - **SeaLion AI** - Primary AI service for Southeast Asian contexts
-- **OpenAI** - GPT-4o for advanced language processing
-- **Google Vertex AI** - Additional AI capabilities
+- **OpenAI** - GPT-4o for advanced language processing and fallback
+- **Google Vertex AI** - Additional AI capabilities and Vertex AI integration
 - **AWS Bedrock** - Claude integration for enterprise features
 
 ### **Development & Deployment**
