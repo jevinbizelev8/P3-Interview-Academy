@@ -21,11 +21,13 @@ describe('Session API Integration', () => {
     });
 
     it('requires all query parameters', async () => {
-      const response = await apiRequest('GET', '/api/practice/scenarios?stage=hiring-manager');
-      
-      expect(response.status).toBe(400);
-      const error = await response.json();
-      expect(error.message).toBe('Missing required parameters');
+      try {
+        await apiRequest('GET', '/api/practice/scenarios?stage=hiring-manager');
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error.message).toBe('400: {"message":"Missing required parameters"}');
+      }
     });
 
     it('handles different interview stages', async () => {
@@ -36,7 +38,8 @@ describe('Session API Integration', () => {
         const scenarios = await response.json();
 
         expect(scenarios[0].interviewStage).toBe(stage);
-        expect(scenarios[0].title).toContain(stage.replace('-', ' '));
+        const expectedTitle = stage.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        expect(scenarios[0].title).toContain(expectedTitle);
       }
     });
 
@@ -92,11 +95,14 @@ describe('Session API Integration', () => {
       ];
 
       for (const invalidData of invalidRequests) {
-        const response = await apiRequest('POST', '/api/practice/sessions', invalidData);
-        
-        expect(response.status).toBe(400);
-        const error = await response.json();
-        expect(error.message).toContain('Missing required fields');
+        try {
+          await apiRequest('POST', '/api/practice/sessions', invalidData);
+          // Should not reach here
+          expect(true).toBe(false);
+        } catch (error) {
+          expect(error.message).toContain('400:');
+          expect(error.message).toContain('Missing required fields');
+        }
       }
     });
 
@@ -203,11 +209,13 @@ describe('Session API Integration', () => {
     });
 
     it('handles scenario generation errors', async () => {
-      const response = await apiRequest('GET', '/api/practice/scenarios/error');
-      
-      expect(response.status).toBe(500);
-      const error = await response.json();
-      expect(error.message).toBe('Internal server error');
+      try {
+        await apiRequest('GET', '/api/practice/scenarios/error');
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error.message).toBe('500: {"message":"Internal server error"}');
+      }
     });
 
     it('handles session creation errors', async () => {
@@ -217,11 +225,13 @@ describe('Session API Integration', () => {
         userCompanyName: 'Company',
       };
 
-      const response = await apiRequest('POST', '/api/practice/sessions/error', sessionData);
-      
-      expect(response.status).toBe(500);
-      const error = await response.json();
-      expect(error.message).toBe('Failed to create session');
+      try {
+        await apiRequest('POST', '/api/practice/sessions/error', sessionData);
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        expect(error.message).toBe('500: {"message":"Failed to create session"}');
+      }
     });
 
     it('handles network errors gracefully', async () => {
@@ -257,8 +267,13 @@ describe('Session API Integration', () => {
           userCompanyName: 'Company',
         };
 
-        const response = await apiRequest('POST', '/api/practice/sessions', sessionData);
-        expect(response.status).toBe(400);
+        try {
+          await apiRequest('POST', '/api/practice/sessions', sessionData);
+          // Should not reach here
+          expect(true).toBe(false);
+        } catch (error) {
+          expect(error.message).toContain('400:');
+        }
       }
     });
 

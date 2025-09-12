@@ -44,7 +44,7 @@ export default function LanguageSelector({ value, onValueChange, className }: La
                 )}
               </div>
             ) : (
-              'Select Language'
+              <span>Select Language</span>
             )}
           </SelectValue>
         </SelectTrigger>

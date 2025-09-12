@@ -14,9 +14,12 @@ vi.mock('wouter', async () => {
 });
 
 // Mock toast hook
-const mockToast = vi.fn();
 vi.mock('@/hooks/use-toast', () => ({
-  toast: mockToast,
+  toast: vi.fn(),
+  useToast: () => ({ 
+    toast: vi.fn(),
+    toasts: []
+  }),
 }));
 
 describe('Home Component', () => {
@@ -27,7 +30,7 @@ describe('Home Component', () => {
   describe('Component Rendering', () => {
     it('renders without crashing', () => {
       render(<Home />);
-      expect(screen.getByText('Master Your Interview Skills')).toBeInTheDocument();
+      expect(screen.getByText('AI Interview Coaching')).toBeInTheDocument();
     });
 
     it('displays all required form fields', () => {

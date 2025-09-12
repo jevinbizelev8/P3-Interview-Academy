@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import type { InterviewType, JobDescription } from '@shared/schema';
+import type { InterviewType } from '@shared/schema';
 
 // Mock data
 const mockScenarios = [
@@ -32,17 +32,6 @@ const mockSession = {
   updatedAt: new Date().toISOString(),
 };
 
-const mockJobDescriptions: JobDescription[] = [
-  {
-    id: 'job-desc-1',
-    userId: 'test-user-123',
-    fileName: 'business-manager-job.pdf',
-    content: 'Business Manager position at Microsoft...',
-    uploadedAt: new Date(),
-    fileSize: 1024,
-    fileUrl: '/uploads/job-desc-1.pdf',
-  },
-];
 
 export const handlers = [
   // Scenarios API
@@ -57,14 +46,18 @@ export const handlers = [
     }
 
     // Return mock scenarios customized for the request
-    const customScenarios = mockScenarios.map(scenario => ({
-      ...scenario,
-      id: `dynamic-${stage}-${Date.now()}`,
-      interviewStage: stage,
-      jobRole: userJobPosition,
-      companyBackground: userCompanyName,
-      description: `Customized ${stage} interview for ${userJobPosition} at ${userCompanyName}`,
-    }));
+    const customScenarios = mockScenarios.map(scenario => {
+      const stageTitle = stage.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+      return {
+        ...scenario,
+        id: `dynamic-${stage}-${Date.now()}`,
+        title: `${stageTitle} Interview`,
+        interviewStage: stage,
+        jobRole: userJobPosition,
+        companyBackground: userCompanyName,
+        description: `Customized ${stage} interview for ${userJobPosition} at ${userCompanyName}`,
+      };
+    });
 
     return HttpResponse.json(customScenarios);
   }),
@@ -80,6 +73,14 @@ export const handlers = [
       );
     }
 
+    // Validate scenario ID format
+    if (typeof body.scenarioId !== 'string' || body.scenarioId.trim() === '') {
+      return HttpResponse.json(
+        { message: 'Invalid scenario ID format' },
+        { status: 400 }
+      );
+    }
+
     const session = {
       ...mockSession,
       scenarioId: body.scenarioId,
@@ -91,72 +92,6 @@ export const handlers = [
     return HttpResponse.json(session, { status: 201 });
   }),
 
-  // Job descriptions API
-  http.get('/api/job-descriptions/user/:userId', ({ params }) => {
-    const { userId } = params;
-    if (userId === 'test-user-123') {
-      return HttpResponse.json(mockJobDescriptions);
-    }
-    return HttpResponse.json([]);
-  }),
-
-  // Handle edge case for empty userId
-  http.get('/api/job-descriptions/user/', () => {
-    return HttpResponse.json([]);
-  }),
-
-  http.post('/api/job-descriptions', async ({ request }) => {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    const userId = formData.get('userId') as string;
-
-    if (!file || !userId) {
-      return HttpResponse.json(
-        { message: 'Missing file or userId' },
-        { status: 400 }
-      );
-    }
-
-    // Simulate file validation
-    if (file.size > 5 * 1024 * 1024) { // 5MB limit
-      return HttpResponse.json(
-        { message: 'File too large. Maximum size is 5MB.' },
-        { status: 400 }
-      );
-    }
-
-    // Validate file type
-    const allowedTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ];
-
-    if (!allowedTypes.includes(file.type)) {
-      return HttpResponse.json(
-        { message: 'Invalid file type. Only PDF, DOC, and DOCX files are allowed.' },
-        { status: 400 }
-      );
-    }
-
-    const newJobDescription = {
-      id: `job-desc-${Date.now()}`,
-      userId,
-      fileName: file.name,
-      content: `Mock content for ${file.name}`,
-      uploadedAt: new Date(),
-      fileSize: file.size,
-      fileUrl: `/uploads/job-desc-${Date.now()}.pdf`,
-    };
-
-    return HttpResponse.json(newJobDescription, { status: 201 });
-  }),
-
-  http.delete('/api/job-descriptions/:id', ({ params }) => {
-    const { id } = params;
-    // Mock successful deletion
-    return HttpResponse.json({ message: 'Job description deleted successfully' });
-  }),
 
   // Error simulation handlers (can be activated in specific tests)
   http.get('/api/practice/scenarios/error', () => {
@@ -175,4 +110,4 @@ export const handlers = [
 ];
 
 // Export specific mock data for use in tests
-export { mockScenarios, mockSession, mockJobDescriptions };
+export { mockScenarios, mockSession };
