@@ -71,7 +71,7 @@ export default function ChatInterface({
   };
 
   return (
-    <Card className="h-96 flex flex-col">
+    <Card className="flex flex-col h-full min-h-0">
       {/* Chat Header */}
       <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg flex-shrink-0">
         <div className="flex items-center">
