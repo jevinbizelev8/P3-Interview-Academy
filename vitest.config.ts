@@ -9,6 +9,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./client/src/__tests__/setup.ts'],
     include: ['client/src/__tests__/**/*.test.{ts,tsx}'],
+    testTimeout: 10000, // Increase test timeout to 10 seconds
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

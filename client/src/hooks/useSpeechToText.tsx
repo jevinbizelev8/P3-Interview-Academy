@@ -49,7 +49,7 @@ export function useSpeechToText(options: SpeechToTextOptions = {}): UseSpeechToT
     recognition.continuous = continuous;
     recognition.interimResults = interimResults;
     recognition.lang = language;
-    recognition.maxAlternatives = 1;
+    // recognition.maxAlternatives = 1; // This property doesn't exist in standard SpeechRecognition
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -165,10 +165,3 @@ export function useSpeechToText(options: SpeechToTextOptions = {}): UseSpeechToT
   };
 }
 
-// Extend Window interface for TypeScript
-declare global {
-  interface Window {
-    SpeechRecognition: any;
-    webkitSpeechRecognition: any;
-  }
-}
