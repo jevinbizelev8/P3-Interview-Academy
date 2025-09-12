@@ -67,13 +67,34 @@ export default function VoiceControls({
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       
-      // Filter voices by language preference
-      const filteredVoices = voices.filter(voice => {
-        if (language === 'en') return voice.lang.startsWith('en');
-        return voice.lang.startsWith(language);
+      // Our supported languages
+      const supportedLanguages = ['en', 'th', 'id', 'ms', 'vi', 'tl', 'fil'];
+      
+      // Filter voices to only show those for supported languages
+      const relevantVoices = voices.filter(voice => {
+        const voiceLang = voice.lang.toLowerCase();
+        return supportedLanguages.some(lang => 
+          voiceLang.startsWith(lang) || 
+          (lang === 'tl' && voiceLang.startsWith('fil')) || // Filipino mapping
+          (lang === 'ms' && voiceLang.startsWith('ms-my')) || // Malaysian mapping
+          (lang === 'id' && voiceLang.startsWith('id-id'))    // Indonesian mapping
+        );
       });
       
-      setAvailableVoices(filteredVoices.length > 0 ? filteredVoices : voices);
+      // Filter by current session language if available
+      const languageFilteredVoices = relevantVoices.filter(voice => {
+        const voiceLang = voice.lang.toLowerCase();
+        if (language === 'en') return voiceLang.startsWith('en');
+        if (language === 'th') return voiceLang.startsWith('th');
+        if (language === 'id') return voiceLang.startsWith('id');
+        if (language === 'ms') return voiceLang.startsWith('ms');
+        if (language === 'vi') return voiceLang.startsWith('vi');
+        if (language === 'tl') return voiceLang.startsWith('fil') || voiceLang.startsWith('tl');
+        return voiceLang.startsWith(language);
+      });
+      
+      // Use language-specific voices if available, otherwise use all relevant voices
+      setAvailableVoices(languageFilteredVoices.length > 0 ? languageFilteredVoices : relevantVoices);
     };
 
     loadVoices();
