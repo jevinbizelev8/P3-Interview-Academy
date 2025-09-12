@@ -53,7 +53,8 @@
       "WebSearch",
       "Bash(npx drizzle-kit:*)",
       "Bash(npx tsx:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(timeout 30s npm test -- client/src/__tests__/api/JobDescriptionAPI.test.ts)"
     ],
     "deny": [],
     "ask": []

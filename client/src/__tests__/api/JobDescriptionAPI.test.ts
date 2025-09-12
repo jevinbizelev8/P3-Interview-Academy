@@ -135,10 +135,8 @@ describe('Job Description API Integration', () => {
           body: formData,
         });
 
-        // Note: In the mock, we're not implementing file type validation
-        // In a real implementation, this would return 400
-        // For now, we'll test that the upload endpoint exists
-        expect(response.status).toBeOneOf([201, 400]);
+        // Should reject invalid file types
+        expect(response.status).toBe(400);
       }
     });
 

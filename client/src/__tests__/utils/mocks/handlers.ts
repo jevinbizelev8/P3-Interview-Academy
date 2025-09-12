@@ -100,6 +100,11 @@ export const handlers = [
     return HttpResponse.json([]);
   }),
 
+  // Handle edge case for empty userId
+  http.get('/api/job-descriptions/user/', () => {
+    return HttpResponse.json([]);
+  }),
+
   http.post('/api/job-descriptions', async ({ request }) => {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -116,6 +121,20 @@ export const handlers = [
     if (file.size > 5 * 1024 * 1024) { // 5MB limit
       return HttpResponse.json(
         { message: 'File too large. Maximum size is 5MB.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      return HttpResponse.json(
+        { message: 'Invalid file type. Only PDF, DOC, and DOCX files are allowed.' },
         { status: 400 }
       );
     }
