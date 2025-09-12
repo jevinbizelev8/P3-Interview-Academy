@@ -58,11 +58,7 @@ const LANGUAGES = [
   { value: 'id', label: 'Bahasa Indonesia', flag: '🇮🇩' },
   { value: 'th', label: 'ภาษาไทย (Thai)', flag: '🇹🇭' },
   { value: 'vi', label: 'Tiếng Việt', flag: '🇻🇳' },
-  { value: 'tl', label: 'Filipino', flag: '🇵🇭' },
-  { value: 'my', label: 'မြန်မာဘာသာ (Burmese)', flag: '🇲🇲' },
-  { value: 'km', label: 'ភាសាខ្មែរ (Khmer)', flag: '🇰🇭' },
-  { value: 'lo', label: 'ພາສາລາວ (Lao)', flag: '🇱🇦' },
-  { value: 'bn', label: 'বাংলা (Bengali)', flag: '🇧🇩' }
+  { value: 'tl', label: 'Filipino', flag: '🇵🇭' }
 ];
 
 // Common job titles for quick selection
