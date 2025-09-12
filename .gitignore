@@ -30,6 +30,12 @@ fix-*.cjs
 clean-*.cjs
 *.sql
 
+# Essential assets (DO NOT IGNORE)
+!client/src/assets/
+!client/src/assets/**/*.png
+!client/src/assets/**/*.jpg
+!client/src/assets/**/*.svg
+
 # Cache and temp files
 .cache/
 .upm/
