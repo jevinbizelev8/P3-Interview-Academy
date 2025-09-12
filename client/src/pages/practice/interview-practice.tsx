@@ -345,7 +345,19 @@ export default function InterviewPractice() {
   
   const handleTestVoice = async () => {
     const language = session?.preferredLanguage || 'en';
-    await integratedVoiceService.testVoice(language === 'en' ? 'en-US' : `${language}-MY`);
+    
+    // Use the same language mapping as speakAIResponse
+    const languageMap: Record<string, string> = {
+      'en': 'en-US',
+      'th': 'th-TH',
+      'id': 'id-ID',
+      'ms': 'ms-MY',
+      'vi': 'vi-VN',
+      'tl': 'fil-PH'
+    };
+    
+    const voiceLanguage = languageMap[language] || 'en-US';
+    await integratedVoiceService.testVoice(voiceLanguage);
   };
   
   // Speak AI response function
@@ -354,7 +366,40 @@ export default function InterviewPractice() {
     
     setIsSpeaking(true);
     const language = session?.preferredLanguage || 'en';
-    const voiceLanguage = language === 'en' ? 'en-US' : `${language}-MY`;
+    
+    // Map language codes to proper TTS locale codes with ASEAN fallback
+    const getVoiceLanguage = (lang: string): string => {
+      const languageMap: Record<string, string> = {
+        'en': 'en-US',
+        'th': 'th-TH',
+        'id': 'id-ID',
+        'ms': 'ms-MY',
+        'vi': 'vi-VN',
+        'tl': 'fil-PH'
+      };
+      
+      const targetLang = languageMap[lang] || 'en-US';
+      
+      // Check if voices are available for target language
+      const voices = typeof window !== 'undefined' ? window.speechSynthesis?.getVoices() || [] : [];
+      const hasTargetVoice = voices.some(v => v.lang.toLowerCase().startsWith(lang));
+      
+      if (!hasTargetVoice && lang === 'th') {
+        // Thai fallback: try Indonesian first, then other ASEAN languages
+        const fallbackOrder = ['id', 'ms', 'vi', 'tl', 'en'];
+        for (const fallbackLang of fallbackOrder) {
+          const hasFallbackVoice = voices.some(v => v.lang.toLowerCase().startsWith(fallbackLang));
+          if (hasFallbackVoice) {
+            console.log(`🎙️ Thai voice not available, falling back to ${fallbackLang.toUpperCase()}`);
+            return languageMap[fallbackLang] || 'en-US';
+          }
+        }
+      }
+      
+      return targetLang;
+    };
+    
+    const voiceLanguage = getVoiceLanguage(language);
     
     try {
       await integratedVoiceService.speak(text, {
@@ -843,7 +888,19 @@ export default function InterviewPractice() {
                       data-testid="select-voice"
                     >
                       <option value="">Default Voice</option>
-                      {typeof window !== 'undefined' && window.speechSynthesis?.getVoices().map((voice) => (
+                      {typeof window !== 'undefined' && window.speechSynthesis?.getVoices()
+                        .filter((voice) => {
+                          const voiceLang = voice.lang.toLowerCase();
+                          // Only show Southeast Asian and English voices
+                          return voiceLang.startsWith('en') || 
+                                 voiceLang.startsWith('th') || 
+                                 voiceLang.startsWith('id') || 
+                                 voiceLang.startsWith('ms') || 
+                                 voiceLang.startsWith('vi') || 
+                                 voiceLang.startsWith('fil') || 
+                                 voiceLang.startsWith('tl');
+                        })
+                        .map((voice) => (
                         <option key={voice.name} value={voice.name}>
                           {voice.name} ({voice.lang})
                         </option>
