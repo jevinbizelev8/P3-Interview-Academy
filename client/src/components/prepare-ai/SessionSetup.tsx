@@ -123,23 +123,8 @@ export default function SessionSetup({
       return;
     }
     
-    // Map frontend config to backend schema
-    const backendConfig = {
-      jobPosition: config.jobTitle,
-      companyName: config.companyName || undefined,
-      interviewStage: config.interviewStage,
-      experienceLevel: "intermediate" as const, // Default to intermediate
-      preferredLanguage: config.language,
-      voiceEnabled: config.voiceEnabled,
-      speechRate: "1.0",
-      difficultyLevel: config.difficulty === 'beginner' ? 'beginner' as const : 
-                      config.difficulty === 'advanced' ? 'advanced' as const : 
-                      'intermediate' as const,
-      focusAreas: ["behavioral", "situational"],
-      questionCategories: ["general"]
-    };
-    
-    onStartSession(backendConfig);
+    // Pass frontend config directly - backend transformation happens in PrepareAIInterface
+    onStartSession(config);
   };
 
   const selectedStage = INTERVIEW_STAGES.find(stage => stage.value === config.interviewStage);
