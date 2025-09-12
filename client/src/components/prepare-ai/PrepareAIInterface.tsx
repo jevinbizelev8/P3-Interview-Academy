@@ -437,12 +437,44 @@ export default function PrepareAIInterface({
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = speechRate;
-    utterance.lang = session?.preferredLanguage === 'en' ? 'en-US' : session?.preferredLanguage || 'en-US';
+    
+    // Map language codes to proper TTS locale codes
+    const languageMap: Record<string, string> = {
+      'en': 'en-US',
+      'th': 'th-TH',
+      'id': 'id-ID', 
+      'ms': 'ms-MY',
+      'vi': 'vi-VN',
+      'tl': 'fil-PH'
+    };
+    
+    const lang = session?.preferredLanguage || 'en';
+    utterance.lang = languageMap[lang] || 'en-US';
+    
+    // Enhanced voice selection for better language support
+    const voices = speechSynthesis.current.getVoices();
     
     if (selectedVoice) {
-      const voices = speechSynthesis.current.getVoices();
       const voice = voices.find(v => v.name === selectedVoice);
       if (voice) utterance.voice = voice;
+    } else {
+      // Auto-select best voice for the language
+      const targetLang = utterance.lang;
+      const langCode = targetLang.split('-')[0];
+      
+      // Find voices that match the language
+      const matchingVoices = voices.filter(v => 
+        v.lang.toLowerCase().startsWith(langCode.toLowerCase())
+      );
+      
+      if (matchingVoices.length > 0) {
+        // Prefer Google voices for better quality
+        const googleVoice = matchingVoices.find(v => v.name.includes('Google'));
+        const microsoftVoice = matchingVoices.find(v => v.name.includes('Microsoft'));
+        
+        utterance.voice = googleVoice || microsoftVoice || matchingVoices[0];
+        console.log(`🎙️ Auto-selected voice for ${lang}: ${utterance.voice.name}`);
+      }
     }
 
     utterance.onstart = () => setIsSpeaking(true);
