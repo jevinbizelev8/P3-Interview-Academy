@@ -1,0 +1,61 @@
+{
+  "id": "test-evaluation-123",
+  "sessionId": "test-session-123",
+  "relevanceScore": "4.2",
+  "relevanceFeedback": "The candidate provided focused and relevant answers throughout the interview, directly addressing each question without unnecessary tangents.",
+  "starStructureScore": "3.8",
+  "starStructureFeedback": "Good use of the STAR method with clear situation and task descriptions, though some action sections could be more detailed.",
+  "specificEvidenceScore": "4.5",
+  "specificEvidenceFeedback": "Excellent use of specific examples with concrete metrics and measurable outcomes. The candidate consistently backed up claims with solid evidence.",
+  "roleAlignmentScore": "4.0",
+  "roleAlignmentFeedback": "Strong alignment with the role requirements, demonstrating relevant experience and genuine enthusiasm for the position.",
+  "outcomeOrientedScore": "3.7",
+  "outcomeOrientedFeedback": "Good focus on measurable results, though some examples could benefit from more quantified business impact.",
+  "communicationScore": "4.3",
+  "communicationFeedback": "Highly articulate and confident communication with clear, professional language throughout the interview.",
+  "problemSolvingScore": "3.9",
+  "problemSolvingFeedback": "Demonstrated solid analytical thinking with creative problem-solving approaches and strategic insight.",
+  "culturalFitScore": "4.1",
+  "culturalFitFeedback": "Excellent alignment with company values, showing strong teamwork orientation and collaborative mindset.",
+  "learningAgilityScore": "3.6",
+  "learningAgilityFeedback": "Shows good adaptability and willingness to learn, with examples of proactive skill development.",
+  "weightedOverallScore": "4.0",
+  "overallRating": "Pass",
+  "overallScore": "8.0",
+  "empathyScore": "4.1",
+  "culturalAlignmentScore": "4.1",
+  "qualitativeObservations": "The candidate demonstrated strong technical competency paired with excellent communication skills. Their responses showed deep understanding of the role requirements and clear enthusiasm for the position. Areas for improvement include providing more quantified results and expanding on collaborative experiences.",
+  "actionableInsights": [
+    "Focus on quantifying business impact with specific metrics and percentages",
+    "Prepare more detailed examples of cross-functional collaboration",
+    "Practice articulating technical concepts for non-technical stakeholders"
+  ],
+  "personalizedDrills": [
+    "Practice behavioral questions with emphasis on measurable outcomes",
+    "Conduct mock presentations to diverse audiences",
+    "Role-play challenging team conflict scenarios",
+    "Practice explaining complex technical concepts simply"
+  ],
+  "reflectionPrompts": [
+    "What specific value would you bring to this role that others might not?",
+    "How do you handle feedback and continuous learning in your career?",
+    "What challenges excite you most about this position?"
+  ],
+  "badgeEarned": "Strong Candidate",
+  "pointsEarned": 80,
+  "strengths": [
+    "Excellent communication and presentation skills",
+    "Strong technical problem-solving abilities", 
+    "Clear role alignment and genuine enthusiasm",
+    "Good use of specific examples and evidence"
+  ],
+  "improvementAreas": [
+    "Provide more quantified business impact metrics",
+    "Expand on cross-team collaboration examples",
+    "Include more strategic thinking perspectives"
+  ],
+  "evaluationLanguage": "en",
+  "culturalContext": "SEA",
+  "createdAt": "2025-09-07T08:58:00.000Z",
+  "updatedAt": "2025-09-07T08:58:00.000Z"
+}

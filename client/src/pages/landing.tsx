@@ -8,6 +8,9 @@ import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCirc
 import { useAuth } from "@/hooks/use-auth";
 import AuthenticatedLanding from "@/components/AuthenticatedLanding";
 import AuthModal from "@/components/AuthModal";
+import professionalInterviewImage from "@assets/generated_images/Professional_interview_scene_0e52b9e3.png";
+import aiCoachingImage from "@assets/generated_images/AI_coaching_dashboard_732a8dd4.png";
+import careerSuccessImage from "@assets/generated_images/Career_success_celebration_559e261d.png";
 
 const FEATURES = [
   {
@@ -179,12 +182,12 @@ export default function Landing() {
       <section className="py-16 bg-gradient-to-r from-gray-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg shadow-2xl p-12 flex items-center justify-center">
-              <div className="text-center">
-                <Users className="w-24 h-24 text-blue-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">Real Interview Practice</h3>
-                <p className="text-gray-600">Experience authentic interview scenarios</p>
-              </div>
+            <div>
+              <img 
+                src={professionalInterviewImage} 
+                alt="Professional interview scene with diverse professionals" 
+                className="rounded-lg shadow-2xl w-full"
+              />
             </div>
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-6">
@@ -266,12 +269,12 @@ export default function Landing() {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-green-100 to-blue-100 rounded-lg shadow-2xl p-12 flex items-center justify-center">
-              <div className="text-center">
-                <Zap className="w-24 h-24 text-green-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">AI-Powered Coaching</h3>
-                <p className="text-gray-600">Intelligent feedback and guidance</p>
-              </div>
+            <div>
+              <img 
+                src={aiCoachingImage} 
+                alt="AI-powered coaching dashboard interface" 
+                className="rounded-lg shadow-2xl w-full"
+              />
             </div>
           </div>
         </div>
@@ -405,12 +408,12 @@ export default function Landing() {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-yellow-100 to-green-100 rounded-lg shadow-2xl p-12 flex items-center justify-center">
-              <div className="text-center">
-                <Award className="w-24 h-24 text-yellow-600 mx-auto mb-4" />
-                <h3 className="text-2xl font-bold text-gray-800 mb-2">Career Success</h3>
-                <p className="text-gray-600">Land your dream job with confidence</p>
-              </div>
+            <div>
+              <img 
+                src={careerSuccessImage} 
+                alt="Career success celebration with diverse professionals" 
+                className="rounded-lg shadow-2xl w-full"
+              />
             </div>
           </div>
         </div>
