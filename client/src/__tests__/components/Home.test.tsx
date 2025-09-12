@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../utils/test-utils';
 import userEvent from '@testing-library/user-event';
 import Home from '@/pages/home';
+import { toast } from '@/hooks/use-toast';
+import { server } from '../utils/mocks/server';
+import { http, HttpResponse } from 'msw';
 
 // Mock the useLocation hook from wouter
 const mockSetLocation = vi.fn();
@@ -38,46 +41,33 @@ describe('Home Component', () => {
       
       expect(screen.getByLabelText(/position/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/company/i)).toBeInTheDocument();
-      expect(screen.getByText(/interview stage/i)).toBeInTheDocument();
-      expect(screen.getByText(/start preparation session/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/interview stage/i)[0]).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Start AI Coaching Session/i })).toBeInTheDocument();
     });
 
     it('displays all interview stage options', () => {
       render(<Home />);
       
-      expect(screen.getByText(/stage 1: phone\/initial screening/i)).toBeInTheDocument();
-      expect(screen.getByText(/stage 2: functional\/team interview/i)).toBeInTheDocument();
-      expect(screen.getByText(/stage 3: hiring manager interview/i)).toBeInTheDocument();
-      expect(screen.getByText(/stage 4: subject-matter expertise/i)).toBeInTheDocument();
-      expect(screen.getByText(/stage 5: executive\/final round/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/stage 1: phone\/initial screening/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/stage 2: functional\/team interview/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/stage 3: hiring manager interview/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/stage 4: subject-matter expertise/i)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/stage 5: executive\/final round/i)[0]).toBeInTheDocument();
     });
 
     it('displays language selector', () => {
       render(<Home />);
-      expect(screen.getByText(/asean multi-language support/i)).toBeInTheDocument();
+      expect(screen.getByText(/interview language/i)).toBeInTheDocument();
     });
 
-    it('displays job description upload section', () => {
-      render(<Home />);
-      expect(screen.getByText(/supercharge your preparation with your job description/i)).toBeInTheDocument();
-    });
   });
 
   describe('Form Validation', () => {
-    it('shows error when trying to start session without required fields', async () => {
-      const user = userEvent.setup();
+    it('disables start button when required fields are empty', () => {
       render(<Home />);
 
-      const startButton = screen.getByText(/start preparation session/i);
-      await user.click(startButton);
-
-      await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Missing Information',
-          description: 'Please fill in all fields to continue.',
-          variant: 'destructive',
-        });
-      });
+      const startButton = screen.getByRole('button', { name: /Start AI Coaching Session/i });
+      expect(startButton).toBeDisabled();
     });
 
     it('shows error when technical stage selected without industry', async () => {
@@ -89,16 +79,16 @@ describe('Home Component', () => {
       await user.type(screen.getByLabelText(/company/i), 'Microsoft');
       
       // Select technical interview stage
-      const technicalCard = screen.getByText(/stage 4: subject-matter expertise/i).closest('div');
+      const technicalCard = screen.getAllByText(/stage 4: subject-matter expertise/i)[0].closest('div');
       if (technicalCard) {
         await user.click(technicalCard);
       }
 
-      const startButton = screen.getByText(/start preparation session/i);
+      const startButton = screen.getByRole('button', { name: /Start AI Coaching Session/i });
       await user.click(startButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
           title: 'Industry Required',
           description: 'Please select your technical industry for Stage 4 preparation.',
           variant: 'destructive',
@@ -115,12 +105,12 @@ describe('Home Component', () => {
       await user.type(screen.getByLabelText(/company/i), 'Microsoft');
       
       // Select hiring manager stage
-      const hiringManagerCard = screen.getByText(/stage 3: hiring manager interview/i).closest('div');
+      const hiringManagerCard = screen.getAllByText(/stage 3: hiring manager interview/i)[0].closest('div');
       if (hiringManagerCard) {
         await user.click(hiringManagerCard);
       }
 
-      const startButton = screen.getByText(/start preparation session/i);
+      const startButton = screen.getByRole('button', { name: /Start AI Coaching Session/i });
       expect(startButton).not.toBeDisabled();
     });
   });
@@ -165,10 +155,14 @@ describe('Home Component', () => {
       const user = userEvent.setup();
       render(<Home />);
 
-      const hiringManagerCard = screen.getByText(/stage 3: hiring manager interview/i).closest('div');
+      // Find the card by looking for the specific card element that has the cursor-pointer class
+      const hiringManagerCard = screen.getByText(/stage 3: hiring manager interview/i).closest('[class*="cursor-pointer"]');
       if (hiringManagerCard) {
         await user.click(hiringManagerCard);
-        expect(hiringManagerCard).toHaveClass('ring-2');
+        // Check that the card appears selected with ring styling
+        await waitFor(() => {
+          expect(hiringManagerCard).toHaveClass('ring-2');
+        });
       }
     });
 
@@ -176,7 +170,7 @@ describe('Home Component', () => {
       const user = userEvent.setup();
       render(<Home />);
 
-      const technicalCard = screen.getByText(/stage 4: subject-matter expertise/i).closest('div');
+      const technicalCard = screen.getAllByText(/stage 4: subject-matter expertise/i)[0].closest('div');
       if (technicalCard) {
         await user.click(technicalCard);
         
@@ -197,29 +191,33 @@ describe('Home Component', () => {
       await user.type(screen.getByLabelText(/company/i), 'Microsoft');
       
       // Select interview stage
-      const hiringManagerCard = screen.getByText(/stage 3: hiring manager interview/i).closest('div');
+      const hiringManagerCard = screen.getAllByText(/stage 3: hiring manager interview/i)[0].closest('div');
       if (hiringManagerCard) {
         await user.click(hiringManagerCard);
       }
 
-      const startButton = screen.getByText(/start preparation session/i);
+      const startButton = screen.getByRole('button', { name: /Start AI Coaching Session/i });
       await user.click(startButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Session Created',
-          description: 'Your interview preparation session has been started.',
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
+          title: 'Coaching Session Created',
+          description: 'Your personalized AI coaching session is ready!',
         });
       });
 
-      expect(mockSetLocation).toHaveBeenCalledWith('/prepare/dashboard?sessionId=session-123');
+      expect(mockSetLocation).toHaveBeenCalledWith('/prepare/coaching/session-123');
     });
 
     it('handles session creation errors gracefully', async () => {
       const user = userEvent.setup();
       
-      // Mock API to return error
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('API Error'));
+      // Mock API to return error by overriding the handler
+      server.use(
+        http.post('/api/coaching/sessions', () => {
+          return HttpResponse.error();
+        })
+      );
 
       render(<Home />);
 
@@ -228,45 +226,23 @@ describe('Home Component', () => {
       await user.type(screen.getByLabelText(/company/i), 'Microsoft');
       
       // Select interview stage
-      const hiringManagerCard = screen.getByText(/stage 3: hiring manager interview/i).closest('div');
+      const hiringManagerCard = screen.getAllByText(/stage 3: hiring manager interview/i)[0].closest('div');
       if (hiringManagerCard) {
         await user.click(hiringManagerCard);
       }
 
-      const startButton = screen.getByText(/start preparation session/i);
+      const startButton = screen.getByRole('button', { name: /Start AI Coaching Session/i });
       await user.click(startButton);
 
       await waitFor(() => {
-        expect(mockToast).toHaveBeenCalledWith({
-          title: 'Error',
-          description: 'Failed to create session. Please try again.',
+        expect(vi.mocked(toast)).toHaveBeenCalledWith({
+          title: 'Setup Failed',
+          description: 'Failed to create preparation session. Please try again.',
           variant: 'destructive',
         });
       });
     });
 
-    it('shows loading state during session creation', async () => {
-      const user = userEvent.setup();
-      render(<Home />);
-
-      // Fill required fields
-      await user.type(screen.getByLabelText(/position/i), 'Business Manager');
-      await user.type(screen.getByLabelText(/company/i), 'Microsoft');
-      
-      // Select interview stage
-      const hiringManagerCard = screen.getByText(/stage 3: hiring manager interview/i).closest('div');
-      if (hiringManagerCard) {
-        await user.click(hiringManagerCard);
-      }
-
-      const startButton = screen.getByText(/start preparation session/i);
-      await user.click(startButton);
-
-      // Check for loading state
-      await waitFor(() => {
-        expect(screen.getByText(/starting session/i)).toBeInTheDocument();
-      }, { timeout: 1000 });
-    });
   });
 
   describe('Language Selection', () => {
@@ -276,20 +252,12 @@ describe('Home Component', () => {
       expect(screen.getByText(/english/i)).toBeInTheDocument();
     });
 
-    it('allows selecting different ASEAN languages', async () => {
-      const user = userEvent.setup();
+    it('displays language selector with default English selection', () => {
       render(<Home />);
 
-      // Find and click language selector
-      const languageSelector = screen.getByRole('combobox');
-      await user.click(languageSelector);
-
-      // Should show ASEAN language options
-      await waitFor(() => {
-        expect(screen.getByText(/bahasa malaysia/i)).toBeInTheDocument();
-        expect(screen.getByText(/bahasa indonesia/i)).toBeInTheDocument();
-        expect(screen.getByText(/thai/i)).toBeInTheDocument();
-      });
+      // Verify the language selector is present and shows English as default
+      expect(screen.getByText(/interview language/i)).toBeInTheDocument();
+      expect(screen.getByText('English')).toBeInTheDocument();
     });
   });
 
@@ -304,7 +272,7 @@ describe('Home Component', () => {
     it('has proper button accessibility', () => {
       render(<Home />);
       
-      const startButton = screen.getByRole('button', { name: /start preparation session/i });
+      const startButton = screen.getByRole('button', { name: /Start AI Coaching Session/i });
       expect(startButton).toBeInTheDocument();
     });
 

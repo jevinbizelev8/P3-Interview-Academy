@@ -63,33 +63,29 @@ export const handlers = [
   }),
 
   // Session creation API
-  http.post('/api/practice/sessions', async ({ request }) => {
+  http.post('/api/coaching/sessions', async ({ request }) => {
     const body = await request.json() as any;
     
-    if (!body.scenarioId || !body.userJobPosition || !body.userCompanyName) {
+    if (!body.jobPosition || !body.companyName || !body.interviewStage) {
       return HttpResponse.json(
-        { message: 'Missing required fields: scenarioId, userJobPosition, userCompanyName' },
-        { status: 400 }
-      );
-    }
-
-    // Validate scenario ID format
-    if (typeof body.scenarioId !== 'string' || body.scenarioId.trim() === '') {
-      return HttpResponse.json(
-        { message: 'Invalid scenario ID format' },
+        { message: 'Missing required fields: jobPosition, companyName, interviewStage' },
         { status: 400 }
       );
     }
 
     const session = {
-      ...mockSession,
-      scenarioId: body.scenarioId,
-      userJobPosition: body.userJobPosition,
-      userCompanyName: body.userCompanyName,
+      id: 'session-123',
+      userId: 'test-user-123',
+      jobPosition: body.jobPosition,
+      companyName: body.companyName,
+      interviewStage: body.interviewStage,
       interviewLanguage: body.interviewLanguage || 'en',
+      status: 'created',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    return HttpResponse.json(session, { status: 201 });
+    return HttpResponse.json({ data: session }, { status: 201 });
   }),
 
 
