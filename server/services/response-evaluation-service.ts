@@ -592,45 +592,9 @@ ASEAN BUSINESS CONTEXT:
     return guidanceMap[language] || guidanceMap['en'];
   }
 
-  /**
-   * Clean JSON response by removing markdown code blocks and other formatting
-   */
-  private cleanJsonResponse(response: string): string {
-    let cleaned = response.trim();
-    
-    console.log('🧹 Original response:', cleaned.substring(0, 100) + '...');
-    
-    // Remove markdown code blocks more comprehensively
-    // Handle ```json, ```, and any backticks
-    cleaned = cleaned.replace(/```(?:json)?\s*\n?/gi, ''); // Remove opening code blocks
-    cleaned = cleaned.replace(/\n?\s*```\s*$/g, ''); // Remove closing code blocks
-    cleaned = cleaned.replace(/```/g, ''); // Remove any remaining triple backticks
-    
-    // Remove any remaining backticks at start/end
-    cleaned = cleaned.replace(/^`+|`+$/g, '');
-    
-    // Remove any leading/trailing whitespace again
-    cleaned = cleaned.trim();
-    
-    // Handle case where there might be text before or after the JSON
-    // Look for the first { and last } to extract just the JSON part
-    const firstBrace = cleaned.indexOf('{');
-    const lastBrace = cleaned.lastIndexOf('}');
-    
-    if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
-      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
-    }
-    
-    console.log('✨ Cleaned response:', cleaned.substring(0, 100) + '...');
-    
-    return cleaned;
-  }
-
   private parseEvaluationResponse(response: string, request: EvaluationRequest): EvaluationResult | null {
     try {
-      // Clean the response to handle markdown code blocks and other formatting
-      const cleanedResponse = this.cleanJsonResponse(response);
-      const jsonResponse = JSON.parse(cleanedResponse);
+      const jsonResponse = JSON.parse(response);
       
       // Extract 9-criteria scores
       const relevanceScore = jsonResponse.relevanceScore || 3;
@@ -889,8 +853,8 @@ ASEAN BUSINESS CONTEXT:
   }
 
   private shouldUseSeaLion(language: string): boolean {
-    // Use SeaLion for ASEAN languages, Chinese variants, and cultural contexts
-    const aseanLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'bn', 'hi', 'zh', 'zh-cn', 'zh-tw', 'zh-hk', 'zh-sg', 'ta'];
+    // Use SeaLion for ASEAN languages and cultural contexts
+    const aseanLanguages = ['id', 'ms', 'th', 'vi', 'tl', 'my', 'km', 'lo', 'bn', 'hi', 'zh', 'ta'];
     return aseanLanguages.includes(language.toLowerCase());
   }
 

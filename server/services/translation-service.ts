@@ -203,9 +203,6 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       'vi': 'Vietnamese (Tiếng Việt)',
       'fil': 'Filipino language',
       'zh-sg': 'Simplified Chinese (简体中文)',
-      'zh-cn': 'Simplified Chinese (简体中文)',
-      'zh-tw': 'Traditional Chinese (繁體中文)',
-      'zh-hk': 'Chinese Hong Kong (繁體中文)',
       'en': 'English'
     };
     return languageNames[code as keyof typeof languageNames] || 'the target language';
@@ -219,9 +216,6 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       'vi': 'Vietnamese',
       'fil': 'Filipino',
       'zh-sg': 'Chinese',
-      'zh-cn': 'Simplified Chinese',
-      'zh-tw': 'Traditional Chinese',
-      'zh-hk': 'Chinese (Hong Kong)',
       'en': 'English'
     };
     return languageNames[code as keyof typeof languageNames] || code.toUpperCase();
@@ -235,9 +229,6 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       'vi': 'Tên bạn là gì?',
       'fil': 'Ano ang pangalan mo?',
       'zh-sg': '你叫什么名字？',
-      'zh-cn': '您叫什么名字？',
-      'zh-tw': '您叫什麼名字？',
-      'zh-hk': '您叫什麼名字？',
       'en': 'What is your name?'
     };
     return examples[code as keyof typeof examples] || 'Translation example';
@@ -278,9 +269,6 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       'km': 'ផ្តល់តែការបកប្រែជាភាសាខ្មែរប៉ុណ្ណោះ។',
       'lo': 'ໃຫ້ແຕ່ການແປພາສາລາວເທົ່ານັ້ນ.',
       'zh-sg': '只提供中文翻译。',
-      'zh-cn': '只提供简体中文翻译。',
-      'zh-tw': '只提供繁體中文翻譯。',
-      'zh-hk': '只提供繁體中文（香港）翻譯。',
       'en': 'Respond in English only.'
     };
     return instructions[language as keyof typeof instructions] || instructions['en'];
@@ -497,10 +485,7 @@ Output: ${this.getTranslationExample(targetLanguage)}`
       'my': ['တွင်', 'နှင့်', 'သည်', 'ဖြစ်', 'မည်', 'ရှိ', 'လုပ်', 'ငါ', 'သင်', 'သူ', 'ဤ', 'ထို', 'များ', 'မ', 'ကို'],
       'km': ['ក្នុង', 'និង', 'នេះ', 'នោះ', 'ជា', 'មាន', 'បាន', 'ខ្ញុំ', 'អ្នក', 'គាត់', 'ពួកគេ', 'ដើម្បី', 'ទៅ', 'មក', 'ផង'],
       'lo': ['ໃນ', 'ແລະ', 'ທີ່', 'ເປັນ', 'ມີ', 'ໄດ້', 'ຈະ', 'ຂ້ອຍ', 'ເຈົ້າ', 'ເຂົາ', 'ນີ້', 'ນັ້ນ', 'ກັບ', 'ໄປ', 'ມາ'],
-      'zh-sg': ['的', '是', '在', '了', '有', '和', '就', '不', '这', '那', '我', '你', '他', '她', '它', '我们', '你们', '他们'],
-      'zh-cn': ['的', '是', '在', '了', '有', '和', '就', '不', '这', '那', '我', '你', '他', '她', '它', '我们', '你们', '他们', '您', '什么', '可以', '会', '能'],
-      'zh-tw': ['的', '是', '在', '了', '有', '和', '就', '不', '這', '那', '我', '你', '他', '她', '它', '我們', '你們', '他們', '您', '什麼', '可以', '會', '能'],
-      'zh-hk': ['的', '是', '在', '了', '有', '和', '就', '不', '這', '那', '我', '你', '他', '她', '它', '我們', '你們', '他們', '您', '什麼', '可以', '會', '能']
+      'zh-sg': ['的', '是', '在', '了', '有', '和', '就', '不', '这', '那', '我', '你', '他', '她', '它', '我们', '你们', '他们']
     };
     
     return languageWords[targetLanguage as keyof typeof languageWords] || [];
