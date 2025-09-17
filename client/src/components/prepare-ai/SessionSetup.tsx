@@ -138,7 +138,7 @@ export default function SessionSetup({
           <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Brain className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-2xl">Setup Your AI Interview Practice</CardTitle>
+          <CardTitle className="text-2xl">Prepare Your AI Interview</CardTitle>
           <p className="text-gray-600">
             Configure your personalized interview preparation session with voice-enabled AI coaching
           </p>
