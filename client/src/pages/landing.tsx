@@ -95,6 +95,12 @@ const TARGET_AUDIENCES = [
 export default function Landing() {
   const { user, isLoading, isAuthenticated } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalView, setAuthModalView] = useState<'login' | 'signup' | 'reset'>('login');
+
+  const openAuthModal = (view: 'login' | 'signup' | 'reset' = 'login') => {
+    setAuthModalView(view);
+    setShowAuthModal(true);
+  };
 
   // Always show login/signup landing page first
   // Users will access authenticated features through protected routes
@@ -120,11 +126,11 @@ export default function Landing() {
                 <div className="animate-pulse bg-gray-200 h-9 w-20 rounded"></div>
               ) : (
                 <>
-                  <Button variant="outline" onClick={() => setShowAuthModal(true)}>
+                  <Button variant="outline" onClick={() => openAuthModal('login')}>
                     <LogIn className="w-4 h-4 mr-2" />
                     Login
                   </Button>
-                  <Button onClick={() => setShowAuthModal(true)}>
+                  <Button onClick={() => openAuthModal('signup')}>
                     <UserPlus className="w-4 h-4 mr-2" />
                     Get Started
                   </Button>
@@ -160,12 +166,12 @@ export default function Landing() {
               and detailed performance analytics using the proven P³ framework: Prepare, Practice, Perform.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="text-lg px-8 py-3" onClick={() => setShowAuthModal(true)}>
+              <Button size="lg" className="text-lg px-8 py-3" onClick={() => openAuthModal('signup')}>
                 <UserPlus className="mr-2 w-5 h-5" />
                 Create Free Account
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-3" onClick={() => setShowAuthModal(true)}>
+              <Button variant="outline" size="lg" className="text-lg px-8 py-3" onClick={() => openAuthModal('login')}>
                 <LogIn className="mr-2 w-5 h-5" />
                 Login to Continue
               </Button>
@@ -506,7 +512,8 @@ export default function Landing() {
       {/* Auth Modal */}
       <AuthModal 
         isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+        onClose={() => setShowAuthModal(false)}
+        initialView={authModalView} 
       />
     </div>
   );
