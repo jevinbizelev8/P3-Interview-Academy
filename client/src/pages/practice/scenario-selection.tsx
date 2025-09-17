@@ -151,7 +151,8 @@ export default function ScenarioSelection() {
       <div className="space-y-6">
         <Card>
           <CardContent className="p-6">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Choose Your Interview Stage</h3>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Start Your Interview Practice</h2>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Choose Your Interview Stage</h3>
             <p className="text-gray-600 mb-6">
               Select the interview stage you'd like to practise. Each scenario includes 25 tailored questions.
             </p>
