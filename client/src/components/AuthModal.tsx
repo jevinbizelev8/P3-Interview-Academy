@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import LoginForm from "./LoginForm";
@@ -8,10 +8,18 @@ import ResetPasswordForm from "./ResetPasswordForm";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialView?: 'login' | 'signup' | 'reset';
 }
 
-export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const [currentView, setCurrentView] = useState<'login' | 'signup' | 'reset'>('login');
+export default function AuthModal({ isOpen, onClose, initialView = 'login' }: AuthModalProps) {
+  const [currentView, setCurrentView] = useState<'login' | 'signup' | 'reset'>(initialView);
+
+  // Reset to initial view when modal opens or initialView changes
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentView(initialView);
+    }
+  }, [isOpen, initialView]);
 
   const handleSuccess = () => {
     onClose();
