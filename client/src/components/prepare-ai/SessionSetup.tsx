@@ -140,7 +140,7 @@ export default function SessionSetup({
           </div>
           <CardTitle className="text-2xl">Prepare Your AI Interview</CardTitle>
           <p className="text-gray-600">
-            Configure your personalized interview preparation session with voice-enabled AI coaching
+            Configure your personalised interview preparation session with voice-enabled AI coaching
           </p>
         </CardHeader>
       </Card>
