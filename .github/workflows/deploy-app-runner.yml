@@ -36,12 +36,11 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Ensure ECR repository exists
-        shell: bash
         run: |
           set -euo pipefail
-          REPO="${ECR_REPOSITORY}"
+          REPO="${{ env.ECR_REPOSITORY }}"
           if ! aws ecr describe-repositories --repository-names "$REPO" >/dev/null 2>&1; then
-            aws ecr create-repository --repository-name "$REPO" 1>/dev/null
+            aws ecr create-repository --repository-name "$REPO" >/dev/null
             echo "Created ECR repository: $REPO"
           else
             echo "ECR repository exists: $REPO"
@@ -60,7 +59,6 @@ jobs:
 
       - name: Ensure App Runner ECR access role exists
         id: ensure-role
-        shell: bash
         run: |
           set -euo pipefail
           ROLE_NAME="AppRunnerECRAccessRole"
@@ -75,7 +73,7 @@ jobs:
                   "Principal": {"Service": "build.apprunner.amazonaws.com"},
                   "Action": "sts:AssumeRole"
                 }]
-              }' 1>/dev/null
+              }' >/dev/null
             aws iam attach-role-policy --role-name "$ROLE_NAME" --policy-arn "$POLICY_ARN"
             echo "Created and attached policy to role: $ROLE_NAME"
             # Wait a moment for role propagation
@@ -87,20 +85,19 @@ jobs:
           echo "ROLE_ARN=$ROLE_ARN" >> $GITHUB_ENV
 
       - name: Create or update App Runner service
-        shell: bash
         env:
           IMAGE_URI: ${{ env.IMAGE_URI }}
           ROLE_ARN: ${{ env.ROLE_ARN }}
         run: |
           set -euo pipefail
-          SERVICE_NAME="$APP_RUNNER_SERVICE_NAME"
+          SERVICE_NAME="${{ env.APP_RUNNER_SERVICE_NAME }}"
 
           # Lookup existing service ARN by name
           SERVICE_ARN=$(aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceArn | [0]" --output text)
 
           RUNTIME_ENV="Name=NODE_ENV,Value=${{ secrets.NODE_ENV || 'production' }} \
-Name=PORT,Value=$PORT \
-Name=AWS_REGION,Value=$AWS_REGION \
+Name=PORT,Value=${{ env.PORT }} \
+Name=AWS_REGION,Value=${{ env.AWS_REGION }} \
 Name=DATABASE_URL,Value=${{ secrets.DATABASE_URL }} \
 Name=WS_ALLOWED_ORIGINS,Value=${{ secrets.WS_ALLOWED_ORIGINS }}"
 
@@ -113,11 +110,11 @@ Name=WS_ALLOWED_ORIGINS,Value=${{ secrets.WS_ALLOWED_ORIGINS }}"
                   "ImageIdentifier": "'"$IMAGE_URI"'",
                   "ImageRepositoryType": "ECR",
                   "ImageConfiguration": {
-                    "Port": "'"$PORT"'",
+                    "Port": "${{ env.PORT }}",
                     "RuntimeEnvironmentVariables": [
                       {"Name":"NODE_ENV","Value":"'"${{ secrets.NODE_ENV || 'production' }}"'"},
-                      {"Name":"PORT","Value":"'"$PORT"'"},
-                      {"Name":"AWS_REGION","Value":"'"$AWS_REGION"'"},
+                      {"Name":"PORT","Value":"${{ env.PORT }}"},
+                      {"Name":"AWS_REGION","Value":"${{ env.AWS_REGION }}"},
                       {"Name":"DATABASE_URL","Value":"'"${{ secrets.DATABASE_URL }}"'"},
                       {"Name":"WS_ALLOWED_ORIGINS","Value":"'"${{ secrets.WS_ALLOWED_ORIGINS }}"'"}
                     ]
@@ -127,7 +124,7 @@ Name=WS_ALLOWED_ORIGINS,Value=${{ secrets.WS_ALLOWED_ORIGINS }}"
                   "AccessRoleArn": "'"$ROLE_ARN"'"
                 }
               }' \
-              --health-check-configuration Path="$HEALTH_PATH" 1>/dev/null
+              --health-check-configuration Path="${{ env.HEALTH_PATH }}" >/dev/null
           else
             echo "Updating App Runner service: $SERVICE_NAME"
             aws apprunner update-service \
@@ -137,11 +134,11 @@ Name=WS_ALLOWED_ORIGINS,Value=${{ secrets.WS_ALLOWED_ORIGINS }}"
                   "ImageIdentifier": "'"$IMAGE_URI"'",
                   "ImageRepositoryType": "ECR",
                   "ImageConfiguration": {
-                    "Port": "'"$PORT"'",
+                    "Port": "${{ env.PORT }}",
                     "RuntimeEnvironmentVariables": [
                       {"Name":"NODE_ENV","Value":"'"${{ secrets.NODE_ENV || 'production' }}"'"},
-                      {"Name":"PORT","Value":"'"$PORT"'"},
-                      {"Name":"AWS_REGION","Value":"'"$AWS_REGION"'"},
+                      {"Name":"PORT","Value":"${{ env.PORT }}"},
+                      {"Name":"AWS_REGION","Value":"${{ env.AWS_REGION }}"},
                       {"Name":"DATABASE_URL","Value":"'"${{ secrets.DATABASE_URL }}"'"},
                       {"Name":"WS_ALLOWED_ORIGINS","Value":"'"${{ secrets.WS_ALLOWED_ORIGINS }}"'"}
                     ]
@@ -150,7 +147,7 @@ Name=WS_ALLOWED_ORIGINS,Value=${{ secrets.WS_ALLOWED_ORIGINS }}"
                 "AuthenticationConfiguration": {
                   "AccessRoleArn": "'"$ROLE_ARN"'"
                 }
-              }' 1>/dev/null
+              }' >/dev/null
           fi
 
           echo "Deployment triggered. Check App Runner console for status."
