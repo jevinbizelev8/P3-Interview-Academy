@@ -45,11 +45,20 @@ export class PrepareWebSocketService {
   private audioBuffers: Map<string, Buffer[]>; // For collecting audio chunks
 
   constructor(httpServer: HTTPServer) {
+    const allowedOriginsRaw = (process.env.WS_ALLOWED_ORIGINS || '').split(',')
+      .map(o => o.trim())
+      .filter(o => o.length > 0);
+    const allowAllOrigins = allowedOriginsRaw.includes('*');
+
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: process.env.NODE_ENV === 'production' 
-          ? ["https://yourdomain.com"] 
-          : ["http://localhost:3001", "http://localhost:5173"],
+        origin: allowAllOrigins
+          ? true
+          : (allowedOriginsRaw.length > 0
+            ? allowedOriginsRaw
+            : (process.env.NODE_ENV === 'production'
+              ? ["https://yourdomain.com"]
+              : ["http://localhost:3001", "http://localhost:5173"])) ,
         methods: ["GET", "POST"],
         credentials: true
       },
