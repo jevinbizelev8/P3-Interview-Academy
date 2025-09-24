@@ -52,13 +52,191 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Use the requireAuth middleware from simple auth
 
-  // System diagnostic endpoints
-  app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development'
+  // Simple health check for load balancers
+  app.get('/api/health/simple', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString()
     });
+  });
+
+  // Enhanced system health check endpoint
+  app.get('/api/health', async (req, res) => {
+    const startTime = Date.now();
+    const healthCheck = {
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      uptime: process.uptime(),
+      version: process.env.npm_package_version || 'unknown',
+      checks: {}
+    };
+
+    try {
+      // 1. Database connectivity check
+      try {
+        const { pool } = await import('./db');
+        const dbStart = Date.now();
+        await pool.query('SELECT 1');
+        healthCheck.checks.database = {
+          status: 'healthy',
+          responseTime: Date.now() - dbStart
+        };
+      } catch (error) {
+        healthCheck.checks.database = {
+          status: 'unhealthy',
+          error: error.message,
+          responseTime: null
+        };
+        healthCheck.status = 'degraded';
+      }
+
+      // 2. Environment variables check
+      const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
+      const optionalEnvVars = ['OPENAI_API_KEY', 'SEALION_API_KEY', 'WS_ALLOWED_ORIGINS'];
+
+      const envCheck = {
+        required: {},
+        optional: {}
+      };
+
+      requiredEnvVars.forEach(envVar => {
+        envCheck.required[envVar] = !!process.env[envVar];
+        if (!process.env[envVar]) {
+          healthCheck.status = 'unhealthy';
+        }
+      });
+
+      optionalEnvVars.forEach(envVar => {
+        envCheck.optional[envVar] = !!process.env[envVar];
+      });
+
+      healthCheck.checks.environment = envCheck;
+
+      // 3. Memory usage check
+      const memUsage = process.memoryUsage();
+      healthCheck.checks.memory = {
+        heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
+        heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
+        external: `${Math.round(memUsage.external / 1024 / 1024)}MB`,
+        rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`
+      };
+
+      // 4. System load (if available)
+      try {
+        const os = await import('os');
+        healthCheck.checks.system = {
+          platform: os.platform(),
+          arch: os.arch(),
+          nodeVersion: process.version,
+          loadAverage: os.loadavg()
+        };
+      } catch (error) {
+        healthCheck.checks.system = { error: 'System info unavailable' };
+      }
+
+      // 5. Total response time
+      healthCheck.responseTime = Date.now() - startTime;
+
+      // Set appropriate HTTP status
+      const httpStatus = healthCheck.status === 'ok' ? 200 :
+                        healthCheck.status === 'degraded' ? 200 : 503;
+
+      res.status(httpStatus).json(healthCheck);
+
+    } catch (error) {
+      res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: error.message,
+        responseTime: Date.now() - startTime
+      });
+    }
+  });
+
+  // Detailed system diagnostics endpoint (for admins/debugging)
+  app.get('/api/diagnostics', requireAuthWithBypass, async (req, res) => {
+    try {
+      const startTime = Date.now();
+      const diagnostics = {
+        timestamp: new Date().toISOString(),
+        system: {
+          nodeVersion: process.version,
+          platform: process.platform,
+          arch: process.arch,
+          uptime: process.uptime(),
+          pid: process.pid,
+          cwd: process.cwd()
+        },
+        memory: process.memoryUsage(),
+        environment: {
+          NODE_ENV: process.env.NODE_ENV,
+          PORT: process.env.PORT,
+          hasDatabase: !!process.env.DATABASE_URL,
+          hasSession: !!process.env.SESSION_SECRET,
+          hasOpenAI: !!process.env.OPENAI_API_KEY,
+          hasSeaLion: !!process.env.SEALION_API_KEY,
+          hasWSOrigins: !!process.env.WS_ALLOWED_ORIGINS
+        }
+      };
+
+      // Database detailed check
+      try {
+        const { pool } = await import('./db');
+        const dbStart = Date.now();
+        const result = await pool.query(`
+          SELECT
+            NOW() as current_time,
+            version() as pg_version,
+            current_database() as database_name,
+            current_user as user_name
+        `);
+
+        diagnostics.database = {
+          status: 'connected',
+          responseTime: Date.now() - dbStart,
+          info: result.rows[0]
+        };
+
+        // Check database tables
+        const tablesResult = await pool.query(`
+          SELECT table_name
+          FROM information_schema.tables
+          WHERE table_schema = 'public'
+          ORDER BY table_name
+        `);
+
+        diagnostics.database.tables = tablesResult.rows.map(row => row.table_name);
+
+      } catch (error) {
+        diagnostics.database = {
+          status: 'error',
+          error: error.message
+        };
+      }
+
+      // System load information
+      try {
+        const os = await import('os');
+        diagnostics.system.loadAverage = os.loadavg();
+        diagnostics.system.totalMemory = `${Math.round(os.totalmem() / 1024 / 1024)}MB`;
+        diagnostics.system.freeMemory = `${Math.round(os.freemem() / 1024 / 1024)}MB`;
+        diagnostics.system.cpus = os.cpus().length;
+      } catch (error) {
+        diagnostics.system.osError = error.message;
+      }
+
+      diagnostics.responseTime = Date.now() - startTime;
+
+      res.json(diagnostics);
+
+    } catch (error) {
+      res.status(500).json({
+        error: 'Diagnostics failed',
+        message: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
   });
 
   // Vertex AI connection test endpoint
