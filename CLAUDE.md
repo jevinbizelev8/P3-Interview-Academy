@@ -251,3 +251,12 @@ Three-tier health checking system:
 - OpenAI: `OPENAI_API_KEY` set in EB env vars
 - Observed: Root serving EB default page; `/api/health` returns 200 via nginx (HTML). Instance command failure during deploy per EB events.
 - Immediate actions: review EB logs, verify start command/`dist` artifacts in bundle, ensure `PORT` env aligns (Node listens on `process.env.PORT`), redeploy corrected bundle.
+
+## Deployment Progress (2025-09-24)
+- Resolved production 502s by rebuilding the bundle so the runtime no longer imports Vite (`server/index.ts`, `server/setup-vite.ts`, `server/vite.ts`).
+- Published Elastic Beanstalk application version `p3-interview-academy-vitefix-20250924d` with refreshed environment variables (database URL, session secret, placeholder AI keys).
+- Verified environment health: `p3-interview-academy-prod-v2` now reports Ready/Green and `/api/health/simple` returns 200.
+
+## Outstanding Follow-Ups
+- Replace placeholder `SEALION_API_KEY` / `OPENAI_API_KEY` values with live credentials or adjust AI integrations.
+- Provision HTTPS for the public endpoint (ACM certificate + load balancer listener) to remove browser security warnings.
