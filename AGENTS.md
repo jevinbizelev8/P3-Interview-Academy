@@ -1,4 +1,4 @@
-﻿# Repository Guidelines
+# Repository Guidelines
 
 ## Project Structure & Module Organization
 The TypeScript monorepo separates the Vite-driven client in `client/src` (UI in `components/`, routed views in `pages/`, hooks in `hooks/`, API wrappers in `services/`) from the Express API in `server/` (`routes.ts`, `services/`, `middleware/`, and the Vite bootstrap in `index.ts`). Shared contracts and Drizzle schemas live in `shared/schema.ts` and `shared/types.ts`; update them alongside corresponding route handlers. Deployment helpers are collected under `deployment-scripts/`, while production bundles output to `dist/`. Large design artifacts and marketing collateral stay in `attached_assets/` - avoid copying them into the runtime folders.
@@ -21,4 +21,4 @@ Vitest plus React Testing Library power the suite. Place UI specs under `client/
 Follow the existing history: keep subjects short, capitalized, and imperative (`Add deployment configuration`, `Fix GitHub Actions workflow`). Mention the scope (client/server/shared) in the body when relevant. PRs must summarise intent, link issues or Trello tickets, list verification commands, and attach UI screenshots for visual changes. Before requesting review, run `npm run check`, `npm run test:run`, and any affected database scripts, then note the results in the PR description.
 
 ## Security & Configuration Tips
-Copy `.env.example` to `.env` and provide credentials for OpenAI, SeaLion, Google Vertex, and the database only in local or secrets-managed environments. Rotate keys regularly, scrub fixtures of production data, and update `DEPLOYMENT.md` whenever infrastructure prerequisites shift. Never commit generated `.zip` bundles or `.env` files.
+Copy `.env.example` to `.env` and provide credentials for OpenAI, SeaLion, and the database only in local or secrets-managed environments. Rotate keys regularly, scrub fixtures of production data, and update `DEPLOYMENT.md` whenever infrastructure prerequisites shift. Never commit generated `.zip` bundles or `.env` files.

@@ -34,8 +34,8 @@ export class AIRouter {
   private readonly MAX_CACHE_SIZE = 100;
 
   constructor() {
-    console.log('🔀 AI Router initialized with SeaLion via Vertex AI (primary) + OpenAI (fallback)');
-    console.log('🚀 All languages now use Vertex AI SeaLion for enhanced performance and reliability');
+    console.log('🔀 AI Router initialized with OpenAI (primary) and SeaLion (fallback)');
+    console.log('🚀 OpenAI now handles all languages; SeaLion acts as the regional fallback when available');
     
     // Clean expired cache entries every 5 minutes
     setInterval(() => this.cleanExpiredCache(), 5 * 60 * 1000);
@@ -71,7 +71,7 @@ export class AIRouter {
     // Try primary service first  
     if (this.isServiceAvailable(primaryService)) {
       try {
-        console.log(`🤖 Using ${primaryService} ${primaryService === 'sealion' ? 'via Vertex AI' : ''} (primary)...`);
+        console.log(`[AI] Using ${primaryService} (primary)...`);
         
         const content = await this.callService(primaryService, options);
         
@@ -101,7 +101,7 @@ export class AIRouter {
     // Fallback to secondary service
     if (this.isServiceAvailable(fallbackService)) {
       try {
-        console.log(`🤖 Using ${fallbackService} ${fallbackService === 'sealion' ? 'via Vertex AI' : ''} (fallback)...`);
+        console.log(`[AI] Using ${fallbackService} (fallback)...`);
         
         const content = await this.callService(fallbackService, options);
         
@@ -185,13 +185,11 @@ export class AIRouter {
 
   /**
    * Determine service priority based on language
-   * Updated: SeaLion (via Vertex AI) is now PRIMARY for ALL languages
+   * Updated: OpenAI is now PRIMARY for all languages
    */
   private determineServicePriority(language?: string): { primaryService: 'sealion' | 'openai'; fallbackService: 'sealion' | 'openai' } {
-    // SeaLion (via Vertex AI) is now the primary AI for all languages
-    // This leverages Google Cloud infrastructure for better performance and reliability
-    // OpenAI serves as the fallback for any failures
-    return { primaryService: 'sealion', fallbackService: 'openai' };
+    // OpenAI handles all requests by default for consistent behaviour
+    return { primaryService: 'openai', fallbackService: 'sealion' };
   }
 
   /**
@@ -350,3 +348,4 @@ export class AIRouter {
 
 // Export singleton instance
 export const aiRouter = new AIRouter();
+

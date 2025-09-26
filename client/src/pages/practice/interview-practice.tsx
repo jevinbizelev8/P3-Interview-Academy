@@ -70,13 +70,77 @@ export default function InterviewPractice() {
     }
   }, [session?.totalQuestions]);
 
+  // Generate AI response mutation (using existing Practice API)
+  const generateAiResponseMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/practice/sessions/${sessionId}/ai-question`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ userResponse: message }),
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to get AI response");
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/practice/sessions/${sessionId}`] });
+      
+      // Speak the AI response if voice is enabled
+      const questionText = data?.data?.question?.questionText ?? data?.content;
+      if (voiceEnabled && questionText) {
+        speakAIResponse(questionText);
+      }
+      
+      const questionCount = session?.currentQuestionNumber || currentQuestionNumber;
+      
+      if (data.isCompleted || questionCount >= maxQuestions) {
+        setIsCompleted(true);
+        toast({
+          title: "Interview Completed!",
+          description: `You answered ${questionCount} questions. Your comprehensive AI evaluation is being generated...`,
+        });
+        // Redirect to assessment after a short delay
+        setTimeout(() => {
+          window.location.href = `/practice/assessment/${sessionId}`;
+        }, 3000);
+      } else {
+        setCurrentQuestionNumber(prev => prev + 1);
+        
+        // Show warning when approaching end
+        if (questionCount >= maxQuestions - 5) {
+          toast({
+            title: "Nearly Finished!",
+            description: `Only ${maxQuestions - questionCount} questions remaining.`,
+            variant: "default",
+          });
+        }
+      }
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to get AI response. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Auto-generate first question when session loads with no messages (only once)
   useEffect(() => {
-    if (session && messages.length === 0 && session.status !== 'completed' && !generateAiResponseMutation.isPending && session.currentQuestionNumber === 1) {
+    if (!session || session.status === 'completed' || generateAiResponseMutation.isPending) {
+      return;
+    }
+    const noMessages = messages.length === 0;
+    const nextQuestionNumber = session.currentQuestionNumber ?? 1;
+    if (noMessages && nextQuestionNumber <= 1) {
       console.log('🎯 Auto-generating first AI question for new session');
       generateAiResponseMutation.mutate();
     }
-  }, [session?.id]); // Only depend on session.id to prevent loops
+  }, [session?.id, session?.currentQuestionNumber, session?.status, messages.length, generateAiResponseMutation.isPending]);
 
   // Send message mutation (adapted to work with existing Practice API)
   const sendMessageMutation = useMutation({
@@ -128,64 +192,6 @@ export default function InterviewPractice() {
       toast({
         title: "Error",
         description: "Failed to send message. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Generate AI response mutation (using existing Practice API)
-  const generateAiResponseMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch(`/api/practice/sessions/${sessionId}/ai-question`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ userResponse: message }),
-      });
-      
-      if (!response.ok) {
-        throw new Error("Failed to get AI response");
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/practice/sessions/${sessionId}`] });
-      
-      // Speak the AI response if voice is enabled
-      if (voiceEnabled && data.content) {
-        speakAIResponse(data.content);
-      }
-      
-      const questionCount = session?.currentQuestionNumber || currentQuestionNumber;
-      
-      if (data.isCompleted || questionCount >= maxQuestions) {
-        setIsCompleted(true);
-        toast({
-          title: "Interview Completed!",
-          description: `You answered ${questionCount} questions. Your comprehensive AI evaluation is being generated...`,
-        });
-        // Redirect to assessment after a short delay
-        setTimeout(() => {
-          window.location.href = `/practice/assessment/${sessionId}`;
-        }, 3000);
-      } else {
-        setCurrentQuestionNumber(prev => prev + 1);
-        
-        // Show warning when approaching end
-        if (questionCount >= maxQuestions - 5) {
-          toast({
-            title: "Nearly Finished!",
-            description: `Only ${maxQuestions - questionCount} questions remaining.`,
-            variant: "default",
-          });
-        }
-      }
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to get AI response. Please try again.",
         variant: "destructive",
       });
     },

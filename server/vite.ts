@@ -1,4 +1,4 @@
-﻿import express, { type Express } from "express";
+import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
@@ -23,10 +23,28 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use((req, res, next) => {
+    if (req.path.includes("..") || /(^|\/)\./.test(req.path)) {
+      return res.status(404).json({ message: "Not found" });
+    }
+    next();
+  });
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  app.use(express.static(distPath, { index: false, extensions: [] }));
+
+  app.use("*", (req, res) => {
+    if (req.method !== "GET") {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    const acceptsHtml = req.headers.accept?.includes("text/html");
+    const pathname = req.originalUrl.split("?")[0];
+    const hasExtension = path.extname(pathname) !== "";
+
+    if (!acceptsHtml || hasExtension) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

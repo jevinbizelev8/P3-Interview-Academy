@@ -20,7 +20,7 @@ The backend runs on Node.js with Express.js using TypeScript and ES modules. It 
 The application uses Drizzle ORM with PostgreSQL dialect, specifically configured for Neon serverless deployment. Database schema management is handled through Drizzle Kit with strongly typed schemas integrated with Zod for validation. The schema includes comprehensive tables for users, interview scenarios, sessions, messages, AI evaluations, and preparation data across all three modules.
 
 ### AI Integration
-The platform integrates multiple AI services with intelligent fallback mechanisms. SeaLion AI serves as the primary provider for culturally-aware interview coaching optimized for Southeast Asian markets, with Vertex AI and OpenAI as fallback options. The AI router service manages provider selection, response caching, and error handling to ensure reliable AI-powered features across question generation, response evaluation, and translation services.
+The platform integrates multiple AI services with intelligent fallback mechanisms. OpenAI now serves as the primary provider, with SeaLion AI delivering Southeast Asia-focused fallback support and Anthropic via Bedrock as an additional safety net. The AI router service manages provider selection, response caching, and error handling to ensure reliable AI-powered features across question generation, response evaluation, and translation services.
 
 ### Voice Services Architecture
 Voice functionality is implemented using free browser Web Speech APIs for both Text-to-Speech (TTS) and Speech-to-Text (STT). The system includes comprehensive multi-language support for 10+ Southeast Asian languages, voice selection optimization, audio quality detection, and browser compatibility checking. Voice services operate primarily client-side to minimize server dependencies while maintaining high performance.
@@ -38,7 +38,6 @@ The platform features robust session persistence with comprehensive lifecycle ma
 ### AI and Language Services
 - **@anthropic-ai/sdk**: Claude AI integration for advanced language processing
 - **@aws-sdk/client-bedrock-runtime**: AWS Bedrock runtime for Claude model access
-- **@google-cloud/aiplatform**: Google Cloud AI Platform for Vertex AI integration
 - **SeaLion AI**: Primary AI service for Southeast Asian culturally-aware responses
 
 ### UI and Frontend

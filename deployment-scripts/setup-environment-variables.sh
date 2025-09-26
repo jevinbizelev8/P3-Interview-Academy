@@ -125,13 +125,6 @@ if [ -n "$ANTHROPIC_API_KEY" ]; then
     set_env_var "ANTHROPIC_API_KEY" "$ANTHROPIC_API_KEY" "Optional: For Anthropic Claude integration"
 fi
 
-# Google Cloud API Key
-echo ""
-read -s -p "Enter GOOGLE_API_KEY (optional, press Enter to skip): " GOOGLE_API_KEY
-echo ""
-if [ -n "$GOOGLE_API_KEY" ]; then
-    set_env_var "GOOGLE_API_KEY" "$GOOGLE_API_KEY" "Optional: For Google Vertex AI integration"
-fi
 
 echo ""
 echo "==========================================="

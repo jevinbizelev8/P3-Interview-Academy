@@ -23,7 +23,7 @@ Transform your interview skills with personalized AI coaching, multi-language su
 
 ### 🤖 **Advanced AI Integration**
 - **SeaLion AI**: Primary AI service optimized for Southeast Asian markets
-- **Multiple Fallbacks**: OpenAI and Vertex AI for reliable service
+- **Multiple Fallbacks**: OpenAI primary with SeaLion and Anthropic fallbacks
 - **STAR Method Evaluation**: Structured feedback using Situation, Task, Action, Result framework
 - **Real-time Coaching**: Instant analysis and personalized improvement suggestions
 
@@ -55,7 +55,7 @@ Transform your interview skills with personalized AI coaching, multi-language su
 ### **AI & Language Services**
 - **SeaLion AI** - Primary AI service for Southeast Asian contexts
 - **OpenAI** - GPT-4o for advanced language processing and fallback
-- **Google Vertex AI** - Additional AI capabilities and Vertex AI integration
+- **SeaLion AI** - Regional language models for Southeast Asia (optional)
 - **AWS Bedrock** - Claude integration for enterprise features
 
 ### **Development & Deployment**
@@ -119,13 +119,6 @@ Transform your interview skills with personalized AI coaching, multi-language su
    
    # Database
    DATABASE_URL=your_postgresql_url
-   
-   # Google Cloud (for Vertex AI)
-   GCP_PROJECT_ID=your_project_id
-   GCP_REGION=your_region
-   GOOGLE_APPLICATION_CREDENTIALS=./path/to/service-account.json
-   ```
-
 4. **Database Setup**
    ```bash
    npm run db:generate
@@ -224,3 +217,4 @@ For support, feature requests, or business inquiries:
 ---
 
 *Built with ❤️ for the Southeast Asian professional community*
+

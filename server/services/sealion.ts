@@ -1,7 +1,7 @@
 import { OpenAI } from 'openai';
 import axios from 'axios';
 import { logSeaLionError, errorLogger } from './error-logger';
-import { getVertexAIService, VertexAIService } from './vertex-ai-config';
+import { getOpenAIService } from './openai-service';
 
 // Define types locally since @shared/types may not exist
 interface InterviewContext {
@@ -45,33 +45,32 @@ const DEFAULT_CONFIG: Omit<SeaLionConfig, 'apiKey'> = {
 export class SeaLionService {
   private client: OpenAI | null = null;
   private config: SeaLionConfig;
-  private vertexAI: VertexAIService;
-  private useVertexAI: boolean = false;
+  private seaLionEnabled = false;
 
   constructor(apiKey?: string) {
+    const envKey = (apiKey || process.env.SEALION_API_KEY || process.env.SEA_LION_API_KEY || '').trim();
+
     this.config = {
       ...DEFAULT_CONFIG,
-      apiKey: apiKey || process.env.SEALION_API_KEY || process.env.SEA_LION_API_KEY || ''
+      apiKey: envKey
     };
 
-    // Initialize Vertex AI service
-    this.vertexAI = getVertexAIService();
-    this.useVertexAI = this.vertexAI.isAvailable();
+    const hasValidKey = envKey.length > 0 && envKey.toLowerCase() !== 'disabled';
 
-    if (this.useVertexAI) {
-      console.log('SeaLion service initialized with Vertex AI');
-    } else if (!this.config.apiKey) {
-      throw new Error('SeaLion API key is required when Vertex AI is not available. Set SEALION_API_KEY or SEA_LION_API_KEY environment variable.');
-    } else {
-      console.log('SeaLion service initialized with direct API');
+    if (hasValidKey) {
       this.client = new OpenAI({
-        apiKey: this.config.apiKey,
+        apiKey: envKey,
         baseURL: this.config.baseUrl
       });
+      this.seaLionEnabled = true;
+      console.log('SeaLion service initialized with direct API');
+    } else {
+      this.config.apiKey = '';
+      console.log('SeaLion API key not provided; SeaLion service will defer to OpenAI fallback');
     }
   }
 
-  // Private method to handle API calls with Vertex AI fallback
+  // Private method to handle API calls with optional SeaLion access
   private async makeAPICall(options: {
     messages: Array<{ role: string; content: string }>;
     maxTokens?: number;
@@ -80,38 +79,7 @@ export class SeaLionService {
   }): Promise<string> {
     const { messages, maxTokens = 1000, temperature = 0.7, model } = options;
 
-    // Try Vertex AI first if available
-    if (this.useVertexAI) {
-      try {
-        const response = await this.vertexAI.generateResponse({
-          messages,
-          maxTokens,
-          temperature
-        });
-        return response;
-      } catch (error) {
-        console.warn('🔄 Vertex AI call failed, falling back to direct API:', error instanceof Error ? error.message : 'Unknown error');
-        
-        // Enhanced fallback strategy
-        if (!this.config.apiKey) {
-          console.error('❌ Both Vertex AI and direct SeaLion API are unavailable');
-          console.log('💡 For translation requests, consider routing to OpenAI as final fallback');
-          throw new Error('Both Vertex AI and direct API are unavailable');
-        }
-        
-        // Initialize direct client if not already done
-        if (!this.client) {
-          console.log('🔧 Initializing direct SeaLion API client as fallback');
-          this.client = new OpenAI({
-            apiKey: this.config.apiKey,
-            baseURL: this.config.baseUrl
-          });
-        }
-      }
-    }
-
-    // Use direct API (either as primary or fallback)
-    if (this.client) {
+    if (this.seaLionEnabled && this.client) {
       try {
         const completion = await this.client.chat.completions.create({
           model: model || this.config.defaultModel,
@@ -120,31 +88,29 @@ export class SeaLionService {
           temperature
         });
 
-        return completion.choices[0].message.content || '';
+        const content = completion.choices[0].message.content || '';
+        if (content) {
+          return content;
+        }
       } catch (directApiError) {
-        console.warn('🔄 Direct SeaLion API failed, falling back to OpenAI:', directApiError instanceof Error ? directApiError.message : 'Unknown error');
+        console.warn('SeaLion direct API failed, falling back to OpenAI:', directApiError instanceof Error ? directApiError.message : 'Unknown error');
       }
     }
 
-    // Final fallback to OpenAI
-    console.log('🔄 Falling back to OpenAI for generation...');
+    console.log('Falling back to OpenAI for SeaLion request...');
     try {
-      const { AIService } = await import('./ai-service');
-      const aiService = new AIService();
-      
-      // Convert messages to prompt format for OpenAI
-      const prompt = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n\n');
-      // Simple fallback - return the prompt as response for now
-      const response = `Fallback response: ${prompt}`;
-      
-      console.log('✅ OpenAI fallback successful');
-      return response;
+      const openai = getOpenAIService();
+      return await openai.generateResponse({
+        messages,
+        maxTokens,
+        temperature,
+        model,
+      });
     } catch (openaiError) {
-      console.error('❌ OpenAI fallback also failed:', openaiError);
-      throw new Error(`All AI services failed. SeaLion: Not available, OpenAI: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`);
+      console.error('OpenAI fallback also failed:', openaiError);
+      throw new Error(`All AI services failed. OpenAI: ${openaiError instanceof Error ? openaiError.message : 'Unknown error'}`);
     }
   }
-
   // Get language-specific instructions for SeaLion - ULTRA MINIMAL to prevent overthinking
   private getLanguageInstructions(language: string): string {
     const instructions = {
@@ -683,7 +649,7 @@ export class SeaLionService {
     return evaluations[language as keyof typeof evaluations] || evaluations.en;
   }
 
-  // Generic method for AI text generation with SeaLion using Vertex AI or direct API
+  // Generic method for AI text generation with SeaLion (falls back to OpenAI when needed)
   async generateResponse(options: {
     messages: Array<{ role: string; content: string }>;
     maxTokens?: number;
@@ -720,3 +686,4 @@ export class SeaLionService {
 // Export singleton instance
 const sealionService = new SeaLionService();
 export { sealionService };
+

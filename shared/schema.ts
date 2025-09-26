@@ -28,7 +28,7 @@ export const SUPPORTED_LANGUAGES = {
 
 export type SupportedLanguage = keyof typeof SUPPORTED_LANGUAGES;
 
-// Session storage table for Replit Auth
+// Session storage table for express-session auth
 export const sessions = pgTable(
   "sessions",
   {

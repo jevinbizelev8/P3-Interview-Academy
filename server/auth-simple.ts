@@ -6,17 +6,23 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtlMs = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtlSeconds = Math.floor(sessionTtlMs / 1000);
   const pgStore = connectPg(session);
+  const sslOption = process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false };
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    conObject: {
+      connectionString: process.env.DATABASE_URL,
+      ...(sslOption === false ? { ssl: false } : { ssl: sslOption }),
+    },
     createTableIfMissing: true,
-    ttl: sessionTtl,
+    ttl: sessionTtlSeconds, // connect-pg-simple expects seconds
     tableName: "sessions",
   });
   
-  // Fix for Replit iframe context: use SameSite=None with Secure in production
-  const isHttps = process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS === 'true';
+  // Let Express inspect X-Forwarded-Proto and auto-set secure cookies when appropriate
+  const secureCookie = process.env.FORCE_HTTPS === 'true' ? true : 'auto';
+  const sameSite = secureCookie === true ? 'none' : 'lax';
   
   return session({
     secret: process.env.SESSION_SECRET!,
@@ -27,9 +33,9 @@ export function getSession() {
     rolling: true, // Reset expiration on each request for active users
     cookie: {
       httpOnly: true, // Prevent XSS attacks
-      secure: isHttps, // HTTPS in production
-      maxAge: sessionTtl, // 7 days but resets with rolling
-      sameSite: isHttps ? 'none' : 'lax', // 'none' for iframe contexts, 'lax' for localhost
+      secure: secureCookie,
+      maxAge: sessionTtlMs, // 7 days but resets with rolling
+      sameSite,
       domain: undefined, // Let browser handle domain
     },
     // Enhanced security: clean up expired sessions

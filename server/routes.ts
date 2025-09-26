@@ -1,6 +1,8 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { ensureCriticalSchema } from "./services/schema-auditor";
+import { executeQuery } from "./db";
 import { sealionService } from "./services/sealion";
 import { AIService } from "./services/ai-service";
 // import { prepareService } from "./services/prepare-service"; // QUARANTINED - moved to legacy-quarantine/
@@ -43,10 +45,23 @@ declare global {
   }
 }
 
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> => {
+  let timeoutId: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId!);
+  }
+};
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup simple authentication instead of broken OAuth
   const { setupSimpleAuth, requireAuth } = await import("./auth-simple");
   await setupSimpleAuth(app);
+  await ensureCriticalSchema();
+  const DB_TIMEOUT_MS = Number(process.env.HEALTH_DB_TIMEOUT_MS ?? '4000');
 
   // Auth routes are now handled by simple auth system
 
@@ -63,30 +78,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Enhanced system health check endpoint
   app.get('/api/health', async (req, res) => {
     const startTime = Date.now();
-    const healthCheck = {
+    const healthCheck: {
+      status: 'ok' | 'degraded' | 'unhealthy';
+      timestamp: string;
+      environment: string;
+      uptime: number;
+      version: string;
+      checks: Record<string, any>;
+      responseTime?: number;
+    } = {
       status: 'ok',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       uptime: process.uptime(),
       version: process.env.npm_package_version || 'unknown',
-      checks: {}
+      checks: {},
     };
 
     try {
       // 1. Database connectivity check
       try {
-        const { pool } = await import('./db');
         const dbStart = Date.now();
-        await pool.query('SELECT 1');
+        await withTimeout(executeQuery('SELECT 1'), DB_TIMEOUT_MS, `Database health check timed out after ${DB_TIMEOUT_MS}ms`);
         healthCheck.checks.database = {
           status: 'healthy',
           responseTime: Date.now() - dbStart
         };
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         healthCheck.checks.database = {
           status: 'unhealthy',
-          error: error.message,
-          responseTime: null
+          error: errorMessage,
+          responseTime: null,
         };
         healthCheck.status = 'degraded';
       }
@@ -95,7 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requiredEnvVars = ['DATABASE_URL', 'SESSION_SECRET'];
       const optionalEnvVars = ['OPENAI_API_KEY', 'SEALION_API_KEY', 'WS_ALLOWED_ORIGINS'];
 
-      const envCheck = {
+      const envCheck: { required: Record<string, boolean>; optional: Record<string, boolean> } = {
         required: {},
         optional: {}
       };
@@ -145,11 +168,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(httpStatus).json(healthCheck);
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       res.status(503).json({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
-        error: error.message,
-        responseTime: Date.now() - startTime
+        error: errorMessage,
+        responseTime: Date.now() - startTime,
       });
     }
   });
@@ -158,7 +182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/diagnostics', requireAuthWithBypass, async (req, res) => {
     try {
       const startTime = Date.now();
-      const diagnostics = {
+      const diagnostics: any = {
         timestamp: new Date().toISOString(),
         system: {
           nodeVersion: process.version,
@@ -182,15 +206,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Database detailed check
       try {
-        const { pool } = await import('./db');
         const dbStart = Date.now();
-        const result = await pool.query(`
+        const resultPromise = executeQuery(`
           SELECT
             NOW() as current_time,
             version() as pg_version,
             current_database() as database_name,
             current_user as user_name
         `);
+        const result = await withTimeout(resultPromise, DB_TIMEOUT_MS, `Database diagnostics query timed out after ${DB_TIMEOUT_MS}ms`) as { rows: Array<Record<string, any>> };
 
         diagnostics.database = {
           status: 'connected',
@@ -199,19 +223,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
 
         // Check database tables
-        const tablesResult = await pool.query(`
+        const tablesPromise = executeQuery(`
           SELECT table_name
           FROM information_schema.tables
           WHERE table_schema = 'public'
           ORDER BY table_name
         `);
-
+        const tablesResult = await withTimeout(tablesPromise, DB_TIMEOUT_MS, `Database diagnostics tables query timed out after ${DB_TIMEOUT_MS}ms`) as { rows: Array<{ table_name: string }> };
         diagnostics.database.tables = tablesResult.rows.map(row => row.table_name);
 
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         diagnostics.database = {
           status: 'error',
-          error: error.message
+          error: errorMessage,
         };
       }
 
@@ -223,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         diagnostics.system.freeMemory = `${Math.round(os.freemem() / 1024 / 1024)}MB`;
         diagnostics.system.cpus = os.cpus().length;
       } catch (error) {
-        diagnostics.system.osError = error.message;
+        diagnostics.system.osError = (error instanceof Error ? error.message : 'Unknown error');
       }
 
       diagnostics.responseTime = Date.now() - startTime;
@@ -231,48 +256,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(diagnostics);
 
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       res.status(500).json({
         error: 'Diagnostics failed',
-        message: error.message,
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
-
-  // Vertex AI connection test endpoint
-  app.get('/api/vertex-ai/test', async (req, res) => {
-    try {
-      const { getVertexAIService } = await import('./services/vertex-ai-config');
-      const vertexAI = getVertexAIService();
-      
-      if (!vertexAI.isAvailable()) {
-        return res.status(503).json({
-          success: false,
-          message: 'Vertex AI service is not properly configured',
-          config: {
-            hasProjectId: !!process.env.GCP_PROJECT_ID,
-            hasRegion: !!process.env.GCP_REGION,
-            hasEndpointId: !!process.env.GCP_ENDPOINT_ID,
-            hasCredentials: !!process.env.GOOGLE_APPLICATION_CREDENTIALS,
-            hasApiKey: !!process.env.GOOGLE_API_KEY
-          }
-        });
-      }
-      
-      const testResult = await vertexAI.testConnection();
-      
-      res.json({
-        success: testResult.success,
-        message: testResult.message,
-        endpoint: testResult.endpoint,
-        timestamp: new Date().toISOString()
-      });
-      
-    } catch (error) {
-      console.error('Vertex AI test endpoint error:', error);
-      res.status(500).json({
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: errorMessage,
         timestamp: new Date().toISOString()
       });
     }
@@ -2603,3 +2590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   return httpServer;
 }
+
+
+
+
