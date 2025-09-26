@@ -46,7 +46,6 @@ chmod +x deployment-scripts/setup-environment-variables.sh
 - `OPENAI_API_KEY` - For OpenAI GPT integration
 - `SEALION_API_KEY` - For SeaLion AI integration
 - `ANTHROPIC_API_KEY` - For Claude integration
-- `GOOGLE_API_KEY` - For Vertex AI integration
 
 ### 3. Verify Database Connectivity
 Test database connection and schema:
@@ -70,6 +69,12 @@ npm run build
 Expected output:
 - `dist/index.js` - Built backend server
 - `dist/public/` - Built frontend assets
+
+### 5. Run Schema Auditor (recommended after schema changes)
+The Express bootstrap now calls `ensureCriticalSchema()` on startup to create the Prepare tables and align `interview_sessions` column names. Trigger it manually before deploying or after restoring a snapshot to keep the database consistent:
+```bash
+npx tsx server/services/schema-auditor.ts
+```
 
 ## 🚀 Deployment Process
 
@@ -167,6 +172,7 @@ curl http://your-eb-app.region.elasticbeanstalk.com/api/health
 - Verify AI services are working
 - Check WebSocket connections
 - Test voice features
+- Start a new Practice session; a fresh chat should auto-populate the first AI question and play the voice prompt when enabled.
 
 ## 🐛 Troubleshooting
 
@@ -208,7 +214,18 @@ aws elasticbeanstalk describe-events \
 - Check database server accessibility
 - Verify credentials and permissions
 
-#### 3. Static Files Not Serving
+#### 3. Missing `ai_prepare_*` tables or `interview_sessions.user_id`
+**Symptoms:** Logs show `relation "ai_prepare_sessions" does not exist` or column names like `user_id` missing after deployment.
+
+**Resolution:**
+- Restart the Elastic Beanstalk environment; the server runs `ensureCriticalSchema()` on boot.
+- Or SSH in / run remotely:
+```bash
+npx tsx server/services/schema-auditor.ts
+```
+This will create the Prepare tables and rename any camelCase `interview_sessions` columns back to snake_case.
+
+#### 4. Static Files Not Serving
 **Symptoms:** Frontend not loading, API works
 
 **Causes:**
@@ -221,7 +238,7 @@ aws elasticbeanstalk describe-events \
 - Verify `dist/public/index.html` exists
 - Check `.ebextensions/01-nodejs.config` static file configuration
 
-#### 4. WebSocket Connection Failures
+#### 5. WebSocket Connection Failures
 **Symptoms:** Real-time features not working
 
 **Solutions:**

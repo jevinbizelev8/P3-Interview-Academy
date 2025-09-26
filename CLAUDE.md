@@ -23,6 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run db:push` - Push database schema changes using Drizzle Kit
 - Database schema is defined in `shared/schema.ts`
 - Uses PostgreSQL with Drizzle ORM
+- Boot-time schema guard: `ensureCriticalSchema()` in `server/services/schema-auditor.ts` runs every server start to create the AI Prepare tables and rename legacy `interview_sessions` columns. Restart the API after restoring a snapshot or run `node -e "import('./dist/services/schema-auditor.js').then(m => m.ensureCriticalSchema())"` to apply it manually.
 
 ## Architecture Overview
 
@@ -44,7 +45,7 @@ This is a full-stack TypeScript application with a React frontend and Express.js
 #### AI Services Architecture
 The application integrates multiple AI services with a fallback pattern:
 - **Primary**: SeaLion AI (optimized for Southeast Asian markets)
-- **Fallbacks**: OpenAI GPT-4o, Google Vertex AI, AWS Bedrock (Anthropic Claude)
+- **Fallbacks**: SeaLion AI, AWS Bedrock (Anthropic Claude)
 - All AI services are abstracted through service classes in `server/services/`
 
 #### Database Design
@@ -125,6 +126,10 @@ The platform evaluates responses using the STAR framework:
 - **Result** - Outcomes achieved
 
 Evaluation logic is in `server/services/response-evaluation-service.ts`.
+
+### Practice Module Notes
+- `client/src/pages/practice/interview-practice.tsx` auto-requests the first AI prompt once `getPracticeSession` resolves and the mutation queue is idle. If you seed practice sessions manually, reset `current_question_number` to 1 (or null) so the bootstrap question still fires.
+- Voice playback now reads `data.question.questionText` from `/api/practice/sessions/:id/ai-question`; API changes should continue populating that field alongside the existing `content` fallback.
 
 ## Development Notes
 
