@@ -1,0 +1,155 @@
+name: Deploy to AWS Elastic Beanstalk Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip test execution'
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+env:
+  AWS_REGION: ap-southeast-1
+  EB_APPLICATION_NAME: p3-interview-academy
+  EB_ENVIRONMENT_NAME: p3-interview-academy-prod-v2
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.skip_tests != 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript check
+        run: npm run check
+
+      - name: Run tests
+        run: npm run test:run
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: always() && (needs.test.result == 'success' || github.event.inputs.skip_tests == 'true')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+
+      - name: Create deployment bundle
+        run: |
+          # Create bundle directory
+          mkdir -p deployment-bundle
+
+          # Copy source code and configuration
+          cp -r server/ deployment-bundle/
+          cp -r client/ deployment-bundle/
+          cp -r shared/ deployment-bundle/
+          cp -r .ebextensions/ deployment-bundle/
+
+          # Copy package files
+          cp package.json deployment-bundle/
+          cp package-lock.json deployment-bundle/
+          cp .npmrc deployment-bundle/
+          cp tsconfig.json deployment-bundle/
+          cp vite.config.ts deployment-bundle/
+          cp postcss.config.js deployment-bundle/ || echo "No postcss.config.js"
+
+          # Copy built static assets
+          mkdir -p deployment-bundle/dist/public
+          cp -r dist/public/* deployment-bundle/dist/public/ || echo "No static assets"
+
+          # Create deployment zip
+          cd deployment-bundle
+          zip -r ../deployment-$(date +%Y%m%d-%H%M%S).zip . -q
+          cd ..
+
+          echo "BUNDLE_NAME=deployment-$(date +%Y%m%d-%H%M%S).zip" >> $GITHUB_ENV
+
+      - name: Upload to S3
+        run: |
+          aws s3 cp $BUNDLE_NAME s3://elasticbeanstalk-ap-southeast-1-${{ secrets.AWS_ACCOUNT_ID }}/${{ env.EB_APPLICATION_NAME }}/
+
+      - name: Create application version
+        run: |
+          VERSION_LABEL=$(basename $BUNDLE_NAME .zip)
+          aws elasticbeanstalk create-application-version \
+            --application-name ${{ env.EB_APPLICATION_NAME }} \
+            --version-label $VERSION_LABEL \
+            --description "Automated deployment from GitHub Actions - $(date)" \
+            --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-${{ secrets.AWS_ACCOUNT_ID }},S3Key=${{ env.EB_APPLICATION_NAME }}/$BUNDLE_NAME
+          echo "VERSION_LABEL=$VERSION_LABEL" >> $GITHUB_ENV
+
+      - name: Deploy to EB environment
+        run: |
+          aws elasticbeanstalk update-environment \
+            --environment-name ${{ env.EB_ENVIRONMENT_NAME }} \
+            --version-label $VERSION_LABEL
+
+      - name: Wait for deployment
+        run: |
+          echo "Waiting for deployment to complete..."
+          aws elasticbeanstalk wait environment-updated --environment-name ${{ env.EB_ENVIRONMENT_NAME }}
+
+      - name: Verify deployment
+        run: |
+          # Check environment status
+          aws elasticbeanstalk describe-environments \
+            --environment-names ${{ env.EB_ENVIRONMENT_NAME }} \
+            --query 'Environments[0].{Status:Status,Health:Health,VersionLabel:VersionLabel}'
+
+          # Test health endpoint
+          CNAME=$(aws elasticbeanstalk describe-environments \
+            --environment-names ${{ env.EB_ENVIRONMENT_NAME }} \
+            --query 'Environments[0].CNAME' --output text)
+
+          echo "Testing health endpoint: http://$CNAME/api/health"
+          curl -f "http://$CNAME/api/health" || (echo "Health check failed" && exit 1)
+
+          echo "✅ Deployment verified successfully!"
+
+      - name: Post-deployment cleanup
+        if: success()
+        run: |
+          # Clean up old application versions (keep last 5)
+          aws elasticbeanstalk describe-application-versions \
+            --application-name ${{ env.EB_APPLICATION_NAME }} \
+            --query 'ApplicationVersions[5:].VersionLabel' --output text | \
+          xargs -I {} aws elasticbeanstalk delete-application-version \
+            --application-name ${{ env.EB_APPLICATION_NAME }} \
+            --version-label {} --delete-source-bundle || echo "No old versions to clean"

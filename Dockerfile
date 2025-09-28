@@ -18,6 +18,6 @@ EXPOSE 5000
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=builder /app .
 
-CMD ["node", "server/index.js"]
+CMD ["node", "dist/index.js"]
 
 

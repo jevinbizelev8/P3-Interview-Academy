@@ -70,18 +70,29 @@ mkdir -p "$TEMP_DIR"
 
 echo "Copying production files..."
 
-# Copy built artifacts
-cp -r dist/ "$TEMP_DIR/"
-echo "✓ Built artifacts copied"
+# Copy source code for EB to build
+cp -r server/ "$TEMP_DIR/"
+cp -r client/ "$TEMP_DIR/"
+echo "✓ Source code copied"
+
+# Copy built artifacts (for static assets)
+cp -r dist/public/ "$TEMP_DIR/dist/public/" 2>/dev/null || echo "No dist/public found"
+mkdir -p "$TEMP_DIR/dist"
+echo "✓ Static assets copied"
 
 # Copy package files (production dependencies info)
 cp package.json "$TEMP_DIR/"
 cp package-lock.json "$TEMP_DIR/" 2>/dev/null || echo "No package-lock.json found"
+cp .npmrc "$TEMP_DIR/" 2>/dev/null || echo "No .npmrc found"
 echo "✓ Package files copied"
 
 # Copy configuration files
 cp -r .ebextensions/ "$TEMP_DIR/" 2>/dev/null || echo "No .ebextensions directory found"
-echo "✓ EB Extensions copied"
+cp tsconfig.json "$TEMP_DIR/" 2>/dev/null || echo "No tsconfig.json found"
+cp vite.config.ts "$TEMP_DIR/" 2>/dev/null || echo "No vite.config.ts found"
+cp tailwind.config.js "$TEMP_DIR/" 2>/dev/null || echo "No tailwind.config.js found"
+cp postcss.config.js "$TEMP_DIR/" 2>/dev/null || echo "No postcss.config.js found"
+echo "✓ Configuration files copied"
 
 # Copy shared directory (types and schemas)
 cp -r shared/ "$TEMP_DIR/"
@@ -90,13 +101,9 @@ echo "✓ Shared directory copied"
 # Copy environment example (for reference)
 cp .env.example "$TEMP_DIR/" 2>/dev/null || echo "No .env.example found"
 
-# Create production node_modules (only production dependencies)
-echo "Installing production dependencies in bundle..."
-cd "$TEMP_DIR"
-npm ci --omit=dev --silent
-echo "✓ Production dependencies installed"
-
-cd ..
+# Skip npm install - let EB handle dependency installation
+echo "Skipping npm install - EB will handle dependencies during deployment..."
+echo "✓ Bundle prepared for EB dependency installation"
 
 echo "Bundle contents:"
 find "$TEMP_DIR" -type f -name "*.js" -o -name "*.json" -o -name "*.html" -o -name "package*" | head -20
