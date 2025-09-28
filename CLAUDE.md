@@ -263,6 +263,12 @@ Three-tier health checking system:
 - Refined `fix-database-schema.js` to normalize snake_case columns; rerun once RDS firewall rules allow the workstation.
 - Built and deployed bundle `p3-interview-academy-fixes-20250925a` via Elastic Beanstalk; smoke tests confirm health endpoints and signup succeed.
 
+### Update: 2025-09-29
+- Verified production deployment status and endpoint availability
+- Confirmed application is running on `p3-interview-academy-prod-v2` environment
+- Updated deployment documentation with latest bundle information (`p3-interview-academy-eb-20250928-162757.zip`)
+- Maintained CI/CD pipeline configuration on `chore/ci-deploy-pipeline` branch
+
 ## Deployment Progress (2025-09-24)
 
 ### Initial Issues Resolved
