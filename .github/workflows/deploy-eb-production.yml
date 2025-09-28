@@ -36,6 +36,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
+          NPM_CONFIG_OPTIONAL: "true"
 
       - name: Run TypeScript check
         run: npm run check
@@ -67,12 +70,19 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
+          NPM_CONFIG_OPTIONAL: "true"
 
       - name: Build application
         run: npm run build
 
       - name: Create deployment bundle
         run: |
+          # Reuse a single timestamp for bundle naming
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          BUNDLE_NAME="deployment-$TIMESTAMP.zip"
+
           # Create bundle directory
           mkdir -p deployment-bundle
 
@@ -95,11 +105,9 @@ jobs:
           cp -r dist/public/* deployment-bundle/dist/public/ || echo "No static assets"
 
           # Create deployment zip
-          cd deployment-bundle
-          zip -r ../deployment-$(date +%Y%m%d-%H%M%S).zip . -q
-          cd ..
+          (cd deployment-bundle && zip -r "../$BUNDLE_NAME" . -q)
 
-          echo "BUNDLE_NAME=deployment-$(date +%Y%m%d-%H%M%S).zip" >> $GITHUB_ENV
+          echo "BUNDLE_NAME=$BUNDLE_NAME" >> "$GITHUB_ENV"
 
       - name: Upload to S3
         run: |
