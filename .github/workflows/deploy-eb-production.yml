@@ -22,6 +22,8 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
     if: github.event.inputs.skip_tests != 'true'
 
     steps:
