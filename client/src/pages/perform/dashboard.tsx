@@ -76,7 +76,7 @@ interface DashboardStats {
     id: string;
     date: string;
     scenario?: string;
-    sessionType?: 'Interview' | 'Practice';
+    sessionType?: 'Interview' | 'Practice' | 'Prepare';
     jobTitle?: string;
     companyName?: string;
     interviewStage?: string;
@@ -104,7 +104,7 @@ interface DashboardStats {
   
   // Session type breakdown for charts
   sessionTypeBreakdown?: Array<{
-    type: 'Interview' | 'Practice';
+    type: 'Interview' | 'Practice' | 'Prepare';
     count: number;
     percentage: number;
   }>;
@@ -404,12 +404,12 @@ export default function Dashboard() {
                   <div key={sessionType.type} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className={`w-3 h-3 rounded-full mr-3 ${
-                        sessionType.type === 'Interview' ? 'bg-blue-500' : 'bg-green-500'
+                        sessionType.type === 'Interview' ? 'bg-blue-500' : sessionType.type === 'Practice' ? 'bg-green-500' : 'bg-purple-500'
                       }`} />
                       <span className="text-sm font-medium">{sessionType.type} Sessions</span>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <Badge variant="outline" className={sessionType.type === 'Interview' ? 'text-blue-600' : 'text-green-600'}>
+                      <Badge variant="outline" className={sessionType.type === 'Interview' ? 'text-blue-600' : sessionType.type === 'Practice' ? 'text-green-600' : 'text-purple-600'}>
                         {sessionType.count}
                       </Badge>
                       <span className="text-xs text-gray-500">{sessionType.percentage}%</span>
@@ -448,6 +448,17 @@ export default function Dashboard() {
                   <div className="flex items-center space-x-2">
                     <Badge variant="outline" className="text-green-600">
                       {dashboardStats.practiceSessions || 0}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full mr-3 bg-purple-500" />
+                    <span className="text-sm font-medium">AI Prepare Sessions</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="text-purple-600">
+                      {dashboardStats.sessionTypeBreakdown?.find(s => s.type === 'Prepare')?.count || 0}
                     </Badge>
                   </div>
                 </div>

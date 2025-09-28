@@ -519,17 +519,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Step 1: Get all user sessions (from Practice, Interview, and AI Prepare modules)
       const sessionStart = Date.now();
-      const [userSessions, practiceSessions, practiceOverview] = await Promise.all([
+      const [userSessions, practiceSessions, practiceOverview, aiPrepareSessions] = await Promise.all([
         storage.getUserInterviewSessions(userId),
         storage.getUserPracticeSessions(userId),
-        storage.getPracticeOverview(userId)
+        storage.getPracticeOverview(userId),
+        storage.getUserAIPrepareSessions(userId)
       ]);
-      // Note: getUserAIPrepareSessions method doesn't exist in storage interface
-      const aiPrepareSessions: any[] = [];
       console.log(`⏱️  getUserInterviewSessions took: ${Date.now() - sessionStart}ms, found ${userSessions.length} sessions`);
       console.log(`⏱️  getUserPracticeSessions found: ${practiceSessions.length} sessions`);
+      console.log(`⏱️  getUserAIPrepareSessions found: ${aiPrepareSessions.length} sessions`);
       const completedSessions = userSessions.filter(session => session.status === 'completed');
       const completedPracticeSessions = practiceSessions.filter(session => session.status === 'completed');
+      const completedAIPrepareSessions = aiPrepareSessions.filter(session => session.status === 'completed');
       
       // Step 1a: Fetch practice reports and messages for completed practice sessions
       const practiceReports = new Map<string, any>();
@@ -547,9 +548,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await Promise.all(practiceDataPromises);
       
-      // Calculate combined basic stats (Interview + Practice sessions)
-      const totalSessions = userSessions.length + practiceSessions.length;
-      const completedCount = completedSessions.length + completedPracticeSessions.length;
+      // Calculate combined basic stats (Interview + Practice + AI Prepare sessions)
+      const totalSessions = userSessions.length + practiceSessions.length + aiPrepareSessions.length;
+      const completedCount = completedSessions.length + completedPracticeSessions.length + completedAIPrepareSessions.length;
       
       // Calculate combined average score from completed sessions (5-point scale)
       let totalScore = 0;
@@ -576,10 +577,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           scoreCount++;
         }
       });
-      
+
+      // Add AI Prepare session scores (already on 5-point scale)
+      completedAIPrepareSessions.forEach(session => {
+        if (session.averageStarScore && !isNaN(Number(session.averageStarScore))) {
+          const score = Number(session.averageStarScore);
+          totalScore += score; // AI prepare scores are already on 5-point scale
+          scoreCount++;
+        }
+      });
+
       const averageScore = scoreCount > 0 ? totalScore / scoreCount : 0;
       
-      // Calculate total practice time (in minutes) - Interview + Practice sessions
+      // Calculate total practice time (in minutes) - Interview + Practice + AI Prepare sessions
       let totalPracticeTime = 0;
       completedSessions.forEach(session => {
         if (session.duration) {
@@ -595,8 +605,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalPracticeTime += 5;
         }
       });
+      // Add AI Prepare session time
+      completedAIPrepareSessions.forEach(session => {
+        if (session.totalTimeSpent) {
+          totalPracticeTime += Math.floor(session.totalTimeSpent / 60); // Convert seconds to minutes
+        } else {
+          // Estimate 3 minutes per AI prepare session if duration not tracked
+          totalPracticeTime += 3;
+        }
+      });
       
-      // Get recent sessions (last 5) - combining Interview and Practice sessions
+      // Get recent sessions (last 5) - combining Interview, Practice, and AI Prepare sessions
       const allRecentSessions = [
         ...completedSessions.map(session => ({
           id: session.id,
@@ -624,7 +643,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
             questionsAnswered: userMessages.length || session.totalQuestions || 1,
             voiceEnabled: voiceMessages.length > 0
           };
-        })
+        }),
+        ...completedAIPrepareSessions.map(session => ({
+          id: session.id,
+          date: new Date(session.completedAt || session.createdAt || Date.now()).toLocaleDateString('en-GB'),
+          scenario: `${session.jobPosition} at ${session.companyName}` || 'AI Prepare Session',
+          sessionType: 'Prepare' as const,
+          jobTitle: session.jobPosition,
+          companyName: session.companyName,
+          interviewStage: session.interviewStage,
+          score: session.averageStarScore || 0,
+          duration: session.totalTimeSpent ? Math.floor(session.totalTimeSpent / 60) : 3, // Convert to minutes or estimate
+          questionsAnswered: session.totalQuestionsAsked || 1,
+          voiceEnabled: session.voiceEnabled || false
+        }))
       ];
       
       const recentSessions = allRecentSessions
@@ -812,7 +844,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Session type breakdown for charts
         sessionTypeBreakdown: [
           { type: 'Interview', count: completedSessions.length, percentage: completedCount > 0 ? Math.round((completedSessions.length / completedCount) * 100) : 0 },
-          { type: 'Practice', count: completedPracticeSessions.length, percentage: completedCount > 0 ? Math.round((completedPracticeSessions.length / completedCount) * 100) : 0 }
+          { type: 'Practice', count: completedPracticeSessions.length, percentage: completedCount > 0 ? Math.round((completedPracticeSessions.length / completedCount) * 100) : 0 },
+          { type: 'Prepare', count: completedAIPrepareSessions.length, percentage: completedCount > 0 ? Math.round((completedAIPrepareSessions.length / completedCount) * 100) : 0 }
         ]
       };
       

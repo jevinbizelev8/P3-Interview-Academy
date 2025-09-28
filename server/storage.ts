@@ -22,6 +22,10 @@ import {
   practiceSessions,
   practiceMessages,
   practiceReports,
+  // AI Prepare module tables
+  aiPrepareSessions,
+  aiPrepareQuestions,
+  aiPrepareResponses,
   type User,
   type UpsertUser,
   type InsertInterviewScenario,
@@ -71,6 +75,13 @@ import {
   type InsertPracticeReport,
   type PracticeSessionWithMessages,
   type PracticeSessionOverview,
+  // AI Prepare module types
+  type AiPrepareSession,
+  type InsertAiPrepareSession,
+  type AiPrepareQuestion,
+  type InsertAiPrepareQuestion,
+  type AiPrepareResponse,
+  type InsertAiPrepareResponse,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, avg, sql, or } from "drizzle-orm";
@@ -161,6 +172,11 @@ export interface IStorage {
   
   // Practice overview/analytics
   getPracticeOverview(userId: string): Promise<PracticeSessionOverview>;
+
+  // AI Prepare module operations
+  // AI Prepare sessions
+  getUserAIPrepareSessions(userId: string): Promise<AiPrepareSession[]>;
+  getAIPrepareSessionsWithResponses(userId: string): Promise<AiPrepareSession[]>;
 }
 
 // Simple in-memory cache for question banks
@@ -1417,6 +1433,28 @@ export class DatabaseStorage implements IStorage {
       recentSessions,
       improvementTrends,
     };
+  }
+
+  // AI Prepare module operations
+  async getUserAIPrepareSessions(userId: string): Promise<AiPrepareSession[]> {
+    return await db
+      .select()
+      .from(aiPrepareSessions)
+      .where(eq(aiPrepareSessions.userId, userId))
+      .orderBy(desc(aiPrepareSessions.createdAt));
+  }
+
+  async getAIPrepareSessionsWithResponses(userId: string): Promise<AiPrepareSession[]> {
+    // Get sessions with their related questions and responses
+    const sessions = await db
+      .select()
+      .from(aiPrepareSessions)
+      .where(eq(aiPrepareSessions.userId, userId))
+      .orderBy(desc(aiPrepareSessions.createdAt));
+
+    // For each session, we could join with questions and responses,
+    // but for now return the sessions as-is since the dashboard mainly needs session-level data
+    return sessions;
   }
 }
 
