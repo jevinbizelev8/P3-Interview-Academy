@@ -81,7 +81,14 @@
       "Bash(NODE_ENV=development DATABASE_URL=postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres npx tsx test-auth-flow.ts)",
       "Bash(NODE_ENV=production DATABASE_URL=postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres npx tsx test-auth-flow.ts)",
       "Bash(DATABASE_URL=\"postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres\" npx tsx test-auth-flow.ts)",
-      "Bash(NODE_ENV=production DATABASE_URL=\"postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres\" npx tsx test-auth-flow.ts)"
+      "Bash(NODE_ENV=production DATABASE_URL=\"postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres\" npx tsx test-auth-flow.ts)",
+      "Bash(set NODE_ENV=development)",
+      "Bash(npm start)",
+      "Bash(DATABASE_URL=\"postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres\" BYPASS_AUTH=true npx tsx server/index.ts)",
+      "Bash(powershell:*)",
+      "Bash(dir:*)",
+      "WebFetch(domain:p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com)",
+      "Bash(aws elasticbeanstalk create-environment:*)"
     ],
     "deny": [],
     "ask": []
