@@ -44,9 +44,15 @@ jobs:
 
       - name: Run TypeScript check
         run: npm run check
+        env:
+          NODE_ENV: test
+          NPM_CONFIG_PRODUCTION: "false"
 
       - name: Run tests
         run: npm run test:run
+        env:
+          NODE_ENV: test
+          NPM_CONFIG_PRODUCTION: "false"
 
   deploy:
     runs-on: ubuntu-latest
