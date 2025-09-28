@@ -2,28 +2,19 @@ import bcrypt from "bcryptjs";
 import session from "express-session";
 import crypto from "crypto";
 import type { Express, RequestHandler } from "express";
-import connectPg from "connect-pg-simple";
+import { createSessionStore } from "./session-store";
 import { storage } from "./storage";
 
 export function getSession() {
   const sessionTtlMs = 7 * 24 * 60 * 60 * 1000; // 1 week
-  const sessionTtlSeconds = Math.floor(sessionTtlMs / 1000);
-  const pgStore = connectPg(session);
-  const sslOption = process.env.DB_SSL === 'false' ? false : { rejectUnauthorized: false };
-  const sessionStore = new pgStore({
-    conObject: {
-      connectionString: process.env.DATABASE_URL,
-      ...(sslOption === false ? { ssl: false } : { ssl: sslOption }),
-    },
-    createTableIfMissing: true,
-    ttl: sessionTtlSeconds, // connect-pg-simple expects seconds
-    tableName: "sessions",
+  const sessionStore = createSessionStore({
+    ttl: Math.floor(sessionTtlMs / 1000),
   });
-  
+
   // Let Express inspect X-Forwarded-Proto and auto-set secure cookies when appropriate
   const secureCookie = process.env.FORCE_HTTPS === 'true' ? true : 'auto';
   const sameSite = secureCookie === true ? 'none' : 'lax';
-  
+
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -44,6 +35,7 @@ export function getSession() {
     }
   });
 }
+
 
 export async function setupSimpleAuth(app: Express) {
   app.set("trust proxy", 1);

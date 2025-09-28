@@ -16,7 +16,8 @@
     "test:watch": "vitest --watch",
     "test:prepare": "vitest run --reporter=verbose client/src/__tests__/components/Home.test.tsx client/src/__tests__/components/LanguageSelector.test.tsx client/src/__tests__/components/JobDescriptionUpload.test.tsx",
     "test:integration": "vitest run --reporter=verbose client/src/__tests__/integration/",
-    "test:api": "vitest run --reporter=verbose client/src/__tests__/api/"
+    "test:api": "vitest run --reporter=verbose client/src/__tests__/api/",
+    "test:registration": "tsx test-registration-flow.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
@@ -67,7 +68,7 @@
     "connect-pg-simple": "^10.0.0",
     "date-fns": "^3.6.0",
     "dotenv": "^17.2.2",
-    "drizzle-orm": "^0.39.1",
+    "drizzle-orm": "^0.39.3",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
     "express": "^4.21.2",
