@@ -11,6 +11,4 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
-  // Use standard PostgreSQL driver instead of Neon serverless
-  driver: "pg",
 });

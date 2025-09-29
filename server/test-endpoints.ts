@@ -252,4 +252,40 @@ router.post('/api/test-multilanguage', async (req: Request, res: Response) => {
   }
 });
 
+// Test endpoint for schema deployment
+router.post('/api/test-deploy-schema', async (req: Request, res: Response) => {
+  try {
+    console.log('🗃️ Testing database schema deployment...');
+
+    const { execSync } = await import('child_process');
+
+    // Run schema deployment
+    const output = execSync('npm run db:push', {
+      stdio: 'pipe',
+      encoding: 'utf8',
+      env: { ...process.env },
+      timeout: 30000 // 30 second timeout
+    });
+
+    console.log('✅ Schema deployment completed successfully');
+    console.log('Output:', output);
+
+    res.json({
+      success: true,
+      message: 'Database schema deployed successfully',
+      output: output.toString(),
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Schema deployment failed:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      output: (error as any).stdout || (error as any).stderr || '',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 export default router;
