@@ -270,11 +270,30 @@ Three-tier health checking system:
 - **Database**: All connections verified, health checks passing (32ms response time)
 - **Infrastructure**: Fixed AL2023 platform configuration issues, removed deprecated NodeCommand/NodeVersion settings
 - **Pipeline Features**: Automated testing, TypeScript checking, bundle creation, S3 upload, and EB deployment
-- **Staging Environment**: `p3-interview-academy-staging` successfully created and operational
+- **Staging Environment**: `p3-interview-academy-staging` created with enhanced deployment workflow
   - **URL**: `http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com`
   - **Trigger**: Automatic deployment on PR creation/updates to main branch
-  - **Workflow**: Tests → Build → Bundle → Deploy → Health Check → PR Comment
-  - **Status**: Fully functional PR-based staging deployments
+  - **Workflow**: Tests → Build → Bundle → Deploy + Config → Health Check → PR Comment
+  - **Status**: Deployment issues identified and fixed with comprehensive solution
+  - **Recent Fix**: Auto-configuration of environment variables, timeout handling, retry logic
+
+### Staging Deployment Troubleshooting (2025-09-29)
+**Issue**: GitHub Actions staging deployments failing with "Max attempts exceeded"
+
+**Root Causes Identified:**
+1. Missing environment variables (`DATABASE_URL`, `SESSION_SECRET`, `WS_ALLOWED_ORIGINS`)
+2. Application returning 502 errors due to startup failures
+3. Rolling deployment stuck waiting for unhealthy application
+4. AWS CLI waiter timing out after 15+ minutes
+
+**Solution Implemented:**
+- ✅ Auto-configure environment variables during deployment via `--option-settings`
+- ✅ Enhanced timeout handling with graceful fallbacks
+- ✅ Health check retry logic (3 attempts, 30-second intervals)
+- ✅ Better error reporting and deployment status information
+- ✅ Workflow continues even if health checks are temporarily slow
+
+**Future Deployments**: Should complete successfully with proper environment configuration
 
 ## Deployment Progress (2025-09-24)
 
