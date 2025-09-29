@@ -76,6 +76,46 @@ The Express bootstrap now calls `ensureCriticalSchema()` on startup to create th
 npx tsx server/services/schema-auditor.ts
 ```
 
+## 🔄 GitHub Actions CI/CD Activation
+
+Automated staging and production deployments now live in `.github/workflows/deploy-eb-staging.yml` and `.github/workflows/deploy-eb-production.yml`. Complete the following once per repository to activate the pipeline end to end.
+
+### Step 1: Configure GitHub secrets
+Set the AWS credentials GitHub Actions will use (`Settings → Secrets and variables → Actions`). Create three **repository secrets**:
+- `AWS_ACCESS_KEY_ID` – IAM access key with Elastic Beanstalk, S3, and CloudWatch Logs permissions.
+- `AWS_SECRET_ACCESS_KEY` – Matching secret key.
+- `AWS_ACCOUNT_ID` – Twelve digit AWS account number (used to locate the EB S3 bucket).
+
+Recommended IAM policy actions (minimum): `elasticbeanstalk:*`, `s3:*` on the EB artifact bucket, `cloudwatch:Describe*`, and `iam:PassRole` for the EB instance/profile role.
+
+### Step 2: Provision the staging environment
+Create `p3-interview-academy-staging` inside the existing Elastic Beanstalk application (`p3-interview-academy`). The simplest approach is to **clone the production environment** in the EB console and update the environment variables for staging services (database URL, feature flags, etc.).
+
+Prefer CLI? Use a saved configuration template from production:
+```bash
+aws elasticbeanstalk create-environment \
+  --application-name p3-interview-academy \
+  --environment-name p3-interview-academy-staging \
+  --cname-prefix p3-interview-academy-staging \
+  --solution-stack-name "64bit Amazon Linux 2023 v4.3.1 running Node.js 20" \
+  --template-name production-clone \
+  --version-label placeholder-bootstrap
+```
+Replace `production-clone` with an EB configuration template that mirrors production capacity and networking.
+
+### Step 3: Validate the staging workflow
+1. Open the **Deploy to AWS Elastic Beanstalk Staging** workflow in the Actions tab.
+2. Trigger it manually (`Run workflow`) or open a PR against `main` to let the PR event kick it off.
+3. Confirm the `test` job passes (`npm ci`, `npm run check`, `npm run test:run`).
+4. Watch the `deploy-staging` job upload the bundle, create the EB application version, and wait for `p3-interview-academy-staging` to turn green. The job prints the environment health and hits `/api/health` automatically.
+5. For pull requests, the workflow comments with the staging URL and version label once verification succeeds.
+
+### Step 4: Promote via production workflow
+Pushes to `main` now trigger **Deploy to AWS Elastic Beanstalk Production**. The job reuses the same bundle process, waits for the green health check, and trims older application versions (keeping the newest five). You can also run it manually from the Actions tab if you need to redeploy a prior commit—set `skip_tests` to `true` only during break-glass scenarios.
+
+### Step 5: Sunset manual scripts (optional)
+The scripts under `deployment-scripts/` remain for local smoke tests, but the GitHub Actions workflows are the source of truth for deployments. Update `DEPLOYMENT.md` or deprecate the shell scripts after the team confirms the automated path in practice.
+
 ## 🚀 Deployment Process
 
 ### Method 1: Automated Deployment (Recommended)

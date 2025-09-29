@@ -14,6 +14,8 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
 
     steps:
       - name: Checkout
@@ -27,12 +29,21 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
+          NPM_CONFIG_OPTIONAL: "true"
 
       - name: Run TypeScript check
         run: npm run check
+        env:
+          NODE_ENV: test
+          NPM_CONFIG_PRODUCTION: "false"
 
       - name: Run tests
         run: npm run test:run
+        env:
+          NODE_ENV: test
+          NPM_CONFIG_PRODUCTION: "false"
 
   deploy-staging:
     runs-on: ubuntu-latest
@@ -58,15 +69,19 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
+          NPM_CONFIG_OPTIONAL: "true"
 
       - name: Build application
         run: npm run build
 
       - name: Create deployment bundle
         run: |
-          # Create bundle with timestamp
+          # Reuse a single timestamp for bundle and version names
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           BUNDLE_NAME="staging-$TIMESTAMP.zip"
+          VERSION_LABEL="staging-$TIMESTAMP"
 
           # Create bundle directory
           mkdir -p deployment-bundle
@@ -90,29 +105,38 @@ jobs:
           cp -r dist/public/* deployment-bundle/dist/public/ || echo "No static assets"
 
           # Create deployment zip
-          cd deployment-bundle
-          zip -r ../$BUNDLE_NAME . -q
-          cd ..
+          (cd deployment-bundle && zip -r "../$BUNDLE_NAME" . -q)
 
-          echo "BUNDLE_NAME=$BUNDLE_NAME" >> $GITHUB_ENV
-          echo "VERSION_LABEL=staging-$TIMESTAMP" >> $GITHUB_ENV
+          echo "BUNDLE_NAME=$BUNDLE_NAME" >> "$GITHUB_ENV"
+          echo "VERSION_LABEL=$VERSION_LABEL" >> "$GITHUB_ENV"
 
       - name: Deploy to staging
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.number }}
+          GIT_SHA: ${{ github.sha }}
         run: |
           # Upload bundle
-          aws s3 cp $BUNDLE_NAME s3://elasticbeanstalk-ap-southeast-1-${{ secrets.AWS_ACCOUNT_ID }}/${{ env.EB_APPLICATION_NAME }}/
+          aws s3 cp "$BUNDLE_NAME" "s3://elasticbeanstalk-ap-southeast-1-${{ secrets.AWS_ACCOUNT_ID }}/${{ env.EB_APPLICATION_NAME }}/"
+
+          # Craft descriptive metadata for the application version
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ] && [ -n "$PR_NUMBER" ]; then
+            DESCRIPTION="Staging deployment from PR #$PR_NUMBER - $GIT_SHA"
+          else
+            DESCRIPTION="Staging deployment from $GITHUB_EVENT_NAME - $GIT_SHA"
+          fi
 
           # Create application version
           aws elasticbeanstalk create-application-version \
-            --application-name ${{ env.EB_APPLICATION_NAME }} \
-            --version-label $VERSION_LABEL \
-            --description "Staging deployment from PR #${{ github.event.number }} - ${{ github.sha }}" \
-            --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-${{ secrets.AWS_ACCOUNT_ID }},S3Key=${{ env.EB_APPLICATION_NAME }}/$BUNDLE_NAME
+            --application-name "${{ env.EB_APPLICATION_NAME }}" \
+            --version-label "$VERSION_LABEL" \
+            --description "$DESCRIPTION" \
+            --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-${{ secrets.AWS_ACCOUNT_ID }},S3Key=${{ env.EB_APPLICATION_NAME }}/"$BUNDLE_NAME"
 
           # Deploy to staging environment
           aws elasticbeanstalk update-environment \
-            --environment-name ${{ env.EB_ENVIRONMENT_NAME }} \
-            --version-label $VERSION_LABEL
+            --environment-name "${{ env.EB_ENVIRONMENT_NAME }}" \
+            --version-label "$VERSION_LABEL"
 
       - name: Wait for deployment
         run: |
@@ -121,13 +145,21 @@ jobs:
 
       - name: Verify staging deployment
         run: |
-          # Get environment details
+          # Get environment details as JSON for reuse in downstream steps
           ENV_STATUS=$(aws elasticbeanstalk describe-environments \
-            --environment-names ${{ env.EB_ENVIRONMENT_NAME }} \
-            --query 'Environments[0].{Status:Status,Health:Health,VersionLabel:VersionLabel,CNAME:CNAME}')
+            --environment-names "${{ env.EB_ENVIRONMENT_NAME }}" \
+            --query 'Environments[0].{Status:Status,Health:Health,VersionLabel:VersionLabel,CNAME:CNAME}' \
+            --output json)
 
           echo "Staging Environment Status:"
           echo "$ENV_STATUS"
+
+          # Persist status for later steps (e.g. PR comments)
+          {
+            echo "ENV_STATUS<<'EOF'"
+            echo "$ENV_STATUS"
+            echo 'EOF'
+          } >> "$GITHUB_ENV"
 
           # Test health endpoint
           CNAME=$(echo "$ENV_STATUS" | jq -r '.CNAME')
@@ -141,10 +173,16 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const staging_url = `http://${JSON.parse(process.env.ENV_STATUS).CNAME}`;
+            const envStatus = JSON.parse(process.env.ENV_STATUS || '{}');
+            if (!envStatus.CNAME) {
+              core.warning('Staging environment CNAME missing; skipping PR comment.');
+              return;
+            }
+
+            const stagingUrl = `http://${envStatus.CNAME}`;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🚀 **Staging Deployment Successful**\n\nYour changes have been deployed to staging:\n- **URL**: ${staging_url}\n- **Version**: ${process.env.VERSION_LABEL}\n- **Health**: ✅ Verified\n\nTest your changes and then merge to deploy to production.`
+              body: `🚀 **Staging Deployment Successful**\n\nYour changes have been deployed to staging:\n- **URL**: ${stagingUrl}\n- **Version**: ${process.env.VERSION_LABEL}\n- **Health**: ✅ Verified\n\nTest your changes and then merge to deploy to production.`
             });
