@@ -141,7 +141,7 @@ jobs:
       - name: Wait for deployment
         run: |
           echo "Waiting for staging deployment to complete..."
-          aws elasticbeanstalk wait environment-updated --environment-name ${{ env.EB_ENVIRONMENT_NAME }}
+          timeout 600 aws elasticbeanstalk wait environment-updated --environment-name ${{ env.EB_ENVIRONMENT_NAME }}
 
       - name: Verify staging deployment
         run: |

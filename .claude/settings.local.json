@@ -88,7 +88,12 @@
       "Bash(powershell:*)",
       "Bash(dir:*)",
       "WebFetch(domain:p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com)",
-      "Bash(aws elasticbeanstalk create-environment:*)"
+      "Bash(aws elasticbeanstalk create-environment:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(aws elasticbeanstalk:*)",
+      "Bash(gh pr merge:*)"
     ],
     "deny": [],
     "ask": []

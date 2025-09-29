@@ -270,7 +270,11 @@ Three-tier health checking system:
 - **Database**: All connections verified, health checks passing (32ms response time)
 - **Infrastructure**: Fixed AL2023 platform configuration issues, removed deprecated NodeCommand/NodeVersion settings
 - **Pipeline Features**: Automated testing, TypeScript checking, bundle creation, S3 upload, and EB deployment
-- **Next Steps**: Staging environment setup for PR-based deployments (currently using production-only workflow)
+- **Staging Environment**: `p3-interview-academy-staging` successfully created and operational
+  - **URL**: `http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com`
+  - **Trigger**: Automatic deployment on PR creation/updates to main branch
+  - **Workflow**: Tests → Build → Bundle → Deploy → Health Check → PR Comment
+  - **Status**: Fully functional PR-based staging deployments
 
 ## Deployment Progress (2025-09-24)
 
