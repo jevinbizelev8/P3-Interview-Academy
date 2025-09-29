@@ -44,6 +44,7 @@ export default defineConfig(async () => {
       environment: "jsdom",
       globals: true,
       setupFiles: path.resolve(rootDir, "src/__tests__/setup.ts"),
+      environmentMatchGlobs: [["server/**/*.test.ts", "node"]],
     },
   };
 });
