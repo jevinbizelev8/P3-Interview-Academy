@@ -6,7 +6,6 @@ RUN npm ci --omit=dev
 FROM node:20-alpine AS builder
 WORKDIR /app
 ENV NPM_CONFIG_PRODUCTION=false
-ENV NPM_CONFIG_OPTIONAL=false
 COPY package*.json ./
 RUN npm ci
 COPY . .
