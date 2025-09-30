@@ -191,11 +191,17 @@ export async function setupSimpleAuth(app: Express) {
       origin: req.get('Origin'),
       referer: req.get('Referer')
     });
-    
+
     try {
+      // Handle case where session might be undefined/null after logout
+      if (!req.session) {
+        console.log("❌ AUTH FAILED: No session object");
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
       const session = req.session as any;
       const sessionLoadTime = Date.now() - authStartTime;
-      
+
       console.log("📋 SESSION STATE:", {
         exists: !!req.session,
         sessionID: req.sessionID,
@@ -204,14 +210,21 @@ export async function setupSimpleAuth(app: Express) {
         sessionKeys: session ? Object.keys(session) : 'no session',
         loadTime: `${sessionLoadTime}ms`
       });
-      
+
       if (!session.userId) {
         console.log(`❌ AUTH FAILED: No userId in session (checked in ${Date.now() - authStartTime}ms)`);
         return res.status(401).json({ message: "Unauthorized" });
       }
 
       const userLookupStart = Date.now();
-      const user = await storage.getUser(session.userId);
+      let user;
+      try {
+        user = await storage.getUser(session.userId);
+      } catch (dbError) {
+        console.error("❌ AUTH ERROR: Database lookup failed:", dbError);
+        return res.status(401).json({ message: "Authentication failed" });
+      }
+
       const userLookupTime = Date.now() - userLookupStart;
       if (!user) {
         console.log("❌ AUTH FAILED: User not found in database:", session.userId);
@@ -241,11 +254,26 @@ export async function setupSimpleAuth(app: Express) {
 
   // Logout endpoint
   app.post("/api/auth/logout", (req, res) => {
+    console.log("🚪 LOGOUT REQUEST:", {
+      sessionID: req.sessionID,
+      userId: (req.session as any)?.userId
+    });
+
     req.session.destroy((err) => {
       if (err) {
-        console.error("Logout error:", err);
+        console.error("❌ LOGOUT ERROR:", err);
         return res.status(500).json({ message: "Logout failed" });
       }
+
+      // Clear the session cookie
+      res.clearCookie('connect.sid', {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production' && process.env.FORCE_HTTPS === 'true',
+        sameSite: 'lax'
+      });
+
+      console.log("✅ LOGOUT SUCCESS: Session destroyed");
       res.json({ success: true });
     });
   });
