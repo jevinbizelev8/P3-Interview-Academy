@@ -13,7 +13,7 @@ coverage
 **/*.test.*
 **/__tests__/**
 archive/**
-attached_assets/**
+# attached_assets/** - needed for landing page images
 client/node_modules
 client/dist
 server/*.log
