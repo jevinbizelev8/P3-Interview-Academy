@@ -4,6 +4,44 @@ import { registerRoutes } from "./routes";
 import { serveStatic, log } from "./vite";
 
 const app = express();
+
+// CORS configuration for iframe embedding
+app.use((req, res, next) => {
+  // Allow embedding from bizelev8.ai domains
+  const allowedOrigins = [
+    'https://www.bizelev8.ai',
+    'https://bizelev8.ai',
+    'https://p3app.bizelev8.ai'
+  ];
+
+  const origin = req.get('Origin') || req.get('Referer');
+  if (origin) {
+    const isAllowed = allowedOrigins.some(allowed => origin.includes(allowed.replace('https://', '')));
+    if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+  }
+
+  // Remove X-Frame-Options to allow iframe embedding from allowed domains
+  res.removeHeader('X-Frame-Options');
+
+  // Set Content-Security-Policy to allow embedding from bizelev8.ai
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' https://www.bizelev8.ai https://bizelev8.ai");
+
+  // Standard CORS headers
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

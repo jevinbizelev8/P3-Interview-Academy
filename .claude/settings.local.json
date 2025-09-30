@@ -93,7 +93,9 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(aws elasticbeanstalk:*)",
-      "Bash(gh pr merge:*)"
+      "Bash(gh pr merge:*)",
+      "WebFetch(domain:www.bizelev8.ai)",
+      "Bash(npx vite:*)"
     ],
     "deny": [],
     "ask": []
