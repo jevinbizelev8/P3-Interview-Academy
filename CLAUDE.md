@@ -24,7 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Essential Development Commands
 - `npm run dev` - Start development server (React frontend + Express backend)
-- `npm run build` - Build the application for production
+- `npm run build` - Build the application for production (runs `npm run check` + `npm run test:run` first via the `prebuild` hook)
 - `npm run start` - Start production server
 - `npm run check` - Run TypeScript type checking
 
@@ -37,6 +37,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test:integration` - Run integration tests only
 - `npm run test:api` - Run API tests only
 - Component coverage: `client/src/__tests__/components/LanguageSelector.test.tsx`, `JobDescriptionUpload.test.tsx`, and `SignupForm.test.tsx` keep key onboarding flows stable. Update these when you touch their respective UI.
+- AI prep/practice coverage: `client/src/__tests__/integration/prepare-session.integration.test.tsx` validates the Prepare UI handshake, `client/src/__tests__/integration/perform-dashboard.integration.test.tsx` checks analytics surface practice/prepare data, and `server/__tests__/prepare-ai.routes.test.ts` + `server/__tests__/practice.routes.test.ts` ensure REST endpoints stay aligned with shared schemas.
 
 ### Database Commands
 - `npm run db:push` - Push database schema changes using Drizzle Kit
