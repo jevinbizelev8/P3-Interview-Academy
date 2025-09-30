@@ -126,7 +126,10 @@ Language constants are defined in `shared/schema.ts` as `SUPPORTED_LANGUAGES`.
 
 ## Environment Configuration
 
+**🔒 SECURITY NOTE**: Never commit credentials to version control. Use environment variables or AWS CLI profiles.
+
 Key environment variables (see `.env.example`):
+- **AWS Credentials**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (use AWS CLI profiles when possible)
 - **AI Services**: `SEALION_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
 - **Database**: `DATABASE_URL` (PostgreSQL)
 - **Google Cloud**: `GOOGLE_API_KEY`, `GCP_PROJECT_ID`, `GCP_REGION`
@@ -515,6 +518,31 @@ TTL: 300
 3. **Domain Validation**: Complete DNS validation for SSL certificate
 4. **Update Certificate ARN**: Add certificate ARN to `.ebextensions/04-ssl.config`
 5. **Test Integration**: Verify iframe embedding works with HTTPS domain
+
+## 🔐 Security Best Practices
+
+### AWS Credentials Management
+- **❌ NEVER commit credentials to git repositories** - This is a critical security vulnerability
+- **✅ Use AWS CLI profiles**: Configure with `aws configure --profile bizelev8`
+- **✅ Use environment variables**: Set `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` externally
+- **✅ Enable MFA** on your AWS account for additional security
+- **✅ Regularly rotate access keys** (every 90 days recommended)
+- **✅ Use least privilege principle** - only grant necessary permissions
+- **✅ Monitor AWS CloudTrail** for unauthorized activity
+
+### Security Incident Response (2025-09-30)
+On September 30, 2025, AWS detected exposed credentials in the public GitHub repository:
+- **Affected Key**: `AKIAWCHYHHICYOWB626U` (now quarantined by AWS)
+- **Files Cleaned**: `aws-rds-security-update.js`, `check-deployment-status.js`, `deploy-with-schema.js`, `aws-sdk-deploy.js`, `aws-schema-deploy.js`
+- **Action Taken**: Immediate credential removal and secure configuration implemented
+- **Status**: Repository secured, AWS key rotation required
+
+### Development Security Guidelines
+- **Code Review**: Always review code for sensitive data before committing
+- **Secret Scanning**: Use tools like GitGuardian or GitHub secret scanning
+- **Environment Separation**: Keep production credentials separate from development
+- **Backup Strategy**: Secure backup of credentials outside of version control
+- **Team Training**: Ensure all developers understand security best practices
 
 ## Future Enhancements
 - **Single Sign-On**: Integrate with bizelev8.ai user authentication system
