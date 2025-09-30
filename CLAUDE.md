@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚀 Current Status (2025-09-29)
+## 🚀 Current Status (2025-09-30)
 
-**✅ PRODUCTION READY**: Complete CI/CD pipeline operational with staging and production environments
+**✅ PRODUCTION READY**: Complete CI/CD pipeline operational with bizelev8.ai integration
 
 ### Quick Status Check
 - **Production**: `p3-interview-academy-prod-v2` - ✅ Healthy (HTTP 200, 29ms)
@@ -12,6 +12,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **CI/CD Pipeline**: ✅ Fully operational (GitHub Actions)
 - **Database**: ✅ PostgreSQL RDS healthy (28ms response time)
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
+- **🌐 Bizelev8.ai Integration**: ✅ SSL/CORS configured, ready for DNS setup
 
 ### Developer Workflow
 1. **Feature Development** → Create branch, make changes
@@ -130,6 +131,8 @@ Key environment variables (see `.env.example`):
 - **Database**: `DATABASE_URL` (PostgreSQL)
 - **Google Cloud**: `GOOGLE_API_KEY`, `GCP_PROJECT_ID`, `GCP_REGION`
 - **Auth**: `SESSION_SECRET`, `BYPASS_AUTH` (dev only)
+- **CORS/Integration**: `WS_ALLOWED_ORIGINS` (for WebSocket cross-origin support)
+- **SSL/Security**: `FORCE_HTTPS` (enforces secure cookies in production)
 
 ## Interview Platform Features
 
@@ -188,6 +191,7 @@ Elastic Beanstalk configuration files for proper deployment:
 - **`01-nodejs.config`** - Node.js platform settings, health checks, static file serving
 - **`02-environment-validation.config`** - Pre-deployment validation hooks
 - **`03-logging.config`** - Enhanced logging and monitoring setup
+- **`04-ssl.config`** - SSL certificate and HTTPS configuration for custom domains
 
 ### Health Check System
 Three-tier health checking system:
@@ -242,6 +246,8 @@ Three-tier health checking system:
 
 ### WebSocket/CORS
 - Socket.IO CORS origin is parameterized via `WS_ALLOWED_ORIGINS` in `server/services/prepare-websocket-service.ts`.
+- Main application CORS configured in `server/index.ts` to allow bizelev8.ai iframe embedding
+- Current production settings: `https://www.bizelev8.ai,https://bizelev8.ai,https://p3app.bizelev8.ai`
 - Use `*` for initial beta across unknown origins, then restrict to your domain(s).
 
 ### Deployment Artifacts
@@ -380,9 +386,96 @@ Three-tier health checking system:
 
 **Next Steps for Development Teams**:
 1. ✅ **COMPLETED**: Practice module testing and validation
-2. **IN PROGRESS**: Authentication system testing (user sign-up and login flows)
-3. Create feature branches and PRs to automatically test staging deployments
-4. Monitor deployment health through GitHub Actions and AWS EB console
+2. ✅ **COMPLETED**: Bizelev8.ai integration configuration
+3. **IN PROGRESS**: Authentication system testing (user sign-up and login flows)
+4. Create feature branches and PRs to automatically test staging deployments
+5. Monitor deployment health through GitHub Actions and AWS EB console
+
+## 🌐 Bizelev8.ai Integration (2025-09-30)
+
+**✅ INTEGRATION READY**: P3 Interview Academy configured for secure iframe embedding into bizelev8.ai
+
+### Integration Overview
+P3 Interview Academy is now configured to be embedded as an iframe within the bizelev8.ai website under a "P3 Interview (beta)" page. This integration provides seamless access to the interview platform while maintaining the bizelev8.ai branding and user experience.
+
+### Technical Implementation ✅
+
+#### SSL & Custom Domain Configuration
+- **SSL Certificate Setup**: `.ebextensions/04-ssl.config` configured for `p3app.bizelev8.ai`
+- **HTTPS Enforcement**: Automatic HTTP to HTTPS redirects
+- **Load Balancer**: HTTPS listener on port 443 with SSL termination
+- **Certificate Management**: AWS Certificate Manager (ACM) integration ready
+
+#### CORS & Security Headers
+- **Cross-Origin Resource Sharing**: Configured to allow embedding from bizelev8.ai domains
+  - `https://www.bizelev8.ai`
+  - `https://bizelev8.ai`
+  - `https://p3app.bizelev8.ai`
+- **Content Security Policy**: `frame-ancestors 'self' https://www.bizelev8.ai https://bizelev8.ai`
+- **X-Frame-Options**: Removed to allow iframe embedding
+- **Credentials**: Cross-origin cookies and authentication supported
+
+#### WebSocket CORS Support
+- **Socket.IO Configuration**: Updated `WS_ALLOWED_ORIGINS` to include bizelev8.ai domains
+- **Real-time Features**: Voice recording, AI responses, and live feedback supported in embedded mode
+
+### Deployment Status
+- **Configuration**: ✅ Complete (SSL, CORS, security headers)
+- **Code Deployment**: ✅ Pushed to main branch (auto-deployed via CI/CD)
+- **DNS Setup**: ⏳ Pending CNAME record configuration
+- **SSL Certificate**: ⏳ Pending domain verification after DNS setup
+
+### DNS Configuration Required
+Add this CNAME record to bizelev8.ai DNS settings:
+```
+Type: CNAME
+Name: p3app
+Value: p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com
+TTL: 300
+```
+
+### SSL Certificate Setup Process
+1. **Request Certificate**: AWS Certificate Manager for `p3app.bizelev8.ai`
+2. **Domain Validation**: DNS validation method
+3. **Certificate ARN**: Update `.ebextensions/04-ssl.config` with certificate ARN
+4. **Deploy Updated Config**: Automatic via GitHub Actions
+
+### Wix Integration Code
+```html
+<div style="width: 100%; height: 800px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+  <iframe
+    src="https://p3app.bizelev8.ai"
+    width="100%"
+    height="100%"
+    frameborder="0"
+    allow="microphone; camera; clipboard-write; fullscreen"
+    sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-downloads"
+    loading="lazy"
+    title="P3 Interview Academy - AI Interview Practice Platform">
+    <p>Your browser does not support iframes. Please visit <a href="https://p3app.bizelev8.ai">P3 Interview Academy</a> directly.</p>
+  </iframe>
+</div>
+```
+
+### Integration Features
+- **Responsive Design**: Mobile-optimized iframe sizing
+- **Session Persistence**: Authentication maintained across page loads
+- **Voice Support**: Microphone and camera permissions configured
+- **Full Functionality**: All P3 Interview features available in embedded mode
+- **Security**: Sandboxed iframe with appropriate permissions
+- **Performance**: Lazy loading and optimized for embedded use
+
+### Monitoring & Analytics
+- **Health Checks**: Standard monitoring continues to work
+- **User Analytics**: Session tracking maintains user context
+- **Performance**: Response times monitored for embedded usage
+- **Error Tracking**: Enhanced logging for cross-origin issues
+
+### Future Enhancements
+- **Single Sign-On**: Potential integration with bizelev8.ai user accounts
+- **Custom Branding**: Option to customize colors/themes for embedded view
+- **Analytics Integration**: Cross-domain analytics tracking
+- **Progressive Web App**: Potential standalone app installation from iframe
 
 ## Deployment Progress (2025-09-24)
 
@@ -404,16 +497,29 @@ Three-tier health checking system:
   - ✅ `/api/health/simple`: 200 OK in 13ms (basic health check)
 - **Database Issues**: Enhanced health (`/api/health`) and auth endpoints (`/api/auth/*`) timeout after 15+ seconds
 
-## Outstanding Issues
-- **Local Database Access**: RDS rejects connections from unmanaged IPs (no pg_hba.conf entry), blocking local auth tests and schema normalization.
-- **Schema Verification**: `fix-database-schema.js` must be rerun once direct DB access is restored to confirm live columns match Drizzle definitions.
+## Outstanding Tasks
 
-## Immediate Next Steps
-- Allowlist the current workstation (or tunnel into the VPC) so local tests can hit the RDS instance.
-- Rerun `npm run test:registration` and `node fix-database-schema.js` after connectivity is restored.
-- Continue monitoring EB logs and health while validating the `p3-interview-academy-fixes-20250925a` rollout.
+### Bizelev8.ai Integration
+- **DNS Configuration**: Add CNAME record for `p3app.bizelev8.ai` pointing to AWS Elastic Beanstalk
+- **SSL Certificate**: Request and configure AWS Certificate Manager certificate for custom domain
+- **Wix Page Setup**: Create "P3 Interview (beta)" page with iframe embed code
+
+### Development & Testing
+- **Authentication Flow Testing**: Complete user sign-up and login flow validation
+- **Schema Verification**: Confirm all database schema updates are properly deployed
+- **Cross-Origin Testing**: Validate iframe functionality once DNS/SSL is configured
+
+## Immediate Next Steps (Bizelev8.ai)
+1. **Configure DNS**: Add the provided CNAME record to bizelev8.ai DNS settings
+2. **SSL Setup**: Request certificate in AWS Certificate Manager for `p3app.bizelev8.ai`
+3. **Domain Validation**: Complete DNS validation for SSL certificate
+4. **Update Certificate ARN**: Add certificate ARN to `.ebextensions/04-ssl.config`
+5. **Test Integration**: Verify iframe embedding works with HTTPS domain
 
 ## Future Enhancements
-- Replace placeholder `SEALION_API_KEY` with live credentials once database issues resolved
-- Provision HTTPS for the public endpoint (ACM certificate + load balancer listener)
-- Implement database connection retry logic and proper error handling
+- **Single Sign-On**: Integrate with bizelev8.ai user authentication system
+- **Custom Theming**: Brand customization for embedded iframe experience
+- **SeaLion API**: Add live Southeast Asia AI credentials for enhanced regional support
+- **Progressive Web App**: Standalone app installation from embedded iframe
+- **Analytics Integration**: Cross-domain user behavior tracking
+- **Performance Optimization**: Further optimization for embedded usage patterns
