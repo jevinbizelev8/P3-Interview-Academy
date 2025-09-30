@@ -33,7 +33,8 @@ export default function Prepare() {
   const [sessionConfig, setSessionConfig] = useState<any>(null);
 
   const handleStartNewSession = () => {
-    setCurrentView('setup');
+    // Redirect to the working Practice module instead of the Prepare AI system
+    window.location.href = '/practice';
   };
 
   const handleCreateSession = (config: SessionConfig) => {
@@ -228,7 +229,7 @@ export default function Prepare() {
                 Start New Practice Session
               </Button>
               <p className="text-sm text-gray-600 mt-2">
-                Begin your AI-powered interview preparation with personalized questions
+                Start practicing with our AI interviewer and get instant feedback on your responses
               </p>
             </div>
           </CardContent>
