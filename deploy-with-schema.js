@@ -6,13 +6,10 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 import { createReadStream } from 'fs';
 
-// AWS Configuration
+// AWS Configuration - CREDENTIALS REMOVED FOR SECURITY
 const awsConfig = {
   region: 'ap-southeast-1',
-  credentials: {
-    accessKeyId: 'AKIAWCHYHHICYOWB626U',
-    secretAccessKey: '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'
-  }
+  // Use AWS CLI profile or environment variables for credentials
 };
 
 const APPLICATION_NAME = 'p3-interview-academy';

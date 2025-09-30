@@ -3,10 +3,7 @@ import { ElasticBeanstalkClient, DescribeEnvironmentsCommand, DescribeEventsComm
 
 const awsConfig = {
   region: 'ap-southeast-1',
-  credentials: {
-    accessKeyId: 'AKIAWCHYHHICYOWB626U',
-    secretAccessKey: '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'
-  }
+  // CREDENTIALS REMOVED FOR SECURITY - Use AWS CLI profile or environment variables
 };
 
 const ENVIRONMENT_NAME = 'p3-interview-academy-prod-v2';

@@ -4,10 +4,9 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-// AWS Configuration
+// AWS Configuration - CREDENTIALS REMOVED FOR SECURITY
 const AWS_CONFIG = {
-  accessKeyId: 'AKIAWCHYHHICYOWB626U',
-  secretAccessKey: 'I/ybEeLUL1BSAyYQiy37op3WsXL2F4A6KVdP4rG',
+  // Use AWS CLI profile or environment variables for credentials
   region: 'ap-southeast-1'
 };
 

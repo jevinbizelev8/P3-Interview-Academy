@@ -1,9 +1,9 @@
 // AWS CLI commands to update RDS security group
 import { execSync } from 'child_process';
 
-// AWS Configuration - set environment variables
-process.env.AWS_ACCESS_KEY_ID = 'AKIAWCHYHHICYOWB626U';
-process.env.AWS_SECRET_ACCESS_KEY = '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';
+// AWS Configuration - CREDENTIALS REMOVED FOR SECURITY
+// Use AWS CLI profile or environment variables configured externally
+// DO NOT commit credentials to version control
 process.env.AWS_DEFAULT_REGION = 'ap-southeast-1';
 
 async function updateRDSSecurityGroup() {
