@@ -337,11 +337,84 @@ router.post('/sessions/:id/complete', async (req, res) => {
 
     // Get user responses for evaluation
     const userMessages = session.messages.filter(m => m.messageType === 'user_response');
-    
+
+    // Allow early exit with no responses - create minimal report
     if (userMessages.length === 0) {
-      return res.status(400).json({ 
-        error: 'No responses to evaluate',
-        message: 'Session must have at least one user response to complete'
+      console.log('⚠️ Session ended early with no responses - creating minimal report');
+
+      // Create minimal completion report for sessions with no responses
+      const minimalReportData = {
+        sessionId: req.params.id,
+        userId: req.user.id,
+
+        // Minimal scoring (0 for no responses)
+        overallScore: "0",
+        overallRating: "Session ended early",
+
+        // 9-Criteria minimal scores
+        relevanceScore: "0",
+        starStructureScore: "0",
+        specificEvidenceScore: "0",
+        roleAlignmentScore: "0",
+        outcomeOrientedScore: "0",
+        communicationScore: "0",
+        problemSolvingScore: "0",
+        culturalFitScore: "0",
+        learningAgilityScore: "0",
+
+        // Legacy STAR scores for backward compatibility
+        situationScore: "0",
+        taskScore: "0",
+        actionScore: "0",
+        resultScore: "0",
+
+        // Feedback
+        strengths: JSON.stringify(["Started interview practice session"]),
+        weaknesses: JSON.stringify(["No responses submitted"]),
+        improvements: JSON.stringify([
+          "Complete at least one interview question",
+          "Practice structured STAR method responses",
+          "Build confidence by answering multiple questions"
+        ]),
+        detailedFeedback: "Session ended early with no responses submitted. To receive evaluation, please answer at least one interview question in your next practice session.",
+
+        // Minimal insights
+        keyInsights: JSON.stringify([
+          `Session ended after ${Math.floor(duration / 60)} minutes with no responses`,
+          "Practice tip: Answer multiple questions to get comprehensive feedback"
+        ]),
+
+        recommendedActions: JSON.stringify([
+          "Start a new practice session",
+          "Answer at least 3-5 questions for meaningful evaluation",
+          "Use the STAR method framework for behavioral questions",
+          "Include specific examples and metrics in your responses"
+        ]),
+
+        // Metadata
+        evaluatedBy: "system-minimal",
+        evaluationCompleted: true,
+        criteriaVersion: "9-criteria-v1.0",
+        sessionLanguage: session.preferredLanguage || 'en',
+        totalResponses: 0,
+        sessionDuration: duration
+      };
+
+      const minimalReport = await storage.createPracticeReport(minimalReportData);
+
+      // Update session as completed
+      await storage.updatePracticeSession(req.params.id, {
+        status: 'completed',
+        totalDuration: duration,
+      });
+
+      return res.json({
+        success: true,
+        data: {
+          session: { ...session, status: 'completed', totalDuration: duration },
+          report: minimalReport,
+        },
+        message: 'Session completed early without responses'
       });
     }
 

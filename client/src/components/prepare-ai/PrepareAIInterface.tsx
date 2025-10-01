@@ -775,20 +775,53 @@ export default function PrepareAIInterface({
     setShowEndSessionDialog(true);
   };
 
-  const confirmEndSession = () => {
+  const confirmEndSession = async () => {
     // Clear pending timeouts first
     pendingTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
     pendingTimeoutsRef.current = [];
-    
-    setSessionStatus('completed');
-    setShowEndSessionDialog(false);
-    
+
     // Stop any ongoing audio/recording
     if (isSpeaking) {
       stopSpeech();
     }
     if (isRecording) {
       stopRecording();
+    }
+
+    // Call backend API to persist session completion
+    if (session?.id) {
+      setIsLoading(true);
+      try {
+        const response = await fetch(`/api/prepare-ai/sessions/${session.id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ status: 'completed' })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update session status');
+        }
+
+        // Update local state after successful API call
+        setSessionStatus('completed');
+        setShowEndSessionDialog(false);
+
+        console.log('✅ Session ended successfully and saved to backend');
+      } catch (error) {
+        console.error('❌ Error ending session:', error);
+        // Reset dialog state on error so user can try again
+        setShowEndSessionDialog(true);
+        // Don't throw - just log the error and let user retry
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      // No session ID - just update local state
+      console.warn('⚠️ No session ID found - ending session locally only');
+      setSessionStatus('completed');
+      setShowEndSessionDialog(false);
     }
   };
 
@@ -1410,11 +1443,21 @@ export default function PrepareAIInterface({
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEndSessionDialog(false)} data-testid="button-cancel-end">
+            <Button
+              variant="outline"
+              onClick={() => setShowEndSessionDialog(false)}
+              disabled={isLoading}
+              data-testid="button-cancel-end"
+            >
               Continue Session
             </Button>
-            <Button variant="destructive" onClick={confirmEndSession} data-testid="button-confirm-end">
-              End Session
+            <Button
+              variant="destructive"
+              onClick={confirmEndSession}
+              disabled={isLoading}
+              data-testid="button-confirm-end"
+            >
+              {isLoading ? 'Ending Session...' : 'End Session'}
             </Button>
           </DialogFooter>
         </DialogContent>

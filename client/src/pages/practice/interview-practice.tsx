@@ -223,10 +223,11 @@ export default function InterviewPractice() {
         window.location.href = `/practice/assessment/${sessionId}`;
       }, 3000);
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('❌ Complete interview error:', error);
       toast({
-        title: "Error",
-        description: "Failed to complete interview. Please try again.",
+        title: "Error Ending Session",
+        description: error?.message || "Failed to complete interview. Please try again.",
         variant: "destructive",
       });
     },
