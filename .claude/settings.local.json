@@ -95,7 +95,8 @@
       "Bash(aws elasticbeanstalk:*)",
       "Bash(gh pr merge:*)",
       "WebFetch(domain:www.bizelev8.ai)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(git stash:*)"
     ],
     "deny": [],
     "ask": []
