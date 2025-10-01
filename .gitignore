@@ -15,3 +15,9 @@ vite.config.ts.*
 vt-svc-key.json
 gcp-credentials.json
 *-service-account.json
+
+# AWS CLI and GitHub CLI binaries
+awscliv2.zip
+aws-cli-2/
+gh_*/
+aws
