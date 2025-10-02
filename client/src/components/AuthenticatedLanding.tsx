@@ -75,10 +75,10 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
                 <span className="text-xl font-bold text-gray-900">Interview Academy</span>
               </div>
 
-              {/* Bizelev8.ai Home Link - Desktop Only */}
+              {/* Bizelev8.ai Home Link - All Devices */}
               <a
                 href="https://www.bizelev8.ai/"
-                className="hidden lg:flex items-center space-x-1 px-3 py-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 border border-transparent hover:border-blue-200"
+                className="flex items-center space-x-1 px-3 py-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 border border-transparent hover:border-blue-200"
                 target="_self"
               >
                 <ArrowLeft className="w-4 h-4" />
