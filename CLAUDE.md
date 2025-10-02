@@ -603,6 +603,164 @@ node test-end-session-fix.js
 - ✅ Practice Module: HTTP 200, minimal report created for 0 responses
 - ❌ If Practice returns 400 "No responses to evaluate": deployment not active yet
 
+## CLI Tools Setup (Replit Environment)
+
+### Overview
+The Replit environment requires manual installation of AWS CLI and GitHub CLI. These tools are essential for monitoring deployments, managing infrastructure, and creating pull requests.
+
+### GitHub CLI Installation
+
+**1. Download and Extract**
+```bash
+# Download GitHub CLI v2.40.1
+curl -L -o gh.tar.gz https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz
+
+# Extract
+tar -xzf gh.tar.gz
+
+# Verify installation
+./gh_2.40.1_linux_amd64/bin/gh --version
+```
+
+**2. Usage**
+```bash
+# Create pull request
+./gh_2.40.1_linux_amd64/bin/gh pr create --title "PR Title" --body "Description" --base main --head feature-branch
+
+# View PR status
+./gh_2.40.1_linux_amd64/bin/gh pr view <PR_NUMBER> --json state,statusCheckRollup
+
+# List workflow runs
+./gh_2.40.1_linux_amd64/bin/gh run list --repo <owner/repo> --limit 5
+
+# View workflow logs
+./gh_2.40.1_linux_amd64/bin/gh run view <RUN_ID> --repo <owner/repo> --log-failed
+```
+
+**3. Authentication**
+GitHub CLI uses git credentials automatically from the Replit environment. No additional auth required.
+
+### AWS CLI Installation
+
+**1. Download and Extract**
+```bash
+# Download AWS CLI v2
+curl -sL "https://d1vvhvl2y92vvt.cloudfront.net/awscli-exe-linux-x86_64.zip" -o awscli-new.zip
+
+# Extract using npx (Replit doesn't have unzip by default)
+npx extract-zip awscli-new.zip
+
+# Install to local directory
+./aws/install --bin-dir ./aws-cli-bin --install-dir ./aws-cli --update
+```
+
+**2. Find AWS Binary**
+The installation creates symlinks, but you need to use the actual binary path:
+```bash
+# Find the actual AWS CLI binary
+find aws-cli -name "aws" -type f
+
+# Example output: aws-cli/v2/2.31.6/dist/aws
+```
+
+**3. Create Convenience Wrapper**
+```bash
+# Create wrapper script (replace version number with your actual version)
+cat > aws-cmd << 'EOF'
+#!/bin/bash
+exec "$(dirname "$0")/aws-cli/v2/2.31.6/dist/aws" "$@"
+EOF
+
+chmod +x aws-cmd
+
+# Verify
+./aws-cmd --version
+```
+
+**4. Configure Credentials**
+```bash
+# Method 1: Interactive configuration
+./aws-cmd configure
+
+# Method 2: Direct configuration (recommended for automation)
+./aws-cmd configure set aws_access_key_id YOUR_ACCESS_KEY
+./aws-cmd configure set aws_secret_access_key YOUR_SECRET_KEY
+./aws-cmd configure set default.region ap-southeast-1
+./aws-cmd configure set default.output json
+```
+
+**5. Common AWS Commands**
+```bash
+# Check Elastic Beanstalk environment status
+./aws-cmd elasticbeanstalk describe-environments \
+  --environment-names p3-interview-academy-prod-v2 \
+  --region ap-southeast-1 \
+  --query 'Environments[0].{Status:Status,Health:Health,VersionLabel:VersionLabel}' \
+  --output json
+
+# View recent EB events
+./aws-cmd elasticbeanstalk describe-events \
+  --environment-name p3-interview-academy-staging \
+  --region ap-southeast-1 \
+  --max-items 15 \
+  --query 'Events[*].{Time:EventDate,Severity:Severity,Message:Message}' \
+  --output table
+
+# List S3 buckets
+./aws-cmd s3 ls --region ap-southeast-1
+
+# Check RDS instances
+./aws-cmd rds describe-db-instances \
+  --region ap-southeast-1 \
+  --query 'DBInstances[?contains(DBInstanceIdentifier, `p3`)].{ID:DBInstanceIdentifier,Endpoint:Endpoint.Address,Status:DBInstanceStatus}'
+```
+
+### Troubleshooting CLI Installation
+
+**Issue: "unzip: command not found"**
+- Solution: Use `npx extract-zip` instead of `unzip`
+
+**Issue: "python: command not found" when running AWS CLI**
+- This happens with the source tarball. Use the pre-built binary from CloudFront instead (see installation steps above)
+
+**Issue: GitHub CLI "command not found"**
+- Make sure to use the full path: `./gh_2.40.1_linux_amd64/bin/gh`
+- Or create an alias: `alias gh='./gh_2.40.1_linux_amd64/bin/gh'`
+
+**Issue: AWS CLI symlinks broken**
+- Find the actual binary: `find aws-cli -name "aws" -type f`
+- Use the direct path or create a wrapper script (see step 3 above)
+
+### Environment-Specific Notes
+
+**Replit Limitations:**
+- No system-wide package installation (no `sudo` or `apt-get`)
+- No Python interpreter available by default
+- No `unzip` utility (use Node.js `extract-zip` package)
+
+**Workarounds:**
+- Use pre-compiled binaries (AWS CLI v2, GitHub CLI)
+- Extract with `npx extract-zip` or `tar -xzf`
+- Create local wrapper scripts for convenience
+- Store credentials in `~/.aws/credentials` (auto-created by `aws configure`)
+
+### Quick Reference
+
+**File Locations After Setup:**
+- GitHub CLI: `./gh_2.40.1_linux_amd64/bin/gh`
+- AWS CLI: `./aws-cli/v2/<version>/dist/aws` or `./aws-cmd` (wrapper)
+- AWS Credentials: `~/.aws/credentials`
+- AWS Config: `~/.aws/config`
+
+**Wrapper Scripts:**
+```bash
+# GitHub CLI alias (add to ~/.bashrc for persistence)
+alias gh='./gh_2.40.1_linux_amd64/bin/gh'
+
+# AWS CLI alias
+alias aws='./aws-cmd'
+```
+
 ## Future Enhancements
 - **Single Sign-On**: Integrate with bizelev8.ai user authentication system
 - **Custom Theming**: Brand customization for embedded iframe experience
