@@ -4,15 +4,37 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚀 Current Status (2025-10-02)
 
-**✅ ALL SYSTEMS OPERATIONAL**: Practice module fix successfully deployed and verified
+**⏳ IN PROGRESS**: Bizelev8.ai navigation link feature - Staging deployment 99% complete
 
 ### Quick Status Check
 - **Production**: `p3-interview-academy-prod-v2` - ✅ Healthy (HTTP 200)
-- **Staging**: `p3-interview-academy-staging` - ✅ Configured (PR-based deployments)
+- **Staging**: `p3-interview-academy-staging` - ⏳ Nearly Ready (Green health, env vars pending)
 - **CI/CD Pipeline**: ✅ Fully operational (GitHub Actions)
 - **Database**: ✅ PostgreSQL RDS healthy (28ms response time)
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 - **🌐 Bizelev8.ai Integration**: ✅ SSL/CORS configured, ready for DNS setup
+
+### Active Work: Bizelev8.ai Navigation Link (2025-10-02) - PR #4
+- **Feature**: Add "← Bizelev8.ai" navigation link to return to main website
+- **Branch**: `feature/add-bizelev8-home-link`
+- **PR Status**: Open, staging deployment in progress
+- **Progress**:
+  - ✅ Navigation component updated (desktop-only, responsive)
+  - ✅ Staging workflow fixed (dist/index.js bundle issue resolved)
+  - ✅ AWS CLI tools installed and configured in Replit environment
+  - ✅ GitHub CLI tools installed for PR management
+  - ✅ Web service running on staging (Health: Green)
+  - ⏳ Environment variables (SESSION_SECRET, OPENAI_API_KEY) need persistence
+  - ⏳ Final staging verification pending
+- **Staging URL**: `http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com`
+- **Deployment Version**: `staging-20251002-080555`
+
+### To-Do List
+1. ⏳ **Persist staging environment variables** - SESSION_SECRET and OPENAI_API_KEY
+2. ⏳ **Verify staging deployment** - Test Bizelev8.ai navigation link functionality
+3. ⏳ **Merge PR #4 to main** - Once staging tests pass
+4. ⏳ **Production deployment** - Automatic via CI/CD after merge
+5. 📋 **DNS Setup** - Point `p3app.bizelev8.ai` to AWS Elastic Beanstalk (pending)
 
 ### Recent Deployment Success (2025-10-02) - ✅ RESOLVED
 - **Issue**: Practice module "End Session Early" fix (commit `bf0d627`) deployment verification
@@ -602,6 +624,38 @@ node test-end-session-fix.js
 - ✅ Prepare Module: HTTP 200, session completion persisted
 - ✅ Practice Module: HTTP 200, minimal report created for 0 responses
 - ❌ If Practice returns 400 "No responses to evaluate": deployment not active yet
+
+### Issue: Staging Deployments Failing - Web Service Not Running (2025-10-02)
+
+**Symptom**: Staging environment showing "Following services are not running: web"
+**Error**: Instance health checks failing, deployments aborting after 10-15 minutes
+
+**Root Cause**: Staging workflow missing critical bundle fix from production
+- Production workflow fixed Oct 1 (commit `b47a458`) to include `dist/index.js`
+- Staging workflow never received this update
+- Bundles only contained `dist/public/*` (frontend) without `dist/index.js` (backend)
+- Node.js couldn't start: `node dist/index.js` file not found
+
+**Solution Applied** (commit `0866b34`):
+```bash
+# OLD staging workflow (BROKEN)
+mkdir -p deployment-bundle/dist/public
+cp -r dist/public/* deployment-bundle/dist/public/
+
+# NEW staging workflow (FIXED - matches production)
+mkdir -p deployment-bundle/dist
+cp dist/index.js deployment-bundle/dist/ || { echo "ERROR: Backend build missing!"; exit 1; }
+cp -r dist/public deployment-bundle/dist/ || { echo "ERROR: Frontend build missing!"; exit 1; }
+```
+
+**Results**:
+- ✅ Web service now starts successfully on staging instances
+- ✅ Instance health: Severe → Ok
+- ✅ Environment health: Red → Green
+- ✅ Rolling deployments complete without aborting
+- ✅ Staging workflow now reliable for PR testing
+
+**Related**: Production fix commit `b47a458` (Oct 1, 2025)
 
 ## CLI Tools Setup (Replit Environment)
 
