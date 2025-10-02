@@ -116,7 +116,15 @@ class CreditService {
       throw new InsufficientCreditsError(amount, available);
     }
 
-    const updatedUser = await storage.adjustUserCredits(userId, -amount);
+    const updatedUser = await storage.adjustUserCredits(userId, -amount, {
+      preventNegative: true,
+    });
+
+    if (!updatedUser) {
+      const latest = await storage.getUser(userId);
+      const latestBalance = latest?.creditBalance ?? 0;
+      throw new InsufficientCreditsError(amount, latestBalance);
+    }
 
     await storage.recordCreditLedger({
       userId,

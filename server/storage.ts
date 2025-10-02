@@ -106,7 +106,11 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUser(userId: string, updates: Partial<UpsertUser>): Promise<User>;
   updateUserBillingCycle(userId: string, updates: Partial<UpsertUser>): Promise<User>;
-  adjustUserCredits(userId: string, delta: number): Promise<User>;
+  adjustUserCredits(
+    userId: string,
+    delta: number,
+    options?: { preventNegative?: boolean },
+  ): Promise<User | undefined>;
 
   // Organization operations
   createOrganization(org: InsertOrganization): Promise<Organization>;
@@ -349,15 +353,31 @@ export class DatabaseStorage implements IStorage {
     return this.updateUser(userId, updates);
   }
 
-  async adjustUserCredits(userId: string, delta: number): Promise<User> {
+  async adjustUserCredits(
+    userId: string,
+    delta: number,
+    options?: { preventNegative?: boolean },
+  ): Promise<User | undefined> {
+    const preventNegative = options?.preventNegative ?? false;
+    const now = new Date();
+
+    const whereClause = preventNegative && delta < 0
+      ? and(eq(users.id, userId), sql`COALESCE(${users.creditBalance}, 0) >= ${-delta}`)
+      : eq(users.id, userId);
+
     const [user] = await db
       .update(users)
       .set({
-        creditBalance: sql`${users.creditBalance} + ${delta}`,
-        updatedAt: new Date(),
+        creditBalance: sql`COALESCE(${users.creditBalance}, 0) + ${delta}`,
+        updatedAt: now,
       })
-      .where(eq(users.id, userId))
+      .where(whereClause)
       .returning();
+
+    if (!user && preventNegative && delta < 0) {
+      return undefined;
+    }
+
     return user;
   }
 
