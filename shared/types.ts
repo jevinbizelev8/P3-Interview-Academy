@@ -76,3 +76,38 @@ export interface STARAssessment {
   strengths: string[];
   improvements: string[];
 }
+
+// Organization Analytics Types
+export interface ModuleTimeBreakdown {
+  prepare: number; // seconds
+  practice: number; // seconds
+  perform: number; // seconds
+}
+
+export interface MemberAnalytics {
+  userId: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+  totalTimeSpent: number; // seconds
+  timeByModule: ModuleTimeBreakdown;
+  creditsConsumed: number;
+  sessionCount: number;
+  lastActivity: Date | null;
+}
+
+export interface OrganizationSummary {
+  id: string;
+  name: string;
+  type: string;
+  memberCount: number;
+  totalCreditsConsumed: number;
+  totalTimeSpent: number; // seconds
+  timeByModule: ModuleTimeBreakdown;
+  createdAt: Date;
+}
+
+export interface OrganizationAnalytics extends OrganizationSummary {
+  members: MemberAnalytics[];
+}

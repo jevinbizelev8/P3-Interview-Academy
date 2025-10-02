@@ -95,7 +95,11 @@
       "Bash(aws elasticbeanstalk:*)",
       "Bash(gh pr merge:*)",
       "WebFetch(domain:www.bizelev8.ai)",
-      "Bash(npx vite:*)"
+      "Bash(npx vite:*)",
+      "Bash(./gh_2.40.1_linux_amd64/bin/gh pr view 3 --repo jevinbizelev8/P3-Interview-Academy --json title,body,state,mergedAt,headRefName,baseRefName)",
+      "Bash(BYPASS_AUTH=true PORT=5000 npm run dev)",
+      "Bash(NODE_ENV=development BYPASS_AUTH=true PORT=5000 npx tsx server/index.ts)",
+      "Bash(NODE_ENV=test npx vitest run --mode test server/__tests__/company-dashboard.routes.test.ts)"
     ],
     "deny": [],
     "ask": []

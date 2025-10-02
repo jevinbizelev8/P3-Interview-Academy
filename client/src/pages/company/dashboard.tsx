@@ -16,6 +16,7 @@ import type {
   CreditLedgerSnapshot,
   UsageEventSnapshot,
   UserCreditSummary,
+  OrganizationSummary,
 } from "@shared/types";
 import {
   Activity,
@@ -28,7 +29,11 @@ import {
   RefreshCw,
   ShieldCheck,
   Users2,
+  Clock,
+  TrendingUp,
+  ExternalLink,
 } from "lucide-react";
+import { formatDuration } from "@/components/company/TimeTrackingCard";
 
 type SerializedLedgerEntry = Omit<CreditLedgerSnapshot, "createdAt"> & {
   createdAt: string;
@@ -117,6 +122,30 @@ export default function CompanyDashboard() {
       }
 
       return deserializeCreditSummary(json.data);
+    },
+  });
+
+  // Fetch all organizations
+  const {
+    data: organizations,
+    isLoading: orgsLoading,
+    isError: orgsError,
+    refetch: refetchOrgs,
+  } = useQuery<OrganizationSummary[]>({
+    queryKey: ["/api/company/organizations"],
+    enabled: canAccessCompanyTools && user?.role === "admin",
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/company/organizations");
+      const json = await response.json();
+
+      if (!json.success) {
+        throw new Error("Unable to load organizations");
+      }
+
+      return json.data.map((org: any) => ({
+        ...org,
+        createdAt: new Date(org.createdAt),
+      }));
     },
   });
 
@@ -314,6 +343,126 @@ export default function CompanyDashboard() {
                 </CardContent>
               </Card>
             </section>
+
+            {/* Organizations List Section - Only for Admins */}
+            {user?.role === "admin" && (
+              <section className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2 text-slate-800">
+                          <Building2 className="h-5 w-5 text-slate-500" />
+                          Organizations
+                        </CardTitle>
+                        <CardDescription>
+                          View and manage all organizations with usage analytics
+                        </CardDescription>
+                      </div>
+                      <Button
+                        onClick={() => refetchOrgs()}
+                        disabled={orgsLoading}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <RefreshCw
+                          className={`mr-2 h-4 w-4 ${orgsLoading ? "animate-spin" : ""}`}
+                        />
+                        Refresh
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {orgsLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <RefreshCw className="h-6 w-6 animate-spin text-slate-400" />
+                      </div>
+                    ) : orgsError ? (
+                      <div className="flex items-center gap-2 text-rose-600 py-4">
+                        <AlertCircle className="h-5 w-5" />
+                        <span>Failed to load organizations</span>
+                      </div>
+                    ) : !organizations || organizations.length === 0 ? (
+                      <p className="text-sm text-slate-500 py-4">
+                        No organizations found. Create an organization to get started.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {organizations.map((org) => (
+                          <div
+                            key={org.id}
+                            className="border border-slate-200 rounded-lg p-4 bg-white hover:bg-slate-50 transition-colors"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <h3 className="font-semibold text-slate-900">
+                                    {org.name}
+                                  </h3>
+                                  <Badge variant="outline" className="text-xs">
+                                    {org.type}
+                                  </Badge>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3">
+                                  <div className="flex items-center gap-2">
+                                    <Users2 className="h-4 w-4 text-slate-400" />
+                                    <div>
+                                      <p className="text-xs text-slate-500">Members</p>
+                                      <p className="text-sm font-medium text-slate-900">
+                                        {org.memberCount}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Coins className="h-4 w-4 text-amber-500" />
+                                    <div>
+                                      <p className="text-xs text-slate-500">Credits Used</p>
+                                      <p className="text-sm font-medium text-slate-900">
+                                        {org.totalCreditsConsumed.toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-blue-500" />
+                                    <div>
+                                      <p className="text-xs text-slate-500">Total Time</p>
+                                      <p className="text-sm font-medium text-slate-900">
+                                        {formatDuration(org.totalTimeSpent)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <TrendingUp className="h-4 w-4 text-green-500" />
+                                    <div>
+                                      <p className="text-xs text-slate-500">Activity</p>
+                                      <p className="text-sm font-medium text-slate-900">
+                                        {org.timeByModule.prepare > 0 ||
+                                        org.timeByModule.practice > 0
+                                          ? "Active"
+                                          : "Inactive"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <Link
+                                href={`/company/organizations/${org.id}`}
+                                className="ml-4"
+                              >
+                                <Button variant="ghost" size="sm">
+                                  <span className="mr-1">View Details</span>
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </section>
+            )}
 
             <section className="grid gap-6 lg:grid-cols-2">
               <Card>

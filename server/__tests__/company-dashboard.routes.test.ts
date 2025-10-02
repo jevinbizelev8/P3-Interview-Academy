@@ -13,6 +13,11 @@ const storageMocks = vi.hoisted(() => ({
   updateUser: vi.fn(),
 }));
 
+const organizationAnalyticsMocks = vi.hoisted(() => ({
+  getAllOrganizationSummaries: vi.fn(),
+  getOrganizationAnalytics: vi.fn(),
+}));
+
 const creditServiceMocks = vi.hoisted(() => ({
   getUserSummary: vi.fn(),
   initializeUserAccount: vi.fn(),
@@ -30,6 +35,10 @@ vi.mock("../services/credit-service.js", () => ({
   creditService: creditServiceMocks,
 }));
 
+vi.mock("../services/organization-analytics-service.js", () => ({
+  organizationAnalyticsService: organizationAnalyticsMocks,
+}));
+
 vi.mock("bcryptjs", () => ({
   default: bcryptMock,
   hash: bcryptMock.hash,
@@ -39,6 +48,7 @@ describe("company dashboard routes", () => {
   beforeEach(async () => {
     Object.values(storageMocks).forEach(mockFn => mockFn.mockReset?.());
     Object.values(creditServiceMocks).forEach(mockFn => mockFn.mockReset?.());
+    Object.values(organizationAnalyticsMocks).forEach(mockFn => mockFn.mockReset?.());
     bcryptMock.hash.mockClear();
     await vi.resetModules();
   });
@@ -200,5 +210,179 @@ describe("company dashboard routes", () => {
 
     expect(res.status).toBe(403);
     expect(creditServiceMocks.adminAdjustUserCredits).not.toHaveBeenCalled();
+  });
+
+  describe("organization analytics", () => {
+    it("returns all organization summaries for admin users", async () => {
+      const app = await createApp();
+
+      const mockSummaries = [
+        {
+          id: "org-1",
+          name: "Acme Corp",
+          type: "customer",
+          memberCount: 5,
+          totalCreditsConsumed: 500,
+          totalTimeSpent: 18000, // 5 hours
+          timeByModule: {
+            prepare: 7200,
+            practice: 10800,
+            perform: 0,
+          },
+          createdAt: new Date("2025-01-01"),
+        },
+        {
+          id: "org-2",
+          name: "Beta Inc",
+          type: "reseller",
+          memberCount: 3,
+          totalCreditsConsumed: 300,
+          totalTimeSpent: 10800, // 3 hours
+          timeByModule: {
+            prepare: 3600,
+            practice: 7200,
+            perform: 0,
+          },
+          createdAt: new Date("2025-01-15"),
+        },
+      ];
+
+      organizationAnalyticsMocks.getAllOrganizationSummaries.mockResolvedValueOnce(mockSummaries);
+
+      const res = await request(app).get("/api/company/organizations");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toEqual(mockSummaries);
+      expect(organizationAnalyticsMocks.getAllOrganizationSummaries).toHaveBeenCalledOnce();
+    });
+
+    it("prevents non-admin users from accessing organization summaries", async () => {
+      const app = await createApp({ role: "user", id: "regular-user" });
+
+      const res = await request(app).get("/api/company/organizations");
+
+      expect(res.status).toBe(403);
+      expect(organizationAnalyticsMocks.getAllOrganizationSummaries).not.toHaveBeenCalled();
+    });
+
+    it("returns detailed analytics for a specific organization", async () => {
+      const app = await createApp();
+
+      const mockAnalytics = {
+        id: "org-1",
+        name: "Acme Corp",
+        type: "customer",
+        memberCount: 2,
+        totalCreditsConsumed: 350,
+        totalTimeSpent: 12600,
+        timeByModule: {
+          prepare: 1800,
+          practice: 10800,
+          perform: 0,
+        },
+        createdAt: new Date("2025-01-01"),
+        members: [
+          {
+            userId: "user-1",
+            email: "user1@acme.com",
+            firstName: "John",
+            lastName: "Doe",
+            role: "member",
+            totalTimeSpent: 5400,
+            timeByModule: {
+              prepare: 1800,
+              practice: 3600,
+              perform: 0,
+            },
+            creditsConsumed: 150,
+            sessionCount: 2,
+            lastActivity: new Date("2025-01-20"),
+          },
+          {
+            userId: "user-2",
+            email: "user2@acme.com",
+            firstName: "Jane",
+            lastName: "Smith",
+            role: "manager",
+            totalTimeSpent: 7200,
+            timeByModule: {
+              prepare: 0,
+              practice: 7200,
+              perform: 0,
+            },
+            creditsConsumed: 200,
+            sessionCount: 1,
+            lastActivity: new Date("2025-01-21"),
+          },
+        ],
+      };
+
+      storageMocks.getOrganizationMembership.mockResolvedValueOnce({
+        id: "membership-1",
+        organizationId: "org-1",
+        userId: "admin-1",
+        role: "owner",
+      });
+
+      organizationAnalyticsMocks.getOrganizationAnalytics.mockResolvedValueOnce(mockAnalytics);
+
+      const res = await request(app).get("/api/company/organizations/org-1/analytics");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toEqual(mockAnalytics);
+      expect(organizationAnalyticsMocks.getOrganizationAnalytics).toHaveBeenCalledWith("org-1");
+    });
+
+    it("allows organization managers to access analytics", async () => {
+      const app = await createApp({ role: "manager", id: "manager-1" });
+
+      storageMocks.getOrganizationMembership.mockResolvedValueOnce({
+        id: "membership-1",
+        organizationId: "org-1",
+        userId: "manager-1",
+        role: "manager",
+      });
+
+      organizationAnalyticsMocks.getOrganizationAnalytics.mockResolvedValueOnce({
+        id: "org-1",
+        name: "Acme Corp",
+        type: "customer",
+        memberCount: 1,
+        totalCreditsConsumed: 100,
+        totalTimeSpent: 3600,
+        timeByModule: { prepare: 1800, practice: 1800, perform: 0 },
+        createdAt: new Date("2025-01-01"),
+        members: [],
+      });
+
+      const res = await request(app).get("/api/company/organizations/org-1/analytics");
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it("denies access to non-members", async () => {
+      const app = await createApp({ role: "manager", id: "manager-1" });
+
+      storageMocks.getOrganizationMembership.mockResolvedValueOnce(null);
+
+      const res = await request(app).get("/api/company/organizations/org-1/analytics");
+
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe("ACCESS_DENIED");
+    });
+
+    it("returns 404 for non-existent organization", async () => {
+      const app = await createApp();
+
+      organizationAnalyticsMocks.getOrganizationAnalytics.mockResolvedValueOnce(null);
+
+      const res = await request(app).get("/api/company/organizations/non-existent/analytics");
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe("ORGANIZATION_NOT_FOUND");
+    });
   });
 });

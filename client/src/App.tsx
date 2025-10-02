@@ -10,6 +10,7 @@ import Prepare from "@/pages/prepare";
 import Perform from "@/pages/perform";
 import AdminDashboard from "@/pages/admin/dashboard";
 import CompanyDashboard from "@/pages/company/dashboard";
+import OrganizationDetail from "@/pages/company/organization-detail";
 import AuthenticatedLanding from "@/components/AuthenticatedLanding";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/use-auth";
@@ -31,6 +32,11 @@ function Router() {
       <Route path="/practice/*" component={Practice} />
       <Route path="/perform" component={Perform} />
       <Route path="/perform/*" component={Perform} />
+      <Route path="/company/organizations/:id">
+        <ProtectedRoute>
+          <OrganizationDetail />
+        </ProtectedRoute>
+      </Route>
       <Route path="/company">
         <ProtectedRoute>
           <CompanyDashboard />

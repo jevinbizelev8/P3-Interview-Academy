@@ -5,6 +5,7 @@ import { z } from "zod";
 import { storage } from "../storage.js";
 import { creditService } from "../services/credit-service.js";
 import { requireAdmin } from "../middleware/auth-middleware";
+import { organizationAnalyticsService } from "../services/organization-analytics-service.js";
 
 const router = Router();
 
@@ -341,6 +342,157 @@ router.get("/organizations/:orgId/usage", async (req, res) => {
     console.error("Failed to retrieve organization usage:", error);
     res.status(500).json({
       error: "ORGANIZATION_USAGE_FAILED",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// PATCH /api/company/organizations/:orgId/credits - Allocate credits to all organization members
+router.patch("/organizations/:orgId/credits", async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: "UNAUTHORIZED" });
+    }
+
+    const { orgId } = req.params;
+
+    if (req.user.role !== "admin") {
+      await ensureOrganizationManagementAccess(req.user.id, orgId);
+    }
+
+    const validation = updateUserCreditsSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: "INVALID_CREDIT_UPDATE",
+        details: validation.error.issues,
+      });
+    }
+
+    const organization = await storage.getOrganization(orgId);
+    if (!organization) {
+      return res.status(404).json({ error: "ORGANIZATION_NOT_FOUND" });
+    }
+
+    const members = await storage.getOrganizationMembers(orgId);
+
+    if (members.length === 0) {
+      return res.status(400).json({
+        error: "NO_MEMBERS",
+        message: "Organization has no members to allocate credits to",
+      });
+    }
+
+    // Allocate credits to all members
+    const results = await Promise.all(
+      members.map(async (membership) => {
+        try {
+          const summary = await creditService.adminAdjustUserCredits(
+            membership.userId,
+            validation.data,
+          );
+          return {
+            userId: membership.userId,
+            email: membership.user.email,
+            success: true,
+            summary,
+          };
+        } catch (error) {
+          return {
+            userId: membership.userId,
+            email: membership.user.email,
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          };
+        }
+      })
+    );
+
+    const successful = results.filter((r) => r.success);
+    const failed = results.filter((r) => !r.success);
+
+    res.json({
+      success: true,
+      data: {
+        organizationId: orgId,
+        organizationName: organization.name,
+        totalMembers: members.length,
+        successful: successful.length,
+        failed: failed.length,
+        results,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "ACCESS_DENIED") {
+      return res.status(403).json({
+        error: "ACCESS_DENIED",
+        message: "You do not have permission to manage this organization",
+      });
+    }
+
+    console.error("Failed to allocate organization credits:", error);
+    res.status(500).json({
+      error: "ORGANIZATION_CREDIT_ALLOCATION_FAILED",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// GET /api/company/organizations - List all organizations with summary statistics
+router.get("/organizations", requireAdmin, async (req, res) => {
+  try {
+    const summaries = await organizationAnalyticsService.getAllOrganizationSummaries();
+
+    res.json({
+      success: true,
+      data: summaries,
+    });
+  } catch (error) {
+    console.error("Failed to retrieve organizations:", error);
+    res.status(500).json({
+      error: "ORGANIZATIONS_FETCH_FAILED",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// GET /api/company/organizations/:id/analytics - Get detailed analytics for a specific organization
+router.get("/organizations/:id/analytics", async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: "UNAUTHORIZED" });
+    }
+
+    const { id: organizationId } = req.params;
+
+    // Check if user is admin or has access to this organization
+    if (req.user.role !== "admin") {
+      await ensureOrganizationManagementAccess(req.user.id, organizationId);
+    }
+
+    const analytics = await organizationAnalyticsService.getOrganizationAnalytics(organizationId);
+
+    if (!analytics) {
+      return res.status(404).json({
+        error: "ORGANIZATION_NOT_FOUND",
+        message: "Organization not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: analytics,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "ACCESS_DENIED") {
+      return res.status(403).json({
+        error: "ACCESS_DENIED",
+        message: "You do not have permission to view this organization",
+      });
+    }
+
+    console.error("Failed to retrieve organization analytics:", error);
+    res.status(500).json({
+      error: "ORGANIZATION_ANALYTICS_FAILED",
       message: error instanceof Error ? error.message : "Unknown error",
     });
   }

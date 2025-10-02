@@ -575,6 +575,13 @@ export const preparationSessions = pgTable("preparation_sessions", {
   status: varchar("status", { length: 20 }).default("active"), // active, completed, paused
   overallProgress: numeric("overall_progress", { precision: 5, scale: 2 }).default("0"), // 0-100%
   studyPlanId: uuid("study_plan_id"),
+
+  // Session Timing
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  lastActivityAt: timestamp("last_activity_at").defaultNow(),
+  totalDuration: integer("total_duration"), // in seconds
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

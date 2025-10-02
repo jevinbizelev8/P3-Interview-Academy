@@ -455,6 +455,14 @@ export class DatabaseStorage implements IStorage {
     return memberships;
   }
 
+  async getAllOrganizations(): Promise<Organization[]> {
+    const orgs = await db
+      .select()
+      .from(organizations)
+      .orderBy(desc(organizations.createdAt));
+    return orgs;
+  }
+
   async recordCreditLedger(entry: InsertCreditLedger): Promise<CreditLedgerEntry> {
     const [ledgerEntry] = await db
       .insert(creditLedger)
