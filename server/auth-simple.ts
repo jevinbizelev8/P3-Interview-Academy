@@ -4,6 +4,7 @@ import crypto from "crypto";
 import type { Express, RequestHandler } from "express";
 import { createSessionStore } from "./session-store";
 import { storage } from "./storage";
+import { creditService } from "./services/credit-service.js";
 
 export function getSession() {
   const sessionTtlMs = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -73,6 +74,13 @@ export async function setupSimpleAuth(app: Express) {
         role: "user",
         passwordHash: hashedPassword
       });
+
+      try {
+        await creditService.initializeUserAccount(user.id, "free");
+      } catch (error) {
+        console.error("Signup credit initialization error:", error);
+        return res.status(500).json({ message: "Registration failed - unable to initialize credits" });
+      }
 
       // Create session
       (req.session as any).userId = user.id;

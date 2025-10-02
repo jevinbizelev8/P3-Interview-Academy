@@ -26,6 +26,7 @@ import { errorLogger, logAPIError } from "./services/error-logger";
 // import { coachingEngineService } from "./services/coaching-engine-service"; // QUARANTINED
 import { prepareAIRouter } from "./routes/prepare-ai";
 import practiceRouter from "./routes/practice";
+import companyDashboardRouter from "./routes/company-dashboard";
 import voiceServicesRouter from "./routes/voice-services-mvp";
 import testEndpoints from "./test-endpoints";
 
@@ -1828,6 +1829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.use('/api/prepare-ai', requireAuthWithBypass, prepareAIRouter);
   app.use('/api/practice', requireAuthWithBypass, practiceRouter);
+  app.use('/api/company', requireAuthWithBypass, companyDashboardRouter);
   
   // Voice services routes
   app.use('/api/voice-services', voiceServicesRouter);

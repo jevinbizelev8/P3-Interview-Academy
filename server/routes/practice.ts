@@ -11,10 +11,12 @@ import {
 } from "@shared/schema.js";
 import { AIQuestionGenerator } from "../services/ai-question-generator.js";
 import { ResponseEvaluationService } from "../services/response-evaluation-service.js";
+import { creditService, InsufficientCreditsError } from "../services/credit-service.js";
 
 const router = Router();
 const questionGenerator = new AIQuestionGenerator();
 const evaluationService = new ResponseEvaluationService();
+const PRACTICE_SESSION_CREDIT_COST = 10;
 
 // Validation schemas
 const createSessionSchema = z.object({
@@ -63,7 +65,31 @@ router.post('/sessions', async (req, res) => {
     };
 
     const session = await storage.createPracticeSession(sessionData);
-    
+
+    try {
+      await creditService.consumeCredits(
+        req.user.id,
+        'practice',
+        PRACTICE_SESSION_CREDIT_COST,
+        session.id,
+      );
+    } catch (error) {
+      await storage.deletePracticeSession(session.id).catch((deleteError) => {
+        console.error('Failed to rollback practice session after credit error:', deleteError);
+      });
+
+      if (error instanceof InsufficientCreditsError) {
+        return res.status(402).json({
+          error: 'INSUFFICIENT_CREDITS',
+          message: 'Not enough credits to start a Practice session',
+          required: error.required,
+          available: error.available,
+        });
+      }
+
+      throw error;
+    }
+
     res.status(201).json({
       success: true,
       data: session,
@@ -72,6 +98,14 @@ router.post('/sessions', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Create practice session error:', error);
+    if (error instanceof InsufficientCreditsError) {
+      return res.status(402).json({
+        error: 'INSUFFICIENT_CREDITS',
+        message: 'Not enough credits to start a Practice session',
+        required: error.required,
+        available: error.available,
+      });
+    }
     res.status(500).json({
       error: 'Failed to create session',
       message: error instanceof Error ? error.message : 'Unknown error'

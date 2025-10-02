@@ -5,9 +5,11 @@ import { Router } from "express";
 import { z } from "zod";
 import { PrepareAIService } from "../services/prepare-ai-service.js";
 import { emitToSession } from "../services/realtime-gateway.js";
+import { creditService, InsufficientCreditsError } from "../services/credit-service.js";
 
 const router = Router();
 const prepareAIService = new PrepareAIService();
+const PREPARE_SESSION_CREDIT_COST = 5;
 
 // Validation schemas
 const createSessionSchema = z.object({
@@ -54,7 +56,31 @@ router.post('/sessions', async (req, res) => {
     }
 
     const session = await prepareAIService.createSession(req.user.id, validation.data);
-    
+
+    try {
+      await creditService.consumeCredits(
+        req.user.id,
+        'prepare',
+        PREPARE_SESSION_CREDIT_COST,
+        session.id,
+      );
+    } catch (error) {
+      await prepareAIService.deleteSession(session.id).catch((deleteError) => {
+        console.error('Failed to rollback prepare session after credit error:', deleteError);
+      });
+
+      if (error instanceof InsufficientCreditsError) {
+        return res.status(402).json({
+          error: 'INSUFFICIENT_CREDITS',
+          message: 'Not enough credits to start a Prepare session',
+          required: error.required,
+          available: error.available,
+        });
+      }
+
+      throw error;
+    }
+
     res.status(201).json({
       success: true,
       data: session,
@@ -63,6 +89,14 @@ router.post('/sessions', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Create AI session error:', error);
+    if (error instanceof InsufficientCreditsError) {
+      return res.status(402).json({
+        error: 'INSUFFICIENT_CREDITS',
+        message: 'Not enough credits to start a Prepare session',
+        required: error.required,
+        available: error.available,
+      });
+    }
     res.status(500).json({
       error: 'Failed to create session',
       message: error instanceof Error ? error.message : 'Unknown error'

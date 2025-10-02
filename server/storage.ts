@@ -1,5 +1,9 @@
 import {
   users,
+  organizations,
+  organizationMemberships,
+  creditLedger,
+  usageEvents,
   interviewScenarios,
   interviewSessions,
   interviewMessages,
@@ -28,6 +32,14 @@ import {
   aiPrepareResponses,
   type User,
   type UpsertUser,
+  type InsertOrganization,
+  type Organization,
+  type InsertOrganizationMembership,
+  type OrganizationMembership,
+  type InsertCreditLedger,
+  type CreditLedgerEntry,
+  type InsertUsageEvent,
+  type UsageEvent,
   type InsertInterviewScenario,
   type InterviewScenario,
   type InsertInterviewSession,
@@ -85,12 +97,35 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, avg, sql, or } from "drizzle-orm";
+import { UserUsageSummary } from "@shared/types";
 
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  updateUser(userId: string, updates: Partial<UpsertUser>): Promise<User>;
+  updateUserBillingCycle(userId: string, updates: Partial<UpsertUser>): Promise<User>;
+  adjustUserCredits(
+    userId: string,
+    delta: number,
+    options?: { preventNegative?: boolean },
+  ): Promise<User | undefined>;
+
+  // Organization operations
+  createOrganization(org: InsertOrganization): Promise<Organization>;
+  getOrganization(id: string): Promise<Organization | undefined>;
+  addOrganizationMembership(membership: InsertOrganizationMembership): Promise<OrganizationMembership>;
+  getOrganizationMembership(userId: string, organizationId: string): Promise<OrganizationMembership | undefined>;
+  getOrganizationMembers(organizationId: string): Promise<(OrganizationMembership & { user: User })[]>;
+  getUserMemberships(userId: string): Promise<OrganizationMembership[]>;
+
+  // Credits & usage
+  recordCreditLedger(entry: InsertCreditLedger): Promise<CreditLedgerEntry>;
+  getRecentCreditLedger(userId: string, limit?: number): Promise<CreditLedgerEntry[]>;
+  recordUsageEvent(event: InsertUsageEvent): Promise<UsageEvent>;
+  getRecentUsageEvents(userId: string, limit?: number): Promise<UsageEvent[]>;
+  getUserUsageSummary(userId: string): Promise<UserUsageSummary>;
 
   // Interview scenario operations
   getInterviewScenarios(stage?: string): Promise<InterviewScenarioWithStats[]>;
@@ -300,6 +335,189 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return user;
+  }
+
+  async updateUser(userId: string, updates: Partial<UpsertUser>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async updateUserBillingCycle(userId: string, updates: Partial<UpsertUser>): Promise<User> {
+    return this.updateUser(userId, updates);
+  }
+
+  async adjustUserCredits(
+    userId: string,
+    delta: number,
+    options?: { preventNegative?: boolean },
+  ): Promise<User | undefined> {
+    const preventNegative = options?.preventNegative ?? false;
+    const now = new Date();
+
+    const whereClause = preventNegative && delta < 0
+      ? and(eq(users.id, userId), sql`COALESCE(${users.creditBalance}, 0) >= ${-delta}`)
+      : eq(users.id, userId);
+
+    const [user] = await db
+      .update(users)
+      .set({
+        creditBalance: sql`COALESCE(${users.creditBalance}, 0) + ${delta}`,
+        updatedAt: now,
+      })
+      .where(whereClause)
+      .returning();
+
+    if (!user && preventNegative && delta < 0) {
+      return undefined;
+    }
+
+    return user;
+  }
+
+  async createOrganization(org: InsertOrganization): Promise<Organization> {
+    const [organization] = await db
+      .insert(organizations)
+      .values(org)
+      .returning();
+    return organization;
+  }
+
+  async getOrganization(id: string): Promise<Organization | undefined> {
+    const [organization] = await db
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, id));
+    return organization;
+  }
+
+  async addOrganizationMembership(
+    membership: InsertOrganizationMembership,
+  ): Promise<OrganizationMembership> {
+    const [result] = await db
+      .insert(organizationMemberships)
+      .values(membership)
+      .onConflictDoUpdate({
+        target: [organizationMemberships.organizationId, organizationMemberships.userId],
+        set: {
+          role: membership.role,
+          createdAt: new Date(),
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async getOrganizationMembership(
+    userId: string,
+    organizationId: string,
+  ): Promise<OrganizationMembership | undefined> {
+    const [membership] = await db
+      .select()
+      .from(organizationMemberships)
+      .where(
+        and(
+          eq(organizationMemberships.userId, userId),
+          eq(organizationMemberships.organizationId, organizationId),
+        ),
+      );
+    return membership;
+  }
+
+  async getOrganizationMembers(
+    organizationId: string,
+  ): Promise<(OrganizationMembership & { user: User })[]> {
+    const memberships = await db.query.organizationMemberships.findMany({
+      where: eq(organizationMemberships.organizationId, organizationId),
+      with: {
+        user: true,
+      },
+      orderBy: [desc(organizationMemberships.createdAt)],
+    });
+
+    return memberships.map((membership) => ({
+      ...membership,
+      user: membership.user!,
+    }));
+  }
+
+  async getUserMemberships(userId: string): Promise<OrganizationMembership[]> {
+    const memberships = await db
+      .select()
+      .from(organizationMemberships)
+      .where(eq(organizationMemberships.userId, userId));
+    return memberships;
+  }
+
+  async recordCreditLedger(entry: InsertCreditLedger): Promise<CreditLedgerEntry> {
+    const [ledgerEntry] = await db
+      .insert(creditLedger)
+      .values(entry)
+      .returning();
+    return ledgerEntry;
+  }
+
+  async getRecentCreditLedger(
+    userId: string,
+    limit: number = 10,
+  ): Promise<CreditLedgerEntry[]> {
+    return db
+      .select()
+      .from(creditLedger)
+      .where(eq(creditLedger.userId, userId))
+      .orderBy(desc(creditLedger.createdAt))
+      .limit(limit);
+  }
+
+  async recordUsageEvent(event: InsertUsageEvent): Promise<UsageEvent> {
+    const [usageEvent] = await db
+      .insert(usageEvents)
+      .values(event)
+      .returning();
+    return usageEvent;
+  }
+
+  async getRecentUsageEvents(
+    userId: string,
+    limit: number = 10,
+  ): Promise<UsageEvent[]> {
+    return db
+      .select()
+      .from(usageEvents)
+      .where(eq(usageEvents.userId, userId))
+      .orderBy(desc(usageEvents.occurredAt))
+      .limit(limit);
+  }
+
+  async getUserUsageSummary(userId: string): Promise<UserUsageSummary> {
+    const rows = await db
+      .select({
+        module: usageEvents.module,
+        sessionCount: count(usageEvents.id),
+        creditsConsumed: sql<number>`COALESCE(SUM(${usageEvents.creditsConsumed}), 0)` ,
+      })
+      .from(usageEvents)
+      .where(eq(usageEvents.userId, userId))
+      .groupBy(usageEvents.module);
+
+    const breakdown = rows.map((row) => ({
+      module: row.module,
+      sessionCount: Number(row.sessionCount),
+      creditsConsumed: Number(row.creditsConsumed),
+    }));
+
+    const totalCreditsConsumed = breakdown.reduce((acc, item) => acc + item.creditsConsumed, 0);
+
+    return {
+      totalCreditsConsumed,
+      breakdown,
+    };
   }
 
   // Interview scenario operations

@@ -5,17 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SeaLionLogo } from "@/components/ui/sealion-logo";
 import { 
-  BookOpen, 
-  Target, 
-  Award, 
-  ArrowRight, 
-  TrendingUp, 
-  Clock, 
+  BookOpen,
+  Target,
+  Award,
+  ArrowRight,
+  TrendingUp,
+  Clock,
   LogOut,
   User,
   BarChart3,
   Play,
-  Settings
+  Settings,
+  Building2,
+  ShieldCheck
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -26,6 +28,7 @@ interface AuthenticatedLandingProps {
 }
 
 export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps) {
+  const showCompanyDashboard = user.role === 'admin' || user.role === 'manager';
   // Fetch user's recent activity and progress (with error handling)
   const { data: dashboard, isError } = useQuery({
     queryKey: ["/api/perform/dashboard"],
@@ -91,6 +94,14 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
                   Perform
                 </Button>
               </Link>
+              {showCompanyDashboard && (
+                <Link href="/company">
+                  <Button variant="ghost" size="sm">
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Company
+                  </Button>
+                </Link>
+              )}
               <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={user.profileImageUrl || undefined} />
@@ -201,7 +212,7 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
           )}
 
           {/* Module Cards */}
-          <div className="grid lg:grid-cols-3 gap-8 mb-8">
+          <div className={`grid gap-8 mb-8 ${showCompanyDashboard ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
             <Card className="relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between mb-4">
@@ -226,6 +237,34 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
                 </Link>
               </CardContent>
             </Card>
+
+            {showCompanyDashboard && (
+              <Card className="relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-slate-500 bg-opacity-10 rounded-lg flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-slate-600" />
+                    </div>
+                    <Badge className="bg-slate-100 text-slate-800">
+                      Admin
+                    </Badge>
+                  </div>
+                  <CardTitle className="text-xl font-bold text-gray-900">Company</CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Provision team accounts, allocate credits, and review usage directly from the company dashboard.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link href="/company">
+                    <Button className="w-full group-hover:scale-105 transition-transform bg-slate-900 hover:bg-slate-800">
+                      <ShieldCheck className="mr-2 w-4 h-4" />
+                      Open company dashboard
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="relative border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
               <CardHeader className="pb-4">
