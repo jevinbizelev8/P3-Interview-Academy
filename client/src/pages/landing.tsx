@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SeaLionLogo } from "@/components/ui/sealion-logo";
-import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCircle, LogIn, UserPlus, Shield, TrendingUp, Clock } from "lucide-react";
+import { BookOpen, Target, Award, ArrowRight, Users, Globe, Zap, Star, CheckCircle, LogIn, UserPlus, Shield, TrendingUp, Clock, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import AuthenticatedLanding from "@/components/AuthenticatedLanding";
 import AuthModal from "@/components/AuthModal";
@@ -112,11 +112,23 @@ export default function Landing() {
       <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">P³</span>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">P³</span>
+                </div>
+                <span className="text-xl font-bold text-gray-900">Interview Academy</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">Interview Academy</span>
+
+              {/* Bizelev8.ai Home Link - Desktop Only */}
+              <a
+                href="https://www.bizelev8.ai/"
+                className="hidden lg:flex items-center space-x-1 px-3 py-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 border border-transparent hover:border-blue-200"
+                target="_self"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm font-medium">Bizelev8.ai</span>
+              </a>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#modules" className="text-gray-600 hover:text-gray-900 transition-colors">Modules</a>
