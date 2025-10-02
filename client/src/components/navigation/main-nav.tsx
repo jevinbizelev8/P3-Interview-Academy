@@ -1,15 +1,16 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { 
-  BookOpen, 
-  Target, 
-  Award, 
-  Home, 
-  Mic, 
+import {
+  BookOpen,
+  Target,
+  Award,
+  Home,
+  Mic,
   Settings,
   User,
   LogOut,
-  BarChart3
+  BarChart3,
+  ArrowLeft
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -79,13 +80,25 @@ export default function MainNav({ currentModule, hideModuleNav }: MainNavProps) 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Brand */}
-          <Link href="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center group-hover:shadow-md transition-shadow">
-              <span className="text-white font-bold text-sm">P³</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900 group-hover:text-gray-700 transition-colors">Interview Academy</span>
-          </Link>
-          
+          <div className="flex items-center space-x-4">
+            <Link href="/" className="flex items-center space-x-2 group">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center group-hover:shadow-md transition-shadow">
+                <span className="text-white font-bold text-sm">P³</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900 group-hover:text-gray-700 transition-colors">Interview Academy</span>
+            </Link>
+
+            {/* Bizelev8.ai Home Link - Desktop Only */}
+            <a
+              href="https://www.bizelev8.ai/"
+              className="hidden lg:flex items-center space-x-1 px-3 py-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 border border-transparent hover:border-blue-200"
+              target="_self"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Bizelev8.ai</span>
+            </a>
+          </div>
+
           {/* Desktop Navigation */}
           {!hideModuleNav && (
             <div className="hidden md:flex items-center space-x-1">
