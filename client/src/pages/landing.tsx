@@ -112,11 +112,24 @@ export default function Landing() {
       <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">P³</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Interview Academy</span>
+            <div className="flex items-center space-x-3">
+              <a
+                href="https://www.bizelev8.ai"
+                className="flex items-center"
+                aria-label="Bizelev8 homepage"
+              >
+                <img
+                  src="https://static.wixstatic.com/media/3a4fc1_ae0f426cf5804e99be9b1ab4eddf7e01~mv2.png/v1/fill/w_148,h_55,al_c,q_85,usm_0.66_1.00_0.01,enc_avif,quality_auto/bizelev8.png"
+                  alt="Bizelev8 logo"
+                  className="h-9 w-auto object-contain"
+                />
+              </a>
+              <Link href="/" className="flex items-center space-x-2 group">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center group-hover:shadow-md transition-shadow">
+                  <span className="text-white font-bold text-sm">P³</span>
+                </div>
+                <span className="text-xl font-bold text-gray-900 group-hover:text-gray-700 transition-colors">Interview Academy</span>
+              </Link>
             </div>
             <div className="hidden md:flex items-center space-x-8">
               <a href="#modules" className="text-gray-600 hover:text-gray-900 transition-colors">Modules</a>
