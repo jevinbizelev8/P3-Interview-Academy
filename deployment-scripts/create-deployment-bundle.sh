@@ -5,6 +5,18 @@
 
 set -e
 
+select_python() {
+    if command -v python &> /dev/null; then
+        PYTHON_CMD=(python)
+    elif command -v python3 &> /dev/null && [[ $(command -v python3) != *WindowsApps/python3 ]]; then
+        PYTHON_CMD=(python3)
+    elif command -v py &> /dev/null; then
+        PYTHON_CMD=(py -3)
+    else
+        PYTHON_CMD=()
+    fi
+}
+
 # Configuration
 BUNDLE_NAME="p3-interview-academy-eb-$(date +%Y%m%d-%H%M%S)"
 TEMP_DIR="temp-deployment"
@@ -75,10 +87,9 @@ cp -r server/ "$TEMP_DIR/"
 cp -r client/ "$TEMP_DIR/"
 echo "✓ Source code copied"
 
-# Copy built artifacts (for static assets)
-cp -r dist/public/ "$TEMP_DIR/dist/public/" 2>/dev/null || echo "No dist/public found"
-mkdir -p "$TEMP_DIR/dist"
-echo "✓ Static assets copied"
+# Copy built artifacts (frontend and compiled backend)
+cp -r dist "$TEMP_DIR/" 2>/dev/null || echo "No dist directory found"
+echo "Build artifacts copied"
 
 # Copy package files (production dependencies info)
 cp package.json "$TEMP_DIR/"
@@ -118,9 +129,29 @@ echo "4. CREATING ZIP BUNDLE"
 echo "======================"
 
 echo "Creating deployment bundle: $BUNDLE_FILE"
-cd "$TEMP_DIR"
-zip -r "../$BUNDLE_FILE" . -q
-cd ..
+if command -v zip &> /dev/null; then
+    (cd "$TEMP_DIR" && zip -r "../$BUNDLE_FILE" . -q)
+else
+    echo "zip command not found, using python to create archive"
+    select_python
+    if [ ${#PYTHON_CMD[@]} -eq 0 ]; then
+        echo "Python interpreter not found; cannot create archive"
+        exit 1
+    fi
+    TEMP_DIR="$TEMP_DIR" BUNDLE_FILE="$BUNDLE_FILE" "${PYTHON_CMD[@]}" - <<'PY'
+import os
+import zipfile
+
+base = os.environ["TEMP_DIR"]
+out_path = os.environ["BUNDLE_FILE"]
+with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED) as archive:
+    for root, _, files in os.walk(base):
+        for name in files:
+            full_path = os.path.join(root, name)
+            rel_path = os.path.relpath(full_path, base)
+            archive.write(full_path, rel_path)
+PY
+fi
 
 # Get bundle size
 if command -v ls &> /dev/null; then
@@ -146,10 +177,64 @@ if [ ! -f "$BUNDLE_FILE" ]; then
 fi
 
 echo "Verifying bundle contents..."
-zip -t "$BUNDLE_FILE" > /dev/null && echo "✓ Bundle ZIP is valid" || (echo "ERROR: Bundle ZIP is corrupted" && exit 1)
+if command -v zip &> /dev/null; then
+    if zip -t "$BUNDLE_FILE" > /dev/null; then
+        echo "✓ Bundle ZIP is valid"
+    else
+        echo "ERROR: Bundle ZIP is corrupted"
+        exit 1
+    fi
+else
+    select_python
+    if [ ${#PYTHON_CMD[@]} -eq 0 ]; then
+        echo "Python interpreter not found; cannot validate archive"
+        exit 1
+    fi
+    BUNDLE_FILE="$BUNDLE_FILE" "${PYTHON_CMD[@]}" - <<'PY'
+import os
+import sys
+import zipfile
+
+bundle = os.environ["BUNDLE_FILE"]
+try:
+    with zipfile.ZipFile(bundle) as archive:
+        bad_file = archive.testzip()
+except zipfile.BadZipFile:
+    sys.exit(1)
+else:
+    if bad_file is None:
+        sys.exit(0)
+    sys.exit(1)
+PY
+    if [ $? -eq 0 ]; then
+        echo "✓ Bundle ZIP is valid"
+    else
+        echo "ERROR: Bundle ZIP is corrupted"
+        exit 1
+    fi
+fi
 
 echo "Bundle contents preview:"
-unzip -l "$BUNDLE_FILE" | head -20
+if command -v unzip &> /dev/null; then
+    unzip -l "$BUNDLE_FILE" | head -20
+else
+    select_python
+    if [ ${#PYTHON_CMD[@]} -eq 0 ]; then
+        echo "Python interpreter not found; cannot preview archive"
+    else
+        BUNDLE_FILE="$BUNDLE_FILE" "${PYTHON_CMD[@]}" - <<'PY'
+import os
+import zipfile
+
+bundle = os.environ["BUNDLE_FILE"]
+with zipfile.ZipFile(bundle) as archive:
+    for idx, name in enumerate(archive.namelist()):
+        print(name)
+        if idx == 19:
+            break
+PY
+    fi
+fi
 echo ""
 
 # Show deployment instructions
@@ -184,3 +269,5 @@ echo ""
 
 echo "Bundle creation completed successfully!"
 echo "Bundle: $BUNDLE_FILE"
+
+
