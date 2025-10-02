@@ -10,6 +10,7 @@ import {
   index,
   uuid,
   numeric,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -47,9 +48,66 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"), // For secure password authentication
-  role: varchar("role").default("user"), // user, admin
+  role: varchar("role").default("user"), // user, admin, manager
+  accountTier: varchar("account_tier", { length: 50 }).default("free"),
+  monthlyCreditAllocation: integer("monthly_credit_allocation").default(20),
+  creditBalance: integer("credit_balance").default(20),
+  billingCycleStart: timestamp("billing_cycle_start"),
+  billingCycleEnd: timestamp("billing_cycle_end"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizations = pgTable("organizations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }).default("customer"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizationMemberships = pgTable(
+  "organization_memberships",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    userId: varchar("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 50 }).default("member"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("organization_memberships_org_user_idx").on(
+      table.organizationId,
+      table.userId,
+    ),
+  ],
+);
+
+export const creditLedger = pgTable("credit_ledger", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  balanceAfter: integer("balance_after"),
+  reason: varchar("reason", { length: 100 }).notNull(),
+  module: varchar("module", { length: 50 }),
+  sessionId: varchar("session_id"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const usageEvents = pgTable("usage_events", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  module: varchar("module", { length: 50 }).notNull(),
+  sessionId: varchar("session_id"),
+  creditsConsumed: integer("credits_consumed").notNull(),
+  metadata: jsonb("metadata"),
+  occurredAt: timestamp("occurred_at").defaultNow(),
 });
 
 // Interview scenarios table
@@ -307,6 +365,17 @@ export const usersRelations = relations(users, ({ many }) => ({
   interviewSessions: many(interviewSessions),
 }));
 
+export const organizationMembershipsRelations = relations(organizationMemberships, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [organizationMemberships.organizationId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [organizationMemberships.userId],
+    references: [users.id],
+  }),
+}));
+
 export const interviewScenariosRelations = relations(interviewScenarios, ({ one, many }) => ({
   createdBy: one(users, {
     fields: [interviewScenarios.createdBy],
@@ -351,6 +420,32 @@ export const insertUserSchema = createInsertSchema(users).pick({
   profileImageUrl: true,
   passwordHash: true,
   role: true,
+  accountTier: true,
+  monthlyCreditAllocation: true,
+  creditBalance: true,
+  billingCycleStart: true,
+  billingCycleEnd: true,
+});
+
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOrganizationMembershipSchema = createInsertSchema(organizationMemberships).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCreditLedgerSchema = createInsertSchema(creditLedger).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUsageEventSchema = createInsertSchema(usageEvents).omit({
+  id: true,
+  occurredAt: true,
 });
 
 export const insertInterviewScenarioSchema = createInsertSchema(interviewScenarios).omit({
@@ -381,6 +476,14 @@ export const insertAiEvaluationResultSchema = createInsertSchema(aiEvaluationRes
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganizationMembership = z.infer<typeof insertOrganizationMembershipSchema>;
+export type OrganizationMembership = typeof organizationMemberships.$inferSelect;
+export type InsertCreditLedger = z.infer<typeof insertCreditLedgerSchema>;
+export type CreditLedgerEntry = typeof creditLedger.$inferSelect;
+export type InsertUsageEvent = z.infer<typeof insertUsageEventSchema>;
+export type UsageEvent = typeof usageEvents.$inferSelect;
 export type InsertInterviewScenario = z.infer<typeof insertInterviewScenarioSchema>;
 export type InterviewScenario = typeof interviewScenarios.$inferSelect;
 export type InsertInterviewSession = z.infer<typeof insertInterviewSessionSchema>;

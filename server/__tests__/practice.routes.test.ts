@@ -18,6 +18,14 @@ const storageMocks = vi.hoisted(() => ({
 
 const questionGeneratorMock = vi.hoisted(() => ({ generateQuestion: vi.fn() }));
 const evaluationServiceMock = vi.hoisted(() => ({ evaluateSessionResponses: vi.fn() }));
+const creditServiceMock = vi.hoisted(() => ({ consumeCredits: vi.fn() }));
+const InsufficientCreditsErrorMock = vi.hoisted(() =>
+  class InsufficientCreditsError extends Error {
+    constructor(public required: number, public available: number) {
+      super("Insufficient credits");
+    }
+  }
+);
 
 vi.mock("../storage.js", () => ({
   storage: storageMocks,
@@ -31,11 +39,18 @@ vi.mock("../services/response-evaluation-service.js", () => ({
   ResponseEvaluationService: vi.fn(() => evaluationServiceMock),
 }));
 
+vi.mock("../services/credit-service.js", () => ({
+  creditService: creditServiceMock,
+  InsufficientCreditsError: InsufficientCreditsErrorMock,
+}));
+
 describe("practice routes", () => {
   beforeEach(async () => {
     Object.values(storageMocks).forEach(mockFn => mockFn.mockReset?.());
     questionGeneratorMock.generateQuestion.mockReset();
     evaluationServiceMock.evaluateSessionResponses.mockReset();
+    creditServiceMock.consumeCredits.mockReset();
+    creditServiceMock.consumeCredits.mockResolvedValue({});
     await vi.resetModules();
   });
 
@@ -74,6 +89,39 @@ describe("practice routes", () => {
       scenarioId: "scenario-a",
       status: "active",
     }));
+    expect(creditServiceMock.consumeCredits).toHaveBeenCalledWith(
+      "user-456",
+      "practice",
+      10,
+      "practice-session-1",
+    );
+  });
+
+  it("fails gracefully when credits are insufficient", async () => {
+    const app = await createApp();
+
+    storageMocks.createPracticeSession.mockResolvedValueOnce({
+      id: "practice-session-credits",
+      scenarioId: "scenario-a",
+      status: "active",
+    });
+
+    const creditError = new InsufficientCreditsErrorMock(10, 2);
+    creditServiceMock.consumeCredits.mockRejectedValueOnce(creditError);
+
+    storageMocks.deletePracticeSession.mockResolvedValueOnce();
+
+    const res = await request(app)
+      .post("/api/practice/sessions")
+      .send({
+        scenarioId: "scenario-a",
+        interviewStage: "phone-screening",
+        difficultyLevel: "beginner",
+      });
+
+    expect(res.status).toBe(402);
+    expect(res.body.error).toBe("INSUFFICIENT_CREDITS");
+    expect(storageMocks.deletePracticeSession).toHaveBeenCalledWith("practice-session-credits");
   });
 
   it("generates an AI question, saves it, and advances the session", async () => {

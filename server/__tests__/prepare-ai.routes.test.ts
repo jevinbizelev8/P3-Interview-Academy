@@ -14,6 +14,15 @@ const mocks = vi.hoisted(() => ({
   emitToSession: vi.fn(),
 }));
 
+const creditServiceMock = vi.hoisted(() => ({ consumeCredits: vi.fn() }));
+const InsufficientCreditsErrorMock = vi.hoisted(() =>
+  class InsufficientCreditsError extends Error {
+    constructor(public required: number, public available: number) {
+      super("Insufficient credits");
+    }
+  }
+);
+
 vi.mock("../services/prepare-ai-service.js", () => ({
   PrepareAIService: vi.fn(() => ({
     createSession: mocks.createSession,
@@ -31,9 +40,16 @@ vi.mock("../services/realtime-gateway.js", () => ({
   emitToSession: mocks.emitToSession,
 }));
 
+vi.mock("../services/credit-service.js", () => ({
+  creditService: creditServiceMock,
+  InsufficientCreditsError: InsufficientCreditsErrorMock,
+}));
+
 describe("prepare-ai routes", () => {
   beforeEach(async () => {
     Object.values(mocks).forEach(mockFn => mockFn.mockReset?.());
+    creditServiceMock.consumeCredits.mockReset();
+    creditServiceMock.consumeCredits.mockResolvedValue({});
     await vi.resetModules();
   });
 
@@ -69,6 +85,32 @@ describe("prepare-ai routes", () => {
       interviewStage: "functional-team",
       experienceLevel: "senior",
     }));
+    expect(creditServiceMock.consumeCredits).toHaveBeenCalledWith(
+      "user-123",
+      "prepare",
+      5,
+      "prepare-session-1",
+    );
+  });
+
+  it("responds with 402 when credits are insufficient", async () => {
+    const app = await createApp();
+
+    mocks.createSession.mockResolvedValueOnce({ id: "prepare-session-low", jobPosition: "Engineer" });
+    creditServiceMock.consumeCredits.mockRejectedValueOnce(new InsufficientCreditsErrorMock(5, 1));
+    mocks.deleteSession.mockResolvedValueOnce();
+
+    const res = await request(app)
+      .post("/api/prepare-ai/sessions")
+      .send({
+        jobPosition: "Engineer",
+        interviewStage: "functional-team",
+        experienceLevel: "senior",
+      });
+
+    expect(res.status).toBe(402);
+    expect(res.body.error).toBe("INSUFFICIENT_CREDITS");
+    expect(mocks.deleteSession).toHaveBeenCalledWith("prepare-session-low");
   });
 
   it("generates the next AI question and emits it to the session room", async () => {
