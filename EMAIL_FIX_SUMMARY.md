@@ -2,7 +2,7 @@
 
 **Branch**: `email-fix`
 **Date**: 2025-10-04
-**Status**: ✅ Implementation Complete, Ready for Testing
+**Status**: ✅ Code merged locally; staging bundle `p3-interview-academy-eb-20251004-185052` is live for verification
 
 ---
 
@@ -58,6 +58,12 @@
 - Complete setup guide in `DATABASE_SEPARATION.md`
 - Verification scripts for ongoing monitoring
 
+### ✅ 2025-10-04 Staging Redeploy
+
+- Deployed bundle `p3-interview-academy-eb-20251004-185052` to staging; Elastic Beanstalk health is green.
+- Hardened `upsertUser` to reuse existing records and block null emails, unblocking verification failures.
+- Shared schema + schema auditor now expect UUID `user_id` references; staging DB still needs casts (see Schema Alignment).
+
 ### ✅ Chrome MCP Setup (Complete)
 
 **Global Setup**:
@@ -74,6 +80,12 @@
 ---
 
 ## 📝 Remaining Tasks
+
+### 🧱 Schema Alignment (Required)
+
+- [ ] Cast every `user_id`/`created_by` column to `uuid` in staging so `ensureCriticalSchema` can finish cleanly.
+- [ ] Repeat the casts in production after staging sign-off.
+- [ ] Re-run `npm run db:push` or restart the API to let schema auditor validate the new foreign keys.
 
 ### 🧪 Testing in Staging (Priority: HIGH)
 
@@ -368,5 +380,5 @@ Same as staging, but verify:
 
 ---
 
-**Last Updated**: 2025-10-04
+**Last Updated**: 2025-10-04 19:10 UTC
 **Next Review**: After staging testing complete

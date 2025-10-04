@@ -8,12 +8,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Quick Status Check
 - **Production**: `p3-interview-academy-prod-v2` - ✅ Healthy (HTTP 200)
-- **Staging**: `p3-interview-academy-staging` - ✅ Healthy, isolated database (p3_staging)
+- **Staging**: `p3-interview-academy-staging` - ✅ Bundle `p3-interview-academy-eb-20251004-185052`, health green; DB UUID casts pending
 - **CI/CD Pipeline**: ✅ Fully operational (GitHub Actions)
 - **Database**: ✅ PostgreSQL RDS with 7-day backups, staging/prod separated
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 - **🌐 Bizelev8.ai Integration**: ✅ SSL/CORS configured, ready for DNS setup
 - **📧 Email System**: ✅ Gmail SMTP configured, verification & password reset ready for testing
+- **🧱 Schema Alignment**: ⚠️ Cast legacy varchar `user_id` / `created_by` columns to UUID in staging/prod before the next deploy
 
 ### Recent Deployment Success (2025-10-02) - ✅ RESOLVED
 - **Issue**: Practice module "End Session Early" fix (commit `bf0d627`) deployment verification
@@ -74,6 +75,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Database Commands
 - `npm run db:push` - Push database schema changes using Drizzle Kit
+- After 2025-10-04 deploy, cast any `user_id` / `created_by` columns stored as `varchar` to `uuid` (staging first, then prod) so `ensureCriticalSchema` can create FK constraints without errors.
 - Database schema is defined in `shared/schema.ts`
 - Uses PostgreSQL with Drizzle ORM
 - Boot-time schema guard: `ensureCriticalSchema()` in `server/services/schema-auditor.ts` runs every server start to create the AI Prepare tables and rename legacy `interview_sessions` columns. Restart the API after restoring a snapshot or run `node -e "import('./dist/services/schema-auditor.js').then(m => m.ensureCriticalSchema())"` to apply it manually.
