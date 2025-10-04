@@ -96,7 +96,8 @@
       "Bash(gh pr merge:*)",
       "WebFetch(domain:www.bizelev8.ai)",
       "Bash(npx vite:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(git cherry-pick:*)"
     ],
     "deny": [],
     "ask": []
