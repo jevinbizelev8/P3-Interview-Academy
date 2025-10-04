@@ -86,6 +86,7 @@ import {
 import { db } from "./db";
 import { eq, desc, and, count, avg, sql, or } from "drizzle-orm";
 
+type UsersInsert = typeof users.$inferInsert;
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
@@ -315,16 +316,47 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const filteredEntries = Object.entries(userData).filter(([, value]) => value !== undefined);
+    const filtered = Object.fromEntries(filteredEntries) as Partial<UsersInsert>;
+    const idValue = filtered.id as string | undefined;
+    const emailValue = filtered.email as string | undefined;
+    const now = new Date();
+
+    const updatePayload: Partial<UsersInsert> = {
+      ...filtered,
+      updatedAt: now,
+    };
+    delete (updatePayload as Record<string, unknown>).id;
+
+    let existing: User | undefined;
+
+    if (idValue) {
+      existing = await this.getUser(idValue);
+    } else if (emailValue) {
+      existing = await this.getUserByEmail(emailValue);
+    }
+
+    if (existing) {
+      const [updated] = await db
+        .update(users)
+        .set(updatePayload)
+        .where(eq(users.id, existing.id))
+        .returning();
+      return updated;
+    }
+
+    if (!emailValue) {
+      throw new Error("Cannot create user without an email address");
+    }
+
+    const insertPayload: UsersInsert = {
+      ...filtered,
+      updatedAt: (filtered.updatedAt as Date | undefined) ?? now,
+    };
+
     const [user] = await db
       .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
+      .values(insertPayload)
       .returning();
     return user;
   }
@@ -1486,3 +1518,4 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+

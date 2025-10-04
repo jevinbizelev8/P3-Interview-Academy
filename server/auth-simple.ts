@@ -77,7 +77,7 @@ export async function setupSimpleAuth(app: Express) {
       const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       // Create user (unverified)
-      const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const userId = crypto.randomUUID();
       const user = await storage.upsertUser({
         id: userId,
         email,
@@ -566,3 +566,4 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     res.status(500).json({ message: "Authentication failed" });
   }
 };
+
