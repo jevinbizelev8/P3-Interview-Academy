@@ -9,6 +9,8 @@ import Practice from "@/pages/practice";
 import Prepare from "@/pages/prepare";
 import Perform from "@/pages/perform";
 import AdminDashboard from "@/pages/admin/dashboard";
+import VerifyEmail from "@/pages/verify-email";
+import ResetPassword from "@/pages/reset-password";
 import AuthenticatedLanding from "@/components/AuthenticatedLanding";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,6 +21,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/verify-email" component={VerifyEmail} />
+      <Route path="/reset-password" component={ResetPassword} />
       <Route path="/dashboard">
         <ProtectedRoute>
           {user && <AuthenticatedLanding user={user} />}

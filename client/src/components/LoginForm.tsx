@@ -25,12 +25,18 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    
+
     try {
       const response = await apiRequest("POST", "/api/auth/login", formData);
-      if (response.ok) {
+      const data = await response.json();
+
+      if (data.success) {
         onSuccess();
         window.location.href = '/dashboard';
+      } else if (data.requiresVerification) {
+        setError("Please verify your email before logging in. Check your inbox for the verification link.");
+      } else {
+        setError(data.message || "Login failed. Please check your credentials.");
       }
     } catch (error: any) {
       setError(error.message || "Login failed. Please check your credentials.");
