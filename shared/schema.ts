@@ -48,6 +48,25 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"), // For secure password authentication
   role: varchar("role").default("user"), // user, admin
+  accountTier: varchar("account_tier", { length: 50 }).default("free"),
+  monthlyCreditAllocation: integer("monthly_credit_allocation").default(20),
+  creditBalance: integer("credit_balance").default(20),
+  billingCycleStart: timestamp("billing_cycle_start"),
+  billingCycleEnd: timestamp("billing_cycle_end"),
+
+  // Email verification fields
+  emailVerified: boolean("email_verified").default(false),
+  emailVerificationToken: varchar("email_verification_token"),
+  emailVerificationExpires: timestamp("email_verification_expires"),
+
+  // Password reset fields
+  passwordResetToken: varchar("password_reset_token"),
+  passwordResetExpires: timestamp("password_reset_expires"),
+
+  // OAuth fields
+  googleId: varchar("google_id").unique(),
+  authProvider: varchar("auth_provider", { length: 20 }).default("local"), // 'local', 'google', 'both'
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
