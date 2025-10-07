@@ -96,7 +96,21 @@
       "Bash(gh pr merge:*)",
       "WebFetch(domain:www.bizelev8.ai)",
       "Bash(npx vite:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(aws:*)",
+      "Bash(gh:*)",
+      "Bash(/~aws --version)",
+      "Bash(command -v:*)",
+      "Read(//usr/local/bin/**)",
+      "Bash(nix-channel:*)",
+      "Bash(nix-env:*)",
+      "Bash(./fix-production-ssl.sh:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(NODE_ENV=production npm run build --production=false)",
+      "Bash(vite build)",
+      "Bash(esbuild:*)",
+      "Bash(npx esbuild:*)",
+      "WebFetch(domain:docs.google.com)"
     ],
     "deny": [],
     "ask": []

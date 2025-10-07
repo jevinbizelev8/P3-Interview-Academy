@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["jq", "google-cloud-sdk-gce", "openssh"]
+packages = ["jq", "google-cloud-sdk-gce", "openssh", "awscli2", "gh"]
 
 [deployment]
 deploymentTarget = "autoscale"
@@ -53,3 +53,4 @@ externalPort = 3000
 
 [agent]
 integrations = ["javascript_anthropic==1.0.0", "javascript_log_in_with_replit==1.0.0", "javascript_openai==1.0.0", "javascript_database==1.0.0"]
+expertMode = true
