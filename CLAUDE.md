@@ -214,6 +214,7 @@ Evaluation logic is in `server/services/response-evaluation-service.ts`.
 
 ### Deployment Scripts (`deployment-scripts/`)
 The project includes comprehensive deployment automation:
+    - **Utility Scripts**: see `deployment-scripts/util` for ad-hoc maintenance, schema fixes, and debugging helpers
 
 - **`full-deployment.sh`** - Complete deployment orchestration (recommended)
 - **`setup-environment-variables.sh`** - Interactive AWS environment variable configuration
