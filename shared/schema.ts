@@ -41,13 +41,32 @@ export const sessions = pgTable(
 
 // User storage table for authentication
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"), // For secure password authentication
   role: varchar("role").default("user"), // user, admin
+  accountTier: varchar("account_tier", { length: 50 }).default("free"),
+  monthlyCreditAllocation: integer("monthly_credit_allocation").default(20),
+  creditBalance: integer("credit_balance").default(20),
+  billingCycleStart: timestamp("billing_cycle_start"),
+  billingCycleEnd: timestamp("billing_cycle_end"),
+
+  // Email verification fields
+  emailVerified: boolean("email_verified").default(false),
+  emailVerificationToken: varchar("email_verification_token"),
+  emailVerificationExpires: timestamp("email_verification_expires"),
+
+  // Password reset fields
+  passwordResetToken: varchar("password_reset_token"),
+  passwordResetExpires: timestamp("password_reset_expires"),
+
+  // OAuth fields
+  googleId: varchar("google_id").unique(),
+  authProvider: varchar("auth_provider", { length: 20 }).default("local"), // 'local', 'google', 'both'
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -68,7 +87,7 @@ export const interviewScenarios = pgTable("interview_scenarios", {
   interviewerStyle: varchar("interviewer_style", { length: 100 }).notNull(),
   personalityTraits: text("personality_traits").notNull(),
   status: varchar("status", { length: 20 }).default("active"), // active, draft, inactive
-  createdBy: varchar("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -76,7 +95,7 @@ export const interviewScenarios = pgTable("interview_scenarios", {
 // Interview sessions table
 export const interviewSessions = pgTable("interview_sessions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   scenarioId: varchar("scenario_id").notNull(), // Can be UUID or dynamic ID
   status: varchar("status", { length: 20 }).default("in_progress"), // in_progress, completed, abandoned
   currentQuestion: integer("current_question").default(1),
@@ -211,7 +230,7 @@ export const aiEvaluationResults = pgTable("ai_evaluation_results", {
 // Practice sessions for interactive practice interviews
 export const practiceSessions = pgTable("practice_sessions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   scenarioId: varchar("scenario_id").notNull(), // Reference to interview scenario
   
   // Session Configuration
@@ -261,7 +280,7 @@ export const practiceMessages = pgTable("practice_messages", {
 export const practiceReports = pgTable("practice_reports", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: uuid("session_id").notNull().references(() => practiceSessions.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   
   // Overall Evaluation
   overallScore: numeric("overall_score", { precision: 5, scale: 2 }),
@@ -351,6 +370,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   profileImageUrl: true,
   passwordHash: true,
   role: true,
+  emailVerified: true,
+  emailVerificationToken: true,
+  emailVerificationExpires: true,
+  passwordResetToken: true,
+  passwordResetExpires: true,
+  googleId: true,
+  authProvider: true,
 });
 
 export const insertInterviewScenarioSchema = createInsertSchema(interviewScenarios).omit({
@@ -463,7 +489,7 @@ export interface STARComponentScoring {
 // Preparation sessions table
 export const preparationSessions = pgTable("preparation_sessions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   jobPosition: varchar("job_position", { length: 200 }),
   companyName: varchar("company_name", { length: 200 }),
   targetInterviewDate: timestamp("target_interview_date"),
@@ -509,7 +535,7 @@ export const preparationResources = pgTable("preparation_resources", {
   estimatedReadTime: integer("estimated_read_time"), // minutes
   popularity: integer("popularity").default(0),
   isActive: boolean("is_active").default(true),
-  createdBy: varchar("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -517,7 +543,7 @@ export const preparationResources = pgTable("preparation_resources", {
 // User progress tracking for preparation activities
 export const preparationProgress = pgTable("preparation_progress", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   preparationSessionId: uuid("preparation_session_id").notNull().references(() => preparationSessions.id, { onDelete: "cascade" }),
   activityType: varchar("activity_type", { length: 50 }).notNull(), // resource-read, practice-test, star-practice, etc.
   activityId: varchar("activity_id", { length: 255 }), // reference to specific activity
@@ -546,7 +572,7 @@ export const practiceTests = pgTable("practice_tests", {
   difficulty: varchar("difficulty", { length: 20 }), // beginner, intermediate, advanced
   tags: jsonb("tags"), // array of tags
   isActive: boolean("is_active").default(true),
-  createdBy: varchar("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -554,7 +580,7 @@ export const practiceTests = pgTable("practice_tests", {
 // Practice test results
 export const practiceTestResults = pgTable("practice_test_results", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   practiceTestId: uuid("practice_test_id").notNull().references(() => practiceTests.id, { onDelete: "cascade" }),
   preparationSessionId: uuid("preparation_session_id").references(() => preparationSessions.id, { onDelete: "cascade" }),
   score: numeric("score", { precision: 5, scale: 2 }).notNull(),
@@ -573,7 +599,7 @@ export const practiceTestResults = pgTable("practice_test_results", {
 // Company research data
 export const companyResearch = pgTable("company_research", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   companyName: varchar("company_name", { length: 255 }).notNull(),
   industry: varchar("industry", { length: 100 }),
   companySize: varchar("company_size", { length: 50 }), // startup, small, medium, large, enterprise
@@ -598,7 +624,7 @@ export const companyResearch = pgTable("company_research", {
 // STAR method practice sessions
 export const starPracticeSessions = pgTable("star_practice_sessions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   preparationSessionId: uuid("preparation_session_id").references(() => preparationSessions.id, { onDelete: "cascade" }),
   scenario: text("scenario").notNull(), // the practice scenario
   userResponse: jsonb("user_response").notNull(), // STAR components provided by user
@@ -879,7 +905,7 @@ export type QuestionType = typeof INDUSTRY_CATEGORIES[IndustryCategory]['questio
 // Enhanced coaching sessions with industry intelligence
 export const coachingSessions = pgTable("coaching_sessions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   jobPosition: varchar("job_position", { length: 200 }).notNull(),
   companyName: varchar("company_name", { length: 200 }),
   interviewStage: varchar("interview_stage", { length: 50 }).notNull(), // phone-screening, functional-team, hiring-manager, subject-matter-expertise, executive-final
@@ -966,7 +992,7 @@ export const industryQuestions = pgTable("industry_questions", {
   aiGenerated: boolean("ai_generated").default(false),
   popularity: integer("popularity").default(0),
   
-  createdBy: varchar("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1011,7 +1037,7 @@ export const industryKnowledge = pgTable("industry_knowledge", {
   sources: jsonb("sources"), // Information sources
   isActive: boolean("is_active").default(true),
   
-  createdBy: varchar("created_by").references(() => users.id),
+  createdBy: uuid("created_by").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1165,7 +1191,7 @@ export type CoachingMessageWithFeedback = CoachingMessage & {
 // AI Preparation Sessions with Voice Capabilities
 export const aiPrepareSessions = pgTable("ai_prepare_sessions", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   
   // Session Configuration
   sessionName: varchar("session_name", { length: 255 }),
@@ -1286,7 +1312,7 @@ export const aiPrepareResponses = pgTable("ai_prepare_responses", {
 export const aiPrepareAnalytics = pgTable("ai_prepare_analytics", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: uuid("session_id").notNull().references(() => aiPrepareSessions.id, { onDelete: "cascade" }),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
   
   // Performance Metrics
   overallPerformance: jsonb("overall_performance").notNull(), // detailed performance breakdown
@@ -1529,3 +1555,4 @@ export interface ModelAnswer {
   fullAnswer: string;
   keyPoints: string[];
 }
+

@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   emitToSession: vi.fn(),
 }));
 
+const TEST_USER_ID = "11111111-1111-4111-8111-333333333333";
 vi.mock("../services/prepare-ai-service.js", () => ({
   PrepareAIService: vi.fn(() => ({
     createSession: mocks.createSession,
@@ -42,7 +43,7 @@ describe("prepare-ai routes", () => {
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => {
-      req.user = { id: "user-123", role: "user" };
+      req.user = { id: TEST_USER_ID, role: "user" };
       next();
     });
     app.use("/api/prepare-ai", prepareAIRouter);
@@ -64,7 +65,7 @@ describe("prepare-ai routes", () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data.id).toBe("prepare-session-1");
-    expect(mocks.createSession).toHaveBeenCalledWith("user-123", expect.objectContaining({
+    expect(mocks.createSession).toHaveBeenCalledWith(TEST_USER_ID, expect.objectContaining({
       jobPosition: "Product Manager",
       interviewStage: "functional-team",
       experienceLevel: "senior",
@@ -76,7 +77,7 @@ describe("prepare-ai routes", () => {
 
     mocks.getSession.mockResolvedValueOnce({
       id: "prepare-session-2",
-      userId: "user-123",
+      userId: TEST_USER_ID,
       preferredLanguage: "en",
     });
 
@@ -94,7 +95,7 @@ describe("prepare-ai routes", () => {
     expect(res.body.data.id).toBe("question-1");
     expect(mocks.generateNextQuestion).toHaveBeenCalledWith({
       sessionId: "prepare-session-2",
-      userId: "user-123",
+      userId: TEST_USER_ID,
       adaptiveDifficulty: true,
     });
     expect(mocks.emitToSession).toHaveBeenCalledWith("prepare-session-2", "question-generated", {
@@ -108,7 +109,7 @@ describe("prepare-ai routes", () => {
 
     mocks.getSession.mockResolvedValueOnce({
       id: "prepare-session-3",
-      userId: "user-123",
+      userId: TEST_USER_ID,
     });
 
     mocks.processResponse.mockResolvedValueOnce({

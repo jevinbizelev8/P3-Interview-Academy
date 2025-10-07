@@ -15,6 +15,8 @@ interface SignupFormProps {
 export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -27,7 +29,7 @@ export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormPro
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    
+
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -35,13 +37,19 @@ export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormPro
       return;
     }
 
-    // Validate password strength
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long");
+    // Validate password strength (updated to match backend)
+    if (formData.password.length < 8) {
+      setError("Password must be at least 8 characters long");
       setIsLoading(false);
       return;
     }
-    
+
+    if (!/\d/.test(formData.password)) {
+      setError("Password must contain at least one number");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await apiRequest("POST", "/api/auth/signup", {
         email: formData.email,
@@ -49,8 +57,13 @@ export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormPro
         firstName: formData.firstName,
         lastName: formData.lastName
       });
-      
-      if (response.ok) {
+
+      const data = await response.json();
+
+      if (data.success && data.requiresVerification) {
+        setVerificationSent(true);
+        setUserEmail(formData.email);
+      } else if (response.ok) {
         onSuccess();
         window.location.href = '/dashboard';
       }
@@ -60,6 +73,72 @@ export default function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormPro
       setIsLoading(false);
     }
   };
+
+  const handleResendVerification = async () => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      await apiRequest("POST", "/api/auth/resend-verification", {
+        email: userEmail
+      });
+      setError(""); // Clear any errors
+      alert("Verification email resent! Please check your inbox.");
+    } catch (error: any) {
+      setError(error.message || "Failed to resend verification email");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (verificationSent) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="text-center">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-6 h-6 text-blue-600" />
+          </div>
+          <CardTitle className="text-2xl">Check Your Email!</CardTitle>
+          <CardDescription>
+            We've sent a verification link to <strong>{userEmail}</strong>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please check your email and click the verification link to activate your account.
+              The link will expire in 24 hours.
+            </AlertDescription>
+          </Alert>
+
+          <div className="text-center space-y-2">
+            <p className="text-sm text-gray-600">Didn't receive the email?</p>
+            <Button
+              variant="outline"
+              onClick={handleResendVerification}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : null}
+              Resend Verification Email
+            </Button>
+          </div>
+
+          <div className="text-center">
+            <button
+              onClick={onSwitchToLogin}
+              className="text-blue-600 hover:text-blue-500 font-medium text-sm"
+            >
+              Back to Login
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full max-w-md mx-auto">

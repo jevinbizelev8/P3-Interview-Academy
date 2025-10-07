@@ -13,7 +13,7 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   if (DEVELOPMENT_MODE && process.env.BYPASS_AUTH === 'true') {
     console.log('⚠️  DEVELOPMENT: Bypassing authentication - NOT FOR PRODUCTION');
     req.user = { 
-      id: "dev-user-123", 
+      id: "11111111-1111-4111-8111-111111111111", 
       role: "user",
       email: "dev@example.com",
       firstName: "Dev",

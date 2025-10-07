@@ -110,6 +110,9 @@ Replace `production-clone` with an EB configuration template that mirrors produc
 4. Watch the `deploy-staging` job upload the bundle, create the EB application version, and wait for `p3-interview-academy-staging` to turn green. The job prints the environment health and hits `/api/health` automatically.
 5. For pull requests, the workflow comments with the staging URL and version label once verification succeeds.
 
+> ⚠️ **Schema reminder:** After each staging deploy (latest `p3-interview-academy-eb-20251004-185052`), cast any `user_id` / `created_by` columns that still use `varchar` to `uuid` in the staging database, then repeat in production once staging is verified. Run `npm run db:push` or restart the API afterwards so `ensureCriticalSchema` can finish the UUID foreign keys.
+
+
 **Note:** `npm run build` now triggers `npm run check` and `npm run test:run` via the `prebuild` hook, so production bundles fail fast if the AI prepare/practice tests regress.
 ### Step 4: Promote via production workflow
 Pushes to `main` now trigger **Deploy to AWS Elastic Beanstalk Production**. The job reuses the same bundle process, waits for the green health check, and trims older application versions (keeping the newest five). You can also run it manually from the Actions tab if you need to redeploy a prior commit—set `skip_tests` to `true` only during break-glass scenarios.

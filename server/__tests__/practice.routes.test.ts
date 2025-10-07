@@ -19,6 +19,8 @@ const storageMocks = vi.hoisted(() => ({
 const questionGeneratorMock = vi.hoisted(() => ({ generateQuestion: vi.fn() }));
 const evaluationServiceMock = vi.hoisted(() => ({ evaluateSessionResponses: vi.fn() }));
 
+const TEST_USER_ID = "11111111-1111-4111-8111-222222222222";
+
 vi.mock("../storage.js", () => ({
   storage: storageMocks,
 }));
@@ -44,7 +46,7 @@ describe("practice routes", () => {
     const app = express();
     app.use(express.json());
     app.use((req, _res, next) => {
-      req.user = { id: "user-456", role: "user" };
+      req.user = { id: TEST_USER_ID, role: "user" };
       next();
     });
     app.use("/api/practice", practiceRouter);
@@ -70,7 +72,7 @@ describe("practice routes", () => {
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(storageMocks.createPracticeSession).toHaveBeenCalledWith(expect.objectContaining({
-      userId: "user-456",
+      userId: TEST_USER_ID,
       scenarioId: "scenario-a",
       status: "active",
     }));
@@ -81,7 +83,7 @@ describe("practice routes", () => {
 
     storageMocks.getPracticeSession.mockResolvedValueOnce({
       id: "practice-session-2",
-      userId: "user-456",
+      userId: TEST_USER_ID,
       preferredLanguage: "en",
       currentQuestionNumber: 1,
       totalQuestions: 5,
@@ -135,7 +137,7 @@ describe("practice routes", () => {
 
     storageMocks.getPracticeSession.mockResolvedValueOnce({
       id: "practice-session-3",
-      userId: "user-456",
+      userId: TEST_USER_ID,
       status: "active",
       startedAt: new Date("2024-01-01T00:00:00Z"),
       messages: sessionMessages,
@@ -180,7 +182,7 @@ describe("practice routes", () => {
     expect(res.status).toBe(200);
     expect(storageMocks.createPracticeReport).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: "practice-session-3",
-      userId: "user-456",
+      userId: TEST_USER_ID,
       overallScore: "4.1",
       overallRating: "Strong",
     }));

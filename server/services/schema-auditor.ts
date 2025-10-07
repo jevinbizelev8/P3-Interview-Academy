@@ -125,7 +125,7 @@ async function ensurePrepareModuleSchema(): Promise<void> {
     await executeQuery(`
       create table ${sessionTable} (
         id uuid primary key default gen_random_uuid(),
-        user_id varchar not null references users(id),
+        user_id uuid not null references users(id),
         session_name varchar(255),
         job_position varchar(200) not null,
         company_name varchar(200),
@@ -221,7 +221,7 @@ async function ensurePrepareModuleSchema(): Promise<void> {
       create table ${analyticsTable} (
         id uuid primary key default gen_random_uuid(),
         session_id uuid not null references ${sessionTable}(id) on delete cascade,
-        user_id varchar not null references users(id),
+        user_id uuid not null references users(id),
         overall_performance jsonb not null,
         category_scores jsonb default '{}'::jsonb,
         improvement_over_time jsonb default '[]'::jsonb,
@@ -254,3 +254,4 @@ export async function ensureCriticalSchema(): Promise<void> {
     console.error("Failed to ensure prepare module schema", error);
   }
 }
+

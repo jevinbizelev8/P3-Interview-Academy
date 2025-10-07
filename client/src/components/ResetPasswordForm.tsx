@@ -49,7 +49,7 @@ export default function ResetPasswordForm({ onBackToLogin }: ResetPasswordFormPr
         <CardContent className="space-y-4">
           <div className="text-center text-sm text-gray-600 space-y-2">
             <p>If you don't see the email in your inbox, please check your spam folder.</p>
-            <p>The reset link will expire in 24 hours for security reasons.</p>
+            <p>The reset link will expire in 1 hour for security reasons.</p>
           </div>
           
           <Button 
