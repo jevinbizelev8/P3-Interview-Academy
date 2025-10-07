@@ -217,7 +217,7 @@ export function getDefaultDifficultyForStage(stage: InterviewStage): DifficultyL
 /**
  * Auto-correct difficulty to match stage constraints
  */
-export function enforceStage Difficulty(stage: InterviewStage, requestedDifficulty: DifficultyLevel): DifficultyLevel {
+export function enforceStageDifficulty(stage: InterviewStage, requestedDifficulty: DifficultyLevel): DifficultyLevel {
   const constraints = STAGE_DIFFICULTY_CONSTRAINTS[stage];
 
   // If requested difficulty is valid, use it
