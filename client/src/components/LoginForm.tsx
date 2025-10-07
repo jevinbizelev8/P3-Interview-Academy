@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { User, Loader2, AlertCircle } from "lucide-react";
+import { FcGoogle } from "react-icons/fc";
 import { apiRequest } from "@/lib/queryClient";
 
 interface LoginFormProps {
@@ -15,14 +16,76 @@ interface LoginFormProps {
 
 export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isOAuthRedirecting, setIsOAuthRedirecting] = useState(false);
+  const [isGoogleEnabled, setIsGoogleEnabled] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState({
     email: "",
     password: ""
   });
 
+  const googleEnvFlag = (import.meta.env as Record<string, string | undefined>)["VITE_ENABLE_GOOGLE_OAUTH"];
+  const googleEnvEnabled = googleEnvFlag !== "false";
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("authError") === "google") {
+      setError("Google sign-in didn't complete. Please try again or use email instead.");
+      setIsOAuthRedirecting(false);
+      params.delete("authError");
+      const newSearch = params.toString();
+      const newUrl = `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}${window.location.hash}`;
+      window.history.replaceState(null, "", newUrl);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!googleEnvEnabled) {
+      return;
+    }
+    let isMounted = true;
+    const controller = new AbortController();
+
+    const loadProviders = async () => {
+      try {
+        const res = await fetch("/api/auth/providers", {
+          credentials: "include",
+          signal: controller.signal
+        });
+
+        if (!res.ok) {
+          return;
+        }
+
+        const data = await res.json();
+        if (isMounted) {
+          setIsGoogleEnabled(Boolean(data?.providers?.google));
+        }
+      } catch (err) {
+        if (typeof err === "object" && err && "name" in err && (err as { name?: string }).name === "AbortError") {
+          return;
+        }
+        console.error("Failed to load auth providers", err);
+      }
+    };
+
+    loadProviders();
+
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [googleEnvEnabled]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isOAuthRedirecting) {
+      return;
+    }
     setIsLoading(true);
     setError("");
 
@@ -45,6 +108,21 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset
     }
   };
 
+  const handleGoogleSignIn = () => {
+    if (!googleEnvEnabled || isOAuthRedirecting || isLoading) {
+      return;
+    }
+    setError("");
+    setIsOAuthRedirecting(true);
+    const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const params = new URLSearchParams();
+    if (currentPath) {
+      params.set("returnTo", currentPath);
+    }
+    const query = params.toString();
+    window.location.href = query ? `/api/auth/google?${query}` : "/api/auth/google";
+  };
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader className="text-center">
@@ -64,6 +142,36 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset
           </Alert>
         )}
         
+        {googleEnvEnabled && isGoogleEnabled ? (
+          <div className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading || isOAuthRedirecting}
+              data-testid="button-google-login"
+            >
+              {isOAuthRedirecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Redirecting...
+                </>
+              ) : (
+                <>
+                  <FcGoogle className="w-5 h-5" />
+                  Continue with Google
+                </>
+              )}
+            </Button>
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-wide text-gray-500">
+              <span className="h-px flex-1 bg-gray-200" />
+              <span>Or continue with email</span>
+              <span className="h-px flex-1 bg-gray-200" />
+            </div>
+          </div>
+        ) : null}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email Address</Label>
@@ -74,7 +182,7 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
               required
-              disabled={isLoading}
+              disabled={isLoading || isOAuthRedirecting}
               data-testid="input-email"
             />
           </div>
@@ -88,12 +196,12 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset
               value={formData.password}
               onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
               required
-              disabled={isLoading}
+              disabled={isLoading || isOAuthRedirecting}
               data-testid="input-password"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading} data-testid="button-login">
+          <Button type="submit" className="w-full" disabled={isLoading || isOAuthRedirecting} data-testid="button-login">
             {isLoading ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : null}
@@ -107,7 +215,7 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset
               type="button"
               onClick={onSwitchToReset}
               className="text-blue-600 hover:text-blue-500 font-medium text-sm"
-              disabled={isLoading}
+              disabled={isLoading || isOAuthRedirecting}
               data-testid="link-forgot-password"
             >
               Forgot your password?
@@ -118,7 +226,7 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset
             <button 
               onClick={onSwitchToSignup}
               className="text-blue-600 hover:text-blue-500 font-medium"
-              disabled={isLoading}
+              disabled={isLoading || isOAuthRedirecting}
               data-testid="link-signup"
             >
               Create one here

@@ -64,6 +64,13 @@
 - Hardened `upsertUser` to reuse existing records and block null emails, unblocking verification failures.
 - Shared schema + schema auditor now expect UUID `user_id` references; staging DB still needs casts (see Schema Alignment).
 
+### 🚧 Google OAuth Scaffolding (In Progress)
+
+- Google OAuth helper service created with PKCE, nonce, and userinfo fallback logic.
+- `/api/auth/google`, callback, and `/api/auth/providers` routes wired into session auth.
+- Login modal now renders "Continue with Google" based on provider discovery and shows helpful failure copy.
+- `.env.example` plus staging checklist updated with Google credentials and toggles.
+
 ### ✅ Chrome MCP Setup (Complete)
 
 **Global Setup**:
@@ -116,17 +123,27 @@
   - Create OAuth 2.0 credentials
   - Add redirect URIs for dev and prod
 
-- [ ] **Backend Implementation**
-  - Implement `GET /api/auth/google` endpoint
-  - Implement `GET /api/auth/google/callback` endpoint
-  - Handle OAuth token exchange
-  - Create or link user accounts
+- [x] **Backend Implementation**
+  - Implemented `GET /api/auth/google` launcher with PKCE and return-to handling
+  - Implemented `GET /api/auth/google/callback` for token exchange and account linking
+  - Normalizes Google profile data and updates sessions
+  - Added `/api/auth/providers` discovery response
+- [x] **Frontend Implementation**
+  - Login modal surfaces "Continue with Google" when enabled
+  - Handles redirect spinner + disables form during OAuth
+  - Displays helpful message when `authError=google` appears
+  - Keeps email/password path unchanged
 
-- [ ] **Frontend Implementation**
-  - Add "Sign in with Google" button
-  - Style Google button per brand guidelines
-  - Test OAuth flow end-to-end
+- [ ] **Staging Configuration & Verification**
+  - Load Google client credentials + redirect env vars in staging
+  - Redeploy bundle and confirm Google consent flow works
+  - Verify existing-local-user linking promotes `authProvider` to `both`
+  - Exercise failure path (`authError=google`) shows helpful copy
 
+- [ ] **Automated Coverage**
+  - Add server tests for OAuth callback + account linking
+  - Add client tests for provider discovery toggle
+  - Ensure CI exercises auth regression suite
 - [ ] **Testing**
   - Test new user signup via Google
   - Test existing user login via Google
@@ -325,10 +342,10 @@ Same as staging, but verify:
    - Verify production deployment
    - Test in production
 
-5. **Plan Google OAuth** (future sprint):
-   - Set up Google Cloud Project
-   - Design OAuth integration
-   - Implement and test
+5. **Google OAuth Staging Dry Run**:
+   - Populate staging env vars (`GOOGLE_*`, `VITE_ENABLE_GOOGLE_OAUTH=true`)
+   - Redeploy bundle and run checklist in `deployment-scripts/google-oauth-staging-checklist.md`
+   - Document results and follow-up fixes
 
 ---
 
@@ -380,5 +397,5 @@ Same as staging, but verify:
 
 ---
 
-**Last Updated**: 2025-10-04 19:10 UTC
+**Last Updated**: 2025-10-04 15:31 UTC
 **Next Review**: After staging testing complete

@@ -370,6 +370,13 @@ export const insertUserSchema = createInsertSchema(users).pick({
   profileImageUrl: true,
   passwordHash: true,
   role: true,
+  emailVerified: true,
+  emailVerificationToken: true,
+  emailVerificationExpires: true,
+  passwordResetToken: true,
+  passwordResetExpires: true,
+  googleId: true,
+  authProvider: true,
 });
 
 export const insertInterviewScenarioSchema = createInsertSchema(interviewScenarios).omit({

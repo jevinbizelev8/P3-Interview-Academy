@@ -698,13 +698,15 @@ node test-end-session-fix.js
 #### Google OAuth Implementation (Future)
 - [ ] Set up Google Cloud Project and OAuth consent screen
 - [ ] Create OAuth 2.0 credentials for P3 Interview Academy
-- [ ] Implement backend OAuth endpoints:
+- [x] Implement backend OAuth endpoints:
   - `GET /api/auth/google` - Initiates Google OAuth flow
   - `GET /api/auth/google/callback` - Handles OAuth callback
-- [ ] Update frontend with "Sign in with Google" button
+- [x] Update frontend with "Sign in with Google" button
 - [ ] Test Google OAuth signup flow
 - [ ] Test Google OAuth login flow
-- [ ] Handle OAuth account linking (existing email with Google)
+- [ ] Configure staging Google env vars and run checklist
+- [ ] Capture staging results + screenshots for PR
+- [x] Handle OAuth account linking (existing email with Google)
 
 #### Production Deployment
 - [ ] Test all email flows thoroughly in staging
@@ -755,7 +757,13 @@ When ready to implement Google OAuth:
    GOOGLE_CLIENT_ID=<your-client-id>
    GOOGLE_CLIENT_SECRET=<your-client-secret>
    GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+   GOOGLE_SUCCESS_REDIRECT=/dashboard
+   GOOGLE_FAILURE_REDIRECT=/?authError=google
+   VITE_ENABLE_GOOGLE_OAUTH=true
    ```
+
+5. **Provider Discovery**:
+   - Frontend toggles Google sign-in based on `GET /api/auth/providers` and the `VITE_ENABLE_GOOGLE_OAUTH` flag.
 
 ### Files Modified (Email Fix Branch)
 
@@ -763,8 +771,11 @@ When ready to implement Google OAuth:
 - `server/auth-simple.ts` - Email verification and password reset endpoints
 - `server/storage.ts` - Token-based user lookup methods
 - `server/services/email-service.ts` - Gmail SMTP integration (new file)
+- `server/services/google-oauth.ts` - Google OAuth helper service (new file)
+- `deployment-scripts/google-oauth-staging-checklist.md` - Staging rollout checklist
 
 **Frontend**:
+- `client/src/components/LoginForm.tsx` - Adds Google sign-in button and provider detection
 - `client/src/components/SignupForm.tsx` - Verification sent confirmation
 - `client/src/components/LoginForm.tsx` - Unverified user handling
 - `client/src/components/ResetPasswordForm.tsx` - Expiration message update
