@@ -181,9 +181,9 @@ jobs:
 
           # Persist status for later steps (e.g. PR comments)
           {
-            echo "ENV_STATUS<<'EOF'"
+            echo "ENV_STATUS<<EOF"
             echo "$ENV_STATUS"
-            echo 'EOF'
+            echo "EOF"
           } >> "$GITHUB_ENV"
 
           # Test health endpoint with retries
