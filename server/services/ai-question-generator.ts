@@ -288,12 +288,14 @@ Response Format (JSON):
 
       // Normalize stage name
       const stage = normalizeStageName(request.interviewStage) as InterviewStage;
+      console.log(`🔍 CSV Question Lookup: requested="${request.interviewStage}" → normalized="${stage}"`);
 
       // Get random question from the stage
       const curatedQ = this.modelAnswerService.getRandomQuestionByStage(stage);
 
       if (!curatedQ) {
         console.log(`⚠️ No curated questions available for stage: ${stage}`);
+        console.log(`📊 Total curated questions loaded: ${this.modelAnswerService.getQuestionCount()}`);
         return null;
       }
 

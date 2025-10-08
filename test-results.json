@@ -1,14 +1,14 @@
 {
   "success": false,
-  "passed": 27,
+  "passed": 28,
   "failed": 7,
-  "totalTests": 34,
-  "csvPercentage": 33.33333333333333,
+  "totalTests": 35,
+  "csvPercentage": 26.666666666666668,
   "tests": [
     {
       "name": "User signup successful",
       "passed": true,
-      "details": "User ID: user-1759928799356-folp4j9aw"
+      "details": "User ID: user-1759930438958-9dj9xhbt2"
     },
     {
       "name": "Health endpoint responding",
@@ -21,12 +21,17 @@
       "details": "Response time: 1ms"
     },
     {
-      "name": "Create phone-screening session",
+      "name": "Server recently restarted (CSV should be loaded)",
       "passed": true,
-      "details": "Session ID: fecc85cc-4f7b-422a-b1b9-54f145f0ac93"
+      "details": "Uptime: 207s"
     },
     {
-      "name": "Question 1 from CSV (Q#21)",
+      "name": "Create phone-screening session",
+      "passed": true,
+      "details": "Session ID: 092f8566-794b-4b94-8b9b-356c5910d498"
+    },
+    {
+      "name": "Question 1 from CSV (Q#16)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
@@ -43,7 +48,7 @@
     {
       "name": "Model answer provided for phone-screening",
       "passed": true,
-      "details": "Length: \"From my research, I understand your department is currently facing the challenge of [Challenge, e.g..."
+      "details": "Length: \"I rely heavily on a priority matrix (Urgent/Important) and continuous communication. I start by cla..."
     },
     {
       "name": "Weighted score valid for phone-screening",
@@ -51,29 +56,29 @@
       "details": "Score: undefined/5 (undefined)"
     },
     {
-      "name": "Question 2 from CSV (Q#24)",
+      "name": "Question 2 from CSV (Q#2)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
     {
-      "name": "Question 3 from CSV (Q#15)",
+      "name": "Question 3 from CSV (Q#8)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
     {
-      "name": "Question 4 from CSV (Q#12)",
+      "name": "Question 4 from CSV (Q#24)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
     {
-      "name": "Question 5 from CSV (Q#20)",
+      "name": "Question 5 AI-generated",
       "passed": true,
-      "details": "✅ In expected range 1-25"
+      "details": "Not from CSV bank"
     },
     {
       "name": "Create hiring-manager session",
       "passed": true,
-      "details": "Session ID: ef8c5563-8d87-4777-aeea-fd277fe084ec"
+      "details": "Session ID: 458b5e2a-57af-4b9f-98e1-99df0a2576a2"
     },
     {
       "name": "Question 1 AI-generated",
@@ -123,7 +128,7 @@
     {
       "name": "Create executive-leadership session",
       "passed": true,
-      "details": "Session ID: d45794a4-bc7c-4d18-baeb-1c23ea7a9d4f"
+      "details": "Session ID: e34146b2-59cb-48e4-b694-d8bb04c94757"
     },
     {
       "name": "Question 1 AI-generated",
@@ -173,7 +178,7 @@
     {
       "name": "CSV question distribution",
       "passed": false,
-      "details": "5/15 questions from CSV (33.3%, target: ≥80%)"
+      "details": "4/15 questions from CSV (26.7%, target: ≥80%)"
     }
   ]
 }

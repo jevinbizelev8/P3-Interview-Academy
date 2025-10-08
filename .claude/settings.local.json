@@ -117,7 +117,8 @@
       "Bash(cat:*)",
       "Bash(LC_ALL=C grep -P '[\\x{2018}-\\x{201F}]')",
       "Bash(python3:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(openssl rand:*)"
     ],
     "deny": [],
     "ask": []

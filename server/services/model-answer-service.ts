@@ -223,8 +223,16 @@ export class ModelAnswerService {
 
     // Normalize stage name for matching
     const normalizedStage = this.normalizeStage(stage);
+    console.log(`🔍 getQuestionsByStage: input="${stage}" → normalized="${normalizedStage}"`);
 
     const stageQuestions = this.curatedQuestions.filter(q => q.stage === normalizedStage);
+    console.log(`📊 Found ${stageQuestions.length} questions for stage "${normalizedStage}"`);
+
+    // Log first few Q# for debugging
+    if (stageQuestions.length > 0) {
+      const sampleQNumbers = stageQuestions.slice(0, 5).map(q => q.qNumber).join(', ');
+      console.log(`   Sample Q#: ${sampleQNumbers}`);
+    }
 
     if (count && count > 0) {
       return stageQuestions.slice(0, count);
