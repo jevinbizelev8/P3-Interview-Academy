@@ -2,6 +2,93 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚧 ACTIVE TASK - RESUME HERE (2025-10-08)
+
+### Current Work: PR #6 Model Answer Integration - Staging Testing
+
+**Status**: ⏸️ **PAUSED** - Critical blocker identified, ready to resume
+
+**What Was Completed**:
+1. ✅ Fixed staging environment (SESSION_SECRET, DATABASE_URL)
+2. ✅ Created comprehensive automated test suite (`test-staging-automated.js`)
+3. ✅ Ran 22 automated tests (45 minutes execution)
+4. ✅ Identified critical blocker: **Database migration not run**
+5. ✅ Generated detailed test report (`AUTOMATED_TEST_REPORT.md`)
+
+**Test Results**:
+- ✅ Infrastructure: 6/6 tests passed (100%)
+- ❌ Features: 0/16 tests passed (0%) - **BLOCKED by missing DB columns**
+- Overall: 6/22 passed (27.3%)
+
+**Critical Blocker Found**:
+```
+Error: column aiPrepareSessions_questions.csv_question_number does not exist
+Error: column aiPrepareSessions_questions.csv_question_stage does not exist
+Error: column aiPrepareSessions_questions.is_from_curated_bank does not exist
+```
+
+**Next Actions to Resume** (1-1.5 hours total):
+
+1. **Run Database Migration** (15 min) - **START HERE**
+   ```bash
+   # Connect to staging database
+   psql "postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
+
+   # Run migration (copy from AUTOMATED_TEST_REPORT.md or below)
+   ALTER TABLE ai_prepare_questions
+   ADD COLUMN IF NOT EXISTS csv_question_number INTEGER,
+   ADD COLUMN IF NOT EXISTS csv_question_stage VARCHAR(50),
+   ADD COLUMN IF NOT EXISTS is_from_curated_bank BOOLEAN DEFAULT false;
+
+   CREATE INDEX IF NOT EXISTS idx_csv_question_number
+   ON ai_prepare_questions(csv_question_number);
+
+   # Verify columns created
+   \d ai_prepare_questions
+   ```
+
+2. **Re-run Automated Tests** (10 min)
+   ```bash
+   node test-staging-automated.js
+   ```
+   Expected result: 22/22 tests pass (100%)
+
+3. **Verify Feature Metrics** (30 min)
+   - Check 80%+ questions from CSV bank
+   - Verify feedback conciseness (≤15 bullets)
+   - Confirm model answers are question-specific
+   - Test all 9-criteria scores working
+
+4. **Update PR #6** (10 min)
+   - Post test results to PR #6
+   - Attach `AUTOMATED_TEST_REPORT.md`
+   - Show before/after comparison
+   - Request production merge approval
+
+5. **Cleanup** (5 min)
+   - Disable BYPASS_AUTH in staging (if enabled)
+   - Update PRD with final completion status
+
+**Key Files to Reference**:
+- `AUTOMATED_TEST_REPORT.md` - Full test report with migration script
+- `test-staging-automated.js` - Reusable test script
+- `PRD_PREPARE_MODULE_MODEL_ANSWERS.md` - Phase 8.3.3 has next steps
+- `test-results.json` - Raw test data from last run
+
+**Database Credentials** (staging):
+- Host: `p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com`
+- Port: `5432`
+- Database: `postgres`
+- User: `app_user`
+- Password: `ZgVs0A8jEJurQezzkp37txtJ`
+
+**Staging Environment**:
+- URL: `http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com`
+- Status: Green/Ready
+- Version: `staging-20251008-043502`
+
+---
+
 ## 🚀 Current Status (2025-10-02)
 
 **✅ ALL SYSTEMS OPERATIONAL**: Practice module fix successfully deployed and verified

@@ -1,0 +1,119 @@
+{
+  "success": false,
+  "passed": 6,
+  "failed": 16,
+  "totalTests": 22,
+  "csvPercentage": null,
+  "tests": [
+    {
+      "name": "User signup successful",
+      "passed": true,
+      "details": "User ID: user-1759906288715-ue7cm20oj"
+    },
+    {
+      "name": "Health endpoint responding",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Database connection healthy",
+      "passed": true,
+      "details": "Response time: 2ms"
+    },
+    {
+      "name": "Create phone-screening session",
+      "passed": true,
+      "details": "Session ID: d4521d83-b897-435e-93f9-c66db7406fdf"
+    },
+    {
+      "name": "Generate question 1 for phone-screening",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 2 for phone-screening",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 3 for phone-screening",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 4 for phone-screening",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 5 for phone-screening",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Create hiring-manager session",
+      "passed": true,
+      "details": "Session ID: 019a232e-6c0b-42a3-9b78-c5b93f1935b7"
+    },
+    {
+      "name": "Generate question 1 for hiring-manager",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 2 for hiring-manager",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 3 for hiring-manager",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 4 for hiring-manager",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 5 for hiring-manager",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Create executive-leadership session",
+      "passed": true,
+      "details": "Session ID: 3573e45c-e1fc-44e5-80bc-984dee7806de"
+    },
+    {
+      "name": "Generate question 1 for executive-leadership",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 2 for executive-leadership",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 3 for executive-leadership",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 4 for executive-leadership",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "Generate question 5 for executive-leadership",
+      "passed": false,
+      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+    },
+    {
+      "name": "CSV question distribution",
+      "passed": false,
+      "details": "0/0 questions from CSV (NaN%, target: ≥80%)"
+    }
+  ]
+}

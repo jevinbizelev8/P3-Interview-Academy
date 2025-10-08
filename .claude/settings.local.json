@@ -113,7 +113,11 @@
       "WebFetch(domain:docs.google.com)",
       "WebFetch(domain:p3app.bizelev8.ai)",
       "WebFetch(domain:doc-0o-4s-sheets.googleusercontent.com)",
-      "Bash(npx vitest run:*)"
+      "Bash(npx vitest run:*)",
+      "Bash(cat:*)",
+      "Bash(LC_ALL=C grep -P '[\\x{2018}-\\x{201F}]')",
+      "Bash(python3:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "ask": []
