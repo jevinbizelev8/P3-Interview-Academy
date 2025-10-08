@@ -1,14 +1,14 @@
 {
   "success": false,
-  "passed": 27,
+  "passed": 28,
   "failed": 7,
-  "totalTests": 34,
+  "totalTests": 35,
   "csvPercentage": 26.666666666666668,
   "tests": [
     {
       "name": "User signup successful",
       "passed": true,
-      "details": "User ID: user-1759964957849-smi7cdqvk"
+      "details": "User ID: user-1759930438958-9dj9xhbt2"
     },
     {
       "name": "Health endpoint responding",
@@ -21,12 +21,17 @@
       "details": "Response time: 1ms"
     },
     {
-      "name": "Create phone-screening session",
+      "name": "Server recently restarted (CSV should be loaded)",
       "passed": true,
-      "details": "Session ID: 0f93f4bb-85a2-4a60-8976-9922cbe55fe5"
+      "details": "Uptime: 207s"
     },
     {
-      "name": "Question 1 from CSV (Q#14)",
+      "name": "Create phone-screening session",
+      "passed": true,
+      "details": "Session ID: 092f8566-794b-4b94-8b9b-356c5910d498"
+    },
+    {
+      "name": "Question 1 from CSV (Q#16)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
@@ -43,7 +48,7 @@
     {
       "name": "Model answer provided for phone-screening",
       "passed": true,
-      "details": "Length: \"I'm proficient with Jira and Trello for task tracking, Slack for quick communication, and I've cham..."
+      "details": "Length: \"I rely heavily on a priority matrix (Urgent/Important) and continuous communication. I start by cla..."
     },
     {
       "name": "Weighted score valid for phone-screening",
@@ -51,29 +56,29 @@
       "details": "Score: undefined/5 (undefined)"
     },
     {
-      "name": "Question 2 AI-generated",
+      "name": "Question 2 from CSV (Q#2)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Question 3 from CSV (Q#8)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Question 4 from CSV (Q#24)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Question 5 AI-generated",
       "passed": true,
       "details": "Not from CSV bank"
     },
     {
-      "name": "Question 3 from CSV (Q#5)",
-      "passed": true,
-      "details": "✅ In expected range 1-25"
-    },
-    {
-      "name": "Question 4 from CSV (Q#4)",
-      "passed": true,
-      "details": "✅ In expected range 1-25"
-    },
-    {
-      "name": "Question 5 from CSV (Q#23)",
-      "passed": true,
-      "details": "✅ In expected range 1-25"
-    },
-    {
       "name": "Create hiring-manager session",
       "passed": true,
-      "details": "Session ID: 767ffcab-1779-4ca6-b13b-29e3e051e327"
+      "details": "Session ID: 458b5e2a-57af-4b9f-98e1-99df0a2576a2"
     },
     {
       "name": "Question 1 AI-generated",
@@ -123,7 +128,7 @@
     {
       "name": "Create executive-leadership session",
       "passed": true,
-      "details": "Session ID: b8afd40e-86cb-4363-af53-cdef312a17ce"
+      "details": "Session ID: e34146b2-59cb-48e4-b694-d8bb04c94757"
     },
     {
       "name": "Question 1 AI-generated",

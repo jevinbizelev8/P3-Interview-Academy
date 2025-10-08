@@ -2,34 +2,62 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚧 ACTIVE TASK - RESUME HERE (2025-10-08)
+## 🚧 ACTIVE TASK - RESUME HERE (2025-10-08 23:08 UTC)
 
 ### Current Work: PR #6 Model Answer Integration - Staging Testing
 
-**Status**: ⏸️ **PAUSED** - Critical blocker identified, ready to resume
+**Status**: ⚠️ **PARTIAL SUCCESS** - CSV mapping issue found (50% complete)
 
 **What Was Completed**:
-1. ✅ Fixed staging environment (SESSION_SECRET, DATABASE_URL)
-2. ✅ Created comprehensive automated test suite (`test-staging-automated.js`)
-3. ✅ Ran 22 automated tests (45 minutes execution)
-4. ✅ Identified critical blocker: **Database migration not run**
-5. ✅ Generated detailed test report (`AUTOMATED_TEST_REPORT.md`)
+1. ✅ **Phase 0: Repository Organization (2025-10-08 23:05 UTC)**
+   - Created `MD_Documentations/` folder structure (PRDs/, Testing/, Progress/)
+   - Created `testing-scripts/` folder
+   - Moved all MD files to organized locations
+   - Moved all test scripts to `testing-scripts/`
+   - Created session continuity files (TESTING_PROGRESS.md, FRONTEND_TEST_RESULTS.md, STAGING_APPROVAL_CHECKLIST.md)
+2. ✅ **Phase 1: Database Migration (2025-10-08 23:06 UTC)**
+   - Connected to staging database
+   - Verified all CSV tracking columns exist (csv_question_number, csv_question_stage, is_from_curated_bank)
+   - Created indexes for performance
+   - Duration: 2 minutes
+3. ✅ **Phase 2: Automated Backend Testing (2025-10-08 23:07 UTC)**
+   - Ran comprehensive test suite (34 tests)
+   - **Results**: 27/34 passing (79.4%)
+   - Duration: 3 minutes
 
-**Test Results**:
-- ✅ Infrastructure: 6/6 tests passed (100%)
-- ❌ Features: 0/16 tests passed (0%) - **BLOCKED by missing DB columns**
-- Overall: 6/22 passed (27.3%)
+**Test Results Summary**:
+- ✅ Infrastructure: 4/4 passed (health, database, auth)
+- ✅ Session Creation: 3/3 passed (all stages working)
+- ✅ Question Generation: 15/15 passed (all questions generated)
+- ✅ Feedback Conciseness: 3/3 passed (6 bullets, target ≤15) 🎉
+- ✅ Model Answers: 3/3 passed (provided for all stages)
+- ❌ 9-Criteria Scores: 0/3 passed (undefined in API response)
+- ❌ Weighted Scores: 0/3 passed (undefined, related to 9-criteria)
+- ❌ CSV Distribution: **26.7%** (target: ≥80%) ⚠️
+- **Overall**: 27/34 passed (79.4%)
 
-**Critical Blocker Found**:
-```
-Error: column aiPrepareSessions_questions.csv_question_number does not exist
-Error: column aiPrepareSessions_questions.csv_question_stage does not exist
-Error: column aiPrepareSessions_questions.is_from_curated_bank does not exist
-```
+**Issues Found**:
 
-**Next Actions to Resume** (1-1.5 hours total):
+1. **⚠️ CSV Distribution Low (26.7%)**:
+   - Phone Screening: 4/5 from CSV (80%) ✅
+   - Hiring Manager: 0/5 from CSV (0%) ❌
+   - Executive Leadership: 0/5 from CSV (0%) ❌
+   - **Root Cause**: Stage mapping not finding questions for hiring-manager/executive-leadership
+   - **Impact**: Not meeting 80% CSV usage requirement
 
-1. **Run Database Migration** (15 min) - **START HERE**
+2. **❌ 9-Criteria Scores Missing**:
+   - API response not returning 9-criteria scores
+   - Weighted score undefined
+   - **Root Cause**: Unknown (might be test script issue or API response format)
+   - **Impact**: Test failures but feature may still work
+
+**Next Actions to Resume**:
+
+1. **Investigate CSV Stage Mapping Issue** (30 min) - **START HERE**
+   - Check server logs for CSV loading and stage normalization
+   - Verify hiring-manager and executive-leadership stage names
+   - Test stage mapping manually
+   - Review model-answer-service.ts normalizeStage() function
    ```bash
    # Connect to staging database
    psql "postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
@@ -49,7 +77,7 @@ Error: column aiPrepareSessions_questions.is_from_curated_bank does not exist
 
 2. **Re-run Automated Tests** (10 min)
    ```bash
-   node test-staging-automated.js
+   node testing-scripts/test-staging-automated.js
    ```
    Expected result: 22/22 tests pass (100%)
 
@@ -61,7 +89,7 @@ Error: column aiPrepareSessions_questions.is_from_curated_bank does not exist
 
 4. **Update PR #6** (10 min)
    - Post test results to PR #6
-   - Attach `AUTOMATED_TEST_REPORT.md`
+   - Attach `MD_Documentations/Testing/AUTOMATED_TEST_REPORT.md`
    - Show before/after comparison
    - Request production merge approval
 
@@ -70,10 +98,11 @@ Error: column aiPrepareSessions_questions.is_from_curated_bank does not exist
    - Update PRD with final completion status
 
 **Key Files to Reference**:
-- `AUTOMATED_TEST_REPORT.md` - Full test report with migration script
-- `test-staging-automated.js` - Reusable test script
-- `PRD_PREPARE_MODULE_MODEL_ANSWERS.md` - Phase 8.3.3 has next steps
-- `test-results.json` - Raw test data from last run
+- `MD_Documentations/Testing/AUTOMATED_TEST_REPORT.md` - Full test report with migration script
+- `MD_Documentations/Testing/TESTING_PROGRESS.md` - Real-time phase tracker with exact commands
+- `testing-scripts/test-staging-automated.js` - Reusable test script
+- `MD_Documentations/PRDs/PRD_PREPARE_MODULE_MODEL_ANSWERS.md` - Phase 8.3.3 has next steps
+- `testing-scripts/test-results.json` - Raw test data from last run
 
 **Database Credentials** (staging):
 - Host: `p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com`
@@ -86,6 +115,53 @@ Error: column aiPrepareSessions_questions.is_from_curated_bank does not exist
 - URL: `http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com`
 - Status: Green/Ready
 - Version: `staging-20251008-043502`
+
+---
+
+## 📁 Repository Organization Standards
+
+To maintain a clean and organized codebase, follow these folder structure guidelines:
+
+### Documentation Organization
+- **All PRDs** → `MD_Documentations/PRDs/`
+  - Example: `MD_Documentations/PRDs/PRD_PREPARE_MODULE_MODEL_ANSWERS.md`
+- **All testing/progress MD files** → `MD_Documentations/Testing/` or `MD_Documentations/Progress/`
+  - Testing documentation: `MD_Documentations/Testing/`
+  - Progress/resume instructions: `MD_Documentations/Progress/`
+- **Session continuity files** → `MD_Documentations/Testing/`
+  - `TESTING_PROGRESS.md` - Real-time phase tracker
+  - `FRONTEND_TEST_RESULTS.md` - Browser testing results
+  - `STAGING_APPROVAL_CHECKLIST.md` - Production readiness
+
+### Script Organization
+- **All testing scripts** → `testing-scripts/`
+  - Example: `testing-scripts/test-staging-automated.js`
+  - Test helpers: `testing-scripts/test-helpers/`
+  - Test results: `testing-scripts/test-results.json`
+- **All deployment scripts** → `deployment-scripts/` (already established)
+  - Full deployment: `deployment-scripts/full-deployment.sh`
+  - Environment setup: `deployment-scripts/setup-environment-variables.sh`
+
+### Organized Folder Structure
+```
+MD_Documentations/
+├── PRDs/                    # Product requirement documents
+├── Testing/                 # Test reports and checklists
+└── Progress/                # Resume instructions and session continuity
+
+testing-scripts/             # All test automation scripts
+├── test-helpers/            # Shared test utilities
+└── *.js                     # Test scripts
+
+deployment-scripts/          # Deployment automation (existing)
+└── *.sh                     # Deployment scripts
+```
+
+**When creating new documentation or scripts:**
+- Always create PRDs in `MD_Documentations/PRDs/`
+- Always create testing MD files in `MD_Documentations/Testing/`
+- Always create test scripts in `testing-scripts/`
+- Always create deployment scripts in `deployment-scripts/`
 
 ---
 

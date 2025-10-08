@@ -119,7 +119,8 @@
       "Bash(python3:*)",
       "Bash(tee:*)",
       "Bash(openssl rand:*)",
-      "Read(///**)"
+      "Read(///**)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []
