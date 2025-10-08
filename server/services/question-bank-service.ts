@@ -5,7 +5,7 @@ import { translationService } from "./translation-service";
 import type { SupportedLanguage } from "@shared/schema";
 import {
   normalizeStageName,
-  enforceStage Difficulty,
+  enforceStageDifficulty,
   getStageConstraints,
   isValidStageDifficulty,
   type InterviewStage
