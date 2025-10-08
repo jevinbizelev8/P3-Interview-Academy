@@ -202,7 +202,11 @@ export class PrepareAIService {
           culturalContext: questionData.culturalContext,
           questionNumber: currentQuestionNumber,
           starMethodRelevant: questionData.starMethodRelevant,
-          generatedBy: questionData.generatedBy
+          generatedBy: questionData.generatedBy,
+          // CSV Question Tracking
+          csvQuestionNumber: questionData.csvQuestionNumber || null,
+          csvQuestionStage: questionData.csvQuestionStage || null,
+          isFromCuratedBank: questionData.isFromCuratedBank || false
         })
         .returning();
 

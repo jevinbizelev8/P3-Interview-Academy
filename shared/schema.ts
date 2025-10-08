@@ -1233,10 +1233,15 @@ export const aiPrepareQuestions = pgTable("ai_prepare_questions", {
   attempts: integer("attempts").default(0),
   
   // AI Generation Info
-  generatedBy: varchar("generated_by", { length: 20 }).default("sealion"), // sealion, openai, fallback
+  generatedBy: varchar("generated_by", { length: 20 }).default("sealion"), // sealion, openai, fallback, curated
   generationPrompt: text("generation_prompt"),
   generationTimestamp: timestamp("generation_timestamp").defaultNow(),
-  
+
+  // CSV Question Tracking (Google Sheets integration)
+  csvQuestionNumber: integer("csv_question_number"), // Q# from Google Sheets (1-125)
+  csvQuestionStage: varchar("csv_question_stage", { length: 50 }), // phone-screening, functional-team, etc.
+  isFromCuratedBank: boolean("is_from_curated_bank").default(false), // true if from CSV, false if AI-generated
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 

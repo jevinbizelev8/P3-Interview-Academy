@@ -110,7 +110,10 @@
       "Bash(vite build)",
       "Bash(esbuild:*)",
       "Bash(npx esbuild:*)",
-      "WebFetch(domain:docs.google.com)"
+      "WebFetch(domain:docs.google.com)",
+      "WebFetch(domain:p3app.bizelev8.ai)",
+      "WebFetch(domain:doc-0o-4s-sheets.googleusercontent.com)",
+      "Bash(npx vitest run:*)"
     ],
     "deny": [],
     "ask": []
