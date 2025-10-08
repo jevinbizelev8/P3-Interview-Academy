@@ -20,9 +20,15 @@ export class ModelAnswerService {
     // Public Google Sheets CSV URL
     this.csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vT-Yg3A8ub3WQyjGsrrafCWYJf7t9cnuuMYpZxezfWrKjYztpfiLj2nW9OHXX0YJWMPsKgQQ18CYHXi/pub?gid=44685981&single=true&output=csv';
 
-    // Auto-load on startup (fire and forget)
-    this.fetchModelAnswers().catch(error => {
-      console.error('❌ Failed to load model answers on startup:', error);
+    // Auto-load on startup (fire and forget, with timeout to prevent blocking server startup)
+    const loadWithTimeout = Promise.race([
+      this.fetchModelAnswers(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('CSV load timeout after 5s')), 5000))
+    ]);
+
+    loadWithTimeout.catch(error => {
+      console.warn('⚠️ Model answers not loaded on startup (will retry on first use):', error.message);
+      // Service remains functional - will lazy-load on first question generation
     });
   }
 
