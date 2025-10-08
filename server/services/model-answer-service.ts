@@ -312,8 +312,8 @@ export class ModelAnswerService {
     const words2 = new Set(this.normalizeText(str2).split(/\s+/));
 
     // Calculate Jaccard similarity: intersection / union
-    const intersection = new Set([...words1].filter(word => words2.has(word)));
-    const union = new Set([...words1, ...words2]);
+    const intersection = new Set(Array.from(words1).filter(word => words2.has(word)));
+    const union = new Set([...Array.from(words1), ...Array.from(words2)]);
 
     return intersection.size / union.size;
   }
