@@ -120,7 +120,9 @@
       "Bash(tee:*)",
       "Bash(openssl rand:*)",
       "Read(///**)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []
