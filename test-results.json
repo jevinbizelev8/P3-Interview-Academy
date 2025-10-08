@@ -1,14 +1,14 @@
 {
   "success": false,
-  "passed": 6,
-  "failed": 16,
-  "totalTests": 22,
-  "csvPercentage": null,
+  "passed": 27,
+  "failed": 7,
+  "totalTests": 34,
+  "csvPercentage": 33.33333333333333,
   "tests": [
     {
       "name": "User signup successful",
       "passed": true,
-      "details": "User ID: user-1759906288715-ue7cm20oj"
+      "details": "User ID: user-1759928799356-folp4j9aw"
     },
     {
       "name": "Health endpoint responding",
@@ -18,102 +18,162 @@
     {
       "name": "Database connection healthy",
       "passed": true,
-      "details": "Response time: 2ms"
+      "details": "Response time: 1ms"
     },
     {
       "name": "Create phone-screening session",
       "passed": true,
-      "details": "Session ID: d4521d83-b897-435e-93f9-c66db7406fdf"
+      "details": "Session ID: fecc85cc-4f7b-422a-b1b9-54f145f0ac93"
     },
     {
-      "name": "Generate question 1 for phone-screening",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Question 1 from CSV (Q#21)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
     },
     {
-      "name": "Generate question 2 for phone-screening",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Feedback conciseness for phone-screening",
+      "passed": true,
+      "details": "6 bullets (target: ≤15) - Strengths: 2, Weaknesses: 1, Suggestions: 3"
     },
     {
-      "name": "Generate question 3 for phone-screening",
+      "name": "9-criteria scores present for phone-screening",
       "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "details": ""
     },
     {
-      "name": "Generate question 4 for phone-screening",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Model answer provided for phone-screening",
+      "passed": true,
+      "details": "Length: \"From my research, I understand your department is currently facing the challenge of [Challenge, e.g..."
     },
     {
-      "name": "Generate question 5 for phone-screening",
+      "name": "Weighted score valid for phone-screening",
       "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "details": "Score: undefined/5 (undefined)"
+    },
+    {
+      "name": "Question 2 from CSV (Q#24)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Question 3 from CSV (Q#15)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Question 4 from CSV (Q#12)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Question 5 from CSV (Q#20)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
     },
     {
       "name": "Create hiring-manager session",
       "passed": true,
-      "details": "Session ID: 019a232e-6c0b-42a3-9b78-c5b93f1935b7"
+      "details": "Session ID: ef8c5563-8d87-4777-aeea-fd277fe084ec"
     },
     {
-      "name": "Generate question 1 for hiring-manager",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Question 1 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
     },
     {
-      "name": "Generate question 2 for hiring-manager",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Feedback conciseness for hiring-manager",
+      "passed": true,
+      "details": "6 bullets (target: ≤15) - Strengths: 2, Weaknesses: 1, Suggestions: 3"
     },
     {
-      "name": "Generate question 3 for hiring-manager",
+      "name": "9-criteria scores present for hiring-manager",
       "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "details": ""
     },
     {
-      "name": "Generate question 4 for hiring-manager",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Model answer provided for hiring-manager",
+      "passed": true,
+      "details": "Length: **Situation:** I was leading a strategic marketing initiative that required coordination across mult..."
     },
     {
-      "name": "Generate question 5 for hiring-manager",
+      "name": "Weighted score valid for hiring-manager",
       "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "details": "Score: undefined/5 (undefined)"
+    },
+    {
+      "name": "Question 2 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 3 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 4 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 5 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
     },
     {
       "name": "Create executive-leadership session",
       "passed": true,
-      "details": "Session ID: 3573e45c-e1fc-44e5-80bc-984dee7806de"
+      "details": "Session ID: d45794a4-bc7c-4d18-baeb-1c23ea7a9d4f"
     },
     {
-      "name": "Generate question 1 for executive-leadership",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Question 1 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
     },
     {
-      "name": "Generate question 2 for executive-leadership",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Feedback conciseness for executive-leadership",
+      "passed": true,
+      "details": "6 bullets (target: ≤15) - Strengths: 2, Weaknesses: 1, Suggestions: 3"
     },
     {
-      "name": "Generate question 3 for executive-leadership",
+      "name": "9-criteria scores present for executive-leadership",
       "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "details": ""
     },
     {
-      "name": "Generate question 4 for executive-leadership",
-      "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "name": "Model answer provided for executive-leadership",
+      "passed": true,
+      "details": "Length: **Situation:** I was leading a strategic marketing initiative that required coordination across mult..."
     },
     {
-      "name": "Generate question 5 for executive-leadership",
+      "name": "Weighted score valid for executive-leadership",
       "passed": false,
-      "details": "Error: {\"error\":\"Failed to generate question\",\"message\":\"Failed to get session: column aiPrepareSessions_questions.csv_question_number does not exist\"}"
+      "details": "Score: undefined/5 (undefined)"
+    },
+    {
+      "name": "Question 2 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 3 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 4 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 5 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
     },
     {
       "name": "CSV question distribution",
       "passed": false,
-      "details": "0/0 questions from CSV (NaN%, target: ≥80%)"
+      "details": "5/15 questions from CSV (33.3%, target: ≥80%)"
     }
   ]
 }

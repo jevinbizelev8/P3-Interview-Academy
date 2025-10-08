@@ -23,7 +23,7 @@ export class ModelAnswerService {
     // Auto-load on startup (fire and forget, with timeout to prevent blocking server startup)
     const loadWithTimeout = Promise.race([
       this.fetchModelAnswers(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('CSV load timeout after 5s')), 5000))
+      new Promise((_, reject) => setTimeout(() => reject(new Error('CSV load timeout after 15s')), 15000))
     ]);
 
     loadWithTimeout.catch(error => {
