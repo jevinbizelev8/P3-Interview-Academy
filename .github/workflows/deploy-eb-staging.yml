@@ -100,9 +100,10 @@ jobs:
           cp vite.config.ts deployment-bundle/
           cp postcss.config.js deployment-bundle/ || echo "No postcss.config.js"
 
-          # Copy built static assets
-          mkdir -p deployment-bundle/dist/public
-          cp -r dist/public/* deployment-bundle/dist/public/ || echo "No static assets"
+          # Copy ALL built artifacts (backend + frontend)
+          mkdir -p deployment-bundle/dist
+          cp dist/index.js deployment-bundle/dist/ || { echo "ERROR: Backend build missing!"; exit 1; }
+          cp -r dist/public deployment-bundle/dist/ || { echo "ERROR: Frontend build missing!"; exit 1; }
 
           # Create deployment zip
           (cd deployment-bundle && zip -r "../$BUNDLE_NAME" . -q)
