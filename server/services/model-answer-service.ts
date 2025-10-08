@@ -91,35 +91,57 @@ export class ModelAnswerService {
   private parseCSV(csvData: string): CuratedQuestion[] {
     const lines = csvData.split('\n').filter(line => line.trim());
     const questions: CuratedQuestion[] = [];
+    let currentSection = 0; // Track current section (0-4 for sections 1-5)
 
-    // Skip header row (Q#,Question,Focus Area,Guided Model Answer Framework)
-    for (let i = 1; i < lines.length; i++) {
+    // Section headers: "1. First Phone Screening", "2. Functional Team", etc.
+    const sectionHeaderPattern = /^(\d+)\.\s+/;
+
+    for (let i = 0; i < lines.length; i++) {
       try {
         const line = lines[i];
+
+        // Check for section header
+        const headerMatch = line.match(sectionHeaderPattern);
+        if (headerMatch) {
+          currentSection = parseInt(headerMatch[1]) - 1; // Convert to 0-indexed
+          console.log(`📂 Section ${currentSection + 1} detected: ${line.substring(0, 50)}...`);
+          continue;
+        }
+
+        // Skip header rows (Q#,Question,Focus Area,...)
+        if (line.startsWith('Q#,')) {
+          continue;
+        }
 
         // Handle CSV parsing with proper quote handling
         const fields = this.parseCSVLine(line);
 
         if (fields.length < 4) {
-          console.warn(`⚠️ Skipping malformed line ${i}: ${line.substring(0, 50)}...`);
-          continue;
+          continue; // Skip empty/malformed lines silently
         }
 
-        const qNumber = parseInt(fields[0].trim());
-        if (isNaN(qNumber)) {
-          console.warn(`⚠️ Skipping line with invalid Q#: ${fields[0]}`);
-          continue;
+        const localQNumber = parseInt(fields[0].trim());
+        if (isNaN(localQNumber)) {
+          continue; // Skip non-question lines
         }
+
+        // Calculate global Q# based on section
+        // Section 0 (Phone): Q#1-25 → global 1-25
+        // Section 1 (Functional): Q#1-25 → global 26-50
+        // Section 2 (Hiring Manager): Q#1-25 → global 51-75
+        // Section 3 (SME): Q#1-25 → global 76-100
+        // Section 4 (Executive): Q#1-25 → global 101-125
+        const globalQNumber = (currentSection * 25) + localQNumber;
 
         const question = fields[1].trim();
         const focusArea = fields[2].trim();
         const modelAnswer = fields[3].trim();
 
         // Map question number to stage
-        const { stage, stageNumber } = this.mapQuestionToStage(qNumber);
+        const { stage, stageNumber } = this.mapQuestionToStage(globalQNumber);
 
         questions.push({
-          qNumber,
+          qNumber: globalQNumber,
           question,
           focusArea,
           modelAnswer,
@@ -133,6 +155,7 @@ export class ModelAnswerService {
       }
     }
 
+    console.log(`✅ Parsed ${questions.length} total questions from CSV`);
     return questions.sort((a, b) => a.qNumber - b.qNumber);
   }
 
