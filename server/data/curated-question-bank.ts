@@ -295,7 +295,7 @@ export const STAGE_3_QUESTIONS: CuratedQuestion[] = [
     id: 'curated-3-006',
     stage: 3,
     stageName: 'hiring-manager',
-    question: 'Describe a time when you disagreed with your manager's approach. How did you handle it?',
+    question: "Describe a time when you disagreed with your manager's approach. How did you handle it?",
     difficulty: 'advanced',
     category: 'behavioral',
     starMethodRelevant: true,
