@@ -1,0 +1,5 @@
+[mcp_servers.chrome-devtools]
+command = 'C:\Users\User\.codex\chrome-devtools-mcp-wrapper.bat'
+args = []
+env = { SystemRoot="C:\\Windows" }
+startup_timeout_ms = 20_000
