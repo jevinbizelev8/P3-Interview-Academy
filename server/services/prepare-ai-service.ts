@@ -337,18 +337,18 @@ export class PrepareAIService {
         detailedFeedback: dbResponse.detailed_feedback,
         modelAnswer: dbResponse.model_answer,
         modelAnswerTranslated: dbResponse.model_answer_translated,
-        relevanceScore: dbResponse.relevance_score ? parseFloat(dbResponse.relevance_score) : undefined,
-        starStructureScore: dbResponse.star_structure_score ? parseFloat(dbResponse.star_structure_score) : undefined,
-        specificEvidenceScore: dbResponse.specific_evidence_score ? parseFloat(dbResponse.specific_evidence_score) : undefined,
-        roleAlignmentScore: dbResponse.role_alignment_score ? parseFloat(dbResponse.role_alignment_score) : undefined,
-        outcomeOrientedScore: dbResponse.outcome_oriented_score ? parseFloat(dbResponse.outcome_oriented_score) : undefined,
-        communicationScore: dbResponse.communication_score ? parseFloat(dbResponse.communication_score) : undefined,
-        problemSolvingScore: dbResponse.problem_solving_score ? parseFloat(dbResponse.problem_solving_score) : undefined,
-        culturalFitScore: dbResponse.cultural_fit_score ? parseFloat(dbResponse.cultural_fit_score) : undefined,
-        learningAgilityScore: dbResponse.learning_agility_score ? parseFloat(dbResponse.learning_agility_score) : undefined,
-        weightedOverallScore: dbResponse.weighted_overall_score ? parseFloat(dbResponse.weighted_overall_score) : undefined,
+        relevanceScore: dbResponse.relevance_score ? parseFloat(dbResponse.relevance_score) : null,
+        starStructureScore: dbResponse.star_structure_score ? parseFloat(dbResponse.star_structure_score) : null,
+        specificEvidenceScore: dbResponse.specific_evidence_score ? parseFloat(dbResponse.specific_evidence_score) : null,
+        roleAlignmentScore: dbResponse.role_alignment_score ? parseFloat(dbResponse.role_alignment_score) : null,
+        outcomeOrientedScore: dbResponse.outcome_oriented_score ? parseFloat(dbResponse.outcome_oriented_score) : null,
+        communicationScore: dbResponse.communication_score ? parseFloat(dbResponse.communication_score) : null,
+        problemSolvingScore: dbResponse.problem_solving_score ? parseFloat(dbResponse.problem_solving_score) : null,
+        culturalFitScore: dbResponse.cultural_fit_score ? parseFloat(dbResponse.cultural_fit_score) : null,
+        learningAgilityScore: dbResponse.learning_agility_score ? parseFloat(dbResponse.learning_agility_score) : null,
+        weightedOverallScore: dbResponse.weighted_overall_score ? parseFloat(dbResponse.weighted_overall_score) : null,
         overallRating: dbResponse.overall_rating,
-        completenessScore: dbResponse.completeness_score ? parseFloat(dbResponse.completeness_score) : undefined,
+        completenessScore: dbResponse.completeness_score ? parseFloat(dbResponse.completeness_score) : null,
         improvementAreas: dbResponse.improvement_areas,
         evaluatedBy: dbResponse.evaluated_by,
         evaluationTimestamp: dbResponse.evaluation_timestamp,
@@ -358,7 +358,7 @@ export class PrepareAIService {
         retryCount: dbResponse.retry_count,
         createdAt: dbResponse.created_at,
         updatedAt: dbResponse.updated_at
-      } as AiPrepareResponse;
+      } as any;
 
       // Update session progress
       await this.updateSessionProgress(sessionId);
