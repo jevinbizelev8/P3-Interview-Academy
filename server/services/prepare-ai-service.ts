@@ -2,9 +2,9 @@
 // Main orchestration service for AI-driven interview preparation sessions
 
 import { db } from "../db.js";
-import { 
-  aiPrepareSessions, 
-  aiPrepareQuestions, 
+import {
+  aiPrepareSessions,
+  aiPrepareQuestions,
   aiPrepareResponses,
   type InsertAiPrepareSession,
   type AiPrepareSession,
@@ -13,7 +13,7 @@ import {
   type InsertAiPrepareResponse,
   type AiPrepareResponse
 } from "../../shared/schema.js";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { AIQuestionGenerator } from "./ai-question-generator.js";
 import { ResponseEvaluationService } from "./response-evaluation-service.js";
 
@@ -280,49 +280,45 @@ export class PrepareAIService {
       const toNumericString = (val: number | undefined): string | null =>
         val !== undefined ? val.toString() : null;
 
-      // Prepare response data
-      // NOTE: Using 'as any' to bypass Drizzle ORM type inference issue with 9-criteria fields
-      // The fields exist in the database schema but aren't included in the inferred InsertAiPrepareResponse type
-      const responseData_insert = {
-        sessionId,
-        questionId,
-        responseText,
-        responseLanguage: responseData.responseLanguage || session.preferredLanguage,
-        inputMethod: responseData.inputMethod || 'text',
-        audioDuration: responseData.audioDuration,
-        transcriptionConfidence: responseData.transcriptionConfidence,
-
-        // Legacy STAR scores (for backward compatibility)
-        starScores: evaluation.starScores,
-        detailedFeedback: evaluation.detailedFeedback,
-        modelAnswer: evaluation.modelAnswer,
-
-        // 9-Criteria Official Rubric Scores (matching Google Sheets rubric)
-        relevanceScore: toNumericString(evaluation.relevanceScore),
-        starStructureScore: toNumericString(evaluation.starStructureScore),
-        specificEvidenceScore: toNumericString(evaluation.specificEvidenceScore),
-        roleAlignmentScore: toNumericString(evaluation.roleAlignmentScore),
-        outcomeOrientedScore: toNumericString(evaluation.outcomeOrientedScore),
-        communicationScore: toNumericString(evaluation.communicationScore),
-        problemSolvingScore: toNumericString(evaluation.problemSolvingScore),
-        culturalFitScore: toNumericString(evaluation.culturalFitScore),
-        learningAgilityScore: toNumericString(evaluation.learningAgilityScore),
-
-        // Weighted Score and Rating (calculated by evaluation service)
-        weightedOverallScore: toNumericString(evaluation.weightedOverallScore),
-        overallRating: evaluation.overallRating || null,
-
-        // Metadata
-        completenessScore: toNumericString(evaluation.completenessScore),
-        timeTaken: Math.floor(evaluationTime / 1000),
-        wordCount,
-        evaluatedBy: evaluation.evaluatedBy
-      } as any;
-
-      // Insert response with evaluation
-      const [response] = await db.insert(aiPrepareResponses)
-        .values(responseData_insert)
-        .returning();
+      // Use raw SQL insert to bypass Drizzle ORM type inference issues
+      // This ensures all 9-criteria score columns are properly inserted
+      const [response] = await db.execute<AiPrepareResponse>(sql`
+        INSERT INTO ai_prepare_responses (
+          session_id, question_id, response_text, response_language, input_method,
+          audio_duration, transcription_confidence,
+          star_scores, detailed_feedback, model_answer,
+          relevance_score, star_structure_score, specific_evidence_score,
+          role_alignment_score, outcome_oriented_score, communication_score,
+          problem_solving_score, cultural_fit_score, learning_agility_score,
+          weighted_overall_score, overall_rating,
+          completeness_score, time_taken, word_count, evaluated_by
+        ) VALUES (
+          ${sessionId}, ${questionId}, ${responseText},
+          ${responseData.responseLanguage || session.preferredLanguage},
+          ${responseData.inputMethod || 'text'},
+          ${responseData.audioDuration || null},
+          ${responseData.transcriptionConfidence || null},
+          ${JSON.stringify(evaluation.starScores)},
+          ${JSON.stringify(evaluation.detailedFeedback)},
+          ${evaluation.modelAnswer || null},
+          ${toNumericString(evaluation.relevanceScore)},
+          ${toNumericString(evaluation.starStructureScore)},
+          ${toNumericString(evaluation.specificEvidenceScore)},
+          ${toNumericString(evaluation.roleAlignmentScore)},
+          ${toNumericString(evaluation.outcomeOrientedScore)},
+          ${toNumericString(evaluation.communicationScore)},
+          ${toNumericString(evaluation.problemSolvingScore)},
+          ${toNumericString(evaluation.culturalFitScore)},
+          ${toNumericString(evaluation.learningAgilityScore)},
+          ${toNumericString(evaluation.weightedOverallScore)},
+          ${evaluation.overallRating || null},
+          ${toNumericString(evaluation.completenessScore)},
+          ${Math.floor(evaluationTime / 1000)},
+          ${wordCount},
+          ${evaluation.evaluatedBy}
+        )
+        RETURNING *
+      `) as any[];
 
       // Update session progress
       await this.updateSessionProgress(sessionId);
