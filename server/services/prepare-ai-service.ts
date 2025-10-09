@@ -349,9 +349,13 @@ export class PrepareAIService {
         weightedOverallScore: dbResponse.weighted_overall_score ? parseFloat(dbResponse.weighted_overall_score) : undefined,
         overallRating: dbResponse.overall_rating,
         completenessScore: dbResponse.completeness_score ? parseFloat(dbResponse.completeness_score) : undefined,
+        improvementAreas: dbResponse.improvement_areas,
+        evaluatedBy: dbResponse.evaluated_by,
+        evaluationTimestamp: dbResponse.evaluation_timestamp,
+        evaluationDuration: dbResponse.evaluation_duration,
         timeTaken: dbResponse.time_taken,
         wordCount: dbResponse.word_count,
-        evaluatedBy: dbResponse.evaluated_by,
+        retryCount: dbResponse.retry_count,
         createdAt: dbResponse.created_at,
         updatedAt: dbResponse.updated_at
       } as AiPrepareResponse;
