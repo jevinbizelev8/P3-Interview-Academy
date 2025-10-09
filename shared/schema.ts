@@ -1259,10 +1259,15 @@ export const aiPrepareQuestions = pgTable("ai_prepare_questions", {
   attempts: integer("attempts").default(0),
   
   // AI Generation Info
-  generatedBy: varchar("generated_by", { length: 20 }).default("sealion"), // sealion, openai, fallback
+  generatedBy: varchar("generated_by", { length: 20 }).default("sealion"), // sealion, openai, fallback, curated
   generationPrompt: text("generation_prompt"),
   generationTimestamp: timestamp("generation_timestamp").defaultNow(),
-  
+
+  // CSV Question Tracking (Google Sheets integration)
+  csvQuestionNumber: integer("csv_question_number"), // Q# from Google Sheets (1-125)
+  csvQuestionStage: varchar("csv_question_stage", { length: 50 }), // phone-screening, functional-team, etc.
+  isFromCuratedBank: boolean("is_from_curated_bank").default(false), // true if from CSV, false if AI-generated
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -1292,6 +1297,21 @@ export const aiPrepareResponses = pgTable("ai_prepare_responses", {
   relevanceScore: numeric("relevance_score", { precision: 3, scale: 2 }),
   communicationScore: numeric("communication_score", { precision: 3, scale: 2 }),
   completenessScore: numeric("completeness_score", { precision: 3, scale: 2 }),
+
+  // 9-Criteria Official Rubric Scores (1-5 scale) - Google Sheets Integration
+  // Rubric: https://docs.google.com/spreadsheets/d/e/2PACX-1vQlowLLYOvBywNMirisORd1rDOcNVsCzF61nUa5sty2y7EXF_ix8XhvaEe5vx5llYPaIYGnQPvcC8o_/pub?output=csv
+  starStructureScore: numeric("star_structure_score", { precision: 3, scale: 2 }), // 15% weight
+  specificEvidenceScore: numeric("specific_evidence_score", { precision: 3, scale: 2 }), // 15% weight
+  roleAlignmentScore: numeric("role_alignment_score", { precision: 3, scale: 2 }), // 15% weight
+  outcomeOrientedScore: numeric("outcome_oriented_score", { precision: 3, scale: 2 }), // 15% weight
+  problemSolvingScore: numeric("problem_solving_score", { precision: 3, scale: 2 }), // 10% weight
+  culturalFitScore: numeric("cultural_fit_score", { precision: 3, scale: 2 }), // 5% weight
+  learningAgilityScore: numeric("learning_agility_score", { precision: 3, scale: 2 }), // 5% weight
+
+  // Calculated Weighted Scores
+  weightedOverallScore: numeric("weighted_overall_score", { precision: 3, scale: 2 }), // Weighted average (1-5)
+  overallRating: varchar("overall_rating", { length: 30 }), // Pass/Borderline/Needs Improvement
+
   improvementAreas: jsonb("improvement_areas").default("[]"),
   
   // Evaluation Metadata
