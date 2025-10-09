@@ -260,6 +260,22 @@ export class PrepareAIService {
       const evaluationTime = Date.now() - startTime;
       const wordCount = responseText.split(/\s+/).length;
 
+      // Debug logging for 9-criteria scores
+      console.log('🔍 Evaluation scores received:', {
+        relevanceScore: evaluation.relevanceScore,
+        starStructureScore: evaluation.starStructureScore,
+        specificEvidenceScore: evaluation.specificEvidenceScore,
+        roleAlignmentScore: evaluation.roleAlignmentScore,
+        outcomeOrientedScore: evaluation.outcomeOrientedScore,
+        communicationScore: evaluation.communicationScore,
+        problemSolvingScore: evaluation.problemSolvingScore,
+        culturalFitScore: evaluation.culturalFitScore,
+        learningAgilityScore: evaluation.learningAgilityScore,
+        weightedOverallScore: evaluation.weightedOverallScore,
+        overallRating: evaluation.overallRating,
+        evaluatedBy: evaluation.evaluatedBy
+      });
+
       // Insert response with evaluation
       const [response] = await db.insert(aiPrepareResponses)
         .values({
@@ -270,12 +286,29 @@ export class PrepareAIService {
           inputMethod: responseData.inputMethod || 'text',
           audioDuration: responseData.audioDuration,
           transcriptionConfidence: responseData.transcriptionConfidence,
+
+          // Legacy STAR scores (for backward compatibility)
           starScores: evaluation.starScores,
           detailedFeedback: evaluation.detailedFeedback,
           modelAnswer: evaluation.modelAnswer,
-          relevanceScore: evaluation.relevanceScore.toString(),
-          communicationScore: evaluation.communicationScore.toString(),
-          completenessScore: evaluation.completenessScore.toString(),
+
+          // 9-Criteria Official Rubric Scores (matching Google Sheets rubric)
+          relevanceScore: evaluation.relevanceScore?.toString() ?? null,
+          starStructureScore: evaluation.starStructureScore?.toString() ?? null,
+          specificEvidenceScore: evaluation.specificEvidenceScore?.toString() ?? null,
+          roleAlignmentScore: evaluation.roleAlignmentScore?.toString() ?? null,
+          outcomeOrientedScore: evaluation.outcomeOrientedScore?.toString() ?? null,
+          communicationScore: evaluation.communicationScore?.toString() ?? null,
+          problemSolvingScore: evaluation.problemSolvingScore?.toString() ?? null,
+          culturalFitScore: evaluation.culturalFitScore?.toString() ?? null,
+          learningAgilityScore: evaluation.learningAgilityScore?.toString() ?? null,
+
+          // Weighted Score and Rating (calculated by evaluation service)
+          weightedOverallScore: evaluation.weightedOverallScore?.toString() ?? null,
+          overallRating: evaluation.overallRating ?? null,
+
+          // Metadata
+          completenessScore: evaluation.completenessScore?.toString() ?? null,
           timeTaken: Math.floor(evaluationTime / 1000),
           wordCount,
           evaluatedBy: evaluation.evaluatedBy
