@@ -320,7 +320,41 @@ export class PrepareAIService {
         RETURNING *
       `) as any;
 
-      const response = (result.rows?.[0] || result[0]) as AiPrepareResponse;
+      const dbResponse = (result.rows?.[0] || result[0]) as any;
+
+      // Map snake_case database columns to camelCase for API response
+      const response = {
+        id: dbResponse.id,
+        sessionId: dbResponse.session_id,
+        questionId: dbResponse.question_id,
+        responseText: dbResponse.response_text,
+        responseLanguage: dbResponse.response_language,
+        inputMethod: dbResponse.input_method,
+        audioFileUrl: dbResponse.audio_file_url,
+        audioDuration: dbResponse.audio_duration,
+        transcriptionConfidence: dbResponse.transcription_confidence,
+        starScores: dbResponse.star_scores,
+        detailedFeedback: dbResponse.detailed_feedback,
+        modelAnswer: dbResponse.model_answer,
+        modelAnswerTranslated: dbResponse.model_answer_translated,
+        relevanceScore: dbResponse.relevance_score ? parseFloat(dbResponse.relevance_score) : undefined,
+        starStructureScore: dbResponse.star_structure_score ? parseFloat(dbResponse.star_structure_score) : undefined,
+        specificEvidenceScore: dbResponse.specific_evidence_score ? parseFloat(dbResponse.specific_evidence_score) : undefined,
+        roleAlignmentScore: dbResponse.role_alignment_score ? parseFloat(dbResponse.role_alignment_score) : undefined,
+        outcomeOrientedScore: dbResponse.outcome_oriented_score ? parseFloat(dbResponse.outcome_oriented_score) : undefined,
+        communicationScore: dbResponse.communication_score ? parseFloat(dbResponse.communication_score) : undefined,
+        problemSolvingScore: dbResponse.problem_solving_score ? parseFloat(dbResponse.problem_solving_score) : undefined,
+        culturalFitScore: dbResponse.cultural_fit_score ? parseFloat(dbResponse.cultural_fit_score) : undefined,
+        learningAgilityScore: dbResponse.learning_agility_score ? parseFloat(dbResponse.learning_agility_score) : undefined,
+        weightedOverallScore: dbResponse.weighted_overall_score ? parseFloat(dbResponse.weighted_overall_score) : undefined,
+        overallRating: dbResponse.overall_rating,
+        completenessScore: dbResponse.completeness_score ? parseFloat(dbResponse.completeness_score) : undefined,
+        timeTaken: dbResponse.time_taken,
+        wordCount: dbResponse.word_count,
+        evaluatedBy: dbResponse.evaluated_by,
+        createdAt: dbResponse.created_at,
+        updatedAt: dbResponse.updated_at
+      } as AiPrepareResponse;
 
       // Update session progress
       await this.updateSessionProgress(sessionId);
