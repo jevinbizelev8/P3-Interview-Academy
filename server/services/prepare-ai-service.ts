@@ -280,43 +280,46 @@ export class PrepareAIService {
       const toNumericString = (val: number | undefined): string | null =>
         val !== undefined ? val.toString() : null;
 
+      // Prepare response data with explicit typing to satisfy Drizzle ORM
+      const responseData_insert: InsertAiPrepareResponse = {
+        sessionId,
+        questionId,
+        responseText,
+        responseLanguage: responseData.responseLanguage || session.preferredLanguage,
+        inputMethod: responseData.inputMethod || 'text',
+        audioDuration: responseData.audioDuration,
+        transcriptionConfidence: responseData.transcriptionConfidence,
+
+        // Legacy STAR scores (for backward compatibility)
+        starScores: evaluation.starScores,
+        detailedFeedback: evaluation.detailedFeedback,
+        modelAnswer: evaluation.modelAnswer,
+
+        // 9-Criteria Official Rubric Scores (matching Google Sheets rubric)
+        relevanceScore: toNumericString(evaluation.relevanceScore),
+        starStructureScore: toNumericString(evaluation.starStructureScore),
+        specificEvidenceScore: toNumericString(evaluation.specificEvidenceScore),
+        roleAlignmentScore: toNumericString(evaluation.roleAlignmentScore),
+        outcomeOrientedScore: toNumericString(evaluation.outcomeOrientedScore),
+        communicationScore: toNumericString(evaluation.communicationScore),
+        problemSolvingScore: toNumericString(evaluation.problemSolvingScore),
+        culturalFitScore: toNumericString(evaluation.culturalFitScore),
+        learningAgilityScore: toNumericString(evaluation.learningAgilityScore),
+
+        // Weighted Score and Rating (calculated by evaluation service)
+        weightedOverallScore: toNumericString(evaluation.weightedOverallScore),
+        overallRating: evaluation.overallRating || null,
+
+        // Metadata
+        completenessScore: toNumericString(evaluation.completenessScore),
+        timeTaken: Math.floor(evaluationTime / 1000),
+        wordCount,
+        evaluatedBy: evaluation.evaluatedBy
+      };
+
       // Insert response with evaluation
       const [response] = await db.insert(aiPrepareResponses)
-        .values({
-          sessionId,
-          questionId,
-          responseText,
-          responseLanguage: responseData.responseLanguage || session.preferredLanguage,
-          inputMethod: responseData.inputMethod || 'text',
-          audioDuration: responseData.audioDuration,
-          transcriptionConfidence: responseData.transcriptionConfidence,
-
-          // Legacy STAR scores (for backward compatibility)
-          starScores: evaluation.starScores,
-          detailedFeedback: evaluation.detailedFeedback,
-          modelAnswer: evaluation.modelAnswer,
-
-          // 9-Criteria Official Rubric Scores (matching Google Sheets rubric)
-          relevanceScore: toNumericString(evaluation.relevanceScore),
-          starStructureScore: toNumericString(evaluation.starStructureScore),
-          specificEvidenceScore: toNumericString(evaluation.specificEvidenceScore),
-          roleAlignmentScore: toNumericString(evaluation.roleAlignmentScore),
-          outcomeOrientedScore: toNumericString(evaluation.outcomeOrientedScore),
-          communicationScore: toNumericString(evaluation.communicationScore),
-          problemSolvingScore: toNumericString(evaluation.problemSolvingScore),
-          culturalFitScore: toNumericString(evaluation.culturalFitScore),
-          learningAgilityScore: toNumericString(evaluation.learningAgilityScore),
-
-          // Weighted Score and Rating (calculated by evaluation service)
-          weightedOverallScore: toNumericString(evaluation.weightedOverallScore),
-          overallRating: evaluation.overallRating || null,
-
-          // Metadata
-          completenessScore: toNumericString(evaluation.completenessScore),
-          timeTaken: Math.floor(evaluationTime / 1000),
-          wordCount,
-          evaluatedBy: evaluation.evaluatedBy
-        })
+        .values(responseData_insert)
         .returning();
 
       // Update session progress
