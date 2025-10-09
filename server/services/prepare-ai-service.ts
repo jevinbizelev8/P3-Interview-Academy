@@ -276,6 +276,10 @@ export class PrepareAIService {
         evaluatedBy: evaluation.evaluatedBy
       });
 
+      // Helper function to safely convert numbers to strings for database
+      const toNumericString = (val: number | undefined): string | null =>
+        val !== undefined ? val.toString() : null;
+
       // Insert response with evaluation
       const [response] = await db.insert(aiPrepareResponses)
         .values({
@@ -293,22 +297,22 @@ export class PrepareAIService {
           modelAnswer: evaluation.modelAnswer,
 
           // 9-Criteria Official Rubric Scores (matching Google Sheets rubric)
-          relevanceScore: evaluation.relevanceScore?.toString() ?? null,
-          starStructureScore: evaluation.starStructureScore?.toString() ?? null,
-          specificEvidenceScore: evaluation.specificEvidenceScore?.toString() ?? null,
-          roleAlignmentScore: evaluation.roleAlignmentScore?.toString() ?? null,
-          outcomeOrientedScore: evaluation.outcomeOrientedScore?.toString() ?? null,
-          communicationScore: evaluation.communicationScore?.toString() ?? null,
-          problemSolvingScore: evaluation.problemSolvingScore?.toString() ?? null,
-          culturalFitScore: evaluation.culturalFitScore?.toString() ?? null,
-          learningAgilityScore: evaluation.learningAgilityScore?.toString() ?? null,
+          relevanceScore: toNumericString(evaluation.relevanceScore),
+          starStructureScore: toNumericString(evaluation.starStructureScore),
+          specificEvidenceScore: toNumericString(evaluation.specificEvidenceScore),
+          roleAlignmentScore: toNumericString(evaluation.roleAlignmentScore),
+          outcomeOrientedScore: toNumericString(evaluation.outcomeOrientedScore),
+          communicationScore: toNumericString(evaluation.communicationScore),
+          problemSolvingScore: toNumericString(evaluation.problemSolvingScore),
+          culturalFitScore: toNumericString(evaluation.culturalFitScore),
+          learningAgilityScore: toNumericString(evaluation.learningAgilityScore),
 
           // Weighted Score and Rating (calculated by evaluation service)
-          weightedOverallScore: evaluation.weightedOverallScore?.toString() ?? null,
-          overallRating: evaluation.overallRating ?? null,
+          weightedOverallScore: toNumericString(evaluation.weightedOverallScore),
+          overallRating: evaluation.overallRating || null,
 
           // Metadata
-          completenessScore: evaluation.completenessScore?.toString() ?? null,
+          completenessScore: toNumericString(evaluation.completenessScore),
           timeTaken: Math.floor(evaluationTime / 1000),
           wordCount,
           evaluatedBy: evaluation.evaluatedBy
