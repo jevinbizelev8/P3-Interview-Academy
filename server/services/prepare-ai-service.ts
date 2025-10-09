@@ -282,7 +282,7 @@ export class PrepareAIService {
 
       // Use raw SQL insert to bypass Drizzle ORM type inference issues
       // This ensures all 9-criteria score columns are properly inserted
-      const [response] = await db.execute<AiPrepareResponse>(sql`
+      const result = await db.execute<AiPrepareResponse>(sql`
         INSERT INTO ai_prepare_responses (
           session_id, question_id, response_text, response_language, input_method,
           audio_duration, transcription_confidence,
@@ -318,7 +318,9 @@ export class PrepareAIService {
           ${evaluation.evaluatedBy}
         )
         RETURNING *
-      `) as any[];
+      `) as any;
+
+      const response = (result.rows?.[0] || result[0]) as AiPrepareResponse;
 
       // Update session progress
       await this.updateSessionProgress(sessionId);
