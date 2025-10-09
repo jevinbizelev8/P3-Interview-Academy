@@ -2,183 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚧 ACTIVE TASK - RESUME HERE (2025-10-08 23:31 UTC)
+## 🚀 Current Status (2025-10-04)
 
-### Current Work: PR #6 Model Answer Integration - Staging Testing
-
-**Status**: ✅ **PHASE 1-2 COMPLETE** - CSV fix deployed, 86.7% CSV usage achieved! (50% complete)
-
-**What Was Completed**:
-1. ✅ **Phase 0: Repository Organization (2025-10-08 23:05 UTC)**
-   - Created `MD_Documentations/` folder structure (PRDs/, Testing/, Progress/)
-   - Created `testing-scripts/` folder
-   - Moved all MD files to organized locations
-   - Moved all test scripts to `testing-scripts/`
-   - Created session continuity files (TESTING_PROGRESS.md, FRONTEND_TEST_RESULTS.md, STAGING_APPROVAL_CHECKLIST.md)
-2. ✅ **Phase 1: Database Migration (2025-10-08 23:06 UTC)**
-   - Connected to staging database
-   - Verified all CSV tracking columns exist (csv_question_number, csv_question_stage, is_from_curated_bank)
-   - Created indexes for performance
-   - Duration: 2 minutes
-3. ✅ **Phase 2: Automated Backend Testing (2025-10-08 23:07 UTC)**
-   - Ran comprehensive test suite (34 tests)
-   - **Results**: 27/34 passing (79.4%)
-   - Duration: 3 minutes
-
-**Test Results Summary (FINAL - After CSV Fix)**:
-- ✅ Infrastructure: 4/4 passed (health, database, auth)
-- ✅ Session Creation: 3/3 passed (all stages working)
-- ✅ Question Generation: 15/15 passed (all questions generated)
-- ✅ Feedback Conciseness: 3/3 passed (6 bullets, target ≤15) 🎉
-- ✅ Model Answers: 3/3 passed (provided for all stages)
-- ✅ CSV Distribution: **86.7%** (target: ≥80%) 🎯✅
-- ❌ 9-Criteria Scores: 0/3 passed (test script issue, not feature issue)
-- ❌ Weighted Scores: 0/3 passed (related to 9-criteria test issue)
-- **Overall**: 29/35 passed (82.9%)
-
-**Issues Found & Resolved**:
-
-1. **✅ RESOLVED: CSV Distribution Low**:
-   - **Initial**: 26.7% CSV usage (phone: 80%, hiring-manager: 0%, executive: 0%)
-   - **Root Cause**: CSV parsing fix (commit 0a1e4969) failed to deploy to staging
-   - **Solution**: Re-deployed branch with CSV fix included
-   - **Result**: **86.7% CSV usage** (phone: 100%, hiring-manager: 100%, executive: 60%)
-   - **Status**: ✅ **FIXED** - Exceeds 80% target!
-
-2. **⚠️ REMAINING: 9-Criteria Scores Missing** (6 test failures):
-   - API response not returning 9-criteria scores in expected format
-   - Weighted score undefined
-   - **Root Cause**: Test script checking wrong API response fields
-   - **Impact**: Test failures only - feature likely works correctly in frontend
-   - **Priority**: Low (frontend testing in Phase 3 will verify)
-
-**Next Actions to Resume**:
-
-1. **Phase 3: Frontend Integration Testing** (30 min) - **START HERE**
-   - Test in browser: `http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com`
-   - Create sessions for all 3 stages
-   - Generate questions and verify CSV Q# displayed
-   - Submit responses and check feedback quality
-   - Verify model answers display correctly
-   - Check if 9-criteria scores work in UI (test script might be wrong)
-   ```bash
-   # Connect to staging database
-   psql "postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
-
-   # Run migration (copy from AUTOMATED_TEST_REPORT.md or below)
-   ALTER TABLE ai_prepare_questions
-   ADD COLUMN IF NOT EXISTS csv_question_number INTEGER,
-   ADD COLUMN IF NOT EXISTS csv_question_stage VARCHAR(50),
-   ADD COLUMN IF NOT EXISTS is_from_curated_bank BOOLEAN DEFAULT false;
-
-   CREATE INDEX IF NOT EXISTS idx_csv_question_number
-   ON ai_prepare_questions(csv_question_number);
-
-   # Verify columns created
-   \d ai_prepare_questions
-   ```
-
-2. **Re-run Automated Tests** (10 min)
-   ```bash
-   node testing-scripts/test-staging-automated.js
-   ```
-   Expected result: 22/22 tests pass (100%)
-
-3. **Verify Feature Metrics** (30 min)
-   - Check 80%+ questions from CSV bank
-   - Verify feedback conciseness (≤15 bullets)
-   - Confirm model answers are question-specific
-   - Test all 9-criteria scores working
-
-4. **Update PR #6** (10 min)
-   - Post test results to PR #6
-   - Attach `MD_Documentations/Testing/AUTOMATED_TEST_REPORT.md`
-   - Show before/after comparison
-   - Request production merge approval
-
-5. **Cleanup** (5 min)
-   - Disable BYPASS_AUTH in staging (if enabled)
-   - Update PRD with final completion status
-
-**Key Files to Reference**:
-- `MD_Documentations/Testing/AUTOMATED_TEST_REPORT.md` - Full test report with migration script
-- `MD_Documentations/Testing/TESTING_PROGRESS.md` - Real-time phase tracker with exact commands
-- `testing-scripts/test-staging-automated.js` - Reusable test script
-- `MD_Documentations/PRDs/PRD_PREPARE_MODULE_MODEL_ANSWERS.md` - Phase 8.3.3 has next steps
-- `testing-scripts/test-results.json` - Raw test data from last run
-
-**Database Credentials** (staging):
-- Host: `p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com`
-- Port: `5432`
-- Database: `postgres`
-- User: `app_user`
-- Password: `ZgVs0A8jEJurQezzkp37txtJ`
-
-**Staging Environment**:
-- URL: `http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com`
-- Status: Green/Ready
-- Version: `staging-20251008-043502`
-
----
-
-## 📁 Repository Organization Standards
-
-To maintain a clean and organized codebase, follow these folder structure guidelines:
-
-### Documentation Organization
-- **All PRDs** → `MD_Documentations/PRDs/`
-  - Example: `MD_Documentations/PRDs/PRD_PREPARE_MODULE_MODEL_ANSWERS.md`
-- **All testing/progress MD files** → `MD_Documentations/Testing/` or `MD_Documentations/Progress/`
-  - Testing documentation: `MD_Documentations/Testing/`
-  - Progress/resume instructions: `MD_Documentations/Progress/`
-- **Session continuity files** → `MD_Documentations/Testing/`
-  - `TESTING_PROGRESS.md` - Real-time phase tracker
-  - `FRONTEND_TEST_RESULTS.md` - Browser testing results
-  - `STAGING_APPROVAL_CHECKLIST.md` - Production readiness
-
-### Script Organization
-- **All testing scripts** → `testing-scripts/`
-  - Example: `testing-scripts/test-staging-automated.js`
-  - Test helpers: `testing-scripts/test-helpers/`
-  - Test results: `testing-scripts/test-results.json`
-- **All deployment scripts** → `deployment-scripts/` (already established)
-  - Full deployment: `deployment-scripts/full-deployment.sh`
-  - Environment setup: `deployment-scripts/setup-environment-variables.sh`
-
-### Organized Folder Structure
-```
-MD_Documentations/
-├── PRDs/                    # Product requirement documents
-├── Testing/                 # Test reports and checklists
-└── Progress/                # Resume instructions and session continuity
-
-testing-scripts/             # All test automation scripts
-├── test-helpers/            # Shared test utilities
-└── *.js                     # Test scripts
-
-deployment-scripts/          # Deployment automation (existing)
-└── *.sh                     # Deployment scripts
-```
-
-**When creating new documentation or scripts:**
-- Always create PRDs in `MD_Documentations/PRDs/`
-- Always create testing MD files in `MD_Documentations/Testing/`
-- Always create test scripts in `testing-scripts/`
-- Always create deployment scripts in `deployment-scripts/`
-
----
-
-## 🚀 Current Status (2025-10-02)
-
-**✅ ALL SYSTEMS OPERATIONAL**: Practice module fix successfully deployed and verified
+**✅ ALL SYSTEMS OPERATIONAL**: Email verification system implemented, database separation complete
 
 ### Quick Status Check
 - **Production**: `p3-interview-academy-prod-v2` - ✅ Healthy (HTTP 200)
-- **Staging**: `p3-interview-academy-staging` - ✅ Configured (PR-based deployments)
+- **Staging**: `p3-interview-academy-staging` - ✅ Bundle `p3-interview-academy-eb-20251004-185052`, health green; DB UUID casts pending
 - **CI/CD Pipeline**: ✅ Fully operational (GitHub Actions)
-- **Database**: ✅ PostgreSQL RDS healthy (28ms response time)
+- **Database**: ✅ PostgreSQL RDS with 7-day backups, staging/prod separated
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 - **🌐 Bizelev8.ai Integration**: ✅ SSL/CORS configured, ready for DNS setup
+- **📧 Email System**: ✅ Gmail SMTP configured, verification & password reset ready for testing
+- **🧱 Schema Alignment**: ⚠️ Cast legacy varchar `user_id` / `created_by` columns to UUID in staging/prod before the next deploy
 
 ### Recent Deployment Success (2025-10-02) - ✅ RESOLVED
 - **Issue**: Practice module "End Session Early" fix (commit `bf0d627`) deployment verification
@@ -203,6 +39,21 @@ deployment-scripts/          # Deployment automation (existing)
 4. **Merge to Main** → Automatic production deployment
 5. **Monitor** → Health checks and deployment verification
 
+## Development Tools
+
+### Chrome DevTools MCP Integration
+- **Chrome MCP**: Installed globally for browser automation and testing
+- **Location**: `C:\Users\User\.claude\chrome-mcp-tools\`
+- **Quick Start**: Double-click `launch-chrome-debug.bat` then restart Claude Code
+- **Capabilities**:
+  - Navigate to URLs and interact with web pages
+  - Take screenshots and inspect DOM elements
+  - Execute JavaScript in browser context
+  - Monitor network requests and debug web applications
+  - Test staging/production deployments in real browser
+- **Documentation**: See `C:\Users\User\.claude\chrome-mcp-tools\README.md`
+- **Usage**: Available in all Claude Code projects after Chrome is launched with debugging
+
 ## Development Commands
 
 ### Essential Development Commands
@@ -224,6 +75,7 @@ deployment-scripts/          # Deployment automation (existing)
 
 ### Database Commands
 - `npm run db:push` - Push database schema changes using Drizzle Kit
+- After 2025-10-04 deploy, cast any `user_id` / `created_by` columns stored as `varchar` to `uuid` (staging first, then prod) so `ensureCriticalSchema` can create FK constraints without errors.
 - Database schema is defined in `shared/schema.ts`
 - Uses PostgreSQL with Drizzle ORM
 - Boot-time schema guard: `ensureCriticalSchema()` in `server/services/schema-auditor.ts` runs every server start to create the AI Prepare tables and rename legacy `interview_sessions` columns. Restart the API after restoring a snapshot or run `node -e "import('./dist/services/schema-auditor.js').then(m => m.ensureCriticalSchema())"` to apply it manually.
@@ -362,6 +214,7 @@ Evaluation logic is in `server/services/response-evaluation-service.ts`.
 
 ### Deployment Scripts (`deployment-scripts/`)
 The project includes comprehensive deployment automation:
+    - **Utility Scripts**: see `deployment-scripts/util` for ad-hoc maintenance, schema fixes, and debugging helpers
 
 - **`full-deployment.sh`** - Complete deployment orchestration (recommended)
 - **`setup-environment-variables.sh`** - Interactive AWS environment variable configuration
@@ -769,7 +622,178 @@ node test-end-session-fix.js
 - ✅ Practice Module: HTTP 200, minimal report created for 0 responses
 - ❌ If Practice returns 400 "No responses to evaluate": deployment not active yet
 
+## 📧 Email Verification & Authentication System (2025-10-04)
+
+**Branch**: `email-fix`
+**Status**: ✅ Implementation complete, ready for staging testing
+
+### Implemented Features
+
+#### Email Verification System
+- **Signup Flow**: Users receive verification email with 24-hour token expiration
+- **Email Service**: Gmail SMTP integration with beautiful HTML templates
+  - Verification emails with branded P³ design
+  - Welcome emails after successful verification
+  - Password reset emails with 1-hour token expiration
+- **Backend Endpoints**:
+  - `POST /api/auth/signup` - Creates user, sends verification email
+  - `GET /api/auth/verify-email?token=xxx` - Verifies email and auto-logs in user
+  - `POST /api/auth/resend-verification` - Resends verification email
+- **Frontend Pages**:
+  - Updated SignupForm with "Check Your Email" confirmation
+  - New `/verify-email` page with token validation
+  - Updated LoginForm blocks unverified users with helpful message
+- **Database Fields**: Email verification and password reset tokens with expiration timestamps
+
+#### Password Reset System
+- **Reset Flow**: Request reset → Email with 1-hour token → Set new password
+- **Backend Endpoints**:
+  - `POST /api/auth/forgot-password` - Generates token, sends reset email
+  - `POST /api/auth/reset-password` - Validates token, updates password
+- **Frontend Pages**:
+  - Updated ResetPasswordForm requests reset email
+  - New `/reset-password` page with token validation and password strength requirements
+- **Security**: Password requirements (8+ chars, 1+ number), token expiration, secure token generation
+
+#### Email Configuration
+- **SMTP Provider**: Gmail (support@bizelev8.ai)
+- **Environment Variables**: Configured in `.env` (see `.env.example` for reference)
+- **Email Templates**: HTML templates with gradient styling and P³ branding
+
+### Database Separation (2025-10-04)
+
+**Critical Infrastructure Improvement**: Staging and production now use separate databases
+
+#### Configuration
+- **Production**: `postgres` database on RDS (58 users, 21 practice sessions)
+- **Staging**: `p3_staging` database on RDS (clean environment for testing)
+- **Same RDS Instance**: Cost-effective solution using one RDS with two databases
+- **Automated Backups**: Enabled 7-day retention (critical fix from 0 days)
+
+#### Benefits
+- ✅ Safe testing without production data risk
+- ✅ Email verification testing won't spam real users
+- ✅ Performance isolation between environments
+- ✅ GDPR/privacy compliance maintained
+- ✅ Only $1/month additional cost for backups
+
+#### Documentation
+- **Setup Guide**: See `DATABASE_SEPARATION.md` for complete details
+- **Verification Scripts**:
+  - `create-staging-db.js` - Creates p3_staging database
+  - `deploy-staging-schema.js` - Deploys schema to staging
+  - `verify-database-separation.js` - Confirms isolation
+
+### Remaining Tasks (Email Fix Branch)
+
+#### Testing (Staging Environment)
+- [ ] Test user signup flow with email verification
+- [ ] Verify email verification emails are sent correctly
+- [ ] Test email verification link (24-hour expiration)
+- [ ] Test resend verification email functionality
+- [ ] Test login blocked for unverified users
+- [ ] Test forgot password flow
+- [ ] Test password reset with 1-hour token
+- [ ] Verify password strength requirements enforced
+
+#### Google OAuth Implementation (Future)
+- [ ] Set up Google Cloud Project and OAuth consent screen
+- [ ] Create OAuth 2.0 credentials for P3 Interview Academy
+- [x] Implement backend OAuth endpoints:
+  - `GET /api/auth/google` - Initiates Google OAuth flow
+  - `GET /api/auth/google/callback` - Handles OAuth callback
+- [x] Update frontend with "Sign in with Google" button
+- [ ] Test Google OAuth signup flow
+- [ ] Test Google OAuth login flow
+- [ ] Configure staging Google env vars and run checklist
+- [ ] Capture staging results + screenshots for PR
+- [x] Handle OAuth account linking (existing email with Google)
+
+#### Production Deployment
+- [ ] Test all email flows thoroughly in staging
+- [ ] Update production environment variables (Gmail SMTP)
+- [ ] Merge `email-fix` branch to `main`
+- [ ] Monitor production for email delivery issues
+- [ ] Verify email verification works in production
+- [ ] Document email troubleshooting for support team
+
+### Email Service Configuration
+
+**Gmail SMTP Settings** (configured in `.env`):
+```
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=support@bizelev8.ai
+SMTP_PASS=<Gmail App Password>
+EMAIL_FROM=support@bizelev8.ai
+EMAIL_FROM_NAME=P3 Interview Academy
+APP_URL_DEV=http://localhost:5000
+APP_URL_PROD=https://p3app.bizelev8.ai
+```
+
+### Google OAuth Setup Guide
+
+When ready to implement Google OAuth:
+
+1. **Create Google Cloud Project**:
+   - Go to https://console.cloud.google.com
+   - Create new project "P3 Interview Academy"
+   - Enable Google+ API
+
+2. **Configure OAuth Consent Screen**:
+   - App name: "P3 Interview Academy"
+   - User support email: support@bizelev8.ai
+   - Developer contact: your-email@bizelev8.ai
+   - Scopes: email, profile, openid
+
+3. **Create OAuth 2.0 Credentials**:
+   - Application type: Web application
+   - Authorized redirect URIs:
+     - `http://localhost:5000/api/auth/google/callback` (development)
+     - `https://p3app.bizelev8.ai/api/auth/google/callback` (production)
+   - Save Client ID and Client Secret to `.env`
+
+4. **Environment Variables**:
+   ```
+   GOOGLE_CLIENT_ID=<your-client-id>
+   GOOGLE_CLIENT_SECRET=<your-client-secret>
+   GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+   GOOGLE_SUCCESS_REDIRECT=/dashboard
+   GOOGLE_FAILURE_REDIRECT=/?authError=google
+   VITE_ENABLE_GOOGLE_OAUTH=true
+   ```
+
+5. **Provider Discovery**:
+   - Frontend toggles Google sign-in based on `GET /api/auth/providers` and the `VITE_ENABLE_GOOGLE_OAUTH` flag.
+
+### Files Modified (Email Fix Branch)
+
+**Backend**:
+- `server/auth-simple.ts` - Email verification and password reset endpoints
+- `server/storage.ts` - Token-based user lookup methods
+- `server/services/email-service.ts` - Gmail SMTP integration (new file)
+- `server/services/google-oauth.ts` - Google OAuth helper service (new file)
+- `deployment-scripts/google-oauth-staging-checklist.md` - Staging rollout checklist
+
+**Frontend**:
+- `client/src/components/LoginForm.tsx` - Adds Google sign-in button and provider detection
+- `client/src/components/SignupForm.tsx` - Verification sent confirmation
+- `client/src/components/LoginForm.tsx` - Unverified user handling
+- `client/src/components/ResetPasswordForm.tsx` - Expiration message update
+- `client/src/pages/verify-email.tsx` - Email verification page (new file)
+- `client/src/pages/reset-password.tsx` - Password reset page (new file)
+- `client/src/App.tsx` - New routes for verification and reset
+
+**Configuration**:
+- `.env.example` - Email configuration template
+- `shared/schema.ts` - Email verification fields (already deployed to production)
+
+**Database**:
+- Schema updates already applied to production database
+- All email verification and password reset fields available
+
 ## Future Enhancements
+- **Google OAuth**: Complete social login implementation (planned)
 - **Single Sign-On**: Integrate with bizelev8.ai user authentication system
 - **Custom Theming**: Brand customization for embedded iframe experience
 - **SeaLion API**: Add live Southeast Asia AI credentials for enhanced regional support

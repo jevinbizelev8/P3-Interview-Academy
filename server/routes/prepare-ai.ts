@@ -39,7 +39,7 @@ const createSessionSchema = z.object({
   const constraints = getStageConstraints(normalizedStage as InterviewStage);
 
   // Auto-set difficulty based on stage if adaptive
-  let enforcedDifficulty = data.difficultyLevel;
+  let enforcedDifficulty: 'beginner' | 'intermediate' | 'advanced';
   if (data.difficultyLevel === 'adaptive') {
     enforcedDifficulty = constraints.defaultDifficulty;
   } else {

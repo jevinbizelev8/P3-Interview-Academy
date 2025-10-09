@@ -4,6 +4,8 @@ import crypto from "crypto";
 import type { Express, RequestHandler } from "express";
 import { createSessionStore } from "./session-store";
 import { storage } from "./storage";
+import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "./services/email-service";
+import { GoogleOAuthService, GoogleOAuthConfigurationError, GoogleOAuthSessionError } from "./services/google-oauth";
 
 export function getSession() {
   const sessionTtlMs = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -36,6 +38,28 @@ export function getSession() {
   });
 }
 
+function sanitizeReturnTo(returnTo?: string): string | undefined {
+  if (!returnTo || typeof returnTo !== "string") {
+    return undefined;
+  }
+  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) {
+    return undefined;
+  }
+  return returnTo;
+}
+
+function mergeAuthProvider(current?: string | null): "local" | "google" | "both" {
+  if (!current) {
+    return "google";
+  }
+  if (current === "google" || current === "both") {
+    return current;
+  }
+  if (current === "local") {
+    return "both";
+  }
+  return "google";
+}
 
 export async function setupSimpleAuth(app: Express) {
   app.set("trust proxy", 1);
@@ -44,13 +68,134 @@ export async function setupSimpleAuth(app: Express) {
   const sessionMiddleware = getSession();
   app.use(sessionMiddleware);
 
+  let googleOAuth: GoogleOAuthService | null = null;
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_CALLBACK_URL) {
+    try {
+      googleOAuth = await GoogleOAuthService.create({
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        redirectUri: process.env.GOOGLE_CALLBACK_URL,
+      });
+      console.log("Google OAuth configured for client", process.env.GOOGLE_CLIENT_ID);
+    } catch (error) {
+      if (error instanceof GoogleOAuthConfigurationError) {
+        console.error("Google OAuth configuration error:", error.message);
+      } else {
+        console.error("Failed to initialize Google OAuth:", error);
+      }
+    }
+  } else {
+    console.log("Google OAuth not configured. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_CALLBACK_URL to enable it.");
+  }
+
+  const googleSuccessRedirect = process.env.GOOGLE_SUCCESS_REDIRECT ?? "/dashboard";
+  const googleFailureRedirect = process.env.GOOGLE_FAILURE_REDIRECT ?? "/?authError=google";
+
+  app.get("/api/auth/google", async (req, res) => {
+    if (!googleOAuth) {
+      return res.status(501).json({ message: "Google OAuth is not configured" });
+    }
+    try {
+      const returnTo = sanitizeReturnTo(typeof req.query.returnTo === "string" ? req.query.returnTo : undefined);
+      const authorizationUrl = await googleOAuth.getAuthorizationUrl(req, { returnTo });
+      res.redirect(authorizationUrl);
+    } catch (error) {
+      if (error instanceof GoogleOAuthSessionError) {
+        console.error("Google OAuth session error:", error.message);
+        return res.status(400).send(error.message);
+      }
+      console.error("Failed to start Google OAuth flow:", error);
+      res.status(500).send("Failed to start Google login. Please try again.");
+    }
+  });
+
+  app.get("/api/auth/google/callback", async (req, res) => {
+    if (!googleOAuth) {
+      return res.status(501).send("Google OAuth is not configured");
+    }
+    try {
+      const { profile, returnTo } = await googleOAuth.completeAuthorization(req);
+
+      let user = await storage.getUserByGoogleId(profile.googleId);
+      if (!user && profile.email) {
+        user = await storage.getUserByEmail(profile.email);
+      }
+
+      if (user) {
+        const nextProvider = mergeAuthProvider(user.authProvider ?? undefined);
+        user = await storage.upsertUser({
+          id: user.id,
+          googleId: profile.googleId,
+          email: profile.email ?? user.email ?? undefined,
+          firstName: profile.firstName ?? user.firstName ?? undefined,
+          lastName: profile.lastName ?? user.lastName ?? undefined,
+          profileImageUrl: profile.picture ?? user.profileImageUrl ?? undefined,
+          emailVerified: profile.emailVerified || user.emailVerified,
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+          authProvider: nextProvider,
+        });
+      } else {
+        if (!profile.email) {
+          throw new Error("Google account is missing an email address.");
+        }
+        user = await storage.upsertUser({
+          id: crypto.randomUUID(),
+          googleId: profile.googleId,
+          email: profile.email,
+          firstName: profile.firstName ?? "",
+          lastName: profile.lastName ?? "",
+          profileImageUrl: profile.picture ?? undefined,
+          emailVerified: profile.emailVerified,
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+          authProvider: "google",
+          role: "user",
+        });
+      }
+
+      (req.session as any).userId = user.id;
+      (req.session as any).userEmail = user.email ?? profile.email ?? null;
+      (req.session as any).authProvider = user.authProvider ?? "google";
+      (req.session as any).lastLoginProvider = "google";
+
+      const redirectTarget = returnTo ?? googleSuccessRedirect;
+      res.redirect(redirectTarget);
+    } catch (error) {
+      if (error instanceof GoogleOAuthSessionError) {
+        console.warn("Google OAuth callback validation failed:", error.message);
+      } else {
+        console.error("Google OAuth callback error:", error);
+      }
+      const fallback = googleFailureRedirect;
+      res.redirect(fallback);
+    }
+  });
+
+  app.get("/api/auth/providers", (_req, res) => {
+    res.json({
+      providers: {
+        emailPassword: true,
+        google: Boolean(googleOAuth),
+      },
+    });
+  });
+
   // Signup endpoint
   app.post("/api/auth/signup", async (req, res) => {
     try {
       const { email, password, firstName, lastName } = req.body;
-      
+
       if (!email || !password || !firstName) {
         return res.status(400).json({ message: "Email, password, and first name are required" });
+      }
+
+      // Validate password strength (8+ characters, at least one number)
+      if (password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      }
+      if (!/\d/.test(password)) {
+        return res.status(400).json({ message: "Password must contain at least one number" });
       }
 
       // Check if user already exists
@@ -63,38 +208,46 @@ export async function setupSimpleAuth(app: Express) {
       const saltRounds = 12;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Create user
-      const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Generate email verification token (expires in 24 hours)
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Create user (unverified)
+      const userId = crypto.randomUUID();
       const user = await storage.upsertUser({
         id: userId,
         email,
         firstName,
         lastName: lastName || "",
         role: "user",
-        passwordHash: hashedPassword
+        passwordHash: hashedPassword,
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires,
+        authProvider: "local"
       });
 
-      // Create session
-      (req.session as any).userId = user.id;
-      (req.session as any).userEmail = user.email;
-      
-      req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ message: "Registration failed" });
+      // Send verification email
+      try {
+        await sendVerificationEmail(email, verificationToken, firstName);
+        console.log(`✅ Verification email sent to: ${email}`);
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+      }
+
+      // Return success WITHOUT creating session
+      console.log("Signup successful, verification email sent:", email);
+
+      res.json({
+        success: true,
+        message: "Account created! Please check your email to verify your account.",
+        requiresVerification: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName
         }
-        
-        console.log("Signup session saved successfully, ID:", req.sessionID);
-        
-        res.json({ 
-          success: true, 
-          user: { 
-            id: user.id, 
-            email: user.email, 
-            firstName: user.firstName, 
-            lastName: user.lastName 
-          } 
-        });
       });
     } catch (error) {
       console.error("Signup error:", error);
@@ -132,6 +285,15 @@ export async function setupSimpleAuth(app: Express) {
       if (!passwordValid) {
         console.log("❌ LOGIN FAILED: Invalid password for user:", user.id);
         return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Check email verification
+      if (!user.emailVerified) {
+        console.log("❌ LOGIN FAILED: Email not verified for user:", user.id);
+        return res.status(401).json({
+          message: "Please verify your email before logging in",
+          requiresVerification: true
+        });
       }
 
       // Create session
@@ -244,7 +406,10 @@ export async function setupSimpleAuth(app: Express) {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role
+        role: user.role,
+        authProvider: user.authProvider,
+        profileImageUrl: user.profileImageUrl,
+        emailVerified: user.emailVerified,
       });
     } catch (error) {
       console.error("❌ AUTH ERROR:", error);
@@ -278,11 +443,139 @@ export async function setupSimpleAuth(app: Express) {
     });
   });
 
-  // Forgot password endpoint (simplified version without email sending)
+  // Email verification endpoint
+  app.get("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { token } = req.query;
+
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: "Verification token is required" });
+      }
+
+      const user = await storage.getUserByVerificationToken(token);
+
+      if (!user) {
+        return res.status(400).json({
+          message: "Invalid or expired verification token",
+          expired: true
+        });
+      }
+
+      if (user.emailVerificationExpires && new Date() > user.emailVerificationExpires) {
+        return res.status(400).json({
+          message: "Verification token has expired. Please request a new one.",
+          expired: true
+        });
+      }
+
+      if (user.emailVerified) {
+        return res.status(200).json({
+          message: "Email already verified. You can now log in.",
+          alreadyVerified: true
+        });
+      }
+
+      await storage.upsertUser({
+        id: user.id,
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null
+      });
+
+      try {
+        await sendWelcomeEmail(user.email!, user.firstName!);
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+      }
+
+      (req.session as any).userId = user.id;
+      (req.session as any).userEmail = user.email;
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error after verification:", err);
+          return res.json({
+            success: true,
+            message: "Email verified successfully! Please log in.",
+            verified: true
+          });
+        }
+
+        console.log("✅ Email verified and user auto-logged in:", user.email);
+
+        res.json({
+          success: true,
+          message: "Email verified successfully!",
+          verified: true,
+          autoLoggedIn: true,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName
+          }
+        });
+      });
+    } catch (error) {
+      console.error("Email verification error:", error);
+      res.status(500).json({ message: "Failed to verify email" });
+    }
+  });
+
+  // Resend verification email endpoint
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+
+      if (!user) {
+        return res.json({
+          success: true,
+          message: "If the email is registered, a verification email has been sent"
+        });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "Email is already verified. Please log in." });
+      }
+
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await storage.upsertUser({
+        id: user.id,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires
+      });
+
+      try {
+        await sendVerificationEmail(user.email!, verificationToken, user.firstName!);
+        console.log(`✅ Verification email resent to: ${user.email}`);
+      } catch (emailError) {
+        console.error("Failed to resend verification email:", emailError);
+        return res.status(500).json({ message: "Failed to send verification email" });
+      }
+
+      res.json({
+        success: true,
+        message: "Verification email has been sent. Please check your inbox."
+      });
+    } catch (error) {
+      console.error("Resend verification error:", error);
+      res.status(500).json({ message: "Failed to resend verification email" });
+    }
+  });
+
+  // Forgot password endpoint
   app.post("/api/auth/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
@@ -291,21 +584,35 @@ export async function setupSimpleAuth(app: Express) {
       const user = await storage.getUserByEmail(email);
       if (!user) {
         // Don't reveal if email exists for security
-        return res.json({ success: true, message: "If the email exists, reset instructions have been sent" });
+        return res.json({
+          success: true,
+          message: "If the email exists, reset instructions have been sent"
+        });
       }
 
-      // In a real app, you would:
-      // 1. Generate a secure reset token
-      // 2. Store it in database with expiration
-      // 3. Send email with reset link
-      
-      // For now, just simulate success
-      console.log(`Password reset requested for: ${email}`);
-      console.log(`In a real app, would send email with reset link`);
-      
-      res.json({ 
-        success: true, 
-        message: "If the email exists, reset instructions have been sent" 
+      // Generate password reset token (expires in 1 hour)
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // Update user with reset token
+      await storage.upsertUser({
+        id: user.id,
+        passwordResetToken: resetToken,
+        passwordResetExpires: resetExpires
+      });
+
+      // Send password reset email
+      try {
+        await sendPasswordResetEmail(user.email!, resetToken, user.firstName!);
+        console.log(`✅ Password reset email sent to: ${user.email}`);
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+        return res.status(500).json({ message: "Failed to send reset email" });
+      }
+
+      res.json({
+        success: true,
+        message: "If the email exists, reset instructions have been sent"
       });
     } catch (error) {
       console.error("Forgot password error:", error);
@@ -313,27 +620,58 @@ export async function setupSimpleAuth(app: Express) {
     }
   });
 
-  // Reset password endpoint (simplified version)
+  // Reset password endpoint
   app.post("/api/auth/reset-password", async (req, res) => {
     try {
       const { token, newPassword } = req.body;
-      
+
       if (!token || !newPassword) {
         return res.status(400).json({ message: "Token and new password are required" });
       }
 
-      // In a real app, you would:
-      // 1. Validate the reset token
-      // 2. Check if it's not expired
-      // 3. Find the user associated with the token
-      // 4. Update their password
-      
-      // For now, just simulate success
-      console.log(`Password reset with token: ${token}`);
-      
-      res.json({ 
-        success: true, 
-        message: "Password has been reset successfully" 
+      // Validate password strength
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      }
+      if (!/\d/.test(newPassword)) {
+        return res.status(400).json({ message: "Password must contain at least one number" });
+      }
+
+      // Find user by reset token
+      const user = await storage.getUserByPasswordResetToken(token);
+
+      if (!user) {
+        return res.status(400).json({
+          message: "Invalid or expired reset token",
+          expired: true
+        });
+      }
+
+      // Check if token has expired
+      if (user.passwordResetExpires && new Date() > user.passwordResetExpires) {
+        return res.status(400).json({
+          message: "Reset token has expired. Please request a new one.",
+          expired: true
+        });
+      }
+
+      // Hash new password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+      // Update user password and clear reset token
+      await storage.upsertUser({
+        id: user.id,
+        passwordHash: hashedPassword,
+        passwordResetToken: null,
+        passwordResetExpires: null
+      });
+
+      console.log(`✅ Password reset successfully for user: ${user.email}`);
+
+      res.json({
+        success: true,
+        message: "Password has been reset successfully. You can now log in with your new password."
       });
     } catch (error) {
       console.error("Reset password error:", error);
@@ -367,3 +705,4 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     res.status(500).json({ message: "Authentication failed" });
   }
 };
+
