@@ -1,14 +1,14 @@
 {
   "success": false,
-  "passed": 29,
-  "failed": 6,
+  "passed": 34,
+  "failed": 1,
   "totalTests": 35,
-  "csvPercentage": 86.66666666666667,
+  "csvPercentage": 73.33333333333333,
   "tests": [
     {
       "name": "User signup successful",
       "passed": true,
-      "details": "User ID: user-1759965861721-55d721y8f"
+      "details": "User ID: user-1760014439861-msrwl8wpp"
     },
     {
       "name": "Health endpoint responding",
@@ -23,15 +23,15 @@
     {
       "name": "Server recently restarted (CSV should be loaded)",
       "passed": true,
-      "details": "Uptime: 249s"
+      "details": "Uptime: 243s"
     },
     {
       "name": "Create phone-screening session",
       "passed": true,
-      "details": "Session ID: 702c1735-b848-4347-bcad-568a1de923bb"
+      "details": "Session ID: 910ee63f-c98f-4f93-881b-1c7ee0cb6691"
     },
     {
-      "name": "Question 1 from CSV (Q#6)",
+      "name": "Question 1 from CSV (Q#11)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
@@ -42,46 +42,46 @@
     },
     {
       "name": "9-criteria scores present for phone-screening",
-      "passed": false,
+      "passed": true,
       "details": ""
     },
     {
       "name": "Model answer provided for phone-screening",
       "passed": true,
-      "details": "Length: \"Yes, I am legally eligible to work in the Singapore/I hold the necessary visa status which is valid..."
+      "details": "Length: \"The main duties, [List 2-3 key duties], align perfectly with my [X years] of experience in [Specifi..."
     },
     {
       "name": "Weighted score valid for phone-screening",
-      "passed": false,
-      "details": "Score: undefined/5 (undefined)"
+      "passed": true,
+      "details": "Score: 4.2/5 (Pass)"
     },
     {
-      "name": "Question 2 from CSV (Q#3)",
+      "name": "Question 2 from CSV (Q#20)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
     {
-      "name": "Question 3 from CSV (Q#3)",
+      "name": "Question 3 from CSV (Q#8)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
     {
-      "name": "Question 4 from CSV (Q#21)",
+      "name": "Question 4 AI-generated",
       "passed": true,
-      "details": "✅ In expected range 1-25"
+      "details": "Not from CSV bank"
     },
     {
-      "name": "Question 5 from CSV (Q#3)",
+      "name": "Question 5 from CSV (Q#12)",
       "passed": true,
       "details": "✅ In expected range 1-25"
     },
     {
       "name": "Create hiring-manager session",
       "passed": true,
-      "details": "Session ID: cf284671-6076-417d-8e6f-9b17e695a1db"
+      "details": "Session ID: 82a73794-71e1-4d14-93e5-07a3aa5875eb"
     },
     {
-      "name": "Question 1 from CSV (Q#63)",
+      "name": "Question 1 from CSV (Q#56)",
       "passed": true,
       "details": "✅ In expected range 51-75"
     },
@@ -92,46 +92,46 @@
     },
     {
       "name": "9-criteria scores present for hiring-manager",
-      "passed": false,
+      "passed": true,
       "details": ""
     },
     {
       "name": "Model answer provided for hiring-manager",
       "passed": true,
-      "details": "Length: \"In the short term, I would need support in gaining quick introductions to key departmental contacts..."
+      "details": "Length: \"I treat ambiguity as a scoping challenge. I immediately seek to frame the uncertainty by asking cla..."
     },
     {
       "name": "Weighted score valid for hiring-manager",
-      "passed": false,
-      "details": "Score: undefined/5 (undefined)"
+      "passed": true,
+      "details": "Score: 4.2/5 (Pass)"
     },
     {
-      "name": "Question 2 from CSV (Q#72)",
+      "name": "Question 2 from CSV (Q#70)",
       "passed": true,
       "details": "✅ In expected range 51-75"
     },
     {
-      "name": "Question 3 from CSV (Q#63)",
+      "name": "Question 3 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 4 from CSV (Q#75)",
       "passed": true,
       "details": "✅ In expected range 51-75"
     },
     {
-      "name": "Question 4 from CSV (Q#58)",
-      "passed": true,
-      "details": "✅ In expected range 51-75"
-    },
-    {
-      "name": "Question 5 from CSV (Q#60)",
+      "name": "Question 5 from CSV (Q#68)",
       "passed": true,
       "details": "✅ In expected range 51-75"
     },
     {
       "name": "Create executive-leadership session",
       "passed": true,
-      "details": "Session ID: cd338b2d-eb9d-4119-a1fc-882f60a65827"
+      "details": "Session ID: 637157b2-0adb-4c37-8c02-7f6c9d8e6b47"
     },
     {
-      "name": "Question 1 from CSV (Q#101)",
+      "name": "Question 1 from CSV (Q#119)",
       "passed": true,
       "details": "✅ In expected range 101-125"
     },
@@ -142,23 +142,23 @@
     },
     {
       "name": "9-criteria scores present for executive-leadership",
-      "passed": false,
+      "passed": true,
       "details": ""
     },
     {
       "name": "Model answer provided for executive-leadership",
       "passed": true,
-      "details": "Length: \"I believe your biggest opportunity is [Specific Geo/Product/Segment]. The market here is underserve..."
+      "details": "Length: \"I would follow a three-step process: (1) Deep Audit: Conduct an unbiased review of the unit's talen..."
     },
     {
       "name": "Weighted score valid for executive-leadership",
-      "passed": false,
-      "details": "Score: undefined/5 (undefined)"
+      "passed": true,
+      "details": "Score: 4.2/5 (Pass)"
     },
     {
-      "name": "Question 2 from CSV (Q#122)",
+      "name": "Question 2 AI-generated",
       "passed": true,
-      "details": "✅ In expected range 101-125"
+      "details": "Not from CSV bank"
     },
     {
       "name": "Question 3 AI-generated",
@@ -166,19 +166,19 @@
       "details": "Not from CSV bank"
     },
     {
-      "name": "Question 4 AI-generated",
+      "name": "Question 4 from CSV (Q#118)",
       "passed": true,
-      "details": "Not from CSV bank"
+      "details": "✅ In expected range 101-125"
     },
     {
-      "name": "Question 5 from CSV (Q#109)",
+      "name": "Question 5 from CSV (Q#123)",
       "passed": true,
       "details": "✅ In expected range 101-125"
     },
     {
       "name": "CSV question distribution",
-      "passed": true,
-      "details": "13/15 questions from CSV (86.7%, target: ≥80%)"
+      "passed": false,
+      "details": "11/15 questions from CSV (73.3%, target: ≥80%)"
     }
   ]
 }

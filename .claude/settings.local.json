@@ -122,7 +122,8 @@
       "Read(///**)",
       "Bash(git mv:*)",
       "Bash(git rev-parse:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "WebFetch(domain:doc-0s-4s-sheets.googleusercontent.com)"
     ],
     "deny": [],
     "ask": []
