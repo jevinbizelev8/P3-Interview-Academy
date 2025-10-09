@@ -1,0 +1,184 @@
+{
+  "success": false,
+  "passed": 34,
+  "failed": 1,
+  "totalTests": 35,
+  "csvPercentage": 73.33333333333333,
+  "tests": [
+    {
+      "name": "User signup successful",
+      "passed": true,
+      "details": "User ID: user-1760014439861-msrwl8wpp"
+    },
+    {
+      "name": "Health endpoint responding",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Database connection healthy",
+      "passed": true,
+      "details": "Response time: 1ms"
+    },
+    {
+      "name": "Server recently restarted (CSV should be loaded)",
+      "passed": true,
+      "details": "Uptime: 243s"
+    },
+    {
+      "name": "Create phone-screening session",
+      "passed": true,
+      "details": "Session ID: 910ee63f-c98f-4f93-881b-1c7ee0cb6691"
+    },
+    {
+      "name": "Question 1 from CSV (Q#11)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Feedback conciseness for phone-screening",
+      "passed": true,
+      "details": "6 bullets (target: ≤15) - Strengths: 2, Weaknesses: 1, Suggestions: 3"
+    },
+    {
+      "name": "9-criteria scores present for phone-screening",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Model answer provided for phone-screening",
+      "passed": true,
+      "details": "Length: \"The main duties, [List 2-3 key duties], align perfectly with my [X years] of experience in [Specifi..."
+    },
+    {
+      "name": "Weighted score valid for phone-screening",
+      "passed": true,
+      "details": "Score: 4.2/5 (Pass)"
+    },
+    {
+      "name": "Question 2 from CSV (Q#20)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Question 3 from CSV (Q#8)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Question 4 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 5 from CSV (Q#12)",
+      "passed": true,
+      "details": "✅ In expected range 1-25"
+    },
+    {
+      "name": "Create hiring-manager session",
+      "passed": true,
+      "details": "Session ID: 82a73794-71e1-4d14-93e5-07a3aa5875eb"
+    },
+    {
+      "name": "Question 1 from CSV (Q#56)",
+      "passed": true,
+      "details": "✅ In expected range 51-75"
+    },
+    {
+      "name": "Feedback conciseness for hiring-manager",
+      "passed": true,
+      "details": "6 bullets (target: ≤15) - Strengths: 2, Weaknesses: 1, Suggestions: 3"
+    },
+    {
+      "name": "9-criteria scores present for hiring-manager",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Model answer provided for hiring-manager",
+      "passed": true,
+      "details": "Length: \"I treat ambiguity as a scoping challenge. I immediately seek to frame the uncertainty by asking cla..."
+    },
+    {
+      "name": "Weighted score valid for hiring-manager",
+      "passed": true,
+      "details": "Score: 4.2/5 (Pass)"
+    },
+    {
+      "name": "Question 2 from CSV (Q#70)",
+      "passed": true,
+      "details": "✅ In expected range 51-75"
+    },
+    {
+      "name": "Question 3 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 4 from CSV (Q#75)",
+      "passed": true,
+      "details": "✅ In expected range 51-75"
+    },
+    {
+      "name": "Question 5 from CSV (Q#68)",
+      "passed": true,
+      "details": "✅ In expected range 51-75"
+    },
+    {
+      "name": "Create executive-leadership session",
+      "passed": true,
+      "details": "Session ID: 637157b2-0adb-4c37-8c02-7f6c9d8e6b47"
+    },
+    {
+      "name": "Question 1 from CSV (Q#119)",
+      "passed": true,
+      "details": "✅ In expected range 101-125"
+    },
+    {
+      "name": "Feedback conciseness for executive-leadership",
+      "passed": true,
+      "details": "6 bullets (target: ≤15) - Strengths: 2, Weaknesses: 1, Suggestions: 3"
+    },
+    {
+      "name": "9-criteria scores present for executive-leadership",
+      "passed": true,
+      "details": ""
+    },
+    {
+      "name": "Model answer provided for executive-leadership",
+      "passed": true,
+      "details": "Length: \"I would follow a three-step process: (1) Deep Audit: Conduct an unbiased review of the unit's talen..."
+    },
+    {
+      "name": "Weighted score valid for executive-leadership",
+      "passed": true,
+      "details": "Score: 4.2/5 (Pass)"
+    },
+    {
+      "name": "Question 2 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 3 AI-generated",
+      "passed": true,
+      "details": "Not from CSV bank"
+    },
+    {
+      "name": "Question 4 from CSV (Q#118)",
+      "passed": true,
+      "details": "✅ In expected range 101-125"
+    },
+    {
+      "name": "Question 5 from CSV (Q#123)",
+      "passed": true,
+      "details": "✅ In expected range 101-125"
+    },
+    {
+      "name": "CSV question distribution",
+      "passed": false,
+      "details": "11/15 questions from CSV (73.3%, target: ≥80%)"
+    }
+  ]
+}

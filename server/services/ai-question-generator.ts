@@ -11,6 +11,7 @@ import {
   type DifficultyLevel
 } from "../config/stage-difficulty-constraints.js";
 import { getCuratedQuestionsByStage, type CuratedQuestion } from "../data/curated-question-bank.js";
+import { ModelAnswerService } from "./model-answer-service.js";
 
 interface QuestionGenerationRequest {
   jobPosition: string;
@@ -35,7 +36,10 @@ interface GeneratedQuestion {
   expectedAnswerTime: number;
   culturalContext: string;
   starMethodRelevant: boolean;
-  generatedBy: 'sealion' | 'openai' | 'fallback';
+  generatedBy: 'sealion' | 'openai' | 'fallback' | 'curated';
+  csvQuestionNumber?: number;
+  csvQuestionStage?: string;
+  isFromCuratedBank?: boolean;
 }
 
 interface QuestionTemplate {
@@ -49,10 +53,12 @@ interface QuestionTemplate {
 export class AIQuestionGenerator {
   private seaLionService: SeaLionService;
   private openaiService: OpenAIService | null;
+  private modelAnswerService: ModelAnswerService;
   private questionTemplates: QuestionTemplate[];
 
   constructor() {
     this.seaLionService = new SeaLionService();
+    this.modelAnswerService = new ModelAnswerService();
     try {
       this.openaiService = getOpenAIService();
     } catch (error) {
@@ -69,7 +75,18 @@ export class AIQuestionGenerator {
     try {
       console.log(`🎯 Generating question ${request.questionNumber} for ${request.jobPosition} (${request.preferredLanguage})`);
 
-      // Try OpenAI first (prioritized as requested)
+      // Priority 1: Use curated questions from Google Sheets (80% of time)
+      if (Math.random() < 0.8) {
+        const curatedQuestion = this.getCuratedQuestion(request);
+        if (curatedQuestion) {
+          console.log(`📋 Using curated question Q${curatedQuestion.csvQuestionNumber} from Google Sheets`);
+          return curatedQuestion;
+        } else {
+          console.log(`⚠️ No curated question available, falling back to AI generation`);
+        }
+      }
+
+      // Priority 2: Try OpenAI for AI-generated questions (20% for variety)
       if (this.openaiService) {
         try {
           const openaiQuestion = await this.generateWithOpenAI(request);
@@ -79,7 +96,7 @@ export class AIQuestionGenerator {
         }
       }
 
-      // Try SeaLion AI as fallback for ASEAN languages and cultural context
+      // Priority 3: Try SeaLion AI as fallback for ASEAN languages and cultural context
       if (this.shouldUseSeaLion(request.preferredLanguage)) {
         try {
           console.log(`🌏 Using SeaLion AI as fallback for ${request.preferredLanguage} language generation`);
@@ -90,7 +107,7 @@ export class AIQuestionGenerator {
         }
       }
 
-      // Fallback to template-based generation
+      // Priority 4: Fallback to template-based generation
       return this.generateFromTemplate(request);
 
     } catch (error) {
@@ -259,15 +276,60 @@ Response Format (JSON):
   }
 
   /**
+   * Get curated question from Google Sheets model answer bank
+   */
+  private getCuratedQuestion(request: QuestionGenerationRequest): GeneratedQuestion | null {
+    try {
+      // Check if model answer service is ready
+      if (!this.modelAnswerService.isReady()) {
+        console.warn('⚠️ Model answer service not yet loaded');
+        return null;
+      }
+
+      // Normalize stage name
+      const stage = normalizeStageName(request.interviewStage) as InterviewStage;
+      console.log(`🔍 CSV Question Lookup: requested="${request.interviewStage}" → normalized="${stage}"`);
+
+      // Get random question from the stage
+      const curatedQ = this.modelAnswerService.getRandomQuestionByStage(stage);
+
+      if (!curatedQ) {
+        console.log(`⚠️ No curated questions available for stage: ${stage}`);
+        console.log(`📊 Total curated questions loaded: ${this.modelAnswerService.getQuestionCount()}`);
+        return null;
+      }
+
+      // Format as GeneratedQuestion
+      return {
+        questionText: curatedQ.question,
+        questionTextTranslated: curatedQ.question, // CSV already contains target language
+        questionCategory: curatedQ.focusArea,
+        questionType: 'behavioral', // Most curated questions are behavioral
+        difficultyLevel: request.difficultyLevel,
+        expectedAnswerTime: 120, // 2 minutes default for curated questions
+        culturalContext: `Curated question from ${stage} stage (Q${curatedQ.qNumber})`,
+        starMethodRelevant: true, // All curated questions follow STAR method
+        generatedBy: 'curated',
+        csvQuestionNumber: curatedQ.qNumber,
+        csvQuestionStage: curatedQ.stage,
+        isFromCuratedBank: true
+      };
+    } catch (error) {
+      console.error('❌ Error getting curated question:', error);
+      return null;
+    }
+  }
+
+  /**
    * Generate question from templates (fallback method)
    */
   private generateFromTemplate(request: QuestionGenerationRequest): GeneratedQuestion {
     const category = this.selectCategory(request);
     const template = this.getQuestionTemplate(category, request);
-    
+
     const questionText = this.fillTemplate(template, request);
     const questionTextTranslated = this.translateQuestion(questionText, request.preferredLanguage);
-    
+
     return {
       questionText,
       questionTextTranslated,

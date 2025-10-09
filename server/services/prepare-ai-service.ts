@@ -2,9 +2,9 @@
 // Main orchestration service for AI-driven interview preparation sessions
 
 import { db } from "../db.js";
-import { 
-  aiPrepareSessions, 
-  aiPrepareQuestions, 
+import {
+  aiPrepareSessions,
+  aiPrepareQuestions,
   aiPrepareResponses,
   type InsertAiPrepareSession,
   type AiPrepareSession,
@@ -13,7 +13,7 @@ import {
   type InsertAiPrepareResponse,
   type AiPrepareResponse
 } from "../../shared/schema.js";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { AIQuestionGenerator } from "./ai-question-generator.js";
 import { ResponseEvaluationService } from "./response-evaluation-service.js";
 
@@ -202,7 +202,11 @@ export class PrepareAIService {
           culturalContext: questionData.culturalContext,
           questionNumber: currentQuestionNumber,
           starMethodRelevant: questionData.starMethodRelevant,
-          generatedBy: questionData.generatedBy
+          generatedBy: questionData.generatedBy,
+          // CSV Question Tracking
+          csvQuestionNumber: questionData.csvQuestionNumber || null,
+          csvQuestionStage: questionData.csvQuestionStage || null,
+          isFromCuratedBank: questionData.isFromCuratedBank || false
         })
         .returning();
 
@@ -256,27 +260,105 @@ export class PrepareAIService {
       const evaluationTime = Date.now() - startTime;
       const wordCount = responseText.split(/\s+/).length;
 
-      // Insert response with evaluation
-      const [response] = await db.insert(aiPrepareResponses)
-        .values({
-          sessionId,
-          questionId,
-          responseText,
-          responseLanguage: responseData.responseLanguage || session.preferredLanguage,
-          inputMethod: responseData.inputMethod || 'text',
-          audioDuration: responseData.audioDuration,
-          transcriptionConfidence: responseData.transcriptionConfidence,
-          starScores: evaluation.starScores,
-          detailedFeedback: evaluation.detailedFeedback,
-          modelAnswer: evaluation.modelAnswer,
-          relevanceScore: evaluation.relevanceScore.toString(),
-          communicationScore: evaluation.communicationScore.toString(),
-          completenessScore: evaluation.completenessScore.toString(),
-          timeTaken: Math.floor(evaluationTime / 1000),
-          wordCount,
-          evaluatedBy: evaluation.evaluatedBy
-        })
-        .returning();
+      // Debug logging for 9-criteria scores
+      console.log('🔍 Evaluation scores received:', {
+        relevanceScore: evaluation.relevanceScore,
+        starStructureScore: evaluation.starStructureScore,
+        specificEvidenceScore: evaluation.specificEvidenceScore,
+        roleAlignmentScore: evaluation.roleAlignmentScore,
+        outcomeOrientedScore: evaluation.outcomeOrientedScore,
+        communicationScore: evaluation.communicationScore,
+        problemSolvingScore: evaluation.problemSolvingScore,
+        culturalFitScore: evaluation.culturalFitScore,
+        learningAgilityScore: evaluation.learningAgilityScore,
+        weightedOverallScore: evaluation.weightedOverallScore,
+        overallRating: evaluation.overallRating,
+        evaluatedBy: evaluation.evaluatedBy
+      });
+
+      // Helper function to safely convert numbers to strings for database
+      const toNumericString = (val: number | undefined): string | null =>
+        val !== undefined ? val.toString() : null;
+
+      // Use raw SQL insert to bypass Drizzle ORM type inference issues
+      // This ensures all 9-criteria score columns are properly inserted
+      const result = await db.execute<AiPrepareResponse>(sql`
+        INSERT INTO ai_prepare_responses (
+          session_id, question_id, response_text, response_language, input_method,
+          audio_duration, transcription_confidence,
+          star_scores, detailed_feedback, model_answer,
+          relevance_score, star_structure_score, specific_evidence_score,
+          role_alignment_score, outcome_oriented_score, communication_score,
+          problem_solving_score, cultural_fit_score, learning_agility_score,
+          weighted_overall_score, overall_rating,
+          completeness_score, time_taken, word_count, evaluated_by
+        ) VALUES (
+          ${sessionId}, ${questionId}, ${responseText},
+          ${responseData.responseLanguage || session.preferredLanguage},
+          ${responseData.inputMethod || 'text'},
+          ${responseData.audioDuration || null},
+          ${responseData.transcriptionConfidence || null},
+          ${JSON.stringify(evaluation.starScores)},
+          ${JSON.stringify(evaluation.detailedFeedback)},
+          ${evaluation.modelAnswer || null},
+          ${toNumericString(evaluation.relevanceScore)},
+          ${toNumericString(evaluation.starStructureScore)},
+          ${toNumericString(evaluation.specificEvidenceScore)},
+          ${toNumericString(evaluation.roleAlignmentScore)},
+          ${toNumericString(evaluation.outcomeOrientedScore)},
+          ${toNumericString(evaluation.communicationScore)},
+          ${toNumericString(evaluation.problemSolvingScore)},
+          ${toNumericString(evaluation.culturalFitScore)},
+          ${toNumericString(evaluation.learningAgilityScore)},
+          ${toNumericString(evaluation.weightedOverallScore)},
+          ${evaluation.overallRating || null},
+          ${toNumericString(evaluation.completenessScore)},
+          ${Math.floor(evaluationTime / 1000)},
+          ${wordCount},
+          ${evaluation.evaluatedBy}
+        )
+        RETURNING *
+      `) as any;
+
+      const dbResponse = (result.rows?.[0] || result[0]) as any;
+
+      // Map snake_case database columns to camelCase for API response
+      const response = {
+        id: dbResponse.id,
+        sessionId: dbResponse.session_id,
+        questionId: dbResponse.question_id,
+        responseText: dbResponse.response_text,
+        responseLanguage: dbResponse.response_language,
+        inputMethod: dbResponse.input_method,
+        audioFileUrl: dbResponse.audio_file_url,
+        audioDuration: dbResponse.audio_duration,
+        transcriptionConfidence: dbResponse.transcription_confidence,
+        starScores: dbResponse.star_scores,
+        detailedFeedback: dbResponse.detailed_feedback,
+        modelAnswer: dbResponse.model_answer,
+        modelAnswerTranslated: dbResponse.model_answer_translated,
+        relevanceScore: dbResponse.relevance_score ? parseFloat(dbResponse.relevance_score) : null,
+        starStructureScore: dbResponse.star_structure_score ? parseFloat(dbResponse.star_structure_score) : null,
+        specificEvidenceScore: dbResponse.specific_evidence_score ? parseFloat(dbResponse.specific_evidence_score) : null,
+        roleAlignmentScore: dbResponse.role_alignment_score ? parseFloat(dbResponse.role_alignment_score) : null,
+        outcomeOrientedScore: dbResponse.outcome_oriented_score ? parseFloat(dbResponse.outcome_oriented_score) : null,
+        communicationScore: dbResponse.communication_score ? parseFloat(dbResponse.communication_score) : null,
+        problemSolvingScore: dbResponse.problem_solving_score ? parseFloat(dbResponse.problem_solving_score) : null,
+        culturalFitScore: dbResponse.cultural_fit_score ? parseFloat(dbResponse.cultural_fit_score) : null,
+        learningAgilityScore: dbResponse.learning_agility_score ? parseFloat(dbResponse.learning_agility_score) : null,
+        weightedOverallScore: dbResponse.weighted_overall_score ? parseFloat(dbResponse.weighted_overall_score) : null,
+        overallRating: dbResponse.overall_rating,
+        completenessScore: dbResponse.completeness_score ? parseFloat(dbResponse.completeness_score) : null,
+        improvementAreas: dbResponse.improvement_areas,
+        evaluatedBy: dbResponse.evaluated_by,
+        evaluationTimestamp: dbResponse.evaluation_timestamp,
+        evaluationDuration: dbResponse.evaluation_duration,
+        timeTaken: dbResponse.time_taken,
+        wordCount: dbResponse.word_count,
+        retryCount: dbResponse.retry_count,
+        createdAt: dbResponse.created_at,
+        updatedAt: dbResponse.updated_at
+      } as any;
 
       // Update session progress
       await this.updateSessionProgress(sessionId);
