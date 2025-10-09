@@ -103,7 +103,10 @@
       "Bash(aws ec2 describe-security-groups:*)",
       "Bash(aws rds describe-db-snapshots:*)",
       "Bash(aws rds modify-db-instance:*)",
-      "Bash(set DATABASE_URL=postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging?sslmode=require)"
+      "Bash(set DATABASE_URL=postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging?sslmode=require)",
+      "Bash(cat:*)",
+      "Bash(gh run watch:*)",
+      "Bash(aws logs tail:*)"
     ],
     "deny": [],
     "ask": []
