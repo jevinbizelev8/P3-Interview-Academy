@@ -6,13 +6,20 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-// Staging database URL
-const stagingDbUrl = 'postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging';
+// Use DATABASE_URL environment variable for security
+const stagingDbUrl = process.env.STAGING_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!stagingDbUrl) {
+  console.error('❌ Error: STAGING_DATABASE_URL or DATABASE_URL environment variable is required');
+  console.error('   Set it before running this script:');
+  console.error('   export STAGING_DATABASE_URL="postgresql://user:pass@host:port/p3_staging"');
+  process.exit(1);
+}
 
 const pool = new Pool({
   connectionString: stagingDbUrl,
   ssl: {
-    rejectUnauthorized: false
+    rejectUnauthorized: process.env.NODE_ENV === 'production'
   }
 });
 

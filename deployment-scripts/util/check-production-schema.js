@@ -6,11 +6,19 @@ import pg from 'pg';
 
 const { Pool } = pg;
 
-const prodDbUrl = 'postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres';
+// Use DATABASE_URL environment variable for security
+const prodDbUrl = process.env.DATABASE_URL || process.env.PROD_DATABASE_URL;
+
+if (!prodDbUrl) {
+  console.error('❌ Error: DATABASE_URL or PROD_DATABASE_URL environment variable is required');
+  console.error('   Set it before running this script:');
+  console.error('   export DATABASE_URL="postgresql://user:pass@host:port/database"');
+  process.exit(1);
+}
 
 const pool = new Pool({
   connectionString: prodDbUrl,
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: process.env.NODE_ENV === 'production' }
 });
 
 async function checkProductionSchema() {
