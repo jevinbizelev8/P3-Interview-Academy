@@ -9,16 +9,22 @@ import { emitToSession } from "../services/realtime-gateway.js";
 const router = Router();
 const prepareAIService = new PrepareAIService();
 
+// Import stage constraints for validation
+import { normalizeStageName, enforceStageDifficulty, getStageConstraints, type InterviewStage } from "../config/stage-difficulty-constraints.js";
+
 // Validation schemas
 const createSessionSchema = z.object({
   jobPosition: z.string().min(1, "Job position is required"),
   companyName: z.string().optional(),
   interviewStage: z.enum([
-    "phone-screening", 
-    "functional-team", 
-    "hiring-manager", 
-    "sme-expert", 
-    "executive-leadership"
+    "phone-screening",
+    "functional-team",
+    "hiring-manager",
+    "sme-expert",
+    "executive-leadership",
+    // Legacy stage names for backwards compatibility
+    "subject-matter-expertise",
+    "executive-final"
   ]),
   experienceLevel: z.enum(["entry", "intermediate", "senior", "expert"]),
   preferredLanguage: z.string().default("en"),
@@ -27,6 +33,27 @@ const createSessionSchema = z.object({
   difficultyLevel: z.enum(["beginner", "intermediate", "advanced", "adaptive"]).default("adaptive"),
   focusAreas: z.array(z.string()).default(["behavioral", "situational"]),
   questionCategories: z.array(z.string()).default(["general"])
+}).transform((data) => {
+  // Normalize stage name and enforce difficulty constraints
+  const normalizedStage = normalizeStageName(data.interviewStage);
+  const constraints = getStageConstraints(normalizedStage as InterviewStage);
+
+  // Auto-set difficulty based on stage if adaptive
+  let enforcedDifficulty: 'beginner' | 'intermediate' | 'advanced';
+  if (data.difficultyLevel === 'adaptive') {
+    enforcedDifficulty = constraints.defaultDifficulty;
+  } else {
+    enforcedDifficulty = enforceStageDifficulty(
+      normalizedStage as InterviewStage,
+      data.difficultyLevel as 'beginner' | 'intermediate' | 'advanced'
+    );
+  }
+
+  return {
+    ...data,
+    interviewStage: normalizedStage,
+    difficultyLevel: enforcedDifficulty
+  };
 });
 
 const responseSchema = z.object({

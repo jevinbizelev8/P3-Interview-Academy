@@ -3,6 +3,15 @@
 
 import { SeaLionService } from "./sealion.js";
 import { getOpenAIService, OpenAIService } from "./openai-service.js";
+import {
+  normalizeStageName,
+  enforceStageDifficulty,
+  getStageConstraints,
+  type InterviewStage,
+  type DifficultyLevel
+} from "../config/stage-difficulty-constraints.js";
+import { getCuratedQuestionsByStage, type CuratedQuestion } from "../data/curated-question-bank.js";
+import { ModelAnswerService } from "./model-answer-service.js";
 
 interface QuestionGenerationRequest {
   jobPosition: string;
@@ -27,7 +36,10 @@ interface GeneratedQuestion {
   expectedAnswerTime: number;
   culturalContext: string;
   starMethodRelevant: boolean;
-  generatedBy: 'sealion' | 'openai' | 'fallback';
+  generatedBy: 'sealion' | 'openai' | 'fallback' | 'curated';
+  csvQuestionNumber?: number;
+  csvQuestionStage?: string;
+  isFromCuratedBank?: boolean;
 }
 
 interface QuestionTemplate {
@@ -41,10 +53,12 @@ interface QuestionTemplate {
 export class AIQuestionGenerator {
   private seaLionService: SeaLionService;
   private openaiService: OpenAIService | null;
+  private modelAnswerService: ModelAnswerService;
   private questionTemplates: QuestionTemplate[];
 
   constructor() {
     this.seaLionService = new SeaLionService();
+    this.modelAnswerService = new ModelAnswerService();
     try {
       this.openaiService = getOpenAIService();
     } catch (error) {
@@ -61,7 +75,18 @@ export class AIQuestionGenerator {
     try {
       console.log(`🎯 Generating question ${request.questionNumber} for ${request.jobPosition} (${request.preferredLanguage})`);
 
-      // Try OpenAI first (prioritized as requested)
+      // Priority 1: Use curated questions from Google Sheets (80% of time)
+      if (Math.random() < 0.8) {
+        const curatedQuestion = this.getCuratedQuestion(request);
+        if (curatedQuestion) {
+          console.log(`📋 Using curated question Q${curatedQuestion.csvQuestionNumber} from Google Sheets`);
+          return curatedQuestion;
+        } else {
+          console.log(`⚠️ No curated question available, falling back to AI generation`);
+        }
+      }
+
+      // Priority 2: Try OpenAI for AI-generated questions (20% for variety)
       if (this.openaiService) {
         try {
           const openaiQuestion = await this.generateWithOpenAI(request);
@@ -71,7 +96,7 @@ export class AIQuestionGenerator {
         }
       }
 
-      // Try SeaLion AI as fallback for ASEAN languages and cultural context
+      // Priority 3: Try SeaLion AI as fallback for ASEAN languages and cultural context
       if (this.shouldUseSeaLion(request.preferredLanguage)) {
         try {
           console.log(`🌏 Using SeaLion AI as fallback for ${request.preferredLanguage} language generation`);
@@ -82,7 +107,7 @@ export class AIQuestionGenerator {
         }
       }
 
-      // Fallback to template-based generation
+      // Priority 4: Fallback to template-based generation
       return this.generateFromTemplate(request);
 
     } catch (error) {
@@ -134,48 +159,69 @@ export class AIQuestionGenerator {
   }
 
   /**
-   * Build OpenAI prompt for question generation  
+   * Build OpenAI prompt for question generation
    */
   private buildOpenAIPrompt(request: QuestionGenerationRequest): string {
+    // Normalize and enforce stage-difficulty constraints
+    const normalizedStage = normalizeStageName(request.interviewStage) as InterviewStage;
+    const enforcedDifficulty = enforceStageDifficulty(normalizedStage, request.difficultyLevel as DifficultyLevel);
+    const stageConstraints = getStageConstraints(normalizedStage);
+
+    // Get curated questions as examples (style guide, not to copy)
+    const exampleQuestions = getCuratedQuestionsByStage(stageConstraints.stageNumber, 3);
+    const examplesText = exampleQuestions.map((q, i) => `${i + 1}. "${q.question}"`).join('\n');
+
     const culturalContext = this.getCulturalContext(request.preferredLanguage);
     const adaptiveContext = this.getAdaptiveContext(request);
-    const stageGuidance = this.getStageSpecificGuidance(request.interviewStage);
+    const stageGuidance = this.getEnhancedStageGuidance(normalizedStage, enforcedDifficulty);
     const languageName = this.getLanguageName(request.preferredLanguage);
     const isNonEnglish = request.preferredLanguage !== 'en';
 
     return `You are an expert AI interview coach with deep knowledge of hiring practices and interview strategies. Generate a high-quality, culturally-appropriate interview question.
 
+STAGE CONSTRAINTS - STAGE ${stageConstraints.stageNumber}: ${normalizedStage.toUpperCase()}
+Difficulty: ${enforcedDifficulty} (ENFORCED - do not generate ${stageConstraints.forbiddenPatterns.slice(0, 2).join(', ')})
+Complexity Level: ${stageConstraints.complexityIndicators.questionDepth}
+
 Context:
 - Job Position: ${request.jobPosition}
 - Company: ${request.companyName || 'Tech company'}
-- Interview Stage: ${request.interviewStage}
+- Interview Stage: ${normalizedStage} (Stage ${stageConstraints.stageNumber}/5)
 - Experience Level: ${request.experienceLevel}
 - Target Language: ${languageName} (${request.preferredLanguage})
 - Question Number: ${request.questionNumber}
-- Focus Areas: ${request.focusAreas.join(', ')}
-- Categories: ${request.questionCategories.join(', ')}
-- Difficulty: ${request.difficultyLevel}
+- Focus Areas: ${stageConstraints.focusAreas.slice(0, 3).join(', ')}
+- Difficulty: ${enforcedDifficulty} (enforced for this stage)
 
 ${stageGuidance}
+
+STYLE EXAMPLES (generate NEW questions like these, do NOT copy):
+${examplesText}
+
+FORBIDDEN for Stage ${stageConstraints.stageNumber}:
+${stageConstraints.forbiddenPatterns.slice(0, 3).map(p => `- ${p}`).join('\n')}
+
+REQUIRED for Stage ${stageConstraints.stageNumber}:
+${stageConstraints.requiredCharacteristics.slice(0, 3).map(r => `- ${r}`).join('\n')}
 
 ${culturalContext}
 ${adaptiveContext}
 
 CRITICAL REQUIREMENTS:
-1. Generate ONE excellent interview question for ${request.jobPosition}
-2. Make it culturally appropriate for ${languageName} speakers
-3. ${isNonEnglish ? `WRITE THE MAIN QUESTION IN ${languageName.toUpperCase()}, NOT ENGLISH` : 'Write the question in English'}
-4. Include STAR method guidance if behavioral question
-5. Specify expected answer time (60-300 seconds)
-6. Provide cultural context explanation
+1. Generate ONE NEW interview question for ${request.jobPosition} (do not copy examples above)
+2. Match the style and complexity of the example questions
+3. Make it culturally appropriate for ${languageName} speakers
+4. ${isNonEnglish ? `WRITE THE MAIN QUESTION IN ${languageName.toUpperCase()}, NOT ENGLISH` : 'Write the question in English'}
+5. Expected answer length: ${stageConstraints.complexityIndicators.answerExpectations}
+6. Difficulty MUST be: ${enforcedDifficulty}
 
 Response Format (JSON only, no other text):
 {
   "questionText": "${isNonEnglish ? `Main question text in ${languageName}` : 'Question text in English'}",
   "questionTextTranslated": "${isNonEnglish ? 'English translation for reference' : 'Same as questionText'}",
   "questionCategory": "leadership|problem-solving|teamwork|technical|cultural",
-  "questionType": "behavioral|situational|technical|cultural", 
-  "difficultyLevel": "beginner|intermediate|advanced",
+  "questionType": "behavioral|situational|technical|cultural",
+  "difficultyLevel": "${enforcedDifficulty}",
   "expectedAnswerTime": 180,
   "culturalContext": "Brief cultural context explanation in English",
   "starMethodRelevant": true|false
@@ -230,15 +276,60 @@ Response Format (JSON):
   }
 
   /**
+   * Get curated question from Google Sheets model answer bank
+   */
+  private getCuratedQuestion(request: QuestionGenerationRequest): GeneratedQuestion | null {
+    try {
+      // Check if model answer service is ready
+      if (!this.modelAnswerService.isReady()) {
+        console.warn('⚠️ Model answer service not yet loaded');
+        return null;
+      }
+
+      // Normalize stage name
+      const stage = normalizeStageName(request.interviewStage) as InterviewStage;
+      console.log(`🔍 CSV Question Lookup: requested="${request.interviewStage}" → normalized="${stage}"`);
+
+      // Get random question from the stage
+      const curatedQ = this.modelAnswerService.getRandomQuestionByStage(stage);
+
+      if (!curatedQ) {
+        console.log(`⚠️ No curated questions available for stage: ${stage}`);
+        console.log(`📊 Total curated questions loaded: ${this.modelAnswerService.getQuestionCount()}`);
+        return null;
+      }
+
+      // Format as GeneratedQuestion
+      return {
+        questionText: curatedQ.question,
+        questionTextTranslated: curatedQ.question, // CSV already contains target language
+        questionCategory: curatedQ.focusArea,
+        questionType: 'behavioral', // Most curated questions are behavioral
+        difficultyLevel: request.difficultyLevel,
+        expectedAnswerTime: 120, // 2 minutes default for curated questions
+        culturalContext: `Curated question from ${stage} stage (Q${curatedQ.qNumber})`,
+        starMethodRelevant: true, // All curated questions follow STAR method
+        generatedBy: 'curated',
+        csvQuestionNumber: curatedQ.qNumber,
+        csvQuestionStage: curatedQ.stage,
+        isFromCuratedBank: true
+      };
+    } catch (error) {
+      console.error('❌ Error getting curated question:', error);
+      return null;
+    }
+  }
+
+  /**
    * Generate question from templates (fallback method)
    */
   private generateFromTemplate(request: QuestionGenerationRequest): GeneratedQuestion {
     const category = this.selectCategory(request);
     const template = this.getQuestionTemplate(category, request);
-    
+
     const questionText = this.fillTemplate(template, request);
     const questionTextTranslated = this.translateQuestion(questionText, request.preferredLanguage);
-    
+
     return {
       questionText,
       questionTextTranslated,
@@ -422,7 +513,28 @@ Response Format (JSON):
   }
 
   /**
-   * Get stage-specific guidance for interview questions
+   * Get enhanced stage-specific guidance with difficulty enforcement
+   */
+  private getEnhancedStageGuidance(stage: InterviewStage, difficulty: DifficultyLevel): string {
+    const constraints = getStageConstraints(stage);
+
+    return `
+STAGE ${constraints.stageNumber}/5: ${stage.toUpperCase()} - ${difficulty.toUpperCase()} DIFFICULTY
+
+Focus Areas: ${constraints.focusAreas.join(', ')}
+
+Complexity Requirements:
+- Question Depth: ${constraints.complexityIndicators.questionDepth}
+- Answer Expectations: ${constraints.complexityIndicators.answerExpectations}
+- Evaluation Criteria: ${constraints.complexityIndicators.evaluationCriteria}
+
+Required Characteristics:
+${constraints.requiredCharacteristics.map(r => `  • ${r}`).join('\n')}
+`;
+  }
+
+  /**
+   * Get stage-specific guidance for interview questions (Legacy - kept for backwards compatibility)
    */
   private getStageSpecificGuidance(interviewStage: string): string {
     const stageGuidance: Record<string, string> = {
@@ -490,22 +602,54 @@ STAGE FOCUS - Executive/Final Round Interview:
   }
 
   /**
-   * Get adaptive context based on previous responses
+   * Get adaptive context based on previous responses (Enhanced for follow-up questions)
    */
   private getAdaptiveContext(request: QuestionGenerationRequest): string {
     if (!request.adaptiveDifficulty || !request.previousResponses?.length) {
       return '';
     }
 
+    const recentResponses = request.previousResponses.slice(-2); // Last 2 responses
     const avgScore = request.previousResponses.reduce((sum, r) => sum + (r.starScores?.overall || 3), 0) / request.previousResponses.length;
-    
+
+    // Analyze content of recent responses for follow-up opportunities
+    let adaptiveInstructions: string[] = [];
+
+    // Performance-based adaptation
     if (avgScore >= 4.5) {
-      return '\nAdaptive Context: Previous responses show strong performance. Generate a more challenging question.';
+      adaptiveInstructions.push('Previous responses show strong performance. Generate a more challenging question that probes deeper.');
     } else if (avgScore <= 2.5) {
-      return '\nAdaptive Context: Previous responses need improvement. Generate a more supportive, foundational question.';
+      adaptiveInstructions.push('Previous responses need improvement. Generate a more supportive, foundational question.');
+    } else {
+      adaptiveInstructions.push('Previous responses show moderate performance. Maintain current difficulty level.');
     }
-    
-    return '\nAdaptive Context: Previous responses show moderate performance. Maintain current difficulty level.';
+
+    // Content-based follow-up generation
+    const lastResponse = recentResponses[recentResponses.length - 1];
+    if (lastResponse?.content) {
+      const responseText = lastResponse.content.toLowerCase();
+
+      // Detect themes to probe deeper
+      const themes: Record<string, string> = {
+        'team': 'Generate a follow-up about their team leadership or collaboration approach in that situation.',
+        'conflict': 'Create a question that explores how they handled stakeholder reactions or resistance.',
+        'budget|cost': 'Ask about the financial impact or ROI of their decisions.',
+        'transform|change': 'Probe into change management and how they addressed resistance.',
+        'fail|challenge|difficult': 'Explore the lessons learned and what they would do differently.',
+        'success|achieve': 'Ask about the measurable outcomes and long-term impact.',
+        'decision': 'Follow up on the trade-offs they considered and decision-making process.',
+        'customer|client': 'Dig deeper into customer impact and satisfaction metrics.',
+      };
+
+      for (const [keyword, followUpHint] of Object.entries(themes)) {
+        if (new RegExp(keyword).test(responseText)) {
+          adaptiveInstructions.push(`FOLLOW-UP OPPORTUNITY: User mentioned "${keyword}". ${followUpHint}`);
+          break; // Use first matched theme
+        }
+      }
+    }
+
+    return '\n\nADAPTIVE CONTEXT:\n' + adaptiveInstructions.join('\n');
   }
 
   /**

@@ -3,6 +3,7 @@
 
 import { SeaLionService } from "./sealion.js";
 import { getOpenAIService, type OpenAIService } from './openai-service.js';
+import { ModelAnswerService } from "./model-answer-service.js";
 
 interface EvaluationRequest {
   questionText: string;
@@ -58,10 +59,12 @@ interface EvaluationResult {
 export class ResponseEvaluationService {
   private seaLionService: SeaLionService;
   private openaiService: OpenAIService | null;
+  private modelAnswerService: ModelAnswerService;
   private starCriteria: Record<string, string>;
 
   constructor() {
     this.seaLionService = new SeaLionService();
+    this.modelAnswerService = new ModelAnswerService();
     try {
       this.openaiService = getOpenAIService();
     } catch (error) {
@@ -78,10 +81,18 @@ export class ResponseEvaluationService {
     try {
       console.log(`🎯 Evaluating response for ${request.questionCategory} question`);
 
+      // Fetch curated model answer from Google Sheets if available
+      const curatedModelAnswer = this.modelAnswerService.findModelAnswer(request.questionText);
+      if (curatedModelAnswer) {
+        console.log(`✅ Found curated model answer for question`);
+      } else {
+        console.log(`⚠️ No curated model answer found, will generate generic one`);
+      }
+
       // Try OpenAI first (prioritized as requested)
       if (this.openaiService) {
         try {
-          const openaiEvaluation = await this.evaluateWithOpenAI(request);
+          const openaiEvaluation = await this.evaluateWithOpenAI(request, curatedModelAnswer);
           if (openaiEvaluation) return openaiEvaluation;
         } catch (error) {
           console.warn("⚠️ OpenAI evaluation failed, trying SeaLion:", error instanceof Error ? error.message : 'Unknown error');
@@ -91,7 +102,7 @@ export class ResponseEvaluationService {
       // Try SeaLion AI as fallback for ASEAN cultural context
       if (this.shouldUseSeaLion(request.responseLanguage)) {
         try {
-          const seaLionEvaluation = await this.evaluateWithSeaLion(request);
+          const seaLionEvaluation = await this.evaluateWithSeaLion(request, curatedModelAnswer);
           if (seaLionEvaluation) return seaLionEvaluation;
         } catch (error) {
           console.warn("⚠️ SeaLion evaluation failed, falling back to rules:", error instanceof Error ? error.message : 'Unknown error');
@@ -352,17 +363,20 @@ export class ResponseEvaluationService {
   /**
    * Evaluate response using OpenAI with 9-criteria rubric
    */
-  private async evaluateWithOpenAI(request: EvaluationRequest): Promise<EvaluationResult | null> {
+  private async evaluateWithOpenAI(
+    request: EvaluationRequest,
+    curatedModelAnswer?: string | null
+  ): Promise<EvaluationResult | null> {
     try {
-      const prompt = this.buildEvaluationPrompt(request);
-      
+      const prompt = this.buildEvaluationPrompt(request, curatedModelAnswer);
+
       const response = await this.openaiService!.generateResponse({
         messages: [{ role: 'user', content: prompt }],
-        maxTokens: 2000, // Increased for comprehensive evaluation
+        maxTokens: 800, // REDUCED from 2000 for concise feedback
         temperature: 0.2  // Lower temperature for consistent scoring
       });
 
-      return this.parseEvaluationResponse(response, request);
+      return this.parseEvaluationResponse(response, request, curatedModelAnswer);
 
     } catch (error) {
       console.error("❌ OpenAI evaluation error:", error);
@@ -373,17 +387,20 @@ export class ResponseEvaluationService {
   /**
    * Evaluate response using SeaLion AI with 9-criteria rubric
    */
-  private async evaluateWithSeaLion(request: EvaluationRequest): Promise<EvaluationResult | null> {
+  private async evaluateWithSeaLion(
+    request: EvaluationRequest,
+    curatedModelAnswer?: string | null
+  ): Promise<EvaluationResult | null> {
     try {
-      const prompt = this.buildEvaluationPrompt(request);
-      
+      const prompt = this.buildEvaluationPrompt(request, curatedModelAnswer);
+
       const response = await this.seaLionService.generateResponse({
         messages: [{ role: 'user', content: prompt }],
-        maxTokens: 2000, // Increased for comprehensive evaluation
+        maxTokens: 800, // REDUCED from 2000 for concise feedback
         temperature: 0.2  // Lower temperature for consistent scoring
       });
 
-      return this.parseEvaluationResponse(response, request);
+      return this.parseEvaluationResponse(response, request, curatedModelAnswer);
 
     } catch (error) {
       console.error("❌ SeaLion evaluation error:", error);
@@ -394,8 +411,21 @@ export class ResponseEvaluationService {
   /**
    * Build comprehensive 9-criteria evaluation prompt
    */
-  private buildEvaluationPrompt(request: EvaluationRequest): string {
+  private buildEvaluationPrompt(
+    request: EvaluationRequest,
+    curatedModelAnswer?: string | null
+  ): string {
     const culturalGuidance = this.getCulturalEvaluationGuidance(request.responseLanguage);
+
+    // Add curated model answer section if available
+    const modelAnswerSection = curatedModelAnswer
+      ? `
+REFERENCE MODEL ANSWER FROM CURATED QUESTION BANK:
+"${curatedModelAnswer}"
+
+This is an example of a strong response using the STAR method. Use this as a reference to compare the user's response structure and identify what elements they included or missed.
+`
+      : '';
 
     return `You are an expert interview coach specializing in Southeast Asian business contexts. Evaluate this interview response using the official 9-criteria scoring rubric.
 
@@ -408,6 +438,8 @@ Response Language: ${request.responseLanguage}
 
 USER RESPONSE:
 "${request.responseText}"
+
+${modelAnswerSection}
 
 OFFICIAL 9-CRITERIA EVALUATION RUBRIC:
 
@@ -462,6 +494,14 @@ SCORING GUIDELINES:
 - Score each criterion 1-5 based on rubric descriptions above
 - Provide specific evidence from the response for each score
 - Be constructive and culturally sensitive
+
+FEEDBACK REQUIREMENTS (CRITICAL - MUST FOLLOW):
+1. Keep feedback CONCISE - Maximum 3-5 bullet points per category (strengths, weaknesses, suggestions)
+2. Reference specific elements from the question: "${request.questionText}"
+${curatedModelAnswer ? '3. Compare user response structure to the reference model answer provided above' : '3. Focus on STAR method structure'}
+4. Provide actionable improvements specific to THIS question, not generic advice
+5. Be direct and specific - avoid lengthy explanations or excessive detail
+6. Each bullet point should be ONE sentence maximum
 
 LANGUAGE REQUIREMENTS:
 - If the response language is NOT English (${request.responseLanguage}), provide ALL textual feedback (strengths, weaknesses, suggestions, modelAnswer, culturalRelevance) in ${request.responseLanguage}
@@ -652,7 +692,11 @@ ASEAN BUSINESS CONTEXT:
     return guidanceMap[language] || guidanceMap['en'];
   }
 
-  private parseEvaluationResponse(response: string, request: EvaluationRequest): EvaluationResult | null {
+  private parseEvaluationResponse(
+    response: string,
+    request: EvaluationRequest,
+    curatedModelAnswer?: string | null
+  ): EvaluationResult | null {
     try {
       const jsonResponse = JSON.parse(response);
       
@@ -718,8 +762,9 @@ ASEAN BUSINESS CONTEXT:
           suggestions: ['Use STAR method', 'Add specific metrics', 'Connect to role requirements'],
           culturalRelevance: 'Response shows professional communication style'
         },
-        
-        modelAnswer: jsonResponse.modelAnswer || 'Provide specific examples using STAR method with measurable results',
+
+        // Use curated model answer if available, otherwise AI-generated or fallback
+        modelAnswer: curatedModelAnswer || jsonResponse.modelAnswer || 'Provide specific examples using STAR method with measurable results',
         completenessScore: jsonResponse.completenessScore || weightedOverallScore,
         evaluatedBy: 'sealion'
       };
@@ -928,7 +973,15 @@ ASEAN BUSINESS CONTEXT:
   }
 
   private generateModelAnswer(questionCategory: string, jobPosition: string, questionText: string, language: string = 'en'): string {
-    // Generate a direct STAR method response to the specific question
+    // Try to get curated model answer from Google Sheets first
+    const curatedAnswer = this.modelAnswerService.findModelAnswer(questionText);
+    if (curatedAnswer) {
+      console.log('✅ Using curated model answer from Google Sheets');
+      return curatedAnswer;
+    }
+
+    // Fallback: Generate a direct STAR method response
+    console.log('⚠️ No curated model answer found, generating STAR template');
     return this.createStarResponse(questionText, jobPosition, language);
   }
   

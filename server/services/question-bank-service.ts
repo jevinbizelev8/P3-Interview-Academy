@@ -3,6 +3,14 @@ import { sealionService } from "./sealion";
 import { aiRouter } from "./ai-router";
 import { translationService } from "./translation-service";
 import type { SupportedLanguage } from "@shared/schema";
+import {
+  normalizeStageName,
+  enforceStageDifficulty,
+  getStageConstraints,
+  isValidStageDifficulty,
+  type InterviewStage
+} from "../config/stage-difficulty-constraints.js";
+import { getCuratedQuestionsByStage, CURATED_QUESTION_BANK } from "../data/curated-question-bank.js";
 
 export interface QuestionData {
   id: string;
@@ -890,38 +898,91 @@ export const COMPREHENSIVE_QUESTION_BANK: Record<string, QuestionData[]> = {
 };
 
 export class QuestionBankService {
-  
+
   // ================================
   // QUESTION RETRIEVAL METHODS
   // ================================
-  
+
+  /**
+   * Get curated question examples for a specific stage (as reference for AI)
+   */
+  getStageExampleQuestions(interviewStage: string, count: number = 5): QuestionData[] {
+    const normalizedStage = normalizeStageName(interviewStage) as InterviewStage;
+    const constraints = getStageConstraints(normalizedStage);
+    const curatedExamples = getCuratedQuestionsByStage(constraints.stageNumber, count);
+
+    // Convert curated questions to QuestionData format
+    return curatedExamples.map(cq => ({
+      id: cq.id,
+      question: cq.question,
+      category: cq.category as any,
+      difficulty: cq.difficulty,
+      interviewStage: cq.stageName as any,
+      tags: [cq.focusArea],
+      expectedAnswerTime: 3,
+      starMethodRelevant: cq.starMethodRelevant,
+      culturalContext: `Stage ${cq.stage} ${cq.difficulty} question`
+    }));
+  }
+
+  /**
+   * Validate and enforce stage-difficulty constraints
+   */
+  validateStageDifficulty(
+    interviewStage: string,
+    difficulty: 'beginner' | 'intermediate' | 'advanced'
+  ): 'beginner' | 'intermediate' | 'advanced' {
+    const normalizedStage = normalizeStageName(interviewStage) as InterviewStage;
+    return enforceStageDifficulty(normalizedStage, difficulty);
+  }
+
+  /**
+   * Get questions for stage with hybrid approach (curated + AI-generated)
+   */
   async getQuestionsForStage(
     interviewStage: string,
     count: number = 15,
     difficulty?: 'beginner' | 'intermediate' | 'advanced',
     language: SupportedLanguage = 'en'
   ): Promise<QuestionData[]> {
+    // Enforce stage-difficulty constraints
+    const normalizedStage = normalizeStageName(interviewStage);
+    const enforcedDifficulty = difficulty ? this.validateStageDifficulty(interviewStage, difficulty) : undefined;
+
+    console.log(`📚 Hybrid Question Retrieval: Stage=${normalizedStage}, Difficulty=${enforcedDifficulty || 'mixed'}, Count=${count}`);
+
+    // Get existing questions from comprehensive bank
     const stageQuestions = COMPREHENSIVE_QUESTION_BANK[interviewStage] || [];
-    
+
     let filteredQuestions = stageQuestions;
-    if (difficulty) {
-      filteredQuestions = stageQuestions.filter(q => q.difficulty === difficulty);
+    if (enforcedDifficulty) {
+      filteredQuestions = stageQuestions.filter(q => q.difficulty === enforcedDifficulty);
     }
-    
-    // Ensure we have at least the requested count
-    if (filteredQuestions.length < count) {
-      console.log(`Only ${filteredQuestions.length} questions available for ${interviewStage}, generating additional questions...`);
-      const additionalQuestions = await this.generateAdditionalQuestions(
-        interviewStage, 
-        count - filteredQuestions.length,
-        difficulty,
+
+    // Hybrid strategy: Mix curated questions (30%) with AI-generated (70%)
+    const curatedCount = Math.min(Math.floor(count * 0.3), filteredQuestions.length);
+    const aiGeneratedCount = count - curatedCount;
+
+    console.log(`📊 Hybrid Mix: ${curatedCount} curated + ${aiGeneratedCount} AI-generated`);
+
+    // Get curated questions
+    const curatedQuestions = this.shuffleArray(filteredQuestions).slice(0, curatedCount);
+
+    // Generate additional AI questions if needed
+    let aiQuestions: QuestionData[] = [];
+    if (aiGeneratedCount > 0) {
+      console.log(`🤖 Generating ${aiGeneratedCount} AI questions for variety...`);
+      aiQuestions = await this.generateAdditionalQuestions(
+        interviewStage,
+        aiGeneratedCount,
+        enforcedDifficulty,
         language
       );
-      filteredQuestions = [...filteredQuestions, ...additionalQuestions];
     }
-    
-    // Return exactly the requested count, shuffled for variety
-    return this.shuffleArray(filteredQuestions).slice(0, count);
+
+    // Combine and shuffle for variety
+    const allQuestions = [...curatedQuestions, ...aiQuestions];
+    return this.shuffleArray(allQuestions).slice(0, count);
   }
   
   async getAllStageQuestions(): Promise<Record<string, QuestionSet>> {

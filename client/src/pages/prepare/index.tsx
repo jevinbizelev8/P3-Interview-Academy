@@ -33,8 +33,8 @@ export default function Prepare() {
   const [sessionConfig, setSessionConfig] = useState<any>(null);
 
   const handleStartNewSession = () => {
-    // Redirect to the working Practice module instead of the Prepare AI system
-    window.location.href = '/practice';
+    // Start the Prepare AI session setup flow
+    setCurrentView('setup');
   };
 
   const handleCreateSession = (config: SessionConfig) => {
@@ -220,16 +220,16 @@ export default function Prepare() {
 
             {/* Start New Session Button */}
             <div className="mt-6 text-center">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 onClick={handleStartNewSession}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
               >
                 <Play className="w-5 h-5 mr-2" />
-                Start New Practice Session
+                Start New Prepare Session
               </Button>
               <p className="text-sm text-gray-600 mt-2">
-                Start practicing with our AI interviewer and get instant feedback on your responses
+                Start preparing with our AI coach and get personalized question suggestions
               </p>
             </div>
           </CardContent>

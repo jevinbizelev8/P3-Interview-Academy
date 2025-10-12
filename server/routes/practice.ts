@@ -4,13 +4,14 @@
 import { Router } from "express";
 import { z } from "zod";
 import { storage } from "../storage.js";
-import { 
-  insertPracticeSessionSchema, 
+import {
+  insertPracticeSessionSchema,
   insertPracticeMessageSchema,
-  insertPracticeReportSchema 
+  insertPracticeReportSchema
 } from "@shared/schema.js";
 import { AIQuestionGenerator } from "../services/ai-question-generator.js";
 import { ResponseEvaluationService } from "../services/response-evaluation-service.js";
+import { normalizeStageName, enforceStageDifficulty, type InterviewStage } from "../config/stage-difficulty-constraints.js";
 
 const router = Router();
 const questionGenerator = new AIQuestionGenerator();
@@ -244,19 +245,38 @@ router.post('/sessions/:id/ai-question', async (req, res) => {
       });
     }
 
-    // Generate next question using AI Question Generator
+    // Enforce stage-difficulty constraints
+    const normalizedStage = normalizeStageName(session.interviewStage);
+    const enforcedDifficulty = enforceStageDifficulty(
+      normalizedStage as InterviewStage,
+      (session.difficultyLevel || 'intermediate') as 'beginner' | 'intermediate' | 'advanced'
+    );
+
+    console.log(`🎯 Stage-Difficulty Enforcement: ${session.interviewStage} → ${normalizedStage}, ${session.difficultyLevel} → ${enforcedDifficulty}`);
+
+    // Get previous user responses for adaptive questioning
+    const previousResponses = session.messages
+      .filter(m => m.messageType === 'user_response')
+      .map(m => ({
+        content: m.content,
+        questionNumber: m.questionNumber,
+        starScores: { overall: 3 } // Placeholder - would come from evaluation
+      }));
+
+    // Generate next question using AI Question Generator with adaptive context
     const questionRequest = {
       jobPosition: session.jobPosition || "Professional",
       companyName: session.companyName || undefined,
-      interviewStage: session.interviewStage,
-      experienceLevel: (session.difficultyLevel === 'beginner' ? 'entry' : 
-                       session.difficultyLevel === 'advanced' ? 'senior' : 'intermediate') as 'entry' | 'intermediate' | 'senior' | 'expert',
+      interviewStage: normalizedStage,
+      experienceLevel: (enforcedDifficulty === 'beginner' ? 'entry' :
+                       enforcedDifficulty === 'advanced' ? 'senior' : 'intermediate') as 'entry' | 'intermediate' | 'senior' | 'expert',
       preferredLanguage: session.preferredLanguage || 'en',
-      difficultyLevel: session.difficultyLevel || 'intermediate',
+      difficultyLevel: enforcedDifficulty,
       focusAreas: ['behavioral', 'situational'],
       questionCategories: ['general'],
       questionNumber: currentQuestionNumber,
       adaptiveDifficulty: true,
+      previousResponses: previousResponses.length > 0 ? previousResponses : undefined,
     };
 
     const generatedQuestion = await questionGenerator.generateQuestion(questionRequest);

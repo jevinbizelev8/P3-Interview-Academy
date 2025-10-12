@@ -26,7 +26,8 @@ function getTransporter(): Transporter {
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
+      secure: process.env.SMTP_SECURE === 'true', // false for port 587, true for 465
+      requireTLS: true, // Force STARTTLS for Gmail
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
