@@ -23,3 +23,9 @@ gh_*/
 aws
 nul
 
+# Credential rotation scripts (contain password examples)
+rotate-credentials.ps1
+rotate-credentials.sh
+GITGUARDIAN-RESOLUTION-GUIDE.md
+test-email-security.js
+

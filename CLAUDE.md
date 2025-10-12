@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+### Operational Updates
+- Permanent release notes: `CHANGELOG.md`
+- Monthly ops notes: `deployment-scripts/ops-log/` (e.g., `deployment-scripts/ops-log/2025-10.md`)
+- Current deployment snapshot: `DEPLOYMENT-STATUS-REPORT.md`
+
 ## 🚀 Current Status (2025-10-04)
 
 **✅ ALL SYSTEMS OPERATIONAL**: Email verification system implemented, database separation complete
