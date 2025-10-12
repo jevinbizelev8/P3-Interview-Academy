@@ -5,17 +5,30 @@
 
 import nodemailer from 'nodemailer';
 
+// Use environment variables for security
+const smtpUser = process.env.SMTP_USER || process.env.EMAIL_FROM;
+const smtpPass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD;
+
+if (!smtpUser || !smtpPass) {
+  console.error('❌ Error: SMTP credentials not found in environment variables');
+  console.error('   Required: SMTP_USER and SMTP_PASS');
+  console.error('   Set them before running this script:');
+  console.error('   export SMTP_USER="your-email@domain.com"');
+  console.error('   export SMTP_PASS="your-app-password"');
+  process.exit(1);
+}
+
 const config = {
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587', 10),
+  secure: process.env.SMTP_SECURE === 'true',
   requireTLS: true,
   auth: {
-    user: 'support@bizelev8.ai',
-    pass: 'qgmf zwmk ofis srlx'
+    user: smtpUser,
+    pass: smtpPass
   },
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: process.env.NODE_ENV === 'production'
   }
 };
 
@@ -26,7 +39,7 @@ console.log(`  Host: ${config.host}`);
 console.log(`  Port: ${config.port}`);
 console.log(`  Secure: ${config.secure}`);
 console.log(`  User: ${config.auth.user}`);
-console.log(`  Password: ${config.auth.pass.substring(0, 4)}...${config.auth.pass.substring(config.auth.pass.length - 4)}`);
+console.log(`  Password: ${'*'.repeat(Math.min(config.auth.pass.length, 16))} (${config.auth.pass.length} chars)`);
 console.log('');
 
 async function testSMTP() {

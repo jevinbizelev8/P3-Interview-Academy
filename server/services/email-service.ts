@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import escapeHtml from 'escape-html';
 
 const getAppUrl = (): string => {
   if (process.env.NODE_ENV === 'production') {
@@ -9,6 +10,16 @@ const getAppUrl = (): string => {
 };
 
 let transporter: Transporter | null = null;
+
+// Validate email configuration at startup
+export function validateEmailConfig(): void {
+  const required = ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS', 'EMAIL_FROM'];
+  const missing = required.filter(key => !process.env[key]);
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required email configuration: ${missing.join(', ')}`);
+  }
+}
 
 function getTransporter(): Transporter {
   if (!transporter) {
@@ -22,8 +33,8 @@ function getTransporter(): Transporter {
         pass: process.env.SMTP_PASS,
       },
       tls: {
-        // Do not fail on invalid certificates (for development)
-        rejectUnauthorized: false
+        // Enable certificate validation in production for security
+        rejectUnauthorized: process.env.NODE_ENV === 'production'
       }
     });
   }
@@ -148,11 +159,20 @@ export async function sendVerificationEmail(
   token: string,
   firstName: string
 ): Promise<void> {
+  // Validate inputs
+  if (!token || token.length < 32) {
+    throw new Error('Invalid verification token');
+  }
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email address');
+  }
+
   const verificationUrl = `${getAppUrl()}/verify-email?token=${token}`;
+  const safeName = escapeHtml(firstName);
 
   const content = `
     <div class="content">
-      <h2>Welcome, ${firstName}! 👋</h2>
+      <h2>Welcome, ${safeName}! 👋</h2>
       <p>Thank you for joining P³ Interview Academy. We're excited to help you prepare for your interview success!</p>
       <p>To get started, please verify your email address by clicking the button below:</p>
       <div style="text-align: center;">
@@ -173,14 +193,19 @@ export async function sendVerificationEmail(
     to: email,
     subject: 'Verify your P³ Interview Academy account',
     html: getEmailTemplate(content),
-    text: `Welcome, ${firstName}!\n\nPlease verify your email: ${verificationUrl}\n\nThis link expires in 24 hours.`,
+    text: `Welcome, ${safeName}!\n\nPlease verify your email: ${verificationUrl}\n\nThis link expires in 24 hours.`,
   };
 
   try {
     const info = await getTransporter().sendMail(mailOptions);
     console.log('✅ Verification email sent:', info.messageId);
   } catch (error) {
-    console.error('❌ Failed to send verification email:', error);
+    // Sanitize error logging - don't expose SMTP credentials
+    console.error('❌ Failed to send verification email:', {
+      code: (error as any).code,
+      command: (error as any).command,
+      // Credentials intentionally omitted from logs
+    });
     throw new Error('Failed to send verification email');
   }
 }
@@ -190,12 +215,21 @@ export async function sendPasswordResetEmail(
   token: string,
   firstName: string
 ): Promise<void> {
+  // Validate inputs
+  if (!token || token.length < 32) {
+    throw new Error('Invalid reset token');
+  }
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email address');
+  }
+
   const resetUrl = `${getAppUrl()}/reset-password?token=${token}`;
+  const safeName = escapeHtml(firstName);
 
   const content = `
     <div class="content">
       <h2>Password Reset Request 🔒</h2>
-      <p>Hi ${firstName},</p>
+      <p>Hi ${safeName},</p>
       <p>We received a request to reset your P³ Interview Academy password.</p>
       <p>Click the button below to create a new password:</p>
       <div style="text-align: center;">
@@ -216,14 +250,19 @@ export async function sendPasswordResetEmail(
     to: email,
     subject: 'Reset your P³ Interview Academy password',
     html: getEmailTemplate(content),
-    text: `Hi ${firstName},\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour.`,
+    text: `Hi ${safeName},\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour.`,
   };
 
   try {
     const info = await getTransporter().sendMail(mailOptions);
     console.log('✅ Password reset email sent:', info.messageId);
   } catch (error) {
-    console.error('❌ Failed to send password reset email:', error);
+    // Sanitize error logging - don't expose SMTP credentials
+    console.error('❌ Failed to send password reset email:', {
+      code: (error as any).code,
+      command: (error as any).command,
+      // Credentials intentionally omitted from logs
+    });
     throw new Error('Failed to send password reset email');
   }
 }
@@ -232,12 +271,17 @@ export async function sendWelcomeEmail(
   email: string,
   firstName: string
 ): Promise<void> {
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email address');
+  }
+
   const dashboardUrl = `${getAppUrl()}/dashboard`;
+  const safeName = escapeHtml(firstName);
 
   const content = `
     <div class="content">
       <h2>🎉 Welcome to P³ Interview Academy!</h2>
-      <p>Hi ${firstName},</p>
+      <p>Hi ${safeName},</p>
       <p>Your email has been verified! You're all set to start your interview preparation journey.</p>
       <div style="text-align: center;">
         <a href="${dashboardUrl}" class="button">Go to Dashboard</a>
@@ -251,13 +295,19 @@ export async function sendWelcomeEmail(
     to: email,
     subject: '🎉 Welcome to P³ Interview Academy!',
     html: getEmailTemplate(content),
-    text: `Welcome, ${firstName}!\n\nVisit your dashboard: ${dashboardUrl}`,
+    text: `Welcome, ${safeName}!\n\nVisit your dashboard: ${dashboardUrl}`,
   };
 
   try {
     const info = await getTransporter().sendMail(mailOptions);
     console.log('✅ Welcome email sent:', info.messageId);
   } catch (error) {
-    console.error('❌ Failed to send welcome email:', error);
+    // Sanitize error logging - don't expose SMTP credentials
+    console.error('❌ Failed to send welcome email:', {
+      code: (error as any).code,
+      command: (error as any).command,
+      // Credentials intentionally omitted from logs
+    });
+    // Don't throw error for welcome emails - not critical
   }
 }

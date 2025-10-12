@@ -1,11 +1,21 @@
 import bcrypt from "bcryptjs";
 import session from "express-session";
 import crypto from "crypto";
+import rateLimit from "express-rate-limit";
 import type { Express, RequestHandler } from "express";
 import { createSessionStore } from "./session-store";
 import { storage } from "./storage";
 import { sendVerificationEmail, sendPasswordResetEmail, sendWelcomeEmail } from "./services/email-service";
 import { GoogleOAuthService, GoogleOAuthConfigurationError, GoogleOAuthSessionError } from "./services/google-oauth";
+
+// Rate limiting for email-related endpoints (3 requests per 15 minutes per IP)
+const emailRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // Limit each IP to 3 requests per windowMs
+  message: 'Too many email requests from this IP, please try again after 15 minutes',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
 
 export function getSession() {
   const sessionTtlMs = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -181,8 +191,8 @@ export async function setupSimpleAuth(app: Express) {
     });
   });
 
-  // Signup endpoint
-  app.post("/api/auth/signup", async (req, res) => {
+  // Signup endpoint (with rate limiting)
+  app.post("/api/auth/signup", emailRateLimit, async (req, res) => {
     try {
       const { email, password, firstName, lastName } = req.body;
 
@@ -522,8 +532,8 @@ export async function setupSimpleAuth(app: Express) {
     }
   });
 
-  // Resend verification email endpoint
-  app.post("/api/auth/resend-verification", async (req, res) => {
+  // Resend verification email endpoint (with rate limiting)
+  app.post("/api/auth/resend-verification", emailRateLimit, async (req, res) => {
     try {
       const { email } = req.body;
 
@@ -571,8 +581,8 @@ export async function setupSimpleAuth(app: Express) {
     }
   });
 
-  // Forgot password endpoint
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  // Forgot password endpoint (with rate limiting)
+  app.post("/api/auth/forgot-password", emailRateLimit, async (req, res) => {
     try {
       const { email } = req.body;
 
