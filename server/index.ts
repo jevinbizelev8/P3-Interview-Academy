@@ -2,6 +2,16 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic, log } from "./vite";
+import { validateEmailConfig } from "./services/email-service";
+
+// Validate email configuration at startup
+try {
+  validateEmailConfig();
+  log('✅ Email configuration validated', 'startup');
+} catch (error) {
+  log(`⚠️  Email configuration incomplete: ${(error as Error).message}`, 'startup');
+  log('Email features will be unavailable until configuration is complete', 'startup');
+}
 
 const app = express();
 
