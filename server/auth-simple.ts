@@ -191,6 +191,40 @@ export async function setupSimpleAuth(app: Express) {
     });
   });
 
+  // Temporary diagnostics: SMTP verify via Nodemailer
+  app.get("/api/auth/diag-email", async (_req, res) => {
+    try {
+      const { verifyEmailTransport } = await import("./services/email-service");
+      const result = await verifyEmailTransport();
+      res.json(result);
+    } catch (e) {
+      res.status(500).json({ ok: false, message: "SMTP verify failed to run" });
+    }
+  });
+
+  // Temporary admin verify without email (X-Admin-Key header required)
+  app.post("/api/auth/admin-verify", async (req, res) => {
+    try {
+      const expected = process.env.ADMIN_KEY;
+      const key = req.get("X-Admin-Key");
+      if (!expected || !key || key !== expected) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      const email = req.body?.email as string | undefined;
+      if (!email || !email.includes("@")) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      await storage.upsertUser({ id: user.id, emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null });
+      res.json({ success: true, userId: user.id });
+    } catch (e) {
+      res.status(500).json({ message: "Failed to verify user" });
+    }
+  });
+
   // Signup endpoint (with rate limiting)
   app.post("/api/auth/signup", emailRateLimit, async (req, res) => {
     try {
@@ -224,6 +258,7 @@ export async function setupSimpleAuth(app: Express) {
 
       // Create user (unverified)
       const userId = crypto.randomUUID();
+      const autoVerify = process.env.TEMP_AUTO_VERIFY === 'true';
       const user = await storage.upsertUser({
         id: userId,
         email,
@@ -231,18 +266,20 @@ export async function setupSimpleAuth(app: Express) {
         lastName: lastName || "",
         role: "user",
         passwordHash: hashedPassword,
-        emailVerified: false,
-        emailVerificationToken: verificationToken,
-        emailVerificationExpires: verificationExpires,
+        emailVerified: autoVerify ? true : false,
+        emailVerificationToken: autoVerify ? null : verificationToken,
+        emailVerificationExpires: autoVerify ? null : verificationExpires,
         authProvider: "local"
       });
 
-      // Send verification email
-      try {
-        await sendVerificationEmail(email, verificationToken, firstName);
-        console.log(`✅ Verification email sent to: ${email}`);
-      } catch (emailError) {
-        console.error("Failed to send verification email:", emailError);
+      // Send verification email (skip if temporarily auto-verifying)
+      if (!autoVerify) {
+        try {
+          await sendVerificationEmail(email, verificationToken, firstName);
+          console.log(`✅ Verification email sent to: ${email}`);
+        } catch (emailError) {
+          console.error("Failed to send verification email:", emailError);
+        }
       }
 
       // Return success WITHOUT creating session
@@ -251,7 +288,7 @@ export async function setupSimpleAuth(app: Express) {
       res.json({
         success: true,
         message: "Account created! Please check your email to verify your account.",
-        requiresVerification: true,
+        requiresVerification: !autoVerify,
         user: {
           id: user.id,
           email: user.email,
@@ -568,7 +605,8 @@ export async function setupSimpleAuth(app: Express) {
         console.log(`✅ Verification email resent to: ${user.email}`);
       } catch (emailError) {
         console.error("Failed to resend verification email:", emailError);
-        return res.status(500).json({ message: "Failed to send verification email" });
+        const err: any = emailError || {};
+        return res.status(500).json({ message: "Failed to send verification email", code: err.code, command: err.command });
       }
 
       res.json({
@@ -617,7 +655,8 @@ export async function setupSimpleAuth(app: Express) {
         console.log(`✅ Password reset email sent to: ${user.email}`);
       } catch (emailError) {
         console.error("Failed to send password reset email:", emailError);
-        return res.status(500).json({ message: "Failed to send reset email" });
+        const err: any = emailError || {};
+        return res.status(500).json({ message: "Failed to send reset email", code: err.code, command: err.command });
       }
 
       res.json({
