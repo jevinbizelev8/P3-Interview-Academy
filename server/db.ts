@@ -41,13 +41,24 @@ const createNeonClient = (url: string): DatabaseClient => {
   return { pool, db, isNeon: true };
 };
 
+const getPgSslConfig = (): false | { rejectUnauthorized: boolean; ca?: string } => {
+  if (env["DB_SSL"] === "false") return false;
+  const caFromB64 = env["DB_SSL_CA_B64"] ? Buffer.from(env["DB_SSL_CA_B64"], "base64").toString("utf8") : undefined;
+  const ca = caFromB64 || env["DB_SSL_CA"];
+  if (ca) {
+    return { rejectUnauthorized: true, ca };
+  }
+  console.warn("[db] No DB SSL CA provided; using insecure TLS (rejectUnauthorized=false)");
+  return { rejectUnauthorized: false };
+};
+
 const createPostgresClient = (url: string): DatabaseClient => {
   const pool = new PgPool({
     connectionString: url,
     max: 20,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 5000,
-    ssl: env["DB_SSL"] === "false" ? false : { rejectUnauthorized: false },
+    ssl: getPgSslConfig(),
   });
   const db = drizzlePg(pool, { schema });
   return { pool, db, isNeon: false };
