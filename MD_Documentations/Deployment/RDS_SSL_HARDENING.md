@@ -50,10 +50,18 @@ If no CA is provided and `DB_SSL !== 'false'`, the code will warn and fall back 
 
 5) Validate
 
-   - `GET /api/health` should return status `ok` and `checks.database.status` should be `healthy`.
+ - `GET /api/health` should return status `ok` and `checks.database.status` should be `healthy`.
 
 ## Notes
 
 - You can also store the PEM directly using `DB_SSL_CA` (multi-line), but base64 is easier to manage in EB.
 - Connection string should continue to include `?sslmode=require` if you previously set it; the driver uses the provided `ssl` config.
+
+## 2025-10-22 – Applied in Production
+
+- Region: `ap-southeast-1`
+- EB env var set: `DB_SSL_CA_B64` (RDS regional bundle)
+- Removed insecure override: `NODE_TLS_REJECT_UNAUTHORIZED`
+- Health: `/api/health` shows `database: healthy` with TLS verification enabled
+
 
