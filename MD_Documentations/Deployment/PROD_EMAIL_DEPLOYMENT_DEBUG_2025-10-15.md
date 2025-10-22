@@ -118,7 +118,7 @@ aws elasticbeanstalk update-environment \
 aws elasticbeanstalk describe-environments --environment-names p3-interview-academy-prod-v2
 ```
 
-## 2025-10-17 Update — Gmail SMTP EAUTH (support@bizelev8.ai)
+## 2025-10-17 Update – Gmail SMTP EAUTH (support@bizelev8.ai)
 
 Context:
 - Staging previously worked using `jevin@bizelev8.ai` with a Gmail App Password.
@@ -159,3 +159,55 @@ Security notes:
 
 Fallback plan:
 - If Gmail SMTP remains blocked by policy, migrate to Amazon SES (set `SMTP_HOST=email-smtp.<region>.amazonaws.com` with SES SMTP creds) and re‑test diagnostics.
+
+
+## 2025-10-22 Update – Gmail SMTP Verified in Production
+
+Summary:
+- Gmail SMTP authentication is working in production; live flows deliver.
+- Verified receipt via plus-addressing to `jevin+pa3test@bizelev8.ai` (delivered to Jevin’s inbox).
+- Cleaned up EB environment variables and hardened database TLS.
+
+What changed (production EB: `p3-interview-academy-prod-v2`):
+- SMTP
+  - `SMTP_PASS` set to the 16‑char Gmail App Password (spaces removed).
+  - One‑shot self‑test removed: unset `SMTP_SELF_TEST_TO`.
+  - Login/forgot‑password flows return 200 and send emails as expected.
+- Environment cleanup
+  - Removed `PORT` override so the app binds to EB’s assigned port.
+  - Database TLS hardened (details below) and insecure override removed.
+
+Database TLS hardening:
+- Added regional Amazon RDS CA bundle in EB env as base64:
+  - `DB_SSL_CA_B64 = <base64 of ap-southeast-1 RDS bundle>`
+- Application now trusts the CA and validates TLS; removed:
+  - `NODE_TLS_REJECT_UNAUTHORIZED` (previously set to `0`).
+- Result: `/api/health` shows `checks.database.status=healthy` with TLS verification enabled.
+
+Commands used (for audit):
+```
+# Set the RDS CA as base64 in EB
+aws elasticbeanstalk update-environment \
+  --environment-name p3-interview-academy-prod-v2 \
+  --option-settings Namespace=aws:elasticbeanstalk:application:environment,OptionName=DB_SSL_CA_B64,Value=<base64>
+
+# Remove temporary/testing or insecure vars
+aws elasticbeanstalk update-environment \
+  --environment-name p3-interview-academy-prod-v2 \
+  --options-to-remove \
+    Namespace=aws:elasticbeanstalk:application:environment,OptionName=SMTP_SELF_TEST_TO \
+    Namespace=aws:elasticbeanstalk:application:environment,OptionName=PORT \
+    Namespace=aws:elasticbeanstalk:application:environment,OptionName=NODE_TLS_REJECT_UNAUTHORIZED
+```
+
+Current recommended settings (prod):
+- `SMTP_HOST=smtp.gmail.com`
+- `SMTP_PORT=587`, `SMTP_SECURE=false` (STARTTLS)
+- `SMTP_USER=EMAIL_FROM=support@bizelev8.ai`
+- `SMTP_PASS=<16 chars, no spaces>`
+- `TEMP_AUTO_VERIFY=false` (send real verification emails)
+- `DB_SSL_CA_B64=<base64 RDS CA bundle>`
+
+Notes:
+- If Gmail policy ever changes or org policy interferes, SES single‑identity fallback remains viable (no DNS needed if you can click the verification email).
+- The diagnostics endpoints are not exposed in the current prod build to minimize surface area; EB logs + `/api/health` provide sufficient signal.
