@@ -1,7 +1,0 @@
-[
-  {
-    "category": "``awscrt``",
-    "description": "Update awscrt version range ceiling to 0.14.0",
-    "type": "enhancement"
-  }
-]

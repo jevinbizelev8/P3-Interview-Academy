@@ -88,7 +88,8 @@ Both automated (Codex) and manual security hardening tasks have been completed s
 
 #### Gmail SMTP (support@bizelev8.ai)
 - **User**: `support@bizelev8.ai`
-- **App Password**: `qgmf zwmk ofis srlx` (spaces removed: `qgmfzwmkofissrlx`)
+- **App Password**: ROTATED on 2025-10-17; stored in EB environment (not in repo)
+- **Status (updated 2025-10-17)**: ROTATED; verification pending
 - **Status**: ✅ **NOT COMPROMISED** (user confirmed safe to continue using)
 - **Justification**: Password was exposed in git history but:
   1. Git repository is private

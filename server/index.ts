@@ -2,7 +2,9 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic, log } from "./vite";
-import { validateEmailConfig } from "./services/email-service";
+import { validateEmailConfig, verifyEmailTransport } from "./services/email-service";
+import { sendVerificationEmail } from "./services/email-service";
+import crypto from "crypto";
 
 // Validate email configuration at startup
 try {
@@ -13,6 +15,31 @@ try {
   log('Email features will be unavailable until configuration is complete', 'startup');
 }
 
+
+// Proactively verify SMTP transport to catch production issues early
+(async () => {
+  try {
+    const result = await verifyEmailTransport();
+    console.log('[email-startup]', result);
+  } catch (e) {
+    console.error('[email-startup] verify failed to run', e);
+  }
+})();
+
+// Optional one-shot SMTP self-test on startup if configured
+(async () => {
+  const selfTestTo = process.env.SMTP_SELF_TEST_TO;
+  if (!selfTestTo) return;
+  try {
+    const vr = await verifyEmailTransport();
+    console.log('[email-selftest-verify]', vr);
+    const token = crypto.randomBytes(32).toString('hex');
+    await sendVerificationEmail(selfTestTo, token, 'SelfTest');
+    console.log('[email-selftest-send] attempted', { to: selfTestTo });
+  } catch (e: any) {
+    console.error('[email-selftest-error]', { message: e?.message, code: e?.code, command: e?.command });
+  }
+})();
 const app = express();
 
 // CORS configuration for iframe embedding
@@ -136,3 +163,4 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
   });
 })();
+

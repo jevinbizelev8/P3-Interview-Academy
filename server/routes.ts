@@ -1,6 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { verifyEmailTransport } from "./services/email-service";
 import { ensureCriticalSchema } from "./services/schema-auditor";
 import { executeQuery } from "./db";
 import { sealionService } from "./services/sealion";
@@ -28,6 +29,7 @@ import { prepareAIRouter } from "./routes/prepare-ai";
 import practiceRouter from "./routes/practice";
 import voiceServicesRouter from "./routes/voice-services-mvp";
 import testEndpoints from "./test-endpoints";
+import crypto from "crypto";
 
 // Extend Express Request to include user property
 declare global {
@@ -145,7 +147,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`
       };
 
-      // 4. System load (if available)
+      // 4. SMTP check (non-blocking, best-effort)
+      try {
+        const { verifyEmailTransport } = await import('./services/email-service');
+        const emailResult = await Promise.race([
+          verifyEmailTransport(),
+          new Promise((resolve) => setTimeout(() => resolve({ ok: false, message: 'SMTP verify timed out' }), 2500)),
+        ]) as any;
+        healthCheck.checks.email = emailResult;
+      } catch {
+        healthCheck.checks.email = { ok: false, message: 'SMTP verify failed to run' };
+      }
+
+      // 5. System load (if available)
       try {
         const os = await import('os');
         healthCheck.checks.system = {
@@ -262,6 +276,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: errorMessage,
         timestamp: new Date().toISOString()
       });
+    }
+  });
+
+  // Email diagnostics: verify SMTP connectivity/auth (temporarily public for debugging)
+  app.get('/api/diagnostics/email', async (_req, res) => {
+    try {
+      const result = await verifyEmailTransport();
+      res.json({ ok: result.ok, message: result.message });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: 'Email verify failed to run' });
+    }
+  });
+
+  // Health-style email check for simple external probing
+  app.get('/api/health/email', async (_req, res) => {
+    try {
+      const result = await verifyEmailTransport();
+      res.json({ ok: result.ok, message: result.message });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: 'Email verify failed to run' });
+    }
+  });
+
+  // Temporary admin endpoint to verify a user without email (requires X-Admin-Key)
+  app.post('/api/admin/verify-user', async (req, res) => {
+    try {
+      const adminKeyHeader = req.get('X-Admin-Key');
+      const expected = process.env.ADMIN_KEY;
+      if (!expected || !adminKeyHeader || adminKeyHeader !== expected) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      const email = req.body?.email as string | undefined;
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      await storage.upsertUser({
+        id: user.id,
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null
+      });
+      res.json({ success: true, userId: user.id });
+    } catch (e) {
+      res.status(500).json({ message: 'Failed to verify user' });
+    }
+  });
+
+  // Temporary admin endpoint to force resend verification (requires X-Admin-Key)
+  app.get('/api/admin/resend', async (req, res) => {
+    try {
+      const adminKeyHeader = req.get('X-Admin-Key');
+      const expected = process.env.ADMIN_KEY;
+      if (!expected || !adminKeyHeader || adminKeyHeader !== expected) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      const email = typeof req.query.email === 'string' ? req.query.email : undefined;
+      if (!email || !email.includes('@')) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      const token = crypto.randomBytes(32).toString('hex');
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await storage.upsertUser({ id: user.id, emailVerificationToken: token, emailVerificationExpires: expires });
+      try {
+        const { sendVerificationEmail } = await import('./services/email-service');
+        await sendVerificationEmail(user.email!, token, user.firstName || '');
+        res.json({ success: true, message: 'Verification email sent' });
+      } catch (e: any) {
+        res.status(500).json({ message: 'Failed to send verification email', code: e?.code, command: e?.command });
+      }
+    } catch (e) {
+      res.status(500).json({ message: 'Failed to process resend' });
+    }
+  });
+
+  // Non-API path to bypass API 404 wrapper for quick external checks
+  app.get('/diag-email', async (_req, res) => {
+    try {
+      const result = await verifyEmailTransport();
+      res.json({ ok: result.ok, message: result.message });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: 'Email verify failed to run' });
     }
   });
 
