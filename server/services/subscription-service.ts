@@ -124,7 +124,7 @@ export class SubscriptionService {
         planType: tier,
         billingCycle: 'monthly',
         monthlyCredits: tierConfig.credits,
-        pricePerMonth: tierConfig.pricePerMonth,
+        pricePerMonth: tierConfig.pricePerMonth.toString(),
         status: subscription.status,
         nextRenewalDate: new Date(subscription.current_period_end * 1000),
         autoRenew: !subscription.cancel_at_period_end,
