@@ -12,7 +12,7 @@ Status: IN PROGRESS — track completion here. When all items are checked, flip 
 
 ## 2) Stripe Webhooks: End-to-End (Dashboard)
 - [ ] Confirm EB env has correct staging webhook secret in `STRIPE_WEBHOOK_SECRET`
-- [ ] Verify raw-body middleware order for Stripe webhooks
+- [x] Verify raw-body middleware order for Stripe webhooks
   - Files: `server/index.ts`, `server/routes.ts:1956-1960` (`/api/webhooks/stripe`)
 - [ ] From Stripe Dashboard (Test mode), send events to staging URL and expect 2xx:
   - [ ] `checkout.session.completed` (subscription)
