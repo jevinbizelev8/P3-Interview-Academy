@@ -205,7 +205,6 @@ export async function manualCreditReset(userId?: string): Promise<any> {
     // Reset all expired users
     const result = await resetExpiredCredits();
     return {
-      success: true,
       message: `Credit reset complete: ${result.success}/${result.total} users reset`,
       ...result,
     };
