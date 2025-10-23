@@ -4,9 +4,9 @@ Status: IN PROGRESS — track completion here. When all items are checked, flip 
 
 ## 1) Stripe Billing: Customer Portal (500)
 - [ ] Ensure test user has a valid `stripeCustomerId` in DB (e.g., `qa+seed@example.com`).
-  - [ ] If missing, create Stripe customer and persist ID.
+  - [x] If missing, auto-create Stripe customer and persist ID (code updated).
 - [ ] Fix `createCustomerPortalSession` errors and return 200 with URL
-  - Code: `server/services/subscription-service.ts:236-266`
+  - Code: `server/services/subscription-service.ts:236-266` (patched)
 - [ ] Verify `GET /api/subscription/customer-portal` responds 200 and opens Billing Portal
 - [ ] Record portal URL test outcome in the report
 
@@ -81,4 +81,3 @@ Status: IN PROGRESS — track completion here. When all items are checked, flip 
 
 Owner: Deployment lead (you can assign initials per item)
 Notes: Keep this file in sync with the staging test report. If any new defect appears, add a sub‑task here and reference log excerpts and request IDs.
-
