@@ -186,8 +186,7 @@ router.post("/users/:id/credits/add", async (req: Request, res: Response) => {
       });
     }
 
-    const creditService = new CreditService();
-    const result = await creditService.addCredits(
+    const result = await CreditService.addCredits(
       userId,
       amount,
       "admin-adjustment",
@@ -216,8 +215,7 @@ router.post("/users/:id/credits/reset", async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
 
-    const creditService = new CreditService();
-    const result = await creditService.resetMonthlyCredits(userId);
+    const result = await CreditService.resetMonthlyCredits(userId);
 
     res.json({
       success: true,
@@ -523,9 +521,9 @@ router.get("/analytics/usage", async (req: Request, res: Response) => {
   try {
     // Total credits consumed (all time)
     const totalCreditsResult = await db
-      .select({ total: sql<number>`sum(abs(amount))` })
+      .select({ total: sql<number>`sum(abs(${creditTransactions.creditsAmount}))` })
       .from(creditTransactions)
-      .where(sql`amount < 0`);
+      .where(sql`${creditTransactions.creditsAmount} < 0`);
     const totalCreditsConsumed = Number(totalCreditsResult[0]?.total || 0);
 
     // Credits consumed this month
@@ -534,10 +532,10 @@ router.get("/analytics/usage", async (req: Request, res: Response) => {
     firstDayOfMonth.setHours(0, 0, 0, 0);
 
     const monthCreditsResult = await db
-      .select({ total: sql<number>`sum(abs(amount))` })
+      .select({ total: sql<number>`sum(abs(${creditTransactions.creditsAmount}))` })
       .from(creditTransactions)
       .where(and(
-        sql`amount < 0`,
+        sql`${creditTransactions.creditsAmount} < 0`,
         gte(creditTransactions.createdAt, firstDayOfMonth)
       ));
     const creditsThisMonth = Number(monthCreditsResult[0]?.total || 0);
@@ -545,12 +543,15 @@ router.get("/analytics/usage", async (req: Request, res: Response) => {
     // Credits by feature
     const featureUsage = await db
       .select({
-        feature: creditTransactions.feature,
-        total: sql<number>`sum(abs(amount))`,
+        feature: creditTransactions.featureUsed,
+        total: sql<number>`sum(abs(${creditTransactions.creditsAmount}))`,
       })
       .from(creditTransactions)
-      .where(sql`amount < 0 AND feature IS NOT NULL`)
-      .groupBy(creditTransactions.feature);
+      .where(and(
+        sql`${creditTransactions.creditsAmount} < 0`,
+        sql`${creditTransactions.featureUsed} IS NOT NULL`
+      ))
+      .groupBy(creditTransactions.featureUsed);
 
     // Practice sessions count
     const practiceCountResult = await db
@@ -571,22 +572,22 @@ router.get("/analytics/usage", async (req: Request, res: Response) => {
         email: users.email,
         firstName: users.firstName,
         lastName: users.lastName,
-        totalCredits: sql<number>`sum(abs(${creditTransactions.amount}))`,
+        totalCredits: sql<number>`sum(abs(${creditTransactions.creditsAmount}))`,
       })
       .from(creditTransactions)
       .leftJoin(users, eq(creditTransactions.userId, users.id))
-      .where(sql`${creditTransactions.amount} < 0`)
+      .where(sql`${creditTransactions.creditsAmount} < 0`)
       .groupBy(creditTransactions.userId, users.email, users.firstName, users.lastName)
-      .orderBy(desc(sql`sum(abs(${creditTransactions.amount}))`))
+      .orderBy(desc(sql`sum(abs(${creditTransactions.creditsAmount}))`))
       .limit(10);
 
     // Average credits per user
     const avgCreditsResult = await db
       .select({
-        avg: sql<number>`avg(abs(amount))`,
+        avg: sql<number>`avg(abs(${creditTransactions.creditsAmount}))`,
       })
       .from(creditTransactions)
-      .where(sql`amount < 0`);
+      .where(sql`${creditTransactions.creditsAmount} < 0`);
     const averageCreditsPerTransaction = Number(avgCreditsResult[0]?.avg || 0);
 
     res.json({

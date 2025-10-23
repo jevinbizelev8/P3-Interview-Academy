@@ -183,7 +183,9 @@ export default function Billing() {
                   </div>
                 )}
                 <p className="text-sm text-gray-600 mt-1">
-                  {currentPlan === "FREE" ? "Free Forever" : `$${tiers.find(t => t.tier === currentPlan)?.price || 0}/month`}
+                  {currentPlan === "FREE"
+                    ? "Free Forever"
+                    : `$${tiers.find(t => t.tier === currentPlan)?.prices?.monthly ?? 0}/month`}
                 </p>
               </CardContent>
             </Card>
@@ -353,7 +355,9 @@ export default function Billing() {
                     isCurrentPlan={currentPlan === tier.tier}
                     features={tier.features}
                     billingCycle={selectedBillingCycle}
-                    savings={tier.savings?.[selectedBillingCycle]}
+                    savings={selectedBillingCycle === "monthly"
+                      ? undefined
+                      : tier.savings?.[selectedBillingCycle as "3-month" | "6-month"]}
                     disabled={true}
                   />
                 ))}
