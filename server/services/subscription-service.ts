@@ -178,7 +178,7 @@ export class SubscriptionService {
         .set({
           planType: newTier,
           monthlyCredits: tierConfig.credits,
-          pricePerMonth: tierConfig.pricePerMonth,
+          pricePerMonth: tierConfig.pricePerMonth.toString(),
           status: subscription.status,
           nextRenewalDate: new Date(subscription.current_period_end * 1000),
           autoRenew: !subscription.cancel_at_period_end,
@@ -333,7 +333,7 @@ export class SubscriptionService {
         await db
           .update(users)
           .set({
-            monthlyCredits: tierConfig.credits,
+            monthlyCreditAllocation: tierConfig.credits,
             creditBalance: tierConfig.credits + (user.topUpCredits || 0),
           })
           .where(eq(users.id, user.id));
@@ -387,7 +387,7 @@ export class SubscriptionService {
       await db
         .update(users)
         .set({
-          monthlyCredits: tierConfig.credits,
+          monthlyCreditAllocation: tierConfig.credits,
           creditBalance: tierConfig.credits + (user.topUpCredits || 0),
         })
         .where(eq(users.id, userId));
