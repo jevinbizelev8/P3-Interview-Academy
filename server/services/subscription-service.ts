@@ -251,8 +251,21 @@ export class SubscriptionService {
         throw new Error('User not found');
       }
 
+      // Ensure Stripe customer exists for this user (create if missing)
       if (!user.stripeCustomerId) {
-        throw new Error('User does not have a Stripe customer ID');
+        if (!user.email) {
+          throw new Error('User does not have a Stripe customer ID and is missing email');
+        }
+        const stripeCustomerId = await getOrCreateStripeCustomer(
+          user.id,
+          user.email,
+          `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
+        );
+        await db
+          .update(users)
+          .set({ stripeCustomerId })
+          .where(eq(users.id, userId));
+        user.stripeCustomerId = stripeCustomerId as any;
       }
 
       // Create portal session
