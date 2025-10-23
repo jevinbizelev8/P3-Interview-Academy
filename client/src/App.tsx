@@ -8,6 +8,7 @@ import NotFound from "@/pages/not-found";
 import Practice from "@/pages/practice";
 import Prepare from "@/pages/prepare";
 import Perform from "@/pages/perform";
+import Billing from "@/pages/billing";
 import AdminDashboard from "@/pages/admin/dashboard";
 import VerifyEmail from "@/pages/verify-email";
 import ResetPassword from "@/pages/reset-password";
@@ -26,6 +27,11 @@ function Router() {
       <Route path="/dashboard">
         <ProtectedRoute>
           {user && <AuthenticatedLanding user={user} />}
+        </ProtectedRoute>
+      </Route>
+      <Route path="/billing">
+        <ProtectedRoute>
+          <Billing />
         </ProtectedRoute>
       </Route>
       <Route path="/prepare" component={Prepare} />

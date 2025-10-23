@@ -122,7 +122,15 @@
       "Bash(npm exec:*)",
       "Bash(cat:*)",
       "Bash(gh run watch:*)",
-      "Bash(aws logs tail:*)"
+      "Bash(aws logs tail:*)",
+      "Bash(npm ci:*)",
+      "Read(//tmp/npm-cache/_logs/**)",
+      "WebFetch(domain:github.com)",
+      "Read(//tmp/**)",
+      "Bash(git clone:*)",
+      "Bash(NODE_ENV=development BYPASS_AUTH=true PORT=3001 npx tsx:*)",
+      "Bash(git log:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

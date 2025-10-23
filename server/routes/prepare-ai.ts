@@ -5,6 +5,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { PrepareAIService } from "../services/prepare-ai-service.js";
 import { emitToSession } from "../services/realtime-gateway.js";
+import { requireCredits } from "../middleware/credit-middleware.js";
+import { CreditService } from "../services/credit-service.js";
 
 const router = Router();
 const prepareAIService = new PrepareAIService();
@@ -66,7 +68,12 @@ const responseSchema = z.object({
 });
 
 // Session management endpoints
-router.post('/sessions', async (req, res) => {
+/**
+ * POST /sessions
+ * Create new AI preparation session
+ * Credit cost: Determined by credit_costs table (default: 1 credit)
+ */
+router.post('/sessions', requireCredits('prepare-session'), async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -81,12 +88,41 @@ router.post('/sessions', async (req, res) => {
     }
 
     const session = await prepareAIService.createSession(req.user.id, validation.data);
-    
-    res.status(201).json({
-      success: true,
-      data: session,
-      message: 'AI preparation session created successfully'
-    });
+
+    // Deduct credits AFTER successful session creation
+    try {
+      const deduction = await CreditService.deductCredits(
+        req.user.id,
+        'prepare-session',
+        session.id,
+        'Preparation session started'
+      );
+
+      // Include credit info in response
+      res.status(201).json({
+        success: true,
+        data: session,
+        message: 'AI preparation session created successfully',
+        credits: {
+          deducted: deduction.monthlyCreditsUsed + deduction.topUpCreditsUsed,
+          remaining: deduction.balanceAfter,
+          breakdown: {
+            monthlyCreditsUsed: deduction.monthlyCreditsUsed,
+            topUpCreditsUsed: deduction.topUpCreditsUsed,
+          }
+        }
+      });
+    } catch (creditError) {
+      // Session was created but credit deduction failed
+      // Return session anyway but log the error for manual correction
+      console.error('⚠️  Credit deduction failed after session creation:', creditError);
+      res.status(201).json({
+        success: true,
+        data: session,
+        message: 'AI preparation session created successfully',
+        warning: 'Credit deduction failed - please contact support'
+      });
+    }
 
   } catch (error) {
     console.error('❌ Create AI session error:', error);

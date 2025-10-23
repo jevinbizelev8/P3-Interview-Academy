@@ -4,18 +4,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SeaLionLogo } from "@/components/ui/sealion-logo";
-import { 
-  BookOpen, 
-  Target, 
-  Award, 
-  ArrowRight, 
-  TrendingUp, 
-  Clock, 
+import { CreditWidget } from "@/components/layout/CreditWidget";
+import {
+  BookOpen,
+  Target,
+  Award,
+  ArrowRight,
+  TrendingUp,
+  Clock,
   LogOut,
   User,
   BarChart3,
   Play,
-  Settings
+  Settings,
+  CreditCard
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -104,7 +106,14 @@ export default function AuthenticatedLanding({ user }: AuthenticatedLandingProps
                   Perform
                 </Button>
               </Link>
+              <Link href="/billing">
+                <Button variant="ghost" size="sm">
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Billing
+                </Button>
+              </Link>
               <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
+                <CreditWidget />
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={user.profileImageUrl || undefined} />
                   <AvatarFallback className="text-xs">
