@@ -1,12 +1,35 @@
-# Codex Staging Deployment Guide - Admin Subscription System (Phases 1-5)
+# ⚠️ DEPRECATED - DO NOT USE
 
-> Status: ON HOLD (2025-10-23)
+> **This document is OUTDATED and has been superseded.**
 >
-> - Staging deployment is paused to avoid impacting production data.
-> - Observed issue: `p3-interview-academy-staging` currently uses a `DATABASE_URL` pointing to the production database (`.../postgres` with `app_user`).
-> - Action required: update EB staging `DATABASE_URL` to the staging DB: `postgresql://app_user_staging:<password>@<rds-endpoint>:5432/p3_staging?sslmode=require`.
-> - After the environment variable fix, re-run the staging workflow, then execute migrations (`npm run db:push`) and seed credit costs (`npx tsx server/scripts/seed-credit-costs.ts`).
-> - Note: AWS SSL/HTTPS hardening landed on `main`. Prefer using `https://` when accessing the staging URL if the certificate is active.
+> **Use instead**: `MD_Documentations/Deployment/DEPLOYMENT.md`
+>
+> **Why deprecated:**
+> - ❌ Only covers Phases 1-5 (missing Phases 6-8)
+> - ❌ Missing Stripe integration setup
+> - ❌ Missing email notifications testing
+> - ❌ Missing cron job testing
+> - ❌ Missing production release guide
+> - ✅ All content now in DEPLOYMENT.md with comprehensive coverage
+>
+> **New Guide Location:**
+> - File: `MD_Documentations/Deployment/DEPLOYMENT.md`
+> - Section: "🧪 Staging Deployment & Testing Guide" (Step 1-9)
+> - Coverage: All 8 phases + HTTPS + Stripe + complete testing
+>
+> **Redirect:** See DEPLOYMENT.md for current staging deployment instructions.
+
+---
+
+# ~~Codex Staging Deployment Guide - Admin Subscription System (Phases 1-5)~~
+
+> ~~Status: ON HOLD (2025-10-23)~~
+>
+> ~~- Staging deployment is paused to avoid impacting production data.~~
+> ~~- Observed issue: `p3-interview-academy-staging` currently uses a `DATABASE_URL` pointing to the production database (`.../postgres` with `app_user`).~~
+> ~~- Action required: update EB staging `DATABASE_URL` to the staging DB: `postgresql://app_user_staging:<password>@<rds-endpoint>:5432/p3_staging?sslmode=require`.~~
+> ~~- After the environment variable fix, re-run the staging workflow, then execute migrations (`npm run db:push`) and seed credit costs (`npx tsx server/scripts/seed-credit-costs.ts`).~~
+> ~~- Note: AWS SSL/HTTPS hardening landed on `main`. Prefer using `https://` when accessing the staging URL if the certificate is active.~~
 
 **Feature Branch**: `feature/admin-subscription-system`
 **Target Environment**: AWS Staging (`p3-interview-academy-staging`)
