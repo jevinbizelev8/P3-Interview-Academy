@@ -141,6 +141,8 @@ jobs:
             --option-settings \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=NODE_ENV,Value=staging \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=PORT,Value=5000 \
+              # TEMP: Allow auto-verification for staging test users to enable end-to-end flows
+              Namespace=aws:elasticbeanstalk:application:environment,OptionName=TEMP_AUTO_VERIFY,Value=true \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=DATABASE_URL,Value="${{ secrets.DATABASE_URL }}" \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=SESSION_SECRET,Value="${{ secrets.SESSION_SECRET }}" \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=WS_ALLOWED_ORIGINS,Value="*" \
