@@ -26,9 +26,12 @@ import { TopUpCard } from "@/components/billing/TopUpCard";
 import { TransactionHistory } from "@/components/billing/TransactionHistory";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { subscriptionApi } from "@/services/subscription-api";
 
 export default function Billing() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const {
     balance,
     balanceLoading,
@@ -39,6 +42,7 @@ export default function Billing() {
     creditPercentage,
     isLowCredits,
     isCriticallyLow,
+    refetch: refetchCredits,
   } = useCredits();
 
   // Get user's current plan
@@ -51,6 +55,112 @@ export default function Billing() {
 
   // Billing cycle state
   const [selectedBillingCycle, setSelectedBillingCycle] = React.useState<"monthly" | "3-month" | "6-month">("monthly");
+
+  // Loading state for checkout operations
+  const [isCheckoutLoading, setIsCheckoutLoading] = React.useState(false);
+
+  // Handle success/cancel URL parameters
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const success = params.get('success');
+    const canceled = params.get('canceled');
+
+    if (success === 'true') {
+      toast({
+        title: "Payment Successful!",
+        description: "Your payment has been processed. Credits will be updated shortly.",
+        duration: 5000,
+      });
+      // Refresh credit balance
+      refetchCredits?.();
+      // Clean up URL
+      window.history.replaceState({}, '', '/billing');
+    }
+
+    if (canceled === 'true') {
+      toast({
+        title: "Payment Canceled",
+        description: "Your payment was canceled. No charges have been made.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/billing');
+    }
+  }, [toast, refetchCredits]);
+
+  // Handle subscription tier upgrade
+  const handleUpgrade = async (tier: 'PRO' | 'ADVANCED') => {
+    if (isCheckoutLoading) return;
+
+    try {
+      setIsCheckoutLoading(true);
+      await subscriptionApi.createCheckoutSession(tier);
+      // Redirect happens in API call
+    } catch (error) {
+      console.error('Error starting checkout:', error);
+      toast({
+        title: "Checkout Error",
+        description: error instanceof Error ? error.message : "Failed to start checkout. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      setIsCheckoutLoading(false);
+    }
+  };
+
+  // Handle top-up credit purchase
+  const handleTopUpPurchase = async (credits: number) => {
+    if (isCheckoutLoading) return;
+
+    // Map credits to package type
+    const packageTypeMap: Record<number, 'SMALL' | 'POPULAR' | 'BULK'> = {
+      100: 'SMALL',
+      500: 'POPULAR',
+      2000: 'BULK',
+    };
+
+    const packageType = packageTypeMap[credits];
+    if (!packageType) {
+      toast({
+        title: "Invalid Package",
+        description: "Selected credit package is not available.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsCheckoutLoading(true);
+      await subscriptionApi.createTopUpCheckout(packageType);
+      // Redirect happens in API call
+    } catch (error) {
+      console.error('Error starting top-up checkout:', error);
+      toast({
+        title: "Checkout Error",
+        description: error instanceof Error ? error.message : "Failed to start checkout. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      setIsCheckoutLoading(false);
+    }
+  };
+
+  // Handle customer portal access
+  const handleManageSubscription = async () => {
+    try {
+      await subscriptionApi.createCustomerPortal();
+      // Redirect happens in API call
+    } catch (error) {
+      console.error('Error accessing customer portal:', error);
+      toast({
+        title: "Portal Access Error",
+        description: error instanceof Error ? error.message : "Failed to access customer portal. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
+  };
 
   // Tier configurations with multi-cycle pricing
   const tiers = [
@@ -358,7 +468,8 @@ export default function Billing() {
                     savings={selectedBillingCycle === "monthly"
                       ? undefined
                       : tier.savings?.[selectedBillingCycle as "3-month" | "6-month"]}
-                    disabled={true}
+                    onUpgrade={() => handleUpgrade(tier.tier)}
+                    disabled={isCheckoutLoading || selectedBillingCycle !== "monthly"}
                   />
                 ))}
               </div>
@@ -393,7 +504,8 @@ export default function Billing() {
                     pricePerCredit={pkg.pricePerCredit}
                     savings={pkg.savings}
                     isBestValue={pkg.isBestValue}
-                    disabled={true}
+                    onPurchase={() => handleTopUpPurchase(pkg.credits)}
+                    disabled={isCheckoutLoading}
                   />
                 ))}
               </div>

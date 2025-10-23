@@ -50,7 +50,7 @@ export function TierCard({
   isCurrentPlan = false,
   features,
   onUpgrade,
-  disabled = true,
+  disabled = false,
   billingCycle = "monthly",
   savings,
 }: TierCardProps) {
@@ -173,7 +173,7 @@ export function TierCard({
             >
               Free Forever
             </Button>
-          ) : (
+          ) : disabled ? (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -187,13 +187,23 @@ export function TierCard({
                     </Button>
                   </div>
                 </TooltipTrigger>
-                {disabled && (
-                  <TooltipContent>
-                    <p>Payment integration coming soon</p>
-                  </TooltipContent>
-                )}
+                <TooltipContent>
+                  <p>
+                    {billingCycle !== "monthly"
+                      ? "Multi-cycle billing coming soon. Use monthly for now."
+                      : "Please wait..."}
+                  </p>
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          ) : (
+            <Button
+              disabled={disabled}
+              onClick={onUpgrade}
+              className={`w-full bg-gradient-to-r ${config.gradient} hover:opacity-90 text-white transition-all`}
+            >
+              Upgrade to {config.name}
+            </Button>
           )}
         </CardFooter>
       </Card>

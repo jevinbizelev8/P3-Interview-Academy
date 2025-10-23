@@ -34,7 +34,7 @@ export function TopUpCard({
   savings,
   isBestValue = false,
   onPurchase,
-  disabled = true,
+  disabled = false,
 }: TopUpCardProps) {
   const Icon = getPackageIcon(credits);
   const gradient = getPackageGradient(credits);
@@ -138,26 +138,34 @@ export function TopUpCard({
         </CardContent>
 
         <CardFooter className="pt-6">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-full">
-                  <Button
-                    disabled={disabled}
-                    onClick={onPurchase}
-                    className={`w-full bg-gradient-to-r ${gradient} hover:opacity-90 text-white shadow-md`}
-                  >
-                    Purchase Top-Up
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              {disabled && (
+          {disabled ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-full">
+                    <Button
+                      disabled={disabled}
+                      onClick={onPurchase}
+                      className={`w-full bg-gradient-to-r ${gradient} hover:opacity-90 text-white shadow-md`}
+                    >
+                      Purchase Top-Up
+                    </Button>
+                  </div>
+                </TooltipTrigger>
                 <TooltipContent>
-                  <p>Payment integration coming soon</p>
+                  <p>Please wait...</p>
                 </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <Button
+              disabled={disabled}
+              onClick={onPurchase}
+              className={`w-full bg-gradient-to-r ${gradient} hover:opacity-90 text-white shadow-md transition-all`}
+            >
+              Purchase Top-Up
+            </Button>
+          )}
         </CardFooter>
       </Card>
     </motion.div>
