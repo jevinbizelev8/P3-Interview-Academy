@@ -113,6 +113,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.52.5",
     "@replit/vite-plugin-cartographer": "^0.2.8",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/typography": "^0.5.15",
