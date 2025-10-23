@@ -19,8 +19,11 @@ Deploy Phases 1-5 of the Admin Subscription System to AWS staging environment fo
 - ✅ Phase 5: Admin Analytics Dashboard
 
 **What's NOT Being Deployed:**
-- ⏳ Phase 6: Stripe Integration (awaiting webhook secrets)
+- ⏳ Phase 6: Stripe Integration (requires HTTPS/SSL setup + webhook secrets)
 - ⏳ Phases 7-8: Automation and polish (depend on Phase 6)
+
+**📌 Important Note for Phase 6**:
+Before implementing Phase 6 (Stripe webhooks), HTTPS/SSL must be configured on staging and production environments. Stripe requires HTTPS URLs for webhook endpoints. See **`MD_Documentations/Guides/AWS_SSL_HTTPS_SETUP.md`** for setup instructions.
 
 ---
 
@@ -501,10 +504,12 @@ curl $STAGING_URL/api/health
 
 ## 📊 Environment URLs
 
-| Environment | URL | Purpose |
-|-------------|-----|---------|
-| **Staging** | http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com | Testing feature branch |
-| **Production** | http://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com | Live application |
+| Environment | HTTP URL | HTTPS URL (Required for Phase 6) | Purpose |
+|-------------|----------|-----------------------------------|---------|
+| **Staging** | http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com | https://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com | Testing feature branch |
+| **Production** | http://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com | https://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com | Live application |
+
+**Note**: HTTP URLs work for Phases 1-5. HTTPS URLs required for Phase 6 (Stripe webhooks). Setup guide: `AWS_SSL_HTTPS_SETUP.md`
 
 ---
 

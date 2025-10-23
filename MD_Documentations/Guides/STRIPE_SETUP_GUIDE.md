@@ -11,6 +11,8 @@
 
 This guide walks through the complete setup of Stripe payment integration for the P3 Interview Academy subscription system. Follow these steps to configure Stripe for both test (staging) and production environments.
 
+**⚠️ PREREQUISITE**: Stripe webhooks require HTTPS URLs. Before proceeding, ensure SSL/HTTPS is configured on your Elastic Beanstalk environments. See **`MD_Documentations/Guides/AWS_SSL_HTTPS_SETUP.md`** for setup instructions.
+
 ---
 
 ## 🎯 What We're Setting Up
@@ -124,11 +126,13 @@ Webhooks allow Stripe to notify your application about payment events (successfu
 
 ### 3A. Staging Environment Setup
 
+**⚠️ IMPORTANT**: Stripe requires HTTPS URLs. Ensure SSL/HTTPS is configured first (see `AWS_SSL_HTTPS_SETUP.md`).
+
 1. Go to [Stripe Webhooks](https://dashboard.stripe.com/test/webhooks) (test mode)
 2. Click **"Add endpoint"**
 3. Enter endpoint URL:
    ```
-   http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/webhooks/stripe
+   https://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/webhooks/stripe
    ```
 4. Select **"Events to send"** → **"Select events"**
 5. Choose these events:
@@ -147,14 +151,16 @@ Webhooks allow Stripe to notify your application about payment events (successfu
 
 ### 3B. Production Environment Setup
 
+**⚠️ IMPORTANT**: Stripe requires HTTPS URLs. Ensure SSL/HTTPS is configured first (see `AWS_SSL_HTTPS_SETUP.md`).
+
 1. Go to [Stripe Webhooks](https://dashboard.stripe.com/webhooks) (LIVE mode)
 2. Click **"Add endpoint"**
 3. Enter endpoint URL:
    ```
-   http://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/webhooks/stripe
+   https://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/webhooks/stripe
    ```
 
-   Or if using custom domain:
+   Or if using custom domain (recommended for production):
    ```
    https://p3app.bizelev8.ai/api/webhooks/stripe
    ```
