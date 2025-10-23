@@ -256,9 +256,9 @@ export async function sendPasswordResetEmail(
       </div>
       <div class="info-box">
         <p><strong>Security Information:</strong></p>
-        <p>� This link will expire in 1 hour.</p>
-        <p>� If you didn't request this, ignore this email.</p>
-        <p>� If the button doesn't work, copy this link:</p>
+        <p>� This link will expire in 1 hour.</p>
+        <p>� If you didn't request this, ignore this email.</p>
+        <p>� If the button doesn't work, copy this link:</p>
         <p style="word-break: break-all; color: #667eea;">${resetUrl}</p>
       </div>
     </div>
@@ -329,4 +329,358 @@ export async function sendWelcomeEmail(
     });
     // Don't throw error for welcome emails - not critical
   }
+}
+
+// ============================================================================
+// SUBSCRIPTION & BILLING EMAIL NOTIFICATIONS
+// ============================================================================
+
+/**
+ * Send credit reset notification email (monthly billing cycle renewal)
+ */
+export async function sendCreditResetEmail(
+  email: string,
+  name: string,
+  monthlyCredits: number,
+  topUpCredits: number,
+  planType: string,
+  nextResetDate: Date
+): Promise<void> {
+  const safeName = escapeHtml(name);
+  const billingUrl = `${getAppUrl()}/billing`;
+  const formattedDate = nextResetDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const content = `
+    <div class="content">
+      <h2>Your Monthly Credits Have Been Reset! ⚡</h2>
+      <p>Hi ${safeName},</p>
+      <p>Good news! Your ${planType} tier monthly credits have been automatically renewed.</p>
+      <div class="info-box">
+        <p><strong>Credit Summary:</strong></p>
+        <p>✅ Monthly Credits: <strong>${monthlyCredits} credits</strong></p>
+        <p>💎 Top-Up Credits: <strong>${topUpCredits} credits</strong> (never expire)</p>
+        <p>📊 Total Available: <strong>${monthlyCredits + topUpCredits} credits</strong></p>
+        <p>📅 Next Reset: ${formattedDate}</p>
+      </div>
+      <p>You're all set to continue your interview preparation journey!</p>
+      <div style="text-align: center;">
+        <a href="${billingUrl}" class="button">View Billing Dashboard</a>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: `Your ${planType} Credits Have Been Reset - P3 Interview Academy`,
+    html: getEmailTemplate(content),
+  };
+
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[email] Credit reset notification sent to ${email}`);
+}
+
+/**
+ * Send subscription started email (after successful upgrade)
+ */
+export async function sendSubscriptionStartedEmail(
+  email: string,
+  name: string,
+  planType: 'PRO' | 'ADVANCED',
+  monthlyCredits: number,
+  pricePerMonth: number,
+  nextBillingDate: Date
+): Promise<void> {
+  const safeName = escapeHtml(name);
+  const dashboardUrl = `${getAppUrl()}/dashboard`;
+  const billingUrl = `${getAppUrl()}/billing`;
+  const formattedDate = nextBillingDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const content = `
+    <div class="content">
+      <h2>Welcome to ${planType}! 🎉</h2>
+      <p>Hi ${safeName},</p>
+      <p>Thank you for upgrading to ${planType} tier! Your subscription is now active.</p>
+      <div class="info-box">
+        <p><strong>Subscription Details:</strong></p>
+        <p>📦 Plan: <strong>${planType}</strong></p>
+        <p>⚡ Monthly Credits: <strong>${monthlyCredits} credits</strong></p>
+        <p>💰 Price: <strong>$${pricePerMonth}/month</strong></p>
+        <p>📅 Next Billing: ${formattedDate}</p>
+      </div>
+      <p>Your credits have been added to your account and are ready to use!</p>
+      <div style="text-align: center;">
+        <a href="${dashboardUrl}" class="button">Start Practicing Now</a>
+      </div>
+      <p style="text-align: center; margin-top: 16px;">
+        <a href="${billingUrl}" style="color: #667eea; text-decoration: none;">Manage your subscription →</a>
+      </p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: `Welcome to ${planType} - P3 Interview Academy`,
+    html: getEmailTemplate(content),
+  };
+
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[email] Subscription started notification sent to ${email}`);
+}
+
+/**
+ * Send payment succeeded email (subscription renewal)
+ */
+export async function sendPaymentSucceededEmail(
+  email: string,
+  name: string,
+  amount: number,
+  invoiceUrl: string,
+  nextBillingDate: Date
+): Promise<void> {
+  const safeName = escapeHtml(name);
+  const formattedDate = nextBillingDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const content = `
+    <div class="content">
+      <h2>Payment Received ✅</h2>
+      <p>Hi ${safeName},</p>
+      <p>Your subscription payment has been processed successfully.</p>
+      <div class="info-box">
+        <p><strong>Payment Details:</strong></p>
+        <p>💳 Amount: <strong>$${amount.toFixed(2)}</strong></p>
+        <p>📅 Next Billing: ${formattedDate}</p>
+        <p>📄 <a href="${invoiceUrl}" style="color: #667eea;">Download Invoice</a></p>
+      </div>
+      <p>Thank you for continuing with P3 Interview Academy!</p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: 'Payment Received - P3 Interview Academy',
+    html: getEmailTemplate(content),
+  };
+
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[email] Payment succeeded notification sent to ${email}`);
+}
+
+/**
+ * Send payment failed email (dunning management)
+ */
+export async function sendPaymentFailedEmail(
+  email: string,
+  name: string,
+  amount: number,
+  retryDate: Date
+): Promise<void> {
+  const safeName = escapeHtml(name);
+  const billingUrl = `${getAppUrl()}/billing`;
+  const formattedDate = retryDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const content = `
+    <div class="content">
+      <h2>Payment Failed - Action Required ⚠️</h2>
+      <p>Hi ${safeName},</p>
+      <p>We were unable to process your subscription payment of $${amount.toFixed(2)}.</p>
+      <div class="info-box">
+        <p><strong>What happens next:</strong></p>
+        <p>🔄 We'll automatically retry on ${formattedDate}</p>
+        <p>⚡ Your account remains active during this period</p>
+        <p>💳 Please update your payment method to avoid service interruption</p>
+      </div>
+      <p>Update your payment method now to ensure uninterrupted access:</p>
+      <div style="text-align: center;">
+        <a href="${billingUrl}" class="button">Update Payment Method</a>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: 'Payment Failed - Update Required - P3 Interview Academy',
+    html: getEmailTemplate(content),
+  };
+
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[email] Payment failed notification sent to ${email}`);
+}
+
+/**
+ * Send top-up purchase confirmation email
+ */
+export async function sendTopUpPurchaseEmail(
+  email: string,
+  name: string,
+  credits: number,
+  amount: number
+): Promise<void> {
+  const safeName = escapeHtml(name);
+  const dashboardUrl = `${getAppUrl()}/dashboard`;
+  const billingUrl = `${getAppUrl()}/billing`;
+
+  const content = `
+    <div class="content">
+      <h2>Credits Added Successfully! 💎</h2>
+      <p>Hi ${safeName},</p>
+      <p>Your credit top-up purchase has been completed.</p>
+      <div class="info-box">
+        <p><strong>Purchase Summary:</strong></p>
+        <p>⚡ Credits Added: <strong>${credits} credits</strong></p>
+        <p>💰 Amount Paid: <strong>$${amount.toFixed(2)}</strong></p>
+        <p>✨ <strong>These credits never expire!</strong></p>
+      </div>
+      <p>Your credits are now available in your account and ready to use.</p>
+      <div style="text-align: center;">
+        <a href="${dashboardUrl}" class="button">Start Using Credits</a>
+      </div>
+      <p style="text-align: center; margin-top: 16px;">
+        <a href="${billingUrl}" style="color: #667eea; text-decoration: none;">View billing history →</a>
+      </p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: `${credits} Credits Added to Your Account - P3 Interview Academy`,
+    html: getEmailTemplate(content),
+  };
+
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[email] Top-up purchase confirmation sent to ${email}`);
+}
+
+/**
+ * Send low credits warning email (when balance < 20%)
+ */
+export async function sendLowCreditsWarningEmail(
+  email: string,
+  name: string,
+  currentCredits: number,
+  planType: string
+): Promise<void> {
+  const safeName = escapeHtml(name);
+  const billingUrl = `${getAppUrl()}/billing`;
+
+  const content = `
+    <div class="content">
+      <h2>Running Low on Credits ⚠️</h2>
+      <p>Hi ${safeName},</p>
+      <p>Your credit balance is running low. You currently have <strong>${currentCredits} credits</strong> remaining.</p>
+      <div class="info-box">
+        <p><strong>Options to get more credits:</strong></p>
+        <p>📦 Upgrade your plan for more monthly credits</p>
+        <p>💎 Purchase a one-time credit top-up (never expires)</p>
+        ${planType === 'FREE' ? '<p>🎯 FREE tier resets to 50 credits monthly</p>' : '<p>🔄 Your credits reset automatically each month</p>'}
+      </div>
+      <p>Don't let low credits interrupt your interview preparation!</p>
+      <div style="text-align: center;">
+        <a href="${billingUrl}" class="button">Get More Credits</a>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: 'Low Credits Alert - P3 Interview Academy',
+    html: getEmailTemplate(content),
+  };
+
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[email] Low credits warning sent to ${email}`);
+}
+
+/**
+ * Send subscription canceled email
+ */
+export async function sendSubscriptionCanceledEmail(
+  email: string,
+  name: string,
+  planType: string,
+  effectiveDate: Date
+): Promise<void> {
+  const safeName = escapeHtml(name);
+  const billingUrl = `${getAppUrl()}/billing`;
+  const formattedDate = effectiveDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const content = `
+    <div class="content">
+      <h2>Subscription Canceled</h2>
+      <p>Hi ${safeName},</p>
+      <p>Your ${planType} subscription has been canceled.</p>
+      <div class="info-box">
+        <p><strong>What happens next:</strong></p>
+        <p>📅 Active until: ${formattedDate}</p>
+        <p>🔄 After that, you'll be moved to the FREE tier (50 credits/month)</p>
+        <p>💎 Your top-up credits will be preserved</p>
+        <p>✅ You can resubscribe anytime</p>
+      </div>
+      <p>We're sorry to see you go! If you change your mind, you can reactivate your subscription at any time.</p>
+      <div style="text-align: center;">
+        <a href="${billingUrl}" class="button">Reactivate Subscription</a>
+      </div>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: 'Subscription Canceled - P3 Interview Academy',
+    html: getEmailTemplate(content),
+  };
+
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[email] Subscription canceled notification sent to ${email}`);
+}
+
+/**
+ * Send free tier welcome email (new user signup)
+ */
+export async function sendFreeTierWelcomeEmail(
+  email: string,
+  name: string
+): Promise<void> {
+  const safeName = escapeHtml(name);
+  const dashboardUrl = `${getAppUrl()}/dashboard`;
+  const billingUrl = `${getAppUrl()}/billing`;
+
+  const content = `
+    <div class="content">
+      <h2>Welcome to P3 Interview Academy! 🎉</h2>
+      <p>Hi ${safeName},</p>
+      <p>Your account has been created successfully! You're starting with the FREE tier.</p>
+      <div class="info-box">
+        <p><strong>What's included:</strong></p>
+        <p>⚡ <strong>50 free credits</strong> every month</p>
+        <p>🔄 Credits reset automatically on the 1st of each month</p>
+        <p>✨ Access to all core features:</p>
+        <p style="margin-left: 20px;">• AI-powered interview practice</p>
+        <p style="margin-left: 20px;">• Preparation session generator</p>
+        <p style="margin-left: 20px;">• Performance analytics</p>
+      </div>
+      <p>Ready to start your interview preparation journey?</p>
+      <div style="text-align: center;">
+        <a href="${dashboardUrl}" class="button">Start Practicing Now</a>
+      </div>
+      <p style="text-align: center; margin-top: 16px;">
+        <a href="${billingUrl}" style="color: #667eea; text-decoration: none;">Explore premium plans →</a>
+      </p>
+    </div>
+  `;
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: 'Welcome to P3 Interview Academy - Get Started!',
+    html: getEmailTemplate(content),
+  };
+
+  await getTransporter().sendMail(mailOptions);
+  console.log(`[email] Free tier welcome email sent to ${email}`);
 }

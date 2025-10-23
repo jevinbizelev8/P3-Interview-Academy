@@ -1,5 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { toast as sonnerToast } from "sonner";
+import confetti from "canvas-confetti";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -66,11 +68,20 @@ export default function Billing() {
     const canceled = params.get('canceled');
 
     if (success === 'true') {
-      toast({
-        title: "Payment Successful!",
-        description: "Your payment has been processed. Credits will be updated shortly.",
+      // 🎉 Celebrate subscription upgrade with confetti!
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#667eea', '#764ba2', '#f093fb', '#4facfe'],
+      });
+
+      // Enhanced success notification with Sonner
+      sonnerToast.success('🎉 Payment Successful!', {
+        description: 'Your subscription has been upgraded! Credits added to your account.',
         duration: 5000,
       });
+
       // Refresh credit balance
       refetchCredits?.();
       // Clean up URL
@@ -78,10 +89,8 @@ export default function Billing() {
     }
 
     if (canceled === 'true') {
-      toast({
-        title: "Payment Canceled",
-        description: "Your payment was canceled. No charges have been made.",
-        variant: "destructive",
+      sonnerToast.error('Payment Canceled', {
+        description: 'Your payment was canceled. No charges have been made.',
         duration: 5000,
       });
       // Clean up URL
