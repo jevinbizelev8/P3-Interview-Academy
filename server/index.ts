@@ -42,6 +42,10 @@ try {
 })();
 const app = express();
 
+// Stripe webhooks require the raw body for signature verification.
+// Register this BEFORE any JSON/body parsers.
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
+
 // CORS configuration for iframe embedding
 app.use((req, res, next) => {
   // Allow embedding from bizelev8.ai domains
