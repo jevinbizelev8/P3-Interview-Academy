@@ -19,7 +19,10 @@
     "test:integration": "cross-env NODE_ENV=test vitest run --mode test --reporter=verbose client/src/__tests__/integration/",
     "test:api": "cross-env NODE_ENV=test vitest run --mode test --reporter=verbose client/src/__tests__/api/",
     "test:registration": "tsx test-registration-flow.ts",
-    "opslog:seed": "tsx deployment-scripts/ops-log/seed-ops-log.ts"
+    "opslog:seed": "tsx deployment-scripts/ops-log/seed-ops-log.ts",
+    "email:verify": "tsx scripts/email/test-smtp.ts --verify",
+    "email:send": "tsx scripts/email/test-smtp.ts --send",
+    "bundle:posix": "node scripts/pack/create-posix-zip.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.37.0",
@@ -135,6 +138,7 @@
     "drizzle-kit": "^0.30.6",
     "esbuild": "^0.25.0",
     "jsdom": "^26.1.0",
+    "jszip": "^3.10.1",
     "msw": "^2.11.1",
     "postcss": "^8.4.47",
     "supertest": "^7.1.4",

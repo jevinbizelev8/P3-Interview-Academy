@@ -6,8 +6,20 @@ const PgStore = connectPg(session);
 
 type StoreOverrides = Omit<PGStoreOptions, "pool" | "conString" | "conObject" | "pgPromise">;
 
+function getPgSslConfig(): false | { rejectUnauthorized: boolean; ca?: string } {
+  const env = process.env as Record<string, string | undefined>;
+  if (env.DB_SSL === "false") return false;
+  const caFromB64 = env.DB_SSL_CA_B64 ? Buffer.from(env.DB_SSL_CA_B64, "base64").toString("utf8") : undefined;
+  const ca = caFromB64 || env.DB_SSL_CA;
+  if (ca) {
+    return { rejectUnauthorized: true, ca };
+  }
+  console.warn("[session-store] No DB SSL CA provided; using insecure TLS (rejectUnauthorized=false)");
+  return { rejectUnauthorized: false };
+}
+
 export function createSessionStore(overrides: StoreOverrides = {}) {
-  const sslOption = process.env.DB_SSL === "false" ? false : { rejectUnauthorized: false };
+  const sslOption = getPgSslConfig();
 
   const store = new PgStore({
     ...overrides,

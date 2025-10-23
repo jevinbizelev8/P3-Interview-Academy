@@ -21,8 +21,27 @@ export function validateEmailConfig(): void {
   }
 }
 
+// Proactively verify SMTP connectivity and auth at runtime
+export async function verifyEmailTransport(): Promise<{ ok: boolean; message: string }> {
+  try {
+    const t = getTransporter();
+    await t.verify();
+    console.log('[smtp-verify] ok SMTP transport verified');
+    return { ok: true, message: 'SMTP transport verified' };
+  } catch (err: any) {
+    const host = process.env.SMTP_HOST;
+    const fromAddr = process.env.EMAIL_FROM;
+    const code = err?.code || err?.errno || 'UNKNOWN';
+    const cmd = err?.command || err?.stage || 'connect';
+    const resp = typeof err?.response === 'string' ? err.response.slice(0,200) : undefined;
+    console.error('[smtp-verify] fail', { host, from: fromAddr, code, cmd, response: resp });
+    return { ok: false, message: `SMTP verify failed (host=${host}, from=${fromAddr}) code=${code} cmd=${cmd}` };
+  }
+}
+
 function getTransporter(): Transporter {
   if (!transporter) {
+    const smtpPass = (process.env.SMTP_PASS || '').replace(/\s+/g, '');
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587', 10),
@@ -30,7 +49,7 @@ function getTransporter(): Transporter {
       requireTLS: true, // Force STARTTLS for Gmail
       auth: {
         user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        pass: smtpPass,
       },
       tls: {
         // Enable certificate validation in production for security
@@ -48,7 +67,7 @@ const getEmailTemplate = (content: string): string => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>P³ Interview Academy</title>
+      <title>P3 Interview Academy</title>
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -140,12 +159,12 @@ const getEmailTemplate = (content: string): string => {
     <body>
       <div class="container">
         <div class="header">
-          <h1>P³ Interview Academy</h1>
+          <h1>P3 Interview Academy</h1>
           <p>Prepare. Practice. Perform.</p>
         </div>
         ${content}
         <div class="footer">
-          <p>© ${new Date().getFullYear()} P³ Interview Academy. All rights reserved.</p>
+          <p>&copy; ${new Date().getFullYear()} P3 Interview Academy. All rights reserved.</p>
           <p><a href="${getAppUrl()}">Visit our website</a></p>
         </div>
       </div>
@@ -172,24 +191,24 @@ export async function sendVerificationEmail(
 
   const content = `
     <div class="content">
-      <h2>Welcome, ${safeName}! 👋</h2>
-      <p>Thank you for joining P³ Interview Academy. We're excited to help you prepare for your interview success!</p>
+      <h2>Welcome, ${safeName}!</h2>
+      <p>Thank you for joining P3 Interview Academy. We're excited to help you prepare for your interview success!</p>
       <p>To get started, please verify your email address by clicking the button below:</p>
       <div style="text-align: center;">
         <a href="${verificationUrl}" class="button">Verify Email Address</a>
       </div>
       <div class="info-box">
-        <p><strong>📌 Important:</strong></p>
-        <p>• This verification link will expire in 24 hours for security reasons</p>
-        <p>• If you didn't create an account, you can safely ignore this email</p>
-        <p>• If the button doesn't work, copy and paste this link:</p>
+        <p><strong>Important:</strong></p>
+        <p>- This verification link will expire in 24 hours for security reasons.</p>
+        <p>- If you didn't create an account, you can safely ignore this email.</p>
+        <p>- If the button doesn't work, copy and paste this link:</p>
         <p style="word-break: break-all; color: #667eea;">${verificationUrl}</p>
       </div>
     </div>
   `;
 
   const mailOptions = {
-    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.EMAIL_FROM}>`,
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
     to: email,
     subject: 'Verify your P³ Interview Academy account',
     html: getEmailTemplate(content),
@@ -198,10 +217,10 @@ export async function sendVerificationEmail(
 
   try {
     const info = await getTransporter().sendMail(mailOptions);
-    console.log('✅ Verification email sent:', info.messageId);
+    console.log('Verification email sent:', info.messageId);
   } catch (error) {
     // Sanitize error logging - don't expose SMTP credentials
-    console.error('❌ Failed to send verification email:', {
+    console.error('Failed to send verification email:', {
       code: (error as any).code,
       command: (error as any).command,
       // Credentials intentionally omitted from logs
@@ -228,37 +247,37 @@ export async function sendPasswordResetEmail(
 
   const content = `
     <div class="content">
-      <h2>Password Reset Request 🔒</h2>
+      <h2>Password Reset Request</h2>
       <p>Hi ${safeName},</p>
-      <p>We received a request to reset your P³ Interview Academy password.</p>
+      <p>We received a request to reset your P3 Interview Academy password.</p>
       <p>Click the button below to create a new password:</p>
       <div style="text-align: center;">
         <a href="${resetUrl}" class="button">Reset Password</a>
       </div>
       <div class="info-box">
-        <p><strong>⚠️ Security Information:</strong></p>
-        <p>• This link will expire in 1 hour</p>
-        <p>• If you didn't request this, ignore this email</p>
-        <p>• If the button doesn't work, copy this link:</p>
+        <p><strong>Security Information:</strong></p>
+        <p>� This link will expire in 1 hour.</p>
+        <p>� If you didn't request this, ignore this email.</p>
+        <p>� If the button doesn't work, copy this link:</p>
         <p style="word-break: break-all; color: #667eea;">${resetUrl}</p>
       </div>
     </div>
   `;
 
   const mailOptions = {
-    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.EMAIL_FROM}>`,
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
     to: email,
-    subject: 'Reset your P³ Interview Academy password',
+    subject: 'Reset your P3 Interview Academy password',
     html: getEmailTemplate(content),
     text: `Hi ${safeName},\n\nReset your password: ${resetUrl}\n\nThis link expires in 1 hour.`,
   };
 
   try {
     const info = await getTransporter().sendMail(mailOptions);
-    console.log('✅ Password reset email sent:', info.messageId);
+    console.log('Password reset email sent:', info.messageId);
   } catch (error) {
     // Sanitize error logging - don't expose SMTP credentials
-    console.error('❌ Failed to send password reset email:', {
+    console.error('Failed to send password reset email:', {
       code: (error as any).code,
       command: (error as any).command,
       // Credentials intentionally omitted from logs
@@ -280,30 +299,30 @@ export async function sendWelcomeEmail(
 
   const content = `
     <div class="content">
-      <h2>🎉 Welcome to P³ Interview Academy!</h2>
+      <h2>Welcome to P3 Interview Academy!</h2>
       <p>Hi ${safeName},</p>
       <p>Your email has been verified! You're all set to start your interview preparation journey.</p>
       <div style="text-align: center;">
         <a href="${dashboardUrl}" class="button">Go to Dashboard</a>
       </div>
-      <p>Good luck with your interview preparation! 🚀</p>
+      <p>Good luck with your interview preparation!</p>
     </div>
   `;
 
   const mailOptions = {
-    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.EMAIL_FROM}>`,
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
     to: email,
-    subject: '🎉 Welcome to P³ Interview Academy!',
+    subject: 'Welcome to P3 Interview Academy!',
     html: getEmailTemplate(content),
     text: `Welcome, ${safeName}!\n\nVisit your dashboard: ${dashboardUrl}`,
   };
 
   try {
     const info = await getTransporter().sendMail(mailOptions);
-    console.log('✅ Welcome email sent:', info.messageId);
+    console.log('Welcome email sent:', info.messageId);
   } catch (error) {
     // Sanitize error logging - don't expose SMTP credentials
-    console.error('❌ Failed to send welcome email:', {
+    console.error('Failed to send welcome email:', {
       code: (error as any).code,
       command: (error as any).command,
       // Credentials intentionally omitted from logs
