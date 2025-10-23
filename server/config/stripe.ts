@@ -18,7 +18,7 @@ if (!STRIPE_SECRET_KEY) {
 
 // Initialize Stripe SDK
 export const stripe = new Stripe(STRIPE_SECRET_KEY, {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2023-10-16',
   typescript: true,
   appInfo: {
     name: 'P3 Interview Academy',

@@ -44,7 +44,7 @@ export default function Billing() {
     creditPercentage,
     isLowCredits,
     isCriticallyLow,
-    refetch: refetchCredits,
+    refetchBalance: refetchCredits,
   } = useCredits();
 
   // Get user's current plan
@@ -477,7 +477,7 @@ export default function Billing() {
                     savings={selectedBillingCycle === "monthly"
                       ? undefined
                       : tier.savings?.[selectedBillingCycle as "3-month" | "6-month"]}
-                    onUpgrade={() => handleUpgrade(tier.tier)}
+                    onUpgrade={tier.tier === 'FREE' ? undefined : () => handleUpgrade(tier.tier)}
                     disabled={isCheckoutLoading || selectedBillingCycle !== "monthly"}
                   />
                 ))}

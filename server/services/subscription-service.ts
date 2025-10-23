@@ -1,5 +1,5 @@
 import { stripe, SUBSCRIPTION_TIERS, STRIPE_URLS, getOrCreateStripeCustomer, getTierFromPriceId } from '../config/stripe.js';
-import { db } from '../db/index.js';
+import { db } from '../db';
 import { users, subscriptions } from '../../shared/schema.js';
 import { eq, and } from 'drizzle-orm';
 import Stripe from 'stripe';

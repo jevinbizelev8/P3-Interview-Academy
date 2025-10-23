@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { db } from '../db/index.js';
+import { db } from '../db';
 import { users, creditTransactions } from '@shared/schema';
 import { eq, lt } from 'drizzle-orm';
 import { sendCreditResetEmail } from './email-service.js';
@@ -176,15 +176,12 @@ export function initializeCreditResetCron(): void {
       // Log to error monitoring service if available
     }
   }, {
+    // Cast to any to avoid @types/node-cron v3/v4 shape mismatch
     scheduled: true,
     timezone: 'UTC',
-  });
+  } as any);
 
   console.log('[credit-reset] Cron job initialized successfully');
-  console.log('[credit-reset] Next run:', cronJob.nextDates(1).toString());
-
-  // Return the cron job for potential management (stop/start)
-  return cronJob;
 }
 
 /**

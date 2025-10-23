@@ -1,5 +1,5 @@
 import { stripe, TOPUP_PACKAGES, STRIPE_URLS, getOrCreateStripeCustomer, getTopUpFromPriceId } from '../config/stripe.js';
-import { db } from '../db/index.js';
+import { db } from '../db';
 import { users, creditTransactions } from '../../shared/schema.js';
 import { eq } from 'drizzle-orm';
 import { creditService } from './credit-service.js';
