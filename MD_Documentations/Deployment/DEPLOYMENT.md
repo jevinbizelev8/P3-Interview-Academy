@@ -403,3 +403,6 @@ aws elasticbeanstalk update-environment \
 ---
 
 **This deployment guide ensures reliable, repeatable production deployments for P³ Interview Academy.**
+> HTTPS/SSL
+> - Environments should be accessed via HTTPS once the load balancer certificate is provisioned. Prefer `https://` URLs in checks and external links.
+> - Ensure the EB load balancer listener on 443 is active and the certificate is attached. Update CNAMEs/DNS if using a custom domain.

@@ -1,5 +1,13 @@
 # Codex Staging Deployment Guide - Admin Subscription System (Phases 1-5)
 
+> Status: ON HOLD (2025-10-23)
+>
+> - Staging deployment is paused to avoid impacting production data.
+> - Observed issue: `p3-interview-academy-staging` currently uses a `DATABASE_URL` pointing to the production database (`.../postgres` with `app_user`).
+> - Action required: update EB staging `DATABASE_URL` to the staging DB: `postgresql://app_user_staging:<password>@<rds-endpoint>:5432/p3_staging?sslmode=require`.
+> - After the environment variable fix, re-run the staging workflow, then execute migrations (`npm run db:push`) and seed credit costs (`npx tsx server/scripts/seed-credit-costs.ts`).
+> - Note: AWS SSL/HTTPS hardening landed on `main`. Prefer using `https://` when accessing the staging URL if the certificate is active.
+
 **Feature Branch**: `feature/admin-subscription-system`
 **Target Environment**: AWS Staging (`p3-interview-academy-staging`)
 **Document Version**: 1.0
@@ -82,7 +90,7 @@ To https://github.com/jevinbizelev8/P3-Interview-Academy.git
 
 4. **Get staging URL from PR comment:**
    ```
-   Staging URL: http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com
+   Staging URL: https://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com (use https if SSL is provisioned)
    ```
 
 **Expected Result:** PR shows "Deploy to Staging ✅ Successful"
@@ -126,8 +134,9 @@ STEP 5/5: AWS DEPLOYMENT
 ### Step 3: Verify Deployment Health
 
 ```bash
-# Check staging environment health
-curl http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/health
+# Check staging environment health (prefer HTTPS)
+curl -f https://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/health || \
+curl -f http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/health
 ```
 
 **Expected Output:**
