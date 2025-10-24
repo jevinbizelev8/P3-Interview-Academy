@@ -224,8 +224,9 @@ export async function setupSimpleAuth(app: Express) {
         res.json({ success: true, message: 'Seeded and logged in', user: { id: user.id, email: user.email, role: user.role } });
       });
     } catch (e: any) {
-      console.error('[test-seed] error', e?.message || e);
-      res.status(500).json({ message: 'Failed to seed user' });
+      const msg = e?.message || String(e);
+      console.error('[test-seed] error', msg);
+      res.status(500).json({ message: 'Failed to seed user', error: msg });
     }
   });
 
