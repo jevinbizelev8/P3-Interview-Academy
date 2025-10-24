@@ -153,3 +153,16 @@ URL: http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbean
 ---
 
 This report will be updated live as tests are executed and verified.
+ 
+---
+
+Seeded Test Accounts (staging)
+- User: `qadummy1@bizelev8.ai` / `Test1234` (verified; session seeding works)
+- Admin: `qadummyadmin@bizelev8.ai` / `Test1234` (role=admin; verified)
+- Seeding endpoint: `POST /api/auth/test-seed` with header `X-Seed-Key: staging-seed-allow-20251024`
+
+Latest Updates (2025-10-24)
+- Fixed RDS auth: reset master password; updated EB `DATABASE_URL` to `p3_staging`. Health shows DB healthy.
+- Corrected EB `STRIPE_TEST_SECRET_KEY` (trailing `C`).
+- Seeding flow operational; sessions established server-side.
+- Customer Portal currently 500 due to missing Stripe Billing Portal configuration in Test mode. Action: enable and save default portal config in Stripe Dashboard (Test mode): Settings > Billing > Customer portal.

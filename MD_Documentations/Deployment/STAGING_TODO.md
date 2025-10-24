@@ -7,6 +7,8 @@ Status: IN PROGRESS — track completion here. When all items are checked, flip 
   - [x] If missing, auto-create Stripe customer and persist ID (code updated).
 - [ ] Fix `createCustomerPortalSession` errors and return 200 with URL
   - Code: `server/services/subscription-service.ts:236-266` (patched)
+  - [ ] Enable Stripe Billing Portal default configuration in Test mode (Dashboard > Settings > Billing > Customer portal > Save)
+  - [x] Correct STRIPE_TEST_SECRET_KEY on EB (trailing 'C')
 - [ ] Verify `GET /api/subscription/customer-portal` responds 200 and opens Billing Portal
 - [ ] Record portal URL test outcome in the report
 
@@ -48,7 +50,9 @@ Status: IN PROGRESS — track completion here. When all items are checked, flip 
 ## 5) UI/UX & Admin Smoke Tests
 - [ ] Pricing page loads, plan costs match `credit_costs`
 - [ ] Subscription checkout: session created, redirect works, returns success state
+  - Status: READY TO RUN (seeded accounts available; DB healthy)
 - [ ] Top-up checkout: session created, redirect works, credits increase
+  - Status: READY TO RUN (seeded accounts available)
 - [ ] Customer Portal redirect works (after Section 1 fix)
 - [ ] Admin/usage dashboards render; no console errors
 
@@ -60,6 +64,7 @@ Status: IN PROGRESS — track completion here. When all items are checked, flip 
     - `deployment-scripts/util/bootstrap-subscription-core.cjs`
     - `deployment-scripts/util/bootstrap-credit-costs.cjs`
 - [ ] RDS connectivity healthy (SSL enabled; CA in place)
+- [x] Reset RDS master password and update EB `DATABASE_URL`
 - [ ] Monitor for connection pool timeouts or auth errors
 
 ## 7) Environment & EB Health
@@ -70,12 +75,15 @@ Status: IN PROGRESS — track completion here. When all items are checked, flip 
   - [ ] `DATABASE_URL` points to staging DB
 - [ ] EB environment status remains Green; deploys use AllAtOnce with Min/Max=1
 - [ ] Logs: no `StripeAuthenticationError`, no unhandled exceptions
+  - [x] Health returning DB healthy after password reset
 
 ## 8) Reporting & Sign‑off
 - [ ] Update `MD_Documentations/Deployment/STAGING_TEST_REPORT.md` with latest pass/fail and notes
 - [ ] Complete all items from the 46‑item checklist in DEPLOYMENT.md
 - [ ] Flip the report status to COMPLETE and add completion timestamp
 - [ ] Tag this TODO file as COMPLETE (commit note)
+
+Session Note (paused): User requested to pause and resume next session. Next actions on resume: run subscription and top‑up checkout tests, then enable Billing Portal config and retest portal, proceed with webhooks, emails, cron, and UI pass.
 
 ---
 
