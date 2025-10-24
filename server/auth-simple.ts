@@ -225,7 +225,7 @@ export async function setupSimpleAuth(app: Express) {
       req.session.save((err) => {
         if (err) {
           console.error("[test-seed] Session save error:", err);
-          return res.status(500).json({ message: "Seeded but failed to create session", userId: user.id });
+          return res.status(500).json({ message: "Seeded but failed to create session", userId });
         }
         res.json({ success: true, message: 'Seeded and logged in', user: { id: userId, email, role: role === 'admin' ? 'admin' : 'user' } });
       });
