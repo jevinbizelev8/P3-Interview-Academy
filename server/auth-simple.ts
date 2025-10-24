@@ -182,6 +182,53 @@ export async function setupSimpleAuth(app: Express) {
     }
   });
 
+  // TEMP: Staging-only seed endpoint to create a verified test user and start a session
+  // Guarded by TEST_SEED_KEY header; remove after staging tests complete
+  app.post("/api/auth/test-seed", async (req, res) => {
+    try {
+      const seedKey = req.get('X-Seed-Key');
+      const expected = process.env.TEST_SEED_KEY;
+      if (!expected || seedKey !== expected) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { email, password, firstName, lastName, role } = req.body || {};
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // Upsert user as verified
+      const user = await storage.upsertUser({
+        email,
+        firstName: firstName || 'QA',
+        lastName: lastName || 'Tester',
+        role: role === 'admin' ? 'admin' : 'user',
+        passwordHash: hashedPassword,
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      } as any);
+
+      // Start a session for this user
+      (req.session as any).userId = user.id;
+      (req.session as any).userEmail = user.email;
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("[test-seed] Session save error:", err);
+          return res.status(500).json({ message: "Seeded but failed to create session", userId: user.id });
+        }
+        res.json({ success: true, message: 'Seeded and logged in', user: { id: user.id, email: user.email, role: user.role } });
+      });
+    } catch (e: any) {
+      console.error('[test-seed] error', e?.message || e);
+      res.status(500).json({ message: 'Failed to seed user' });
+    }
+  });
+
   app.get("/api/auth/providers", (_req, res) => {
     res.json({
       providers: {

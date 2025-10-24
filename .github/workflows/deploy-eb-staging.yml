@@ -143,6 +143,8 @@ jobs:
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=PORT,Value=5000 \
               # TEMP: Allow auto-verification for staging test users to enable end-to-end flows
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=TEMP_AUTO_VERIFY,Value=true \
+              # TEMP: Seed key to allow creating dummy users and establishing sessions
+              Namespace=aws:elasticbeanstalk:application:environment,OptionName=TEST_SEED_KEY,Value=staging-seed-allow-20251024 \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=DATABASE_URL,Value="${{ secrets.DATABASE_URL }}" \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=SESSION_SECRET,Value="${{ secrets.SESSION_SECRET }}" \
               Namespace=aws:elasticbeanstalk:application:environment,OptionName=WS_ALLOWED_ORIGINS,Value="*" \
