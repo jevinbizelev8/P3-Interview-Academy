@@ -200,28 +200,34 @@ export async function setupSimpleAuth(app: Express) {
       const saltRounds = 12;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Upsert user as verified
-      const user = await storage.upsertUser({
-        email,
-        firstName: firstName || 'QA',
-        lastName: lastName || 'Tester',
-        role: role === 'admin' ? 'admin' : 'user',
-        passwordHash: hashedPassword,
-        emailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationExpires: null,
-      } as any);
+      // Upsert user as verified using raw SQL to avoid any schema drift issues
+      const { pool } = await import('./db');
+      const sel = await (pool as any).query('select id from users where email=$1', [email]);
+      let userId: string;
+      if (sel.rows && sel.rows.length) {
+        userId = sel.rows[0].id;
+        await (pool as any).query(
+          'update users set password_hash=$1, first_name=$2, last_name=$3, role=$4, email_verified=true, email_verification_token=null, email_verification_expires=null where id=$5',
+          [hashedPassword, firstName || 'QA', lastName || 'Tester', role === 'admin' ? 'admin' : 'user', userId]
+        );
+      } else {
+        const ins = await (pool as any).query(
+          "insert into users (email, password_hash, first_name, last_name, role, email_verified) values ($1,$2,$3,$4,$5,true) returning id",
+          [email, hashedPassword, firstName || 'QA', lastName || 'Tester', role === 'admin' ? 'admin' : 'user']
+        );
+        userId = ins.rows[0].id;
+      }
 
       // Start a session for this user
-      (req.session as any).userId = user.id;
-      (req.session as any).userEmail = user.email;
+      (req.session as any).userId = userId;
+      (req.session as any).userEmail = email;
 
       req.session.save((err) => {
         if (err) {
           console.error("[test-seed] Session save error:", err);
           return res.status(500).json({ message: "Seeded but failed to create session", userId: user.id });
         }
-        res.json({ success: true, message: 'Seeded and logged in', user: { id: user.id, email: user.email, role: user.role } });
+        res.json({ success: true, message: 'Seeded and logged in', user: { id: userId, email, role: role === 'admin' ? 'admin' : 'user' } });
       });
     } catch (e: any) {
       const msg = e?.message || String(e);
