@@ -117,7 +117,7 @@ Add test artifacts and signoffs to `docs/ops-log/` after each milestone before p
 
 ---
 
-### Phase 1: Database Migration (2 weeks) ⏳ NEXT
+### Phase 1: Database Migration (2 weeks) 🚧 IN PROGRESS
 
 **Objectives**:
 - Implement 13 new database tables
@@ -125,19 +125,19 @@ Add test artifacts and signoffs to `docs/ops-log/` after each milestone before p
 - Deploy schema to staging and production
 
 **Tasks**:
-- [ ] Create Drizzle migration file
-- [ ] Generate migration skeleton via `npx drizzle-kit generate:pg --out server/migrations/2025-10-redesign`
-- [ ] Add 13 new tables (badges, learning_modules, resumes, etc.)
-- [ ] Extend users table (xp_points, current_streak, readiness_score, etc.)
-- [ ] Add indexes for performance
+- [x] Create Drizzle migration file
+- [x] Generate migration skeleton via `npx drizzle-kit generate:pg --out server/migrations/2025-10-redesign`
+- [x] Add 13 new tables (badges, learning_modules, resumes, etc.)
+- [x] Extend users table (xp_points, current_streak, readiness_score, etc.)
+- [x] Add indexes for performance
 - [ ] Test migration in local development
-- [ ] Add migration regression test (`server/__tests__/migrations/redesign-schema.test.ts`)
-- [ ] Create `server/scripts/seed-redesign.ts` for idempotent seeding
+- [x] Add migration regression test (`server/__tests__/migrations/redesign-schema.test.ts`)
+- [x] Create `server/scripts/seed-redesign.ts` for idempotent seeding
 - [ ] Deploy schema to staging database
 - [ ] Seed initial data (badges, learning modules)
 - [ ] Verify schema integrity
 - [ ] Deploy to production database
-- [ ] Update shared/schema.ts with TypeScript definitions
+- [x] Update shared/schema.ts with TypeScript definitions
 - [ ] Schedule nightly GitHub Action to run `npm run test:db-redesign`
 
 **Deliverables**:
