@@ -2,6 +2,8 @@
 
 This document provides the complete mapping from Base44 SDK calls to our Express REST API endpoints.
 
+**AI Assistant Usage**: When Codex/Claude is building an endpoint, copy the relevant SDK→API block into the chat so the model mirrors the exact route, payload, and success criteria. Each section includes testing notes—run them before concluding the session and log the results in `docs/ops-log/`.
+
 ---
 
 ## 🔑 Authentication & Session

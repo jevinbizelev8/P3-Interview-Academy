@@ -182,6 +182,16 @@ find client/src/components -name "*.tsx" -o -name "*.jsx" | wc -l
 
 ## 📋 Session Workflow
 
+### Pre-Work: AI Assistant Prep
+
+Before requesting edits from Codex or Claude Code, run this micro-checklist to keep the session anchored in the master plan:
+
+1. Open `CLAUDE.md` and confirm the "Codex/Claude Collaboration Blueprint" loop has been filled out for the upcoming task.
+2. Identify the active phase task(s) in `MASTER_PLAN.md` and note the unchecked boxes you intend to complete.
+3. Capture the exact files to modify, relevant endpoints, and required tests in your session notes (share them in-chat so the AI can reference them).
+4. Skim `API_MAPPING.md` and `DATABASE_SCHEMA.md` for the affected features to avoid drift from the approved contracts.
+5. Verify any required design assets exist in `/tmp/elev8interview`; if not, pause and sync the Base44 repository before coding.
+
 ### At Start of Session
 
 1. **Check MASTER_PLAN.md**:

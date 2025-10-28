@@ -8,6 +8,18 @@
 
 ---
 
+## 🧭 Using This Plan with Codex/Claude
+
+| Step | What Codex/Claude Should Do | Source Document |
+|------|-----------------------------|-----------------|
+| 1 | Read the active phase summary and confirm open checkboxes | `docs/redesign/MASTER_PLAN.md` |
+| 2 | Pull endpoint payloads, schema fields, and business rules | `docs/redesign/API_MAPPING.md` + `DATABASE_SCHEMA.md` |
+| 3 | Verify UI/component parity requirements | `docs/redesign/FEATURES_INVENTORY.md` + Base44 repo (`/tmp/elev8interview`) |
+| 4 | Note required test suites and automation hooks | “Quality Assurance Milestones” section (this file) |
+| 5 | After coding, record validation evidence and update progress | `docs/ops-log/YYYY-MM.md` + checkbox updates in this plan |
+
+AI collaborators must follow the loop above before editing code; it keeps implementation synchronized with the master schedule and ensures reviewers have consistent artifacts.
+
 ## 📋 Project Overview
 
 ### Goal

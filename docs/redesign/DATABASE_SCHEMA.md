@@ -5,6 +5,8 @@
 **Status**: Planning Phase
 **Migration Target**: Week 2-3 (Phase 1)
 
+> **AI Assistant Tip**: Before writing migrations with Codex/Claude, copy the relevant sections of this file into your session plan. Align table/column names exactly, then run `npm run test:db-redesign` and paste the output into `docs/ops-log/YYYY-MM.md` so reviewers can trace the implementation back to this canonical spec.
+
 ---
 
 ## Overview

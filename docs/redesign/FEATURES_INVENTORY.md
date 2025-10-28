@@ -20,6 +20,20 @@ Complete inventory of all features from Base44 MVP that need to be implemented i
 
 ---
 
+## 🧭 How to Use This Inventory with Codex/Claude
+
+- **Audience**: Engineers, AI copilots, QA, product, founders
+- **Purpose**: Ensure every Base44 MVP feature is captured, scoped, and planned for migration
+- **Cross-References**:
+  - `docs/redesign/MASTER_PLAN.md` → Phase-level sequencing, ownership, QA milestones
+  - `docs/redesign/API_MAPPING.md` → API contracts for each feature
+  - `docs/redesign/DATABASE_SCHEMA.md` → Database tables/columns for backend support
+  - `/tmp/elev8interview/` → Source of truth for UI/UX implementation
+
+When pairing with an AI assistant, paste the relevant feature row(s) into the chat session plan so the model can see component names, acceptance criteria, and backend dependencies before coding. This anchors the conversation to the approved scope and avoids drift from the master plan.
+
+---
+
 ## 🎓 Prepare Module Features
 
 ### Learning Hub System
