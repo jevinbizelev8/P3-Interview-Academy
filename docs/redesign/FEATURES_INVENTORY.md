@@ -494,74 +494,89 @@ Multi-stage learning system with 4 interview stages, each containing multiple in
 
 ---
 
-### Rewards Points System
+### XP Points System
 
-**Status**: 🆕 New Feature
+**Status**: 🆕 New Feature - ✅ **DESIGNED**
 **Complexity**: Medium
-**Estimated Effort**: 2-3 days
+**Estimated Effort**: 2-3 days (backend service + frontend display)
 
 #### Features
-- [ ] Point earning triggers
+- [ ] XP earning triggers (automatic)
   - Module completion
   - Simulation completion
   - Badge earned
-  - Daily login
-  - Streak maintenance
+  - High performance bonuses
+  - Self-intro assessment
+  - Resume analysis
+  - Daily streak
   - Reflection written
-  - Interview logged
-- [ ] Point values configuration
-- [ ] Points display everywhere
-- [ ] Points history
-- [ ] Points leaderboard
-- [ ] Point milestones
+- [ ] XP values configuration
+- [ ] XP display in header/profile
+- [ ] XP transaction history
+- [ ] XP milestones (levels)
+- [ ] XP progress bars
 
 **Backend Requirements**:
-- `point_activities` table
-- Points calculation service
-- Add points endpoint
-- Leaderboard query
-- `total_points` field in users table
+- `xp_points` field in users table ✅ **DESIGNED**
+- Gamification service (XP distribution logic)
+- XP history tracking (optional separate table)
+- API endpoints: `/api/user/xp/history`
 
-**Point Values** (suggested):
-- Module complete: 50 points
-- Stage complete: 200 points
-- Simulation complete: 100 points
-- Perfect STAR: +50 bonus
-- Badge earned: varies by badge
-- Daily login: 10 points
-- Streak bonus: streak_days × 5
-- Reflection: 25 points
-- Interview logged: 75 points
+**XP Values** (finalized):
+- **Learning modules**: 10-20 XP per module (varies by difficulty)
+- **Interview simulations**: 50-100 XP (HR: 50, Functional: 65, Manager: 75, SME: 85, Executive: 100)
+- **High performance bonus**: +25 XP (>80%), +50 XP (>90%)
+- **Badge earning**: 50-250 XP (varies by badge rarity)
+- **Self-intro assessment**: 25-50 XP
+- **Resume analysis**: 25 XP
+- **Daily streak**: +5 to +N XP (scaling with streak length)
+- **Reflection journals**: 15-20 XP
+
+**Implementation**: `server/services/gamification-service.ts` (to be created)
 
 ---
 
 ### Readiness Score
 
-**Status**: 🆕 New Feature
+**Status**: 🆕 New Feature - ✅ **DESIGNED**
 **Complexity**: Medium
-**Estimated Effort**: 2-3 days
+**Estimated Effort**: 2-3 days (calculation logic + UI display)
 
 #### Component
 - `ReadinessScoreBadge.jsx`
 
 #### Features
-- [ ] Score calculation (0-100)
-  - Stage 1 completion: 25%
-  - Stage 2 completion: 25%
-  - Stage 3 completion: 20%
-  - Stage 4 completion: 15%
-  - Practice sessions: 10%
-  - Interview prep: 5%
-- [ ] Score display badge
-- [ ] Score breakdown
+- [ ] Score calculation (0-100%) with weighted components:
+  - **60% weight**: AI Simulation Performance (average of last 5 simulations)
+  - **20% weight**: Learning Module Completion (% of modules completed)
+  - **10% weight**: Self-Introduction Score (latest assessment)
+  - **5% weight**: Resume Optimization (ATS score + JD match percentage)
+  - **5% weight**: Practice Consistency (streaks + recent engagement)
+- [ ] Score display badge/widget
+- [ ] Score breakdown view (show contribution of each component)
 - [ ] Score history tracking
-- [ ] Improvement suggestions
+- [ ] Personalized improvement suggestions
 - [ ] Target score recommendations
+- [ ] Real-time updates after relevant actions
 
 **Backend Requirements**:
-- Score calculation algorithm
-- Score history tracking
-- API endpoint for score
+- `readiness_score` field in users table ✅ **DESIGNED**
+- `calculateReadinessScore(userId)` function in readiness service
+- Data aggregation from multiple tables (simulations, modules, self-intros, resumes)
+- Caching strategy for performance
+- API endpoints: `/api/user/readiness` (with breakdown)
+
+**Implementation**: `server/services/readiness-service.ts` (to be created)
+
+**Calculation Algorithm**:
+```javascript
+readinessScore =
+  (avgSimulationScore * 0.60) +  // Last 5 simulations
+  (moduleCompletionPct * 0.20) +  // % of modules done
+  (selfIntroScore * 0.10) +        // Latest self-intro
+  (resumeScore * 0.05) +           // ATS + JD match avg
+  (consistencyScore * 0.05)        // Streak + activity
+```
 
 ---
 

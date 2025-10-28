@@ -22,9 +22,10 @@ Transform your interview skills with personalized AI coaching, multi-language su
 - **Cultural Context**: AI responses tailored to regional business practices
 
 ### 🤖 **Advanced AI Integration**
-- **SeaLion AI**: Primary AI service optimized for Southeast Asian markets
-- **Multiple Fallbacks**: OpenAI primary with SeaLion and Anthropic fallbacks
+- **OpenAI GPT-4**: Primary AI service for all interview coaching and evaluation
+- **Qwen Integration**: Planned Alicloud integration for enhanced regional support (Q1 2026)
 - **STAR Method Evaluation**: Structured feedback using Situation, Task, Action, Result framework
+- **9-Criteria Scoring**: Professional rubric with 125 curated questions
 - **Real-time Coaching**: Instant analysis and personalized improvement suggestions
 
 ### 🎙️ **Voice Technology**
@@ -53,10 +54,10 @@ Transform your interview skills with personalized AI coaching, multi-language su
 - **Session management** with auto-save and recovery
 
 ### **AI & Language Services**
-- **SeaLion AI** - Primary AI service for Southeast Asian contexts
-- **OpenAI** - GPT-4o for advanced language processing and fallback
-- **SeaLion AI** - Regional language models for Southeast Asia (optional)
-- **AWS Bedrock** - Claude integration for enterprise features
+- **OpenAI GPT-4** - Primary AI service for interview coaching and evaluation
+- **AWS Bedrock** - Claude integration for enterprise features (optional)
+- **Qwen** - Alicloud integration planned for Q1 2026
+- **Multi-language Support** - 7 Southeast Asian languages with cultural context
 
 ### **Development & Deployment**
 - **TypeScript** for type safety across the stack
@@ -114,9 +115,8 @@ Transform your interview skills with personalized AI coaching, multi-language su
    Set up your environment variables:
    ```bash
    # AI Services
-   OPENAI_API_KEY=your_openai_key
-   SEALION_API_KEY=your_sealion_key
-   
+   OPENAI_API_KEY=your_openai_key  # Required
+
    # Database
    DATABASE_URL=your_postgresql_url
 4. **Database Setup**
@@ -208,14 +208,31 @@ For support, feature requests, or business inquiries:
 
 ## 🏆 Acknowledgments
 
-- **SeaLion AI** for culturally-aware AI responses optimized for Southeast Asia
-- **OpenAI** for advanced language processing capabilities
+- **OpenAI** for advanced AI language processing and interview evaluation
 - **Google Cloud** for scalable AI infrastructure
-- **Replit** for seamless deployment and hosting
+- **AWS** for production deployment infrastructure
+- **Base44** for MVP design inspiration and UX patterns
 - **Southeast Asian Developer Community** for feedback and testing
 
 ---
 
-*Built with ❤️ for the Southeast Asian professional community*
+## 🚀 Redesign Project (Active Development)
 
-# Testing deployment pipeline
+**Status**: Phase 0 Complete - Planning & Documentation ✅
+
+We're currently integrating the Base44 MVP design with P3's robust backend to deliver an enhanced interview preparation experience.
+
+**Key Features Coming Soon**:
+- 🎮 **Gamification**: XP points, badges, streaks, and readiness scores
+- 📚 **Learning Hub**: 11 interactive modules across 5 interview stages
+- 📝 **Self-Introduction Wizard**: 6-step guided process with video recording
+- 📄 **Resume Analyzer**: AI-powered ATS scoring and optimization
+- ⭐ **STAR Story Builder**: Build your behavioral interview story library
+- 📔 **Reflection Journals**: Post-simulation insights and growth tracking
+
+**Timeline**: 16-20 weeks
+**Documentation**: See `docs/redesign/` for complete project details
+
+---
+
+*Built with ❤️ for the Southeast Asian professional community*

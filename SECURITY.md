@@ -24,12 +24,14 @@ This document outlines security best practices, credential management, and incid
 
 Key environment variables requiring protection (see `.env.example`):
 - **AWS Credentials**: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (use AWS CLI profiles when possible)
-- **AI Services**: `SEALION_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
+- **AI Services**: `OPENAI_API_KEY` (required), `ANTHROPIC_API_KEY` (optional), `QWEN_API_KEY` (future)
 - **Database**: `DATABASE_URL` (PostgreSQL connection string with credentials)
 - **Google Cloud**: `GOOGLE_API_KEY`, `GCP_PROJECT_ID`, `GCP_REGION`
 - **Auth**: `SESSION_SECRET` (critical for session encryption)
 - **Email**: `SMTP_PASS` (Gmail app password)
 - **OAuth**: `GOOGLE_CLIENT_SECRET` (Google OAuth credentials)
+- **Payment Processing**: `STRIPE_TEST_SECRET_KEY`, `STRIPE_LIVE_SECRET_KEY` (Stripe API keys)
+- **Webhooks**: `STRIPE_TEST_WEBHOOK_SECRET`, `STRIPE_LIVE_WEBHOOK_SECRET` (Stripe webhook signatures)
 
 ### AWS CLI Profile Setup
 

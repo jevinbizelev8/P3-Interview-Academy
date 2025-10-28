@@ -17,7 +17,7 @@ This project uses multiple documentation files for better organization:
 
 ---
 
-## 🚀 Current Status (2025-10-23)
+## 🚀 Current Status (2025-10-28)
 
 **✅ ALL SYSTEMS OPERATIONAL**: Production and staging environments healthy
 
@@ -29,8 +29,10 @@ This project uses multiple documentation files for better organization:
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 
 ### Recent Updates
-- **2025-10-28**: Started major redesign project based on founder's Base44 MVP design
-- **2025-10-28**: Created comprehensive redesign documentation (8-12 week plan)
+- **2025-10-28**: 🎯 **REDESIGN PROJECT KICKOFF** - Base44 MVP integration (16-20 week timeline)
+- **2025-10-28**: Removed SeaLion AI service - now OpenAI-only (Qwen planned for 3 months)
+- **2025-10-28**: Created comprehensive database schema (13 new tables, 6 user columns)
+- **2025-10-28**: Documented gamification system (XP, badges, streaks, readiness score)
 - **2025-10-28**: Fixed Stripe deployment crash by adding required environment variables to AWS
 - **2025-10-28**: Enhanced CI/CD pipeline with staging → smoke tests → approval → production flow
 - **2025-10-23**: Documentation reorganized into focused files
@@ -39,23 +41,43 @@ This project uses multiple documentation files for better organization:
 - **2025-10-02**: Practice module "End Session Early" fix deployed
 
 ### Current Branch
-- **Branch**: `main`
-- **Main Branch**: `main` (use for PRs)
+- **Branch**: `redesign/mvp-founder-design` (active development)
+- **Main Branch**: `main` (production-ready, use for PRs)
 
-### Redesign Project (Active)
-- **Branch**: `redesign/mvp-founder-design`
-- **Status**: 🟡 Phase 1 - Documentation Complete
-- **Goal**: Rebuild P3 frontend to match founder's Base44 MVP design pixel-perfect
-- **Timeline**: 8-12 weeks estimated
-- **Documentation**: `docs/redesign/`
-  - [MASTER_PLAN.md](docs/redesign/MASTER_PLAN.md) - Complete 8-12 week plan with phases
+### 🎨 Redesign Project (Active - Phase 0)
+**Status**: 🟢 Phase 0 Complete - Documentation & Planning Done
+
+**Overview**:
+- **Goal**: Integrate Base44 MVP design with P3's robust backend
+- **Approach**: Incremental integration with feature flags
+- **Timeline**: 16-20 weeks (realistic estimate)
+- **Current Phase**: Phase 0 - Preparation & Cleanup ✅ COMPLETE
+
+**Key Features to Implement**:
+- ✅ Gamification (XP points, badges, streaks, levels)
+- ✅ Learning Hub (11 interactive modules)
+- ✅ Readiness Score (0-100% interview preparedness)
+- ✅ Self-Introduction Wizard (6-step with video)
+- ✅ Resume Analyzer (AI-powered with ATS scoring)
+- ✅ STAR Story Builder (behavioral interview prep)
+- ✅ Reflection Journals (post-simulation insights)
+- ✅ Referral Program (user growth)
+
+**Documentation**: `docs/redesign/`
+  - [MASTER_PLAN.md](docs/redesign/MASTER_PLAN.md) - Comprehensive 16-20 week plan
+  - [DATABASE_SCHEMA.md](docs/redesign/DATABASE_SCHEMA.md) - 13 new tables, complete schema
+  - [API_MAPPING.md](docs/redesign/API_MAPPING.md) - 48 new API endpoints
+  - [FEATURES_INVENTORY.md](docs/redesign/FEATURES_INVENTORY.md) - 51 features breakdown
   - [QUICK_START.md](docs/redesign/QUICK_START.md) - Session resumption guide
-  - [API_MAPPING.md](docs/redesign/API_MAPPING.md) - 48 endpoints, 15 database tables
-  - [FEATURES_INVENTORY.md](docs/redesign/FEATURES_INVENTORY.md) - 51 features to implement
-- **Base44 Reference**: `/tmp/elev8interview` (founder's MVP design)
-- **Next Phase**: Planning discussion before Phase 2 (Frontend copying)
+
+**Base44 Reference**: `/tmp/elev8interview` (founder's MVP design codebase)
+
+**Next Phase**: Phase 1 - Database Migration (Week 2-3)
 
 ### Outstanding Items
+- 🚀 **Redesign Project**: Phase 1 - Database migration (13 new tables)
+- 🚀 **Redesign Project**: Phase 2 - Backend services (6 new services)
+- 🚀 **Redesign Project**: Phase 3 - API development (48 new endpoints)
 - ⚠️ Cast legacy varchar `user_id` / `created_by` columns to UUID in staging/prod
 - ⏳ Email verification system testing in staging
 - ⏳ Google OAuth testing and production deployment
@@ -147,8 +169,9 @@ Full-stack TypeScript application with React frontend and Express.js backend:
 
 #### AI Services
 - **Primary**: OpenAI GPT-4 (currently configured)
-- **Fallbacks**: SeaLion AI (Southeast Asia optimized), AWS Bedrock (Anthropic Claude)
+- **Future**: Qwen from Alicloud (planned for 3 months)
 - All AI services abstracted through service classes in `server/services/`
+- **Note**: SeaLion AI removed 2025-10-28 (now OpenAI-only)
 
 ### Key Architectural Patterns
 
@@ -160,9 +183,12 @@ Full-stack TypeScript application with React frontend and Express.js backend:
 #### Database Design
 - PostgreSQL with Drizzle ORM
 - Schema supports multi-language content (7 Southeast Asian languages)
-- Key tables: users, interview_sessions, interview_messages, preparation_sessions, practice_sessions
+- **Core Tables** (30 existing): users, interview_sessions, interview_messages, preparation_sessions, practice_sessions, subscriptions, credit_transactions, etc.
+- **New MVP Tables** (13 tables): badges, user_badges, learning_modules, user_module_progress, self_intros, resumes, star_stories, reflection_journals, actual_interviews, referrals, feedback, support_tickets
+- **User Extensions**: xp_points, current_streak, longest_streak, readiness_score, referral_code
 - Session management for both authentication and interview state
 - Separate databases for staging (`p3_staging`) and production (`postgres`)
+- **Complete Schema**: See [DATABASE_SCHEMA.md](docs/redesign/DATABASE_SCHEMA.md)
 
 #### Component Organization
 - `client/src/components/` - Reusable UI components
@@ -204,6 +230,69 @@ Evaluation logic: `server/services/response-evaluation-service.ts`
 - No server-side voice processing costs
 - Multi-language voice support matching the 7 supported languages
 
+### 🎮 Gamification System (Redesign Project)
+
+**Status**: 📋 Planning Phase - Implementation in Phase 2-3
+
+#### XP Points System
+Users earn experience points through platform engagement:
+- **Learning modules**: 10-20 XP per module
+- **Interview simulations**: 50-100 XP (varies by difficulty)
+- **High performance bonus**: +25 XP (>80%), +50 XP (>90%)
+- **Badge earning**: 50-250 XP per badge
+- **Self-intro assessment**: 25-50 XP
+- **Resume analysis**: 25 XP
+- **Daily streak**: +5 to +N XP (scaling)
+- **Reflection journals**: 15-20 XP
+
+**Implementation**: `server/services/gamification-service.ts` (to be created)
+
+#### Interview Readiness Score (0-100%)
+
+Calculated using weighted average of user performance:
+- **60%** - AI Simulation Performance (average of last 5 simulations)
+- **20%** - Learning Module Completion (percentage completed)
+- **10%** - Self-Introduction Score (latest assessment)
+- **5%** - Resume Optimization (ATS score + JD match)
+- **5%** - Practice Consistency (streaks and recent engagement)
+
+**Features**:
+- Real-time updates after relevant actions
+- Breakdown view showing contribution of each component
+- Historical tracking to show improvement over time
+- Personalized recommendations to improve score
+
+**Implementation**: `server/services/readiness-service.ts` (to be created)
+
+#### Badge System
+
+15-20 badges across categories:
+- **Learning**: Module completion achievements
+- **Practice**: Simulation milestones
+- **Achievement**: Performance excellence
+- **Milestone**: Platform engagement
+
+**Badge Tiers**: Common → Uncommon → Rare → Epic → Legendary
+
+**Database**:
+- `badges` table - All available badges with requirements
+- `user_badges` table - User progress and earned badges
+
+**Example Badges**:
+- "First Steps" (1 module, 50 XP)
+- "Quick Learner" (5 modules, 100 XP)
+- "Interview Ready" (10 simulations, 200 XP)
+- "Streak Warrior" (7-day streak, 150 XP)
+
+#### Streak Tracking
+
+- **Current Streak**: Consecutive days of platform activity
+- **Longest Streak**: Personal record
+- **Daily Bonus XP**: Scales with streak length (+5 day 1, +10 day 2, etc.)
+- **Activity Definition**: Any meaningful engagement (module, simulation, exercise)
+
+**Implementation**: Tracked in `users` table, updated by activity tracking service
+
 ---
 
 ## 🌍 Multi-Language Support
@@ -233,8 +322,9 @@ See `.env.example` for complete list. Critical variables:
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (use AWS CLI profiles when possible)
 
 **AI Services**:
-- `OPENAI_API_KEY` (required for current setup)
-- `SEALION_API_KEY`, `ANTHROPIC_API_KEY` (optional fallbacks)
+- `OPENAI_API_KEY` (required - primary AI service)
+- `ANTHROPIC_API_KEY` (optional - AWS Bedrock fallback)
+- `QWEN_API_KEY` (future - Alicloud integration in 3 months)
 - `GOOGLE_API_KEY`, `GCP_PROJECT_ID`, `GCP_REGION` (Google Cloud)
 
 **Database**:
@@ -443,12 +533,20 @@ aws elasticbeanstalk describe-events --environment-name p3-interview-academy-pro
 
 ## 🔮 Future Enhancements
 
+### Short-term (1-3 months)
+- **Qwen Integration**: Add Alicloud Qwen AI as secondary provider (planned Q1 2026)
 - **Google OAuth**: Complete Google Cloud setup and testing
+- **Email Verification**: Complete staging testing and production deployment
+
+### Medium-term (3-6 months)
 - **Single Sign-On**: Integrate with bizelev8.ai user authentication
-- **Custom Theming**: Brand customization for embedded iframe
-- **SeaLion API**: Add Southeast Asia AI credentials for regional optimization
+- **Custom Domain**: Complete DNS and SSL setup for p3app.bizelev8.ai
 - **Progressive Web App**: Standalone app installation from iframe
+
+### Long-term (6+ months)
+- **Custom Theming**: Brand customization for embedded iframe
 - **Analytics Integration**: Cross-domain user behavior tracking
+- **Mobile Apps**: Native iOS and Android applications
 
 ---
 
@@ -485,4 +583,12 @@ aws elasticbeanstalk describe-events --environment-name p3-interview-academy-pro
 ---
 
 **Last Updated**: 2025-10-28
-**Document Version**: 2.1 (Enhanced CI/CD Pipeline)
+**Document Version**: 3.0 (Base44 MVP Redesign Project Kickoff)
+
+**Major Changes in v3.0**:
+- Added comprehensive redesign project documentation
+- Removed SeaLion AI service (now OpenAI-only)
+- Added gamification system documentation (XP, badges, readiness score)
+- Added 13 new database tables documentation
+- Updated all environment variables
+- Reorganized future enhancements by timeline

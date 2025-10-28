@@ -455,119 +455,151 @@ ADD COLUMN reflection_id UUID REFERENCES reflection_journals(id);
 
 ---
 
-## 🏆 Gamification
+## 🏆 Gamification System
 
-### Base44 SDK
-```javascript
-import { Badge, UserBadge } from '@/api/entities';
+### Overview
+Complete gamification system with XP points, badges, streaks, and readiness score.
 
-// Get all badges
-const badges = await Badge.list();
+---
 
-// Get user badges
-const userBadges = await UserBadge.list({ userId });
+### 1. User Profile & Gamification
 
-// (Internal: Award badge)
-await UserBadge.create({ userId, badgeId });
+**Get user profile with gamification stats**
+```typescript
+GET /api/user/profile
+Response: {
+  user: {
+    id: string,
+    username: string,
+    email: string,
+    xp_points: number,
+    current_streak: number,
+    longest_streak: number,
+    last_activity_date: timestamp,
+    readiness_score: number,
+    referral_code: string,
+    credit_balance: number,
+    created_at: timestamp
+  }
+}
 ```
 
-### Express API
-```typescript
-// Get all available badges
-GET /api/gamification/badges
-Response: { badges: Badge[] }
+---
 
-// Get user's awarded badges
-GET /api/gamification/user-badges
+### 2. Badge System (8 endpoints)
+
+**Get all available badges**
+```typescript
+GET /api/badges
+Response: {
+  badges: Badge[]  // All 15-20 badges
+}
+```
+
+**Get user's earned badges**
+```typescript
+GET /api/user/badges
 Response: {
   badges: UserBadge[],
   total_badges: number,
-  earned_badges: number
+  earned_badges: number,
+  progress: BadgeProgress[]  // Badges in progress
 }
+```
 
-// Award badge (INTERNAL - called by backend logic)
-POST /api/gamification/award-badge
-Body: { userId: string, badgeId: string }
-Response: { userBadge: UserBadge, points_awarded: number }
-
-// Add reward points
-POST /api/gamification/add-points
-Body: { points: number, reason: string }
+**Claim earned badge** (user acknowledges)
+```typescript
+POST /api/badges/:id/claim
 Response: {
-  new_total: number,
-  points_added: number
+  userBadge: UserBadge,
+  xp_awarded: number,
+  message: string
 }
+```
 
-// Get user points
-GET /api/gamification/points
+**Get user's XP history**
+```typescript
+GET /api/user/xp/history
+Query: { limit?: number, offset?: number }
 Response: {
-  total_points: number,
-  recent_activities: PointActivity[]
+  history: XPTransaction[],
+  total: number
 }
+```
 
-// Update streak
-POST /api/gamification/update-streak
+**Get streak status**
+```typescript
+GET /api/user/streak
+Response: {
+  current_streak: number,
+  longest_streak: number,
+  last_activity_date: timestamp,
+  daily_bonus_xp: number
+}
+```
+
+**Log user activity** (updates streak)
+```typescript
+POST /api/user/activity
 Body: { activity_type: string }
 Response: {
   current_streak: number,
-  longest_streak: number,
-  streak_bonus: number
-}
-
-// Get streak info
-GET /api/gamification/streak
-Response: {
-  current_streak: number,
-  longest_streak: number,
-  last_activity: timestamp
-}
-
-// Get leaderboard
-GET /api/gamification/leaderboard
-Query: { type: 'points' | 'badges', limit?: number }
-Response: {
-  leaderboard: LeaderboardEntry[],
-  user_rank: number
+  streak_bonus_xp: number,
+  message: string
 }
 ```
 
-**Database Tables**:
-```sql
-CREATE TABLE badges (
-  id UUID PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  icon_url TEXT,
-  category TEXT,  -- 'learning', 'practice', 'milestone'
-  points_reward INTEGER DEFAULT 0,
-  criteria JSONB,  -- Conditions to earn
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE user_badges (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  badge_id UUID REFERENCES badges(id),
-  awarded_at TIMESTAMP DEFAULT NOW(),
-  UNIQUE(user_id, badge_id)
-);
-
-CREATE TABLE point_activities (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  points INTEGER NOT NULL,
-  reason TEXT,
-  activity_type TEXT,  -- 'module_complete', 'badge_earn', etc.
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
--- Extend users table
-ALTER TABLE users
-ADD COLUMN total_points INTEGER DEFAULT 0,
-ADD COLUMN current_streak INTEGER DEFAULT 0,
-ADD COLUMN longest_streak INTEGER DEFAULT 0,
-ADD COLUMN last_activity_date DATE;
+**Get readiness score**
+```typescript
+GET /api/user/readiness
+Response: {
+  readiness_score: number,  // 0-100
+  breakdown: {
+    simulation_performance: { value: number, weight: 0.60 },
+    module_completion: { value: number, weight: 0.20 },
+    self_intro_score: { value: number, weight: 0.10 },
+    resume_optimization: { value: number, weight: 0.05 },
+    practice_consistency: { value: number, weight: 0.05 }
+  },
+  recommendations: string[]
+}
 ```
+
+**Internal: Award badge** (called by backend logic)
+```typescript
+POST /api/internal/badges/award
+Body: { userId: string, badgeId: string }
+Response: { userBadge: UserBadge, xp_awarded: number }
+```
+
+---
+
+### 3. Database Schema
+
+**See `docs/redesign/DATABASE_SCHEMA.md` for complete schema**
+
+Key tables:
+- `badges` - All available badges (15-20 rows)
+- `user_badges` - User's earned badges with progress
+- `users` extensions - xp_points, current_streak, longest_streak, readiness_score, referral_code
+
+**XP Distribution** (automatic via gamification service):
+- Learning modules: 10-20 XP
+- Interview simulations: 50-100 XP (varies by difficulty)
+- High performance bonus: +25 XP (>80%), +50 XP (>90%)
+- Badge earning: 50-250 XP (varies by rarity)
+- Self-intro assessment: 25-50 XP
+- Resume analysis: 25 XP
+- Daily streak: +5 to +N XP (scaling)
+- Reflection journals: 15-20 XP
+
+---
+
+### 4. Backend Services
+
+**To be created**:
+- `server/services/gamification-service.ts` - Badge awarding, XP distribution
+- `server/services/readiness-service.ts` - Readiness score calculation
 
 ---
 

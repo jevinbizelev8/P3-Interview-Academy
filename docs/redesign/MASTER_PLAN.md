@@ -2,77 +2,124 @@
 
 **Branch**: `redesign/mvp-founder-design`
 **Start Date**: 2025-10-28
+**Phase 0 Complete**: 2025-10-28
 **Base44 MVP Location**: `/tmp/elev8interview`
-**Status**: 🟡 In Progress
+**Status**: ✅ Phase 0 Complete → Phase 1 Ready
 
 ---
 
 ## 📋 Project Overview
 
 ### Goal
-Rebuild P3 Interview Academy frontend to match founder's Base44 MVP design pixel-perfect, while maintaining existing AWS infrastructure (Express.js + PostgreSQL + Elastic Beanstalk).
+Integrate founder's Base44 MVP design with P3's robust backend infrastructure to deliver a world-class interview preparation platform with gamification, learning modules, and enhanced user experience.
 
 ### Approach
-- **Frontend**: Copy Base44 UI components and pages exactly
-- **Backend**: Replace Base44 SDK calls with Express API endpoints
-- **Services**: Integrate existing Gmail SMTP, OpenAI/SeaLion AI, and Stripe
-- **Infrastructure**: Deploy on existing AWS Elastic Beanstalk setup
+- **Incremental Integration**: Feature flags for gradual rollout (not big-bang rewrite)
+- **Frontend**: Copy Base44 UI components, convert JSX→TSX, integrate with P3 APIs
+- **Backend**: Build 48 new endpoints, preserve existing services
+- **Database**: Add 13 new tables (gamification, learning, user content)
+- **Infrastructure**: Deploy on existing AWS Elastic Beanstalk with CI/CD pipeline
+- **AI Services**: OpenAI-only (SeaLion removed, Qwen planned Q1 2026)
 
 ### Success Criteria
-- ✅ Frontend matches Base44 MVP design exactly
-- ✅ All interactive learning modules functional
-- ✅ Gamification system (badges, points, streaks) working
-- ✅ Existing features continue to work
-- ✅ All existing users unaffected
-- ✅ Deployed successfully on AWS
+- ✅ Gamification system fully functional (XP, badges, readiness score)
+- ✅ 11 interactive learning modules implemented
+- ✅ Base44 design integrated pixel-perfect
+- ✅ All existing P3 features preserved (9-criteria evaluation, ASEAN languages)
+- ✅ Zero downtime deployment with feature flags
+- ✅ User retention improved by +20%
 
 ---
 
 ## ⏱️ Timeline & Milestones
 
+**Updated Timeline**: 16-20 weeks (realistic with buffer)
+
 | Phase | Duration | Target Date | Status |
 |-------|----------|-------------|--------|
-| Analysis & Documentation | 1-2 days | Week 1 | 🟡 In Progress |
-| Project Setup | 1 day | Week 1 | ⏳ Pending |
-| Backend API Development | 3-4 weeks | Weeks 2-5 | ⏳ Pending |
-| Frontend Integration | 2-3 weeks | Weeks 6-8 | ⏳ Pending |
-| Service Integrations | 1 week | Week 9 | ⏳ Pending |
-| Testing | 1-2 weeks | Weeks 10-11 | ⏳ Pending |
-| Production Deployment | 1 week | Week 12 | ⏳ Pending |
-| **Total Estimated** | **8-12 weeks** | **~3 months** | - |
+| Phase 0: Preparation & Cleanup | 1 day | Week 1 | ✅ **COMPLETE** |
+| Phase 1: Database Migration | 2 weeks | Weeks 2-3 | ⏳ Next |
+| Phase 2: Backend Services | 3 weeks | Weeks 4-6 | ⏳ Pending |
+| Phase 3: API Development | 3 weeks | Weeks 7-9 | ⏳ Pending |
+| Phase 4: Frontend Conversion | 3 weeks | Weeks 10-12 | ⏳ Pending |
+| Phase 5: Quick Wins Deployment | 1 week | Week 13 | ⏳ Pending |
+| Phase 6: Major Features Rollout | 3 weeks | Weeks 14-16 | ⏳ Pending |
+| Phase 7: Polish & Optimization | 2 weeks | Weeks 17-18 | ⏳ Pending |
+| Phase 8: Production Deployment | 2 weeks | Weeks 19-20 | ⏳ Pending |
+| Phase 9: Cleanup & Retrospective | 1 week | Week 21 | ⏳ Pending |
+| **Total Realistic** | **16-20 weeks** | **~4-5 months** | - |
 
 ---
 
 ## 📦 Phase Breakdown
 
-### Phase 1: Analysis & Documentation (1-2 days) 🟡 IN PROGRESS
+### Phase 0: Preparation & Cleanup (1 day) ✅ **COMPLETE**
 
 **Objectives**:
-- Extract complete feature list from Base44 MVP
-- Map Base44 SDK calls to Express endpoints
-- Document database schema changes
-- Create component inventory
+- Remove SeaLion AI service (consolidate to OpenAI-only)
+- Complete comprehensive documentation
+- Design database schema and gamification system
+- Establish project foundation
 
 **Tasks**:
-- [x] Clone Base44 MVP repository
-- [x] Analyze Base44 structure and tech stack
-- [x] Analyze current P3 codebase
-- [x] Create redesign branch
-- [ ] Create MASTER_PLAN.md (this file)
-- [ ] Create QUICK_START.md
-- [ ] Create API_MAPPING.md
-- [ ] Create FEATURES_INVENTORY.md
-- [ ] Create DATABASE_SCHEMA.md
-- [ ] Commit initial documentation
+- [x] Clone Base44 MVP repository → `/tmp/elev8interview` ✅
+- [x] Comprehensive analysis of both codebases ✅
+- [x] Create redesign branch `redesign/mvp-founder-design` ✅
+- [x] **Remove SeaLion AI** from all files (now OpenAI-only) ✅
+- [x] **Create DATABASE_SCHEMA.md** (1000+ lines, 13 tables) ✅
+- [x] **Update CLAUDE.md** v3.0 with redesign documentation ✅
+- [x] **Update README.md** (remove SeaLion, add redesign section) ✅
+- [x] **Update SECURITY.md** (remove SEALION_API_KEY) ✅
+- [x] **Update .env.example** (remove SeaLion variables) ✅
+- [x] **Update ops-log** with project kickoff entry ✅
+- [x] Update MASTER_PLAN.md (this file) ✅
+- [x] Update QUICK_START.md ✅
+- [x] Update API_MAPPING.md with gamification endpoints ✅
+- [x] Update FEATURES_INVENTORY.md with XP/badges details ✅
+- [x] Design gamification system (XP, badges, readiness score) ✅
+- [x] Document 48 new API endpoints ✅
+- [x] Commit all documentation ✅
 
 **Deliverables**:
-- Complete documentation set in `docs/redesign/`
-- Clear understanding of all features
-- Ready-to-implement technical specs
+- ✅ Complete documentation set in `docs/redesign/` (5 files)
+- ✅ SeaLion AI fully removed from codebase
+- ✅ Database schema designed (13 tables, 6 user columns)
+- ✅ Gamification system fully documented
+- ✅ All core documentation updated (CLAUDE.md, README.md, SECURITY.md)
+- ✅ Clear understanding of all 51 features
+- ✅ Ready-to-implement technical specs
+
+**Status**: ✅ **COMPLETE** (2025-10-28)
 
 ---
 
-### Phase 2: Project Setup (1 day) ⏳ PENDING
+### Phase 1: Database Migration (2 weeks) ⏳ NEXT
+
+**Objectives**:
+- Implement 13 new database tables
+- Extend users table with gamification columns
+- Deploy schema to staging and production
+
+**Tasks**:
+- [ ] Create Drizzle migration file
+- [ ] Add 13 new tables (badges, learning_modules, resumes, etc.)
+- [ ] Extend users table (xp_points, current_streak, readiness_score, etc.)
+- [ ] Add indexes for performance
+- [ ] Test migration in local development
+- [ ] Deploy schema to staging database
+- [ ] Seed initial data (badges, learning modules)
+- [ ] Verify schema integrity
+- [ ] Deploy to production database
+- [ ] Update shared/schema.ts with TypeScript definitions
+
+**Deliverables**:
+- Database schema deployed to both environments
+- Initial seed data loaded
+- All tables verified and indexed
+
+---
+
+### Phase 2: Backend Services Development (3 weeks) ⏳ PENDING
 
 **Objectives**:
 - Copy Base44 frontend files to P3
