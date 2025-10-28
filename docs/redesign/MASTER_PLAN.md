@@ -897,7 +897,7 @@ Add test artifacts and signoffs to `docs/ops-log/` after each milestone before p
 
 **Next Session Priorities**:
 1. ✅ DONE - All automation tasks complete
-2. **TODO**: Create PR to trigger staging deployment
+2. **DONE**: PR #13 opened to trigger staging deployment
 3. **TODO**: Monitor CI/CD automatic migration on staging
 4. **TODO**: Verify staging deployment success
 5. **TODO**: Prepare for production deployment (after staging approval)
@@ -915,6 +915,30 @@ Add test artifacts and signoffs to `docs/ops-log/` after each milestone before p
 ---
 
 ## 🔧 Technical Reference
+
+### Session 3: 2025-10-28 (PR Creation + Plan Sync)
+
+**Duration**: 30 minutes
+**Phase**: Phase 1 - Handoff to Staging
+
+**Completed**:
+- [x] Confirmed branch `redesign/mvp-founder-design` and remote sync
+- [x] Preserved local `.codex/config.toml` (skip-worktree) for local MCP context
+- [x] Reviewed redesign docs and validated Phase 1 readiness
+- [x] Created PR to `main` to trigger staging migration: PR #13
+
+**In Progress**:
+- [ ] Monitor CI/CD staging workflow and migration logs
+- [ ] Verify post-migration checks on staging (tables + columns)
+- [ ] Execute staging smoke tests
+
+**Blockers**: None
+
+**Next Session Priorities**:
+1. Monitor staging CI job for migration success
+2. Validate schema via verification script on staging
+3. Run smoke tests; collect evidence in `docs/ops-log/`
+4. Prep production plan (RDS snapshot + approval gate)
 
 ### Current Tech Stack
 - **Frontend**: React 18, Vite, TanStack Query, Wouter, Tailwind CSS, Shadcn/ui
