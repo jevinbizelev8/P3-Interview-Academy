@@ -306,7 +306,7 @@ jobs:
     needs: [build, smoke-tests]
     if: always() && needs.build.result == 'success' && (needs.smoke-tests.result == 'success' || needs.smoke-tests.result == 'skipped')
     environment:
-      name: production
+      name: Production
       url: http://${{ env.EB_PRODUCTION_ENV }}.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com
 
     steps:
@@ -359,7 +359,7 @@ jobs:
       - name: Wait for deployment
         run: |
           echo "Waiting for production deployment to complete..."
-          timeout 600 aws elasticbeanstalk wait environment-updated --environment-name ${{ env.EB_PRODUCTION_ENV }}
+          timeout 900 aws elasticbeanstalk wait environment-updated --environment-name ${{ env.EB_PRODUCTION_ENV }}
 
       - name: Verify production deployment
         run: |
