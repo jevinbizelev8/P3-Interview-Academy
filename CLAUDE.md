@@ -10,9 +10,9 @@ This project uses multiple documentation files for better organization:
 - **[SECURITY.md](SECURITY.md)** - Security best practices, AWS credentials, incident history
 - **[INTEGRATION.md](INTEGRATION.md)** - Bizelev8.ai, email verification, Google OAuth
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Comprehensive deployment procedures and guides
-- **[ops-log/](deployment-scripts/ops-log/)** - Monthly operational updates and historical changes
-  - [2025-09.md](deployment-scripts/ops-log/2025-09.md) - September deployment history
-  - [2025-10.md](deployment-scripts/ops-log/2025-10.md) - October deployment history
+- **[ops-log/](docs/ops-log/)** - Monthly operational updates and historical changes
+  - [2025-09.md](docs/ops-log/2025-09.md) - September deployment history
+  - [2025-10.md](docs/ops-log/2025-10.md) - October deployment history
 - **[CHANGELOG.md](CHANGELOG.md)** - Permanent release notes
 
 ---
@@ -29,6 +29,9 @@ This project uses multiple documentation files for better organization:
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 
 ### Recent Updates
+- **2025-10-28**: Started major redesign project based on founder's Base44 MVP design
+- **2025-10-28**: Created comprehensive redesign documentation (8-12 week plan)
+- **2025-10-28**: Fixed Stripe deployment crash by adding required environment variables to AWS
 - **2025-10-28**: Enhanced CI/CD pipeline with staging → smoke tests → approval → production flow
 - **2025-10-23**: Documentation reorganized into focused files
 - **2025-10-12**: Database security hardened (per-env users, SSL required)
@@ -36,8 +39,21 @@ This project uses multiple documentation files for better organization:
 - **2025-10-02**: Practice module "End Session Early" fix deployed
 
 ### Current Branch
-- **Branch**: `feature/admin-subscription-system`
+- **Branch**: `main`
 - **Main Branch**: `main` (use for PRs)
+
+### Redesign Project (Active)
+- **Branch**: `redesign/mvp-founder-design`
+- **Status**: 🟡 Phase 1 - Documentation Complete
+- **Goal**: Rebuild P3 frontend to match founder's Base44 MVP design pixel-perfect
+- **Timeline**: 8-12 weeks estimated
+- **Documentation**: `docs/redesign/`
+  - [MASTER_PLAN.md](docs/redesign/MASTER_PLAN.md) - Complete 8-12 week plan with phases
+  - [QUICK_START.md](docs/redesign/QUICK_START.md) - Session resumption guide
+  - [API_MAPPING.md](docs/redesign/API_MAPPING.md) - 48 endpoints, 15 database tables
+  - [FEATURES_INVENTORY.md](docs/redesign/FEATURES_INVENTORY.md) - 51 features to implement
+- **Base44 Reference**: `/tmp/elev8interview` (founder's MVP design)
+- **Next Phase**: Planning discussion before Phase 2 (Frontend copying)
 
 ### Outstanding Items
 - ⚠️ Cast legacy varchar `user_id` / `created_by` columns to UUID in staging/prod
@@ -242,6 +258,14 @@ See `.env.example` for complete list. Critical variables:
 - `GOOGLE_CALLBACK_URL`, `GOOGLE_SUCCESS_REDIRECT`, `GOOGLE_FAILURE_REDIRECT`
 - `VITE_ENABLE_GOOGLE_OAUTH`
 
+**Payment Processing (Stripe)**:
+- `STRIPE_MODE` (test or live mode)
+- `STRIPE_TEST_SECRET_KEY`, `STRIPE_TEST_PUBLISHABLE_KEY` (test mode credentials)
+- `STRIPE_TEST_WEBHOOK_SECRET` (webhook verification for test mode)
+- `STRIPE_LIVE_SECRET_KEY`, `STRIPE_LIVE_PUBLISHABLE_KEY` (production credentials)
+- `STRIPE_LIVE_WEBHOOK_SECRET` (webhook verification for live mode)
+- Optional: `STRIPE_SUCCESS_URL`, `STRIPE_CANCEL_URL`, price IDs for subscription products
+
 For detailed setup guides, see:
 - Email verification: [INTEGRATION.md#email-verification](INTEGRATION.md)
 - Google OAuth: [INTEGRATION.md#google-oauth](INTEGRATION.md)
@@ -343,7 +367,7 @@ Located in `deployment-scripts/`:
 ### Troubleshooting
 
 For common deployment issues and solutions, see:
-- [ops-log/2025-10.md](deployment-scripts/ops-log/2025-10.md) - Recent deployment troubleshooting
+- [ops-log/2025-10.md](docs/ops-log/2025-10.md) - Recent deployment troubleshooting
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Comprehensive deployment guide
 - `deployment-scripts/util/` - Debugging and maintenance scripts
 
@@ -428,12 +452,7 @@ aws elasticbeanstalk describe-events --environment-name p3-interview-academy-pro
 
 ---
 
-## 📋 Active Projects
-
-### Admin Subscription System
-- **Branch**: `feature/admin-subscription-system`
-- **Status**: In development
-- See branch documentation for details
+## 📋 Active Projects & Technical Debt
 
 ### Outstanding Technical Debt
 - ⚠️ **Database Schema**: Cast legacy varchar `user_id` / `created_by` columns to UUID
@@ -454,8 +473,8 @@ aws elasticbeanstalk describe-events --environment-name p3-interview-academy-pro
 - **Changelog**: [CHANGELOG.md](CHANGELOG.md) - Permanent release notes
 
 ### Operational Logs
-- **October 2025**: [ops-log/2025-10.md](deployment-scripts/ops-log/2025-10.md)
-- **September 2025**: [ops-log/2025-09.md](deployment-scripts/ops-log/2025-09.md)
+- **October 2025**: [ops-log/2025-10.md](docs/ops-log/2025-10.md)
+- **September 2025**: [ops-log/2025-09.md](docs/ops-log/2025-09.md)
 
 ### Quick Links
 - **Production**: `http://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com`
