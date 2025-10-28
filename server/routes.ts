@@ -28,6 +28,10 @@ import { errorLogger, logAPIError } from "./services/error-logger";
 import { prepareAIRouter } from "./routes/prepare-ai";
 import practiceRouter from "./routes/practice";
 import voiceServicesRouter from "./routes/voice-services-mvp";
+import creditsRouter from "./routes/credits";
+import adminRouter from "./routes/admin";
+import subscriptionRouter from "./routes/subscriptions";
+import stripeWebhookRouter from "./routes/stripe-webhooks";
 import testEndpoints from "./test-endpoints";
 import crypto from "crypto";
 
@@ -1925,13 +1929,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // ================================  
+  // ================================
   // AI-POWERED PREPARE MODULE ROUTES
   // ================================
-  
+
   app.use('/api/prepare-ai', requireAuthWithBypass, prepareAIRouter);
   app.use('/api/practice', requireAuthWithBypass, practiceRouter);
-  
+
+  // ================================
+  // CREDIT MANAGEMENT ROUTES
+  // ================================
+
+  app.use('/api/credits', requireAuthWithBypass, creditsRouter);
+
+  // ================================
+  // ADMIN ROUTES
+  // ================================
+
+  app.use('/api/admin', requireAuthWithBypass, adminRouter);
+
+  // ================================
+  // SUBSCRIPTION & PAYMENT ROUTES
+  // ================================
+
+  // Stripe webhooks (no auth required, verified by signature)
+  app.use('/api/webhooks', stripeWebhookRouter);
+
+  // Subscription management (requires auth)
+  app.use('/api/subscription', requireAuthWithBypass, subscriptionRouter);
+
   // Voice services routes
   app.use('/api/voice-services', voiceServicesRouter);
 

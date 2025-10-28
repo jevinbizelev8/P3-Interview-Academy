@@ -42,6 +42,10 @@ try {
 })();
 const app = express();
 
+// Stripe webhooks require the raw body for signature verification.
+// Register this BEFORE any JSON/body parsers.
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
+
 // CORS configuration for iframe embedding
 app.use((req, res, next) => {
   // Allow embedding from bizelev8.ai domains
@@ -116,6 +120,21 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+
+  // Initialize credit reset cron job (Phase 7)
+  try {
+    const { initializeCreditResetCron, runStartupCreditReset } = await import('./services/credit-reset-cron.js');
+
+    // Initialize daily cron job
+    initializeCreditResetCron();
+    log('✅ Credit reset cron job initialized', 'startup');
+
+    // Run startup fallback to catch any missed resets
+    await runStartupCreditReset();
+    log('✅ Startup credit reset fallback complete', 'startup');
+  } catch (error) {
+    log(`⚠️  Credit reset cron initialization failed: ${(error as Error).message}`, 'startup');
+  }
 
   // CRITICAL: API 404 handler MUST be placed before static file serving
   // to prevent non-existent API routes from serving the frontend HTML

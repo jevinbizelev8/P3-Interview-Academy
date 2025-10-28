@@ -7,14 +7,23 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ScenarioTable from "@/components/admin/scenario-table";
 import CreateScenario from "./create-scenario";
-import { 
-  ClipboardList, 
-  Play, 
-  Users, 
-  TrendingUp, 
-  Plus, 
+import AdminUsersPage from "./users";
+import UserDetailPage from "./user-detail";
+import CreditCostsPage from "./credit-costs";
+import AdminAnalyticsPage from "./analytics";
+import AdminPaymentsPage from "./payments";
+import {
+  ClipboardList,
+  Play,
+  Users,
+  TrendingUp,
+  Plus,
   Search,
-  ArrowLeft 
+  ArrowLeft,
+  Settings,
+  Zap,
+  BarChart3,
+  DollarSign
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -73,8 +82,13 @@ export default function AdminDashboard() {
 
       <Switch>
         <Route path="/admin/create-scenario" component={CreateScenario} />
+        <Route path="/admin/users/:id" component={UserDetailPage} />
+        <Route path="/admin/users" component={AdminUsersPage} />
+        <Route path="/admin/credit-costs" component={CreditCostsPage} />
+        <Route path="/admin/analytics" component={AdminAnalyticsPage} />
+        <Route path="/admin/payments" component={AdminPaymentsPage} />
         <Route>
-          <AdminOverview 
+          <AdminOverview
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
             stageFilter={stageFilter}
@@ -138,6 +152,79 @@ function AdminOverview({
             Create New Scenario
           </Button>
         </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation("/admin/users")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-600" />
+              User Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              View and manage user accounts, subscriptions, and credit balances
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation("/admin/analytics")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-600" />
+              Analytics
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              View user metrics, platform usage, and growth analytics
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation("/admin/payments")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-600" />
+              Payments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Revenue analytics and payment transaction history
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation("/admin/credit-costs")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="w-5 h-5 text-yellow-600" />
+              Credit Costs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Configure credit costs for different features and sessions
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation("/admin/create-scenario")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5 text-blue-600" />
+              Scenarios
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Create and manage interview practice scenarios
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Stats Overview */}

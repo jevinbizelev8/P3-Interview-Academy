@@ -29,6 +29,7 @@ This project uses multiple documentation files for better organization:
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 
 ### Recent Updates
+- **2025-10-28**: Enhanced CI/CD pipeline with staging → smoke tests → approval → production flow
 - **2025-10-23**: Documentation reorganized into focused files
 - **2025-10-12**: Database security hardened (per-env users, SSL required)
 - **2025-10-04**: Email verification implemented, database separation complete
@@ -53,7 +54,7 @@ This project uses multiple documentation files for better organization:
 1. **Feature Development** → Create branch, make changes
 2. **Pull Request** → Automatic staging deployment + testing
 3. **Review & Test** → Staging URL provided in PR comments
-4. **Merge to Main** → Automatic production deployment
+4. **Merge to Main** → Automatic staging deployment → Smoke tests → Manual approval → Production deployment
 5. **Monitor** → Health checks and deployment verification
 
 ### Development Tools
@@ -276,25 +277,37 @@ Three-tier health checking:
 
 ### CI/CD Pipeline (GitHub Actions)
 
-**Production Deployment**:
-- Trigger: Push to `main` branch
-- Workflow: Tests → Build → Bundle → Deploy to production
-- Auto-deploy: Yes
+**Main Branch Deployment** (`.github/workflows/deploy-main.yml`):
+- **Trigger**: Push to `main` branch
+- **Workflow**: Tests → Build → Deploy to Staging → Smoke Tests → **Manual Approval** → Deploy to Production
+- **Approval Gate**: Requires repository admin approval via GitHub Environments
+- **Key Feature**: Single build artifact deployed to both environments for consistency
 
-**Staging Deployment**:
-- Trigger: PR creation/updates
-- Workflow: Tests → Build → Bundle → Deploy to staging → PR comment with URL
-- Auto-config: Environment variables configured during deployment
+**PR-Based Staging Deployment** (`.github/workflows/deploy-eb-staging.yml`):
+- **Trigger**: PR creation/updates to `main`
+- **Workflow**: Tests → Build → Deploy to staging → PR comment with URL
+- **Purpose**: Test changes in staging before merging
 
 **Pipeline Features**:
 - Automated testing (TypeScript + Vitest + Component tests)
-- Bundle creation and S3 upload
+- **Smoke tests** validate staging before production (`deployment-scripts/smoke-tests.ts`)
+- Single build artifact ensures staging-production parity
+- Manual approval gate for production deployments (GitHub Environments)
 - Rolling deployments with health verification
 - PR integration with staging URLs and status updates
+- Automatic cleanup of old application versions
+
+**Smoke Test Coverage**:
+- Health endpoints (`/api/health/simple`, `/api/health`)
+- Database connectivity
+- Authentication endpoints
+- Prepare module API
+- Practice module API
 
 ### Deployment Scripts
 
 Located in `deployment-scripts/`:
+- **`smoke-tests.ts`** - Automated smoke tests for staging validation (used in CI/CD)
 - **`full-deployment.sh`** - Complete deployment orchestration (recommended)
 - **`setup-environment-variables.sh`** - Interactive AWS environment variable configuration
 - **`verify-database.sh`** - Database connectivity and schema verification
@@ -452,5 +465,5 @@ aws elasticbeanstalk describe-events --environment-name p3-interview-academy-pro
 
 ---
 
-**Last Updated**: 2025-10-23
-**Document Version**: 2.0 (Reorganized)
+**Last Updated**: 2025-10-28
+**Document Version**: 2.1 (Enhanced CI/CD Pipeline)

@@ -48,9 +48,21 @@ export const users = pgTable("users", {
   profileImageUrl: varchar("profile_image_url"),
   passwordHash: varchar("password_hash"), // For secure password authentication
   role: varchar("role").default("user"), // user, admin
-  accountTier: varchar("account_tier", { length: 50 }).default("free"),
-  monthlyCreditAllocation: integer("monthly_credit_allocation").default(20),
-  creditBalance: integer("credit_balance").default(20),
+
+  // Subscription and billing fields (NEW - Admin Subscription System)
+  stripeCustomerId: varchar("stripe_customer_id"),
+  stripeSubscriptionId: varchar("stripe_subscription_id"),
+  planType: varchar("plan_type", { length: 20 }).default("FREE"), // FREE, PRO, ADVANCED
+  subscriptionStatus: varchar("subscription_status", { length: 20 }), // active, canceled, past_due
+  currentPeriodEnd: timestamp("current_period_end"),
+
+  // Credit management fields (UPDATED - Admin Subscription System)
+  accountTier: varchar("account_tier", { length: 50 }).default("free"), // DEPRECATED: Use planType instead
+  monthlyCreditAllocation: integer("monthly_credit_allocation").default(50), // Monthly subscription credits (resets each cycle)
+  creditBalance: integer("credit_balance").default(50), // Current available credits (subscription + top-up)
+  topUpCredits: integer("top_up_credits").default(0), // One-time purchased credits (never expire)
+
+  // Billing cycle tracking
   billingCycleStart: timestamp("billing_cycle_start"),
   billingCycleEnd: timestamp("billing_cycle_end"),
 
@@ -70,6 +82,90 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// ===========================================
+// ADMIN SUBSCRIPTION SYSTEM TABLES
+// ===========================================
+
+// Subscriptions table - tracks user subscription lifecycle
+export const subscriptions = pgTable("subscriptions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Plan details
+  planType: varchar("plan_type", { length: 20 }).notNull(), // FREE, PRO, ADVANCED
+  billingCycle: varchar("billing_cycle", { length: 20 }).default("monthly"), // monthly (future: quarterly, annual)
+  monthlyCredits: integer("monthly_credits").notNull(),
+  pricePerMonth: numeric("price_per_month", { precision: 10, scale: 2 }).notNull(),
+
+  // Status and lifecycle
+  status: varchar("status", { length: 20 }).default("active"), // active, canceled, past_due
+  nextRenewalDate: timestamp("next_renewal_date"),
+  autoRenew: boolean("auto_renew").default(true),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Credit transactions table - audit log for all credit changes
+export const creditTransactions = pgTable("credit_transactions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+
+  // Transaction details
+  transactionType: varchar("transaction_type", { length: 30 }).notNull(), // consumption, allocation, top-up, admin-adjustment
+  creditsAmount: integer("credits_amount").notNull(), // Can be negative for consumption
+  balanceAfter: integer("balance_after").notNull(),
+  description: text("description").notNull(),
+
+  // Context
+  featureUsed: varchar("feature_used", { length: 100 }), // e.g., "practice-session", "prepare-session"
+  relatedSessionId: uuid("related_session_id"), // Link to practice/prepare session
+
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Invoices table - tracks billing and payment history
+export const invoices = pgTable("invoices", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscriptionId: uuid("subscription_id").references(() => subscriptions.id, { onDelete: "set null" }),
+
+  // Invoice details
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  invoiceNumber: varchar("invoice_number", { length: 50 }).unique().notNull(),
+  billingPeriodStart: timestamp("billing_period_start").notNull(),
+  billingPeriodEnd: timestamp("billing_period_end").notNull(),
+
+  // Status and payment
+  status: varchar("status", { length: 20 }).default("pending"), // paid, pending, failed
+  stripeInvoiceId: varchar("stripe_invoice_id", { length: 255 }),
+  pdfUrl: varchar("pdf_url", { length: 500 }),
+
+  createdAt: timestamp("created_at").defaultNow(),
+  paidAt: timestamp("paid_at"),
+});
+
+// Credit costs configuration table - admin-configurable pricing per feature
+export const creditCosts = pgTable("credit_costs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+
+  // Feature configuration
+  featureName: varchar("feature_name", { length: 100 }).unique().notNull(), // "practice-session", "prepare-session"
+  creditCost: integer("credit_cost").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+
+  // Audit trail
+  updatedBy: uuid("updated_by").references(() => users.id), // Admin who last changed it
+
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ===========================================
+// INTERVIEW MODULE TABLES
+// ===========================================
 
 // Interview scenarios table
 export const interviewScenarios = pgTable("interview_scenarios", {
@@ -322,6 +418,12 @@ export const practiceReports = pgTable("practice_reports", {
 
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
+  // Subscription system relations
+  subscriptions: many(subscriptions),
+  creditTransactions: many(creditTransactions),
+  invoices: many(invoices),
+  updatedCreditCosts: many(creditCosts),
+  // Interview module relations
   createdScenarios: many(interviewScenarios),
   interviewSessions: many(interviewSessions),
 }));
@@ -358,6 +460,40 @@ export const aiEvaluationResultsRelations = relations(aiEvaluationResults, ({ on
   session: one(interviewSessions, {
     fields: [aiEvaluationResults.sessionId],
     references: [interviewSessions.id],
+  }),
+}));
+
+// Subscription system relations
+export const subscriptionsRelations = relations(subscriptions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [subscriptions.userId],
+    references: [users.id],
+  }),
+  invoices: many(invoices),
+}));
+
+export const creditTransactionsRelations = relations(creditTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [creditTransactions.userId],
+    references: [users.id],
+  }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  user: one(users, {
+    fields: [invoices.userId],
+    references: [users.id],
+  }),
+  subscription: one(subscriptions, {
+    fields: [invoices.subscriptionId],
+    references: [subscriptions.id],
+  }),
+}));
+
+export const creditCostsRelations = relations(creditCosts, ({ one }) => ({
+  updatedBy: one(users, {
+    fields: [creditCosts.updatedBy],
+    references: [users.id],
   }),
 }));
 
@@ -404,6 +540,29 @@ export const insertAiEvaluationResultSchema = createInsertSchema(aiEvaluationRes
   updatedAt: true,
 });
 
+// Subscription system insert schemas
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCreditTransactionSchema = createInsertSchema(creditTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCreditCostSchema = createInsertSchema(creditCosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -415,6 +574,16 @@ export type InsertInterviewMessage = z.infer<typeof insertInterviewMessageSchema
 export type InterviewMessage = typeof interviewMessages.$inferSelect;
 export type InsertAiEvaluationResult = z.infer<typeof insertAiEvaluationResultSchema>;
 export type AiEvaluationResult = typeof aiEvaluationResults.$inferSelect;
+
+// Subscription system types
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertCreditTransaction = z.infer<typeof insertCreditTransactionSchema>;
+export type CreditTransaction = typeof creditTransactions.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertCreditCost = z.infer<typeof insertCreditCostSchema>;
+export type CreditCost = typeof creditCosts.$inferSelect;
 
 // Extended types for API responses
 export type InterviewSessionWithScenario = InterviewSession & {

@@ -12,6 +12,8 @@ import {
 import { AIQuestionGenerator } from "../services/ai-question-generator.js";
 import { ResponseEvaluationService } from "../services/response-evaluation-service.js";
 import { normalizeStageName, enforceStageDifficulty, type InterviewStage } from "../config/stage-difficulty-constraints.js";
+import { requireCredits } from "../middleware/credit-middleware.js";
+import { CreditService } from "../services/credit-service.js";
 
 const router = Router();
 const questionGenerator = new AIQuestionGenerator();
@@ -42,8 +44,9 @@ const userResponseSchema = z.object({
 /**
  * POST /sessions
  * Create new practice session from scenario configuration
+ * Credit cost: Determined by credit_costs table (default: 1 credit)
  */
-router.post('/sessions', async (req, res) => {
+router.post('/sessions', requireCredits('practice-session'), async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -64,12 +67,41 @@ router.post('/sessions', async (req, res) => {
     };
 
     const session = await storage.createPracticeSession(sessionData);
-    
-    res.status(201).json({
-      success: true,
-      data: session,
-      message: 'Practice session created successfully'
-    });
+
+    // Deduct credits AFTER successful session creation
+    try {
+      const deduction = await CreditService.deductCredits(
+        req.user.id,
+        'practice-session',
+        session.id,
+        'Practice session started'
+      );
+
+      // Include credit info in response
+      res.status(201).json({
+        success: true,
+        data: session,
+        message: 'Practice session created successfully',
+        credits: {
+          deducted: deduction.monthlyCreditsUsed + deduction.topUpCreditsUsed,
+          remaining: deduction.balanceAfter,
+          breakdown: {
+            monthlyCreditsUsed: deduction.monthlyCreditsUsed,
+            topUpCreditsUsed: deduction.topUpCreditsUsed,
+          }
+        }
+      });
+    } catch (creditError) {
+      // Session was created but credit deduction failed
+      // Return session anyway but log the error for manual correction
+      console.error('⚠️  Credit deduction failed after session creation:', creditError);
+      res.status(201).json({
+        success: true,
+        data: session,
+        message: 'Practice session created successfully',
+        warning: 'Credit deduction failed - please contact support'
+      });
+    }
 
   } catch (error) {
     console.error('❌ Create practice session error:', error);
