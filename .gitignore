@@ -29,3 +29,6 @@ rotate-credentials.sh
 GITGUARDIAN-RESOLUTION-GUIDE.md
 test-email-security.js
 
+
+# Claude Code local settings (may contain secrets)
+.claude/settings.local.json
