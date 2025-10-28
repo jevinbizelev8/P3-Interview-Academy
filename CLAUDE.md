@@ -106,6 +106,103 @@ This project uses multiple documentation files for better organization:
 
 ---
 
+## 🤖 Codex/Claude Collaboration Blueprint
+
+The Base44 redesign assumes that a human maintainer and an AI pair programmer (Claude Code or Codex) work in a tight loop. This
+section defines the expected artifacts, hand-off points, and guardrails so both parties produce auditable progress every sessi
+on.
+
+### Roles & Responsibilities
+
+- **Scope Alignment**
+  - *Human*: Select the active item from `MASTER_PLAN.md`, clarify priorities, expose any production constraints.
+  - *AI*: Restate the scope, enumerate the supporting specs to consult, and surface open questions before coding.
+- **Execution Planning**
+  - *Human*: Approve or refine the proposed outline, confirm environment access (feature flags, secrets, reference repo).
+  - *AI*: Produce a numbered plan that lists file paths, schema/service updates, test commands, and documentation touchpoints.
+- **Implementation**
+  - *Human*: Review interim diffs, run privileged commands, guard conventions and security boundaries.
+  - *AI*: Apply code exactly as planned, request approval before editing new files, keep diffs small and logically grouped.
+- **Verification**
+  - *Human*: Trigger additional QA when required, confirm the checklist in `MASTER_PLAN.md` is satisfied.
+  - *AI*: Execute automated checks when accessible, capture output snippets, and escalate failures immediately.
+- **Documentation & Logging**
+  - *Human*: Update ops logs, check off completed tasks, coordinate PR reviews and releases.
+  - *AI*: Draft the session summary, prepare PR body/testing notes, and propose follow-up actions for the next session.
+
+### Closed-Loop Execution
+
+1. **Confirm the Scope**
+   - Start each session by pasting the exact checklist item from `docs/redesign/MASTER_PLAN.md` along with links to relevant sp
+ecs.
+   - Require the AI assistant to echo the scope in their own words and call out unanswered questions (e.g., missing API payloads
+ or dependency versions).
+
+2. **Draft & Approve the Plan**
+   - Ask the assistant for a structured plan (bulleted or numbered) that includes: target files, schema/service updates, tests/c
+ommands, and documentation touchpoints.
+   - Review the plan for completeness. If changes are needed (additional tests, feature-flag toggles, environment migrations), a
+pprove only after the assistant restates the revised plan.
+
+3. **Implement with Guardrails**
+   - The assistant performs work incrementally, pausing after each logical chunk (e.g., migration + schema update, API route + t
+est).
+   - If the assistant needs to touch an unapproved file, they must request permission and update the plan before proceeding.
+   - Enforce naming/version parity with the specs—table names, route signatures, and component props should match the Base44 docu
+ments exactly.
+
+4. **Self-Test & Document**
+   - Use the QA milestones defined in `MASTER_PLAN.md` to decide which commands must run (examples: `npm run test:api`, `npm run
+ smoke:redesign`).
+   - The assistant records command output blocks in the chat or PR description. Failures halt the session until investigated.
+   - Capture screenshots for UI work using the browser MCP tooling; include links in the PR.
+
+5. **Log & Handoff**
+   - Update the relevant checkbox in `MASTER_PLAN.md` and append a short entry to `docs/ops-log/YYYY-MM.md` (date, summary, testi
+ng proof).
+   - Store any outstanding follow-up tasks under the same checklist item so future sessions resume seamlessly.
+   - The assistant drafts the PR summary/tests section; the human reviews and submits.
+
+### Session Log Template
+
+```
+#### Session YYYY-MM-DD (Claude/Codex + Human)
+- **Scope**: [MASTER_PLAN.md → Phase X, Task Y]
+- **Outline**: (paste final approved plan)
+- **Changes Made**: bullet list of files/tables/endpoints touched
+- **Validation**: commands + results, screenshots, manual checks
+- **Follow-ups**: remaining blockers, next-session goals
+```
+
+Maintainers should keep this template in the ops log so auditors can trace how each redesign milestone progressed from plan to
+production.
+
+## 🛡️ Operational Safeguards & Runbooks
+
+### Feature Flags
+- **Config**: `server/config/featureFlags.ts` (toggle `redesign.mvp` groups for Prepare/Practice/Perform).
+- **Rollout Strategy**: Enable flags in staging first, verify smoke checklist (login → readiness score → resume analysis) before enabling in production.
+- **Emergency Disable**: Use `npm run feature-flags:disable redesign.mvp` (script wraps Redis toggle) and redeploy via GitHub Actions manual dispatch.
+
+### Database Migration Guardrails
+- Always run `npm run test:db-redesign` prior to `db:push`; script provisions ephemeral Postgres and validates migrations + seeds.
+- Capture `drizzle-kit push --print` output and attach to ops-log entry for traceability.
+- In production, snapshot RDS (`aws rds create-db-snapshot ...`) before applying migrations; rollback by `db:rollback --to <prev>` or restoring snapshot.
+
+### Monitoring & Alerting
+- **APM**: Datadog monitors readiness endpoint latency, resume analysis job duration, and AI cost spikes (OpenAI spend budget alerts at $150/day).
+- **Logs**: CloudWatch log group `p3-interview-api` – use saved query `redesign-anomalies` to surface badge/XP errors.
+- **User Impact Checks**: After each deployment, run smoke tests via `npm run smoke:redesign` (covers module progression, simulation creation, credit purchase).
+
+### Incident Response
+- Document incidents in `docs/ops-log/YYYY-MM.md` within 24 hours.
+- Notify founders via Slack channel `#p3-redesign` with impact summary, mitigation steps, and follow-up tasks.
+- Schedule post-incident review to update runbooks (this section) and acceptance criteria in `MASTER_PLAN.md` if needed.
+
+Keep this section synchronized with deployment changes; update immediately when scripts or flag locations evolve.
+
+---
+
 ## 🛠️ Development Commands
 
 ### Essential Development Commands

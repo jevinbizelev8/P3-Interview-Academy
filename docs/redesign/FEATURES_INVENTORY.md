@@ -20,6 +20,20 @@ Complete inventory of all features from Base44 MVP that need to be implemented i
 
 ---
 
+## 🧭 How to Use This Inventory with Codex/Claude
+
+- **Audience**: Engineers, AI copilots, QA, product, founders
+- **Purpose**: Ensure every Base44 MVP feature is captured, scoped, and planned for migration
+- **Cross-References**:
+  - `docs/redesign/MASTER_PLAN.md` → Phase-level sequencing, ownership, QA milestones
+  - `docs/redesign/API_MAPPING.md` → API contracts for each feature
+  - `docs/redesign/DATABASE_SCHEMA.md` → Database tables/columns for backend support
+  - `/tmp/elev8interview/` → Source of truth for UI/UX implementation
+
+When pairing with an AI assistant, paste the relevant feature row(s) into the chat session plan so the model can see component names, acceptance criteria, and backend dependencies before coding. This anchors the conversation to the approved scope and avoids drift from the master plan.
+
+---
+
 ## 🎓 Prepare Module Features
 
 ### Learning Hub System
@@ -110,6 +124,18 @@ Multi-stage learning system with 4 interview stages, each containing multiple in
 - [ ] Time tracking per module
 - [ ] Completion certificates
 
+**Readiness Score Formula**
+- Stage Weights: HR 25%, Functional 30%, Manager 25%, Executive 20%.
+- Module completion percentage per stage multiplied by weight, summed, then boosted by:
+  - +5 if ≥3 practice sessions in trailing 7 days.
+  - +5 if latest resume analysis ≥80.
+  - +5 if latest self-intro AI rating ≥4/5.
+- Clamp to 0-100 and round to nearest integer; expose breakdown + modifiers in API response.
+
+**Acceptance Criteria**
+- Vitest spec `learningHub.readiness.spec.ts` validates baseline (0%, 50%, 100%) and modifier stacking.
+- QA checklist ensures readiness displayed in dashboard matches API within ±1 point when reloading after module completion.
+
 **Backend Requirements**:
 - `learning_modules` table
 - `user_module_progress` table
@@ -159,6 +185,12 @@ Multi-stage learning system with 4 interview stages, each containing multiple in
 - Add progress indicators
 - Include example intros
 
+**AI Feedback Flow**
+- Prompt Template: `[persona] + [role goals] + [draft script] + rubric emphasising clarity, confidence, STAR structure`.
+- API Call: `POST /v1/responses` (`model=gpt-4o-mini`, temperature 0.4, json schema enforcement) returning `{overallScore, strengths[], improvements[], hookSuggestion}`.
+- Persistence: Save structured response to `self_intros.ai_feedback` and broadcast via WebSocket for real-time UI update.
+- QA: Snapshot unit test `selfIntro.aiFeedback.spec.ts` verifying schema shape; manual QA compares output vs Base44 for sample profile (PM, SWE, Designer).
+
 ---
 
 ### Resume Analyzer
@@ -201,6 +233,13 @@ Multi-stage learning system with 4 interview stages, each containing multiple in
 - Use OpenAI for analysis
 - Store analysis results for quick retrieval
 - Add loading states
+
+**AI Analysis Flow**
+- Pre-processing: Extract text via `pdf-parse`/`mammoth`, strip headers/footers, generate bullet list of achievements.
+- Prompt Template: Provide resume text + optional JD; request ATS score, keyword match ratio, bullet rewrites, and risk flags.
+- API Call: `POST /v1/responses` with `model=gpt-4o-mini`, `temperature=0.2`, `json_mode=true`; expect payload `{score, strengths[], gaps[], keywordsMatched[], atsTips[]}`.
+- Persistence: Store raw analysis + version metadata in `resumes.analysis`, append audit record to `resume_analysis_history`.
+- QA: Regression test `resumeAnalyzer.aiFlow.spec.ts` uses canned resume/JD pair to ensure stable scoring; manual QA compares Base44 output vs new service.
 
 ---
 
@@ -491,6 +530,18 @@ Multi-stage learning system with 4 interview stages, each containing multiple in
 - Marathon Runner (5 sessions in a day)
 - Reflection King (10 reflections)
 - Streak Master (7-day streak)
+
+**Trigger Matrix (Authoritative)**
+
+| Badge | Requirement | Service Hook | Validation |
+|-------|-------------|--------------|------------|
+| First Steps | `user_module_progress` count hits 1 | `onModuleCompleted` | Vitest `badgeTriggers.firstSteps.spec.ts` |
+| Stage Master (per stage) | Stage completion = 100% | `onStageCompleted` | Integration test after copying Base44 modules |
+| Streak Warrior | `current_streak >= 7` | Daily cron `evaluateStreaks` | Time-travel test ensuring reset after gap |
+| Simulation Pro | 10 simulations ≥80 score | `onSimulationSaved` aggregator | API test verifying XP + badge stack |
+| Resume Ace | Two analyses ≥90 score | `onResumeAnalyzed` | Unit test with history fixture |
+
+Log badge awards in `audit_logs` with payload `{ badgeKey, userId, trigger }` for rollback parity with Base44 MVP.
 
 ---
 

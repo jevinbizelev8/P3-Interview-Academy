@@ -8,6 +8,18 @@
 
 ---
 
+## 🧭 Using This Plan with Codex/Claude
+
+| Step | What Codex/Claude Should Do | Source Document |
+|------|-----------------------------|-----------------|
+| 1 | Read the active phase summary and confirm open checkboxes | `docs/redesign/MASTER_PLAN.md` |
+| 2 | Pull endpoint payloads, schema fields, and business rules | `docs/redesign/API_MAPPING.md` + `DATABASE_SCHEMA.md` |
+| 3 | Verify UI/component parity requirements | `docs/redesign/FEATURES_INVENTORY.md` + Base44 repo (`/tmp/elev8interview`) |
+| 4 | Note required test suites and automation hooks | “Quality Assurance Milestones” section (this file) |
+| 5 | After coding, record validation evidence and update progress | `docs/ops-log/YYYY-MM.md` + checkbox updates in this plan |
+
+AI collaborators must follow the loop above before editing code; it keeps implementation synchronized with the master schedule and ensures reviewers have consistent artifacts.
+
 ## 📋 Project Overview
 
 ### Goal
@@ -48,6 +60,18 @@ Integrate founder's Base44 MVP design with P3's robust backend infrastructure to
 | Phase 8: Production Deployment | 2 weeks | Weeks 19-20 | ⏳ Pending |
 | Phase 9: Cleanup & Retrospective | 1 week | Week 21 | ⏳ Pending |
 | **Total Realistic** | **16-20 weeks** | **~4-5 months** | - |
+
+---
+
+### ✅ Quality Assurance Milestones
+
+- **Phase 1 (Database Migration)**: Automated migration test suite (`npm run test:db-redesign`) executes Drizzle migration against ephemeral PostgreSQL container and reverts cleanly; seed script dry-run completes with no diff. Generate SQL diff artifact and attach to ops-log.
+- **Phase 2 (Backend Services)**: Component smoke tests and API contract tests run against mocked services; record Base44 dependency parity diff in Master Plan Appendix A for reviewer sign-off.
+- **Phase 3 (API Development)**: End-to-end Postman/Vitest collection covering 48 endpoints executed in CI; readiness-score unit tests validate weight calculations and edge cases (0%, 50%, 100%).
+- **Phase 4 (Frontend Conversion)**: Visual regression screenshots captured against Base44 reference for high-traffic pages; shadcn/tailwind token diff report attached to PR.
+- **Phase 5+ (Deployments)**: Staging smoke checklist (login, module progression, credit purchase) signed off before prod promotion; feature flags toggled via runbook below to limit blast radius.
+
+Add test artifacts and signoffs to `docs/ops-log/` after each milestone before promoting the phase as complete.
 
 ---
 
@@ -102,20 +126,25 @@ Integrate founder's Base44 MVP design with P3's robust backend infrastructure to
 
 **Tasks**:
 - [ ] Create Drizzle migration file
+- [ ] Generate migration skeleton via `npx drizzle-kit generate:pg --out server/migrations/2025-10-redesign`
 - [ ] Add 13 new tables (badges, learning_modules, resumes, etc.)
 - [ ] Extend users table (xp_points, current_streak, readiness_score, etc.)
 - [ ] Add indexes for performance
 - [ ] Test migration in local development
+- [ ] Add migration regression test (`server/__tests__/migrations/redesign-schema.test.ts`)
+- [ ] Create `server/scripts/seed-redesign.ts` for idempotent seeding
 - [ ] Deploy schema to staging database
 - [ ] Seed initial data (badges, learning modules)
 - [ ] Verify schema integrity
 - [ ] Deploy to production database
 - [ ] Update shared/schema.ts with TypeScript definitions
+- [ ] Schedule nightly GitHub Action to run `npm run test:db-redesign`
 
 **Deliverables**:
 - Database schema deployed to both environments
 - Initial seed data loaded
 - All tables verified and indexed
+- Migration + seed automation validated via CI artifact
 
 ---
 
@@ -839,6 +868,18 @@ From Base44 package.json:
 
 5. **Timeline**: 8-12 weeks is ambitious
    - **Mitigation**: Weekly progress reviews, adjust scope if needed
+
+---
+
+## 📎 Appendix A: Dependency Parity Log
+
+Use this table to document npm package diffs between Base44 MVP and P3 after each sync run.
+
+| Date | Reviewer | Command Output | Follow-up Actions |
+|------|----------|----------------|-------------------|
+| TBD  | TBD      | `node scripts/compare-packages.mjs` diff saved to `tmp/dependency-diff-<date>.md` | Pending |
+
+Attach additional rows as dependency updates occur and link associated PRs/commits.
 
 ---
 

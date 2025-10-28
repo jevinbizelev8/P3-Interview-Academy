@@ -83,6 +83,21 @@ npm run dev
 npm run test
 ```
 
+### 6. Sync Dependencies & Styling
+```bash
+# Align package versions with Base44 reference
+node scripts/compare-packages.mjs /tmp/elev8interview/package.json package.json
+
+# Install any missing shadcn/ui components
+npm run shadcn:sync -- --source /tmp/elev8interview
+
+# Merge Tailwind tokens (runs diff + patch)
+node scripts/merge-tailwind-tokens.mjs --source /tmp/elev8interview/tailwind.config.js --target tailwind.config.ts
+
+# Verify design tokens & typography
+npm run lint:design || echo "Review generated report in tmp/design-diff.html"
+```
+
 ---
 
 ## 📂 Key File Locations
@@ -98,6 +113,7 @@ npm run test
 - **Components**: `/tmp/elev8interview/src/components/`
 - **Pages**: `/tmp/elev8interview/src/pages/`
 - **Package**: `/tmp/elev8interview/package.json`
+- **Design Tokens**: `/tmp/elev8interview/tailwind.config.js`, `/tmp/elev8interview/src/styles/`
 
 ### Current P3 Code
 - **Frontend**: `client/src/`
@@ -165,6 +181,16 @@ find client/src/components -name "*.tsx" -o -name "*.jsx" | wc -l
 ---
 
 ## 📋 Session Workflow
+
+### Pre-Work: AI Assistant Prep
+
+Before requesting edits from Codex or Claude Code, run this micro-checklist to keep the session anchored in the master plan:
+
+1. Open `CLAUDE.md` and confirm the "Codex/Claude Collaboration Blueprint" loop has been filled out for the upcoming task.
+2. Identify the active phase task(s) in `MASTER_PLAN.md` and note the unchecked boxes you intend to complete.
+3. Capture the exact files to modify, relevant endpoints, and required tests in your session notes (share them in-chat so the AI can reference them).
+4. Skim `API_MAPPING.md` and `DATABASE_SCHEMA.md` for the affected features to avoid drift from the approved contracts.
+5. Verify any required design assets exist in `/tmp/elev8interview`; if not, pause and sync the Base44 repository before coding.
 
 ### At Start of Session
 
