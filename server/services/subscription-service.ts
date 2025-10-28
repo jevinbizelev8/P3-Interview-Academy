@@ -1,7 +1,8 @@
 import { stripe, SUBSCRIPTION_TIERS, STRIPE_URLS, getOrCreateStripeCustomer, getTierFromPriceId } from '../config/stripe.js';
-import { db } from '../db/index.js';
+import { db } from '../db';
 import { users, subscriptions } from '../../shared/schema.js';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { randomUUID } from 'crypto';
 import Stripe from 'stripe';
 
 export class SubscriptionService {
@@ -33,10 +34,13 @@ export class SubscriptionService {
       // Get or create Stripe customer
       let stripeCustomerId = user.stripeCustomerId;
       if (!stripeCustomerId) {
+        if (!user.email) {
+          throw new Error('User is missing email');
+        }
         stripeCustomerId = await getOrCreateStripeCustomer(
           user.id,
           user.email,
-          `${user.firstName} ${user.lastName}`
+          `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
         );
 
         // Update user with Stripe customer ID
@@ -108,21 +112,22 @@ export class SubscriptionService {
           subscriptionStatus: subscription.status,
           stripeSubscriptionId: subscription.id,
           currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          monthlyCredits: tierConfig.credits,
+          monthlyCreditAllocation: tierConfig.credits,
           creditBalance: tierConfig.credits, // Reset credits to tier default
         })
         .where(eq(users.id, userId));
 
       // Create subscription record
       await db.insert(subscriptions).values({
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         userId,
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: subscription.items.data[0].price.id,
+        planType: tier,
+        billingCycle: 'monthly',
+        monthlyCredits: tierConfig.credits,
+        pricePerMonth: tierConfig.pricePerMonth.toString(),
         status: subscription.status,
-        currentPeriodStart: new Date(subscription.current_period_start * 1000),
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        nextRenewalDate: new Date(subscription.current_period_end * 1000),
+        autoRenew: !subscription.cancel_at_period_end,
       });
 
       console.log(`✅ Subscription created for user ${userId}: ${tier} tier, ${tierConfig.credits} credits`);
@@ -162,7 +167,7 @@ export class SubscriptionService {
           planType: newTier,
           subscriptionStatus: subscription.status,
           currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          monthlyCredits: tierConfig.credits,
+          monthlyCreditAllocation: tierConfig.credits,
           creditBalance: tierConfig.credits, // Reset credits on tier change
         })
         .where(eq(users.id, userId));
@@ -171,14 +176,14 @@ export class SubscriptionService {
       await db
         .update(subscriptions)
         .set({
-          stripePriceId: priceId,
+          planType: newTier,
+          monthlyCredits: tierConfig.credits,
+          pricePerMonth: tierConfig.pricePerMonth.toString(),
           status: subscription.status,
-          currentPeriodStart: new Date(subscription.current_period_start * 1000),
-          currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          cancelAtPeriodEnd: subscription.cancel_at_period_end,
-          canceledAt: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+          nextRenewalDate: new Date(subscription.current_period_end * 1000),
+          autoRenew: !subscription.cancel_at_period_end,
         })
-        .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
+        .where(eq(subscriptions.userId, userId));
 
       console.log(`✅ Subscription updated for user ${userId}: ${newTier} tier, ${tierConfig.credits} credits`);
     } catch (error) {
@@ -209,7 +214,7 @@ export class SubscriptionService {
           subscriptionStatus: 'canceled',
           stripeSubscriptionId: null,
           currentPeriodEnd: null,
-          monthlyCredits: freeTierConfig.credits,
+          monthlyCreditAllocation: freeTierConfig.credits,
           creditBalance: freeTierConfig.credits, // Reset to free tier credits
         })
         .where(eq(users.id, userId));
@@ -219,9 +224,9 @@ export class SubscriptionService {
         .update(subscriptions)
         .set({
           status: 'canceled',
-          canceledAt: new Date(),
+          autoRenew: false,
         })
-        .where(eq(subscriptions.stripeSubscriptionId, subscription.id));
+        .where(eq(subscriptions.userId, userId));
 
       console.log(`✅ Subscription canceled for user ${userId}: downgraded to FREE tier`);
     } catch (error) {
@@ -246,13 +251,27 @@ export class SubscriptionService {
         throw new Error('User not found');
       }
 
+      // Ensure Stripe customer exists for this user (create if missing)
       if (!user.stripeCustomerId) {
-        throw new Error('User does not have a Stripe customer ID');
+        if (!user.email) {
+          throw new Error('User does not have a Stripe customer ID and is missing email');
+        }
+        const stripeCustomerId = await getOrCreateStripeCustomer(
+          user.id,
+          user.email,
+          `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
+        );
+        await db
+          .update(users)
+          .set({ stripeCustomerId })
+          .where(eq(users.id, userId));
+        user.stripeCustomerId = stripeCustomerId as any;
       }
 
       // Create portal session
+      const customerId = user.stripeCustomerId as string; // guaranteed above
       const session = await stripe.billingPortal.sessions.create({
-        customer: user.stripeCustomerId,
+        customer: customerId,
         return_url: STRIPE_URLS.SUCCESS,
       });
 
@@ -286,22 +305,17 @@ export class SubscriptionService {
         const [subscription] = await db
           .select()
           .from(subscriptions)
-          .where(
-            and(
-              eq(subscriptions.userId, userId),
-              eq(subscriptions.stripeSubscriptionId, user.stripeSubscriptionId)
-            )
-          )
+          .where(eq(subscriptions.userId, userId))
           .limit(1);
 
-        subscriptionData = subscription;
+        subscriptionData = subscription ?? null;
       }
 
       return {
         planType: user.planType,
         subscriptionStatus: user.subscriptionStatus,
         currentPeriodEnd: user.currentPeriodEnd,
-        monthlyCredits: user.monthlyCredits,
+        monthlyCredits: user.monthlyCreditAllocation,
         creditBalance: user.creditBalance,
         topUpCredits: user.topUpCredits,
         stripeCustomerId: user.stripeCustomerId,
@@ -333,7 +347,7 @@ export class SubscriptionService {
         await db
           .update(users)
           .set({
-            monthlyCredits: tierConfig.credits,
+            monthlyCreditAllocation: tierConfig.credits,
             creditBalance: tierConfig.credits + (user.topUpCredits || 0),
           })
           .where(eq(users.id, user.id));
@@ -387,7 +401,7 @@ export class SubscriptionService {
       await db
         .update(users)
         .set({
-          monthlyCredits: tierConfig.credits,
+          monthlyCreditAllocation: tierConfig.credits,
           creditBalance: tierConfig.credits + (user.topUpCredits || 0),
         })
         .where(eq(users.id, userId));

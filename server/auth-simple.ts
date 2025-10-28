@@ -182,6 +182,60 @@ export async function setupSimpleAuth(app: Express) {
     }
   });
 
+  // TEMP: Staging-only seed endpoint to create a verified test user and start a session
+  // Guarded by TEST_SEED_KEY header; remove after staging tests complete
+  app.post("/api/auth/test-seed", async (req, res) => {
+    try {
+      const seedKey = req.get('X-Seed-Key');
+      const expected = process.env.TEST_SEED_KEY;
+      if (!expected || seedKey !== expected) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { email, password, firstName, lastName, role } = req.body || {};
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+      // Upsert user as verified using raw SQL to avoid any schema drift issues
+      const { pool } = await import('./db');
+      const sel = await (pool as any).query('select id from users where email=$1', [email]);
+      let userId: string;
+      if (sel.rows && sel.rows.length) {
+        userId = sel.rows[0].id;
+        await (pool as any).query(
+          'update users set password_hash=$1, first_name=$2, last_name=$3, role=$4, email_verified=true, email_verification_token=null, email_verification_expires=null where id=$5',
+          [hashedPassword, firstName || 'QA', lastName || 'Tester', role === 'admin' ? 'admin' : 'user', userId]
+        );
+      } else {
+        const ins = await (pool as any).query(
+          "insert into users (email, password_hash, first_name, last_name, role, email_verified) values ($1,$2,$3,$4,$5,true) returning id",
+          [email, hashedPassword, firstName || 'QA', lastName || 'Tester', role === 'admin' ? 'admin' : 'user']
+        );
+        userId = ins.rows[0].id;
+      }
+
+      // Start a session for this user
+      (req.session as any).userId = userId;
+      (req.session as any).userEmail = email;
+
+      req.session.save((err) => {
+        if (err) {
+          console.error("[test-seed] Session save error:", err);
+          return res.status(500).json({ message: "Seeded but failed to create session", userId });
+        }
+        res.json({ success: true, message: 'Seeded and logged in', user: { id: userId, email, role: role === 'admin' ? 'admin' : 'user' } });
+      });
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      console.error('[test-seed] error', msg);
+      res.status(500).json({ message: 'Failed to seed user', error: msg });
+    }
+  });
+
   app.get("/api/auth/providers", (_req, res) => {
     res.json({
       providers: {

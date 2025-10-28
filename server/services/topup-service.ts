@@ -1,8 +1,8 @@
 import { stripe, TOPUP_PACKAGES, STRIPE_URLS, getOrCreateStripeCustomer, getTopUpFromPriceId } from '../config/stripe.js';
-import { db } from '../db/index.js';
+import { db } from '../db';
 import { users, creditTransactions } from '../../shared/schema.js';
 import { eq } from 'drizzle-orm';
-import { creditService } from './credit-service.js';
+import { CreditService } from './credit-service.js';
 import Stripe from 'stripe';
 
 export class TopUpService {
@@ -34,10 +34,13 @@ export class TopUpService {
       // Get or create Stripe customer
       let stripeCustomerId = user.stripeCustomerId;
       if (!stripeCustomerId) {
+        if (!user.email) {
+          throw new Error('User is missing email');
+        }
         stripeCustomerId = await getOrCreateStripeCustomer(
           user.id,
           user.email,
-          `${user.firstName} ${user.lastName}`
+          `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim()
         );
 
         // Update user with Stripe customer ID
@@ -107,15 +110,11 @@ export class TopUpService {
       }
 
       // Add credits using credit service
-      await creditService.allocateCredits(
+      await CreditService.addCredits(
         userId,
         creditsToAdd,
-        'topup',
-        `Top-up purchase: ${creditsToAdd} credits ($${session.amount_total! / 100})`,
-        {
-          stripeSessionId: session.id,
-          packageType,
-        }
+        'top-up',
+        `Top-up purchase: ${creditsToAdd} credits ($${(session.amount_total ?? 0) / 100})`
       );
 
       console.log(`✅ Top-up processed for user ${user.email}: ${creditsToAdd} credits added`);
@@ -134,7 +133,7 @@ export class TopUpService {
       credits: config.credits,
       price: config.price,
       pricePerCredit: config.price / config.credits,
-      savings: config.savings || 0,
+      savings: ("savings" in (config as any) ? (config as any).savings : 0),
       stripePriceId: config.stripePriceId,
     }));
   }
@@ -162,7 +161,6 @@ export class TopUpService {
         description: t.description,
         date: t.createdAt,
         balanceAfter: t.balanceAfter,
-        metadata: t.metadata,
       }));
     } catch (error) {
       console.error('❌ Error getting top-up history:', error);
