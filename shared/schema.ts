@@ -10,6 +10,7 @@ import {
   index,
   uuid,
   numeric,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -78,6 +79,14 @@ export const users = pgTable("users", {
   // OAuth fields
   googleId: varchar("google_id").unique(),
   authProvider: varchar("auth_provider", { length: 20 }).default("local"), // 'local', 'google', 'both'
+
+  // Gamification and referral fields (Redesign Phase 1)
+  xpPoints: integer("xp_points").default(0),
+  currentStreak: integer("current_streak").default(0),
+  longestStreak: integer("longest_streak").default(0),
+  lastActivityDate: timestamp("last_activity_date"),
+  readinessScore: integer("readiness_score").default(0),
+  referralCode: varchar("referral_code", { length: 50 }).unique(),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -159,6 +168,274 @@ export const creditCosts = pgTable("credit_costs", {
   // Audit trail
   updatedBy: uuid("updated_by").references(() => users.id), // Admin who last changed it
 
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// ===========================================
+// REDESIGN GAMIFICATION & LEARNING TABLES
+// ===========================================
+
+export const jobDescriptions = pgTable("job_descriptions", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileUrl: varchar("file_url", { length: 500 }),
+  fileSizeBytes: integer("file_size_bytes"),
+  content: text("content"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const badges = pgTable("badges", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description").notNull(),
+  iconName: varchar("icon_name", { length: 50 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  requirementType: varchar("requirement_type", { length: 50 }).notNull(),
+  requirementValue: integer("requirement_value").notNull(),
+  requirementCriteria: jsonb("requirement_criteria"),
+  xpReward: integer("xp_reward").default(0),
+  rarity: varchar("rarity", { length: 20 }).default("common"),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const userBadges = pgTable(
+  "user_badges",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    badgeId: uuid("badge_id").notNull().references(() => badges.id, { onDelete: "cascade" }),
+    progress: integer("progress").default(0),
+    earnedDate: timestamp("earned_date"),
+    isClaimed: boolean("is_claimed").default(false),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    uniqueUserBadge: uniqueIndex("user_badges_user_id_badge_id_key").on(
+      table.userId,
+      table.badgeId,
+    ),
+  }),
+);
+
+export const learningModules = pgTable(
+  "learning_modules",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    stage: varchar("stage", { length: 50 }).notNull(),
+    moduleNumber: integer("module_number").notNull(),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description").notNull(),
+    moduleType: varchar("module_type", { length: 50 }).notNull(),
+    componentName: varchar("component_name", { length: 100 }),
+    estimatedMinutes: integer("estimated_minutes").default(15),
+    difficulty: varchar("difficulty", { length: 20 }).default("beginner"),
+    xpReward: integer("xp_reward").default(10),
+    creditCost: integer("credit_cost").default(0),
+    prerequisites: jsonb("prerequisites"),
+    learningObjectives: jsonb("learning_objectives"),
+    content: jsonb("content"),
+    isActive: boolean("is_active").default(true),
+    sortOrder: integer("sort_order"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    uniqueStageModule: uniqueIndex("learning_modules_stage_module_number_key").on(
+      table.stage,
+      table.moduleNumber,
+    ),
+  }),
+);
+
+export const userModuleProgress = pgTable(
+  "user_module_progress",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    moduleId: uuid("module_id").notNull().references(() => learningModules.id, { onDelete: "cascade" }),
+    startedAt: timestamp("started_at").defaultNow(),
+    completedAt: timestamp("completed_at"),
+    isCompleted: boolean("is_completed").default(false),
+    timeSpentMinutes: integer("time_spent_minutes").default(0),
+    score: integer("score"),
+    userData: jsonb("user_data"),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    uniqueUserModule: uniqueIndex("user_module_progress_user_id_module_id_key").on(
+      table.userId,
+      table.moduleId,
+    ),
+  }),
+);
+
+export const selfIntroDrafts = pgTable(
+  "self_intro_drafts",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    stepNumber: integer("step_number").notNull(),
+    stepData: jsonb("step_data").notNull(),
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
+  },
+  (table) => ({
+    uniqueUserStep: uniqueIndex("self_intro_drafts_user_id_step_number_key").on(
+      table.userId,
+      table.stepNumber,
+    ),
+  }),
+);
+
+export const selfIntros = pgTable("self_intros", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  version: integer("version").default(1),
+  script: text("script").notNull(),
+  videoUrl: varchar("video_url", { length: 500 }),
+  videoDurationSeconds: integer("video_duration_seconds"),
+  aiFeedback: jsonb("ai_feedback"),
+  overallScore: integer("overall_score"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const resumes = pgTable("resumes", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  fileUrl: varchar("file_url", { length: 500 }).notNull(),
+  fileSizeBytes: integer("file_size_bytes"),
+  parsedContent: text("parsed_content"),
+  aiAnalysis: jsonb("ai_analysis"),
+  atsScore: integer("ats_score"),
+  jdMatchPercentage: integer("jd_match_percentage"),
+  jobDescriptionId: uuid("job_description_id").references(() => jobDescriptions.id),
+  keywords: jsonb("keywords"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const resumeAnalysisHistory = pgTable("resume_analysis_history", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  resumeId: uuid("resume_id").notNull().references(() => resumes.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  score: integer("score").notNull(),
+  strengths: jsonb("strengths").notNull(),
+  gaps: jsonb("gaps").notNull(),
+  keywordsMatched: jsonb("keywords_matched"),
+  atsTips: jsonb("ats_tips"),
+  jobDescriptionId: uuid("job_description_id").references(() => jobDescriptions.id),
+  modelVersion: varchar("model_version", { length: 50 }).notNull(),
+  promptHash: varchar("prompt_hash", { length: 64 }).notNull(),
+  responseHash: varchar("response_hash", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const starStories = pgTable("star_stories", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 200 }).notNull(),
+  situation: text("situation").notNull(),
+  task: text("task").notNull(),
+  action: text("action").notNull(),
+  result: text("result").notNull(),
+  tags: jsonb("tags"),
+  aiFeedback: jsonb("ai_feedback"),
+  overallScore: integer("overall_score"),
+  isFavorite: boolean("is_favorite").default(false),
+  usageCount: integer("usage_count").default(0),
+  lastUsedAt: timestamp("last_used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const actualInterviews = pgTable("actual_interviews", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  companyName: varchar("company_name", { length: 200 }).notNull(),
+  position: varchar("position", { length: 200 }).notNull(),
+  jobDescription: text("job_description"),
+  interviewDate: timestamp("interview_date").notNull(),
+  interviewType: varchar("interview_type", { length: 50 }),
+  stage: varchar("stage", { length: 50 }),
+  outcome: varchar("outcome", { length: 50 }),
+  confidenceLevel: integer("confidence_level"),
+  notes: text("notes"),
+  followUpDate: timestamp("follow_up_date"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const reflectionJournals = pgTable("reflection_journals", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  practiceSessionId: uuid("practice_session_id").references(() => practiceSessions.id, { onDelete: "set null" }),
+  strengths: text("strengths").notNull(),
+  improvements: text("improvements").notNull(),
+  actionItems: text("action_items"),
+  overallFeeling: varchar("overall_feeling", { length: 50 }),
+  moodScore: integer("mood_score"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const referrals = pgTable("referrals", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  referrerId: uuid("referrer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  referralCode: varchar("referral_code", { length: 50 }).notNull(),
+  referredEmail: varchar("referred_email", { length: 255 }).notNull(),
+  referredUserId: uuid("referred_user_id").references(() => users.id, { onDelete: "set null" }),
+  status: varchar("status", { length: 50 }).default("pending"),
+  rewardType: varchar("reward_type", { length: 50 }),
+  rewardValue: integer("reward_value"),
+  rewardGiven: boolean("reward_given").default(false),
+  referredAt: timestamp("referred_at").defaultNow(),
+  signedUpAt: timestamp("signed_up_at"),
+  rewardGivenAt: timestamp("reward_given_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const feedback = pgTable("feedback", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  feedbackType: varchar("feedback_type", { length: 50 }).notNull(),
+  subject: varchar("subject", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  pageUrl: varchar("page_url", { length: 500 }),
+  browserInfo: jsonb("browser_info"),
+  screenshotUrl: varchar("screenshot_url", { length: 500 }),
+  status: varchar("status", { length: 50 }).default("open"),
+  priority: varchar("priority", { length: 20 }).default("normal"),
+  adminNotes: text("admin_notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const supportTickets = pgTable("support_tickets", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  ticketNumber: varchar("ticket_number", { length: 50 }).notNull().unique(),
+  category: varchar("category", { length: 50 }).notNull(),
+  subject: varchar("subject", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  status: varchar("status", { length: 50 }).default("open"),
+  priority: varchar("priority", { length: 20 }).default("normal"),
+  assignedTo: uuid("assigned_to").references(() => users.id),
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  closedAt: timestamp("closed_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -423,6 +700,20 @@ export const usersRelations = relations(users, ({ many }) => ({
   creditTransactions: many(creditTransactions),
   invoices: many(invoices),
   updatedCreditCosts: many(creditCosts),
+  jobDescriptions: many(jobDescriptions),
+  userBadges: many(userBadges),
+  moduleProgress: many(userModuleProgress),
+  selfIntroDrafts: many(selfIntroDrafts),
+  selfIntros: many(selfIntros),
+  resumes: many(resumes),
+  resumeAnalysisHistory: many(resumeAnalysisHistory),
+  starStories: many(starStories),
+  actualInterviews: many(actualInterviews),
+  reflectionJournals: many(reflectionJournals),
+  referralsSent: many(referrals, { relationName: "referrer" }),
+  referralsReceived: many(referrals, { relationName: "referred" }),
+  feedback: many(feedback),
+  supportTickets: many(supportTickets),
   // Interview module relations
   createdScenarios: many(interviewScenarios),
   interviewSessions: many(interviewSessions),
@@ -497,6 +788,141 @@ export const creditCostsRelations = relations(creditCosts, ({ one }) => ({
   }),
 }));
 
+export const jobDescriptionsRelations = relations(jobDescriptions, ({ one, many }) => ({
+  user: one(users, {
+    fields: [jobDescriptions.userId],
+    references: [users.id],
+  }),
+  resumes: many(resumes),
+}));
+
+export const badgesRelations = relations(badges, ({ many }) => ({
+  progress: many(userBadges),
+}));
+
+export const userBadgesRelations = relations(userBadges, ({ one }) => ({
+  user: one(users, {
+    fields: [userBadges.userId],
+    references: [users.id],
+  }),
+  badge: one(badges, {
+    fields: [userBadges.badgeId],
+    references: [badges.id],
+  }),
+}));
+
+export const learningModulesRelations = relations(learningModules, ({ many }) => ({
+  progress: many(userModuleProgress),
+}));
+
+export const userModuleProgressRelations = relations(userModuleProgress, ({ one }) => ({
+  user: one(users, {
+    fields: [userModuleProgress.userId],
+    references: [users.id],
+  }),
+  module: one(learningModules, {
+    fields: [userModuleProgress.moduleId],
+    references: [learningModules.id],
+  }),
+}));
+
+export const selfIntroDraftsRelations = relations(selfIntroDrafts, ({ one }) => ({
+  user: one(users, {
+    fields: [selfIntroDrafts.userId],
+    references: [users.id],
+  }),
+}));
+
+export const selfIntrosRelations = relations(selfIntros, ({ one }) => ({
+  user: one(users, {
+    fields: [selfIntros.userId],
+    references: [users.id],
+  }),
+}));
+
+export const resumesRelations = relations(resumes, ({ one, many }) => ({
+  user: one(users, {
+    fields: [resumes.userId],
+    references: [users.id],
+  }),
+  jobDescription: one(jobDescriptions, {
+    fields: [resumes.jobDescriptionId],
+    references: [jobDescriptions.id],
+  }),
+  analysisHistory: many(resumeAnalysisHistory),
+}));
+
+export const resumeAnalysisHistoryRelations = relations(resumeAnalysisHistory, ({ one }) => ({
+  resume: one(resumes, {
+    fields: [resumeAnalysisHistory.resumeId],
+    references: [resumes.id],
+  }),
+  user: one(users, {
+    fields: [resumeAnalysisHistory.userId],
+    references: [users.id],
+  }),
+  jobDescription: one(jobDescriptions, {
+    fields: [resumeAnalysisHistory.jobDescriptionId],
+    references: [jobDescriptions.id],
+  }),
+}));
+
+export const starStoriesRelations = relations(starStories, ({ one }) => ({
+  user: one(users, {
+    fields: [starStories.userId],
+    references: [users.id],
+  }),
+}));
+
+export const actualInterviewsRelations = relations(actualInterviews, ({ one }) => ({
+  user: one(users, {
+    fields: [actualInterviews.userId],
+    references: [users.id],
+  }),
+}));
+
+export const reflectionJournalsRelations = relations(reflectionJournals, ({ one }) => ({
+  user: one(users, {
+    fields: [reflectionJournals.userId],
+    references: [users.id],
+  }),
+  practiceSession: one(practiceSessions, {
+    fields: [reflectionJournals.practiceSessionId],
+    references: [practiceSessions.id],
+  }),
+}));
+
+export const referralsRelations = relations(referrals, ({ one }) => ({
+  referrer: one(users, {
+    fields: [referrals.referrerId],
+    references: [users.id],
+    relationName: "referrer",
+  }),
+  referredUser: one(users, {
+    fields: [referrals.referredUserId],
+    references: [users.id],
+    relationName: "referred",
+  }),
+}));
+
+export const feedbackRelations = relations(feedback, ({ one }) => ({
+  user: one(users, {
+    fields: [feedback.userId],
+    references: [users.id],
+  }),
+}));
+
+export const supportTicketsRelations = relations(supportTickets, ({ one }) => ({
+  user: one(users, {
+    fields: [supportTickets.userId],
+    references: [users.id],
+  }),
+  assignee: one(users, {
+    fields: [supportTickets.assignedTo],
+    references: [users.id],
+  }),
+}));
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   id: true,
@@ -563,6 +989,95 @@ export const insertCreditCostSchema = createInsertSchema(creditCosts).omit({
   updatedAt: true,
 });
 
+export const insertJobDescriptionSchema = createInsertSchema(jobDescriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBadgeSchema = createInsertSchema(badges).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserBadgeSchema = createInsertSchema(userBadges).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLearningModuleSchema = createInsertSchema(learningModules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserModuleProgressSchema = createInsertSchema(userModuleProgress).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSelfIntroDraftSchema = createInsertSchema(selfIntroDrafts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSelfIntroSchema = createInsertSchema(selfIntros).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertResumeSchema = createInsertSchema(resumes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertResumeAnalysisHistorySchema = createInsertSchema(resumeAnalysisHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertStarStorySchema = createInsertSchema(starStories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertActualInterviewSchema = createInsertSchema(actualInterviews).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReflectionJournalSchema = createInsertSchema(reflectionJournals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReferralSchema = createInsertSchema(referrals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFeedbackSchema = createInsertSchema(feedback).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSupportTicketSchema = createInsertSchema(supportTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -584,6 +1099,37 @@ export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertCreditCost = z.infer<typeof insertCreditCostSchema>;
 export type CreditCost = typeof creditCosts.$inferSelect;
+
+export type InsertJobDescription = z.infer<typeof insertJobDescriptionSchema>;
+export type JobDescriptionRecord = typeof jobDescriptions.$inferSelect;
+export type InsertBadge = z.infer<typeof insertBadgeSchema>;
+export type Badge = typeof badges.$inferSelect;
+export type InsertUserBadge = z.infer<typeof insertUserBadgeSchema>;
+export type UserBadge = typeof userBadges.$inferSelect;
+export type InsertLearningModule = z.infer<typeof insertLearningModuleSchema>;
+export type LearningModule = typeof learningModules.$inferSelect;
+export type InsertUserModuleProgress = z.infer<typeof insertUserModuleProgressSchema>;
+export type UserModuleProgressRecord = typeof userModuleProgress.$inferSelect;
+export type InsertSelfIntroDraft = z.infer<typeof insertSelfIntroDraftSchema>;
+export type SelfIntroDraft = typeof selfIntroDrafts.$inferSelect;
+export type InsertSelfIntro = z.infer<typeof insertSelfIntroSchema>;
+export type SelfIntro = typeof selfIntros.$inferSelect;
+export type InsertResume = z.infer<typeof insertResumeSchema>;
+export type Resume = typeof resumes.$inferSelect;
+export type InsertResumeAnalysisHistory = z.infer<typeof insertResumeAnalysisHistorySchema>;
+export type ResumeAnalysisHistoryRecord = typeof resumeAnalysisHistory.$inferSelect;
+export type InsertStarStory = z.infer<typeof insertStarStorySchema>;
+export type StarStory = typeof starStories.$inferSelect;
+export type InsertActualInterview = z.infer<typeof insertActualInterviewSchema>;
+export type ActualInterview = typeof actualInterviews.$inferSelect;
+export type InsertReflectionJournal = z.infer<typeof insertReflectionJournalSchema>;
+export type ReflectionJournal = typeof reflectionJournals.$inferSelect;
+export type InsertReferral = z.infer<typeof insertReferralSchema>;
+export type Referral = typeof referrals.$inferSelect;
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+export type FeedbackRecord = typeof feedback.$inferSelect;
+export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
+export type SupportTicket = typeof supportTickets.$inferSelect;
 
 // Extended types for API responses
 export type InterviewSessionWithScenario = InterviewSession & {

@@ -19,6 +19,7 @@
     "test:integration": "cross-env NODE_ENV=test vitest run --mode test --reporter=verbose client/src/__tests__/integration/",
     "test:api": "cross-env NODE_ENV=test vitest run --mode test --reporter=verbose client/src/__tests__/api/",
     "test:registration": "tsx test-registration-flow.ts",
+    "test:db-redesign": "cross-env NODE_ENV=test vitest run --mode test server/__tests__/migrations/redesign-schema.test.ts",
     "opslog:seed": "tsx deployment-scripts/ops-log/seed-ops-log.ts",
     "email:verify": "tsx scripts/email/test-smtp.ts --verify",
     "email:send": "tsx scripts/email/test-smtp.ts --send",
