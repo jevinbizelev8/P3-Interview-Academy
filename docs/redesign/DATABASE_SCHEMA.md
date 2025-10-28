@@ -422,6 +422,50 @@ export const resumes = pgTable("resumes", {
 });
 ```
 
+#### 7a. `resume_analysis_history` - Immutable AI History
+
+Tracks every AI analysis run to support auditing, trend graphs, and badge triggers.
+
+```sql
+CREATE TABLE resume_analysis_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  resume_id UUID NOT NULL REFERENCES resumes(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  score INTEGER CHECK (score BETWEEN 0 AND 100),
+  strengths JSONB NOT NULL,
+  gaps JSONB NOT NULL,
+  keywords_matched JSONB,
+  ats_tips JSONB,
+  job_description_id UUID REFERENCES job_descriptions(id),
+  model_version VARCHAR(50) NOT NULL, -- e.g. gpt-4o-mini-2025-09-12
+  prompt_hash VARCHAR(64) NOT NULL,
+  response_hash VARCHAR(64) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_resume_analysis_user ON resume_analysis_history(user_id);
+CREATE INDEX idx_resume_analysis_resume ON resume_analysis_history(resume_id);
+```
+
+**Drizzle Schema**:
+```typescript
+export const resumeAnalysisHistory = pgTable("resume_analysis_history", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  resumeId: uuid("resume_id").notNull().references(() => resumes.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  score: integer("score").notNull(),
+  strengths: jsonb("strengths").notNull(),
+  gaps: jsonb("gaps").notNull(),
+  keywordsMatched: jsonb("keywords_matched"),
+  atsTips: jsonb("ats_tips"),
+  jobDescriptionId: uuid("job_description_id").references(() => jobDescriptions.id),
+  modelVersion: varchar("model_version", { length: 50 }).notNull(),
+  promptHash: varchar("prompt_hash", { length: 64 }).notNull(),
+  responseHash: varchar("response_hash", { length: 64 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+```
+
 ---
 
 ### 8. `star_stories` - STAR Method Story Library
@@ -881,6 +925,23 @@ psql $STAGING_DATABASE_URL -c "\d users"
 npm run db:seed:mvp
 ```
 
+### Automation & Testing Checklist
+
+1. **Generate Deterministic Migration**
+   - Command: `npx drizzle-kit generate:pg --out server/migrations/2025-10-redesign`
+   - Commit generated SQL + TypeScript snapshot for code review.
+2. **Local Verification Script**
+   - Add `npm run test:db-redesign` → executes `tsx server/scripts/test-redesign-migration.ts` which:
+     - Spins up ephemeral `postgres:16` container via `testcontainers`.
+     - Applies migration, runs schema assertions, seeds sample data, then rolls back.
+3. **Seed Automation**
+   - Script: `server/scripts/seed-redesign.ts` imports Drizzle client, upserts badges/learning modules from JSON fixtures.
+   - Provide dry-run mode `--check` to diff current vs desired seed state.
+4. **CI Integration**
+   - Add GitHub Action `ci-redesign-migration.yml` that runs `npm run test:db-redesign` on every PR touching `docs/redesign/` or `server/migrations/`.
+5. **Artifacts**
+   - Publish migration plan output (`drizzle-kit push --print`) to `docs/ops-log/YYYY-MM-dd-migration.md` for audit trail.
+
 ### Phase 2: Production Deployment (Week 3)
 
 ```bash
@@ -913,6 +974,7 @@ DROP TABLE IF EXISTS referrals CASCADE;
 DROP TABLE IF EXISTS reflection_journals CASCADE;
 DROP TABLE IF EXISTS actual_interviews CASCADE;
 DROP TABLE IF EXISTS star_stories CASCADE;
+DROP TABLE IF EXISTS resume_analysis_history CASCADE;
 DROP TABLE IF EXISTS resumes CASCADE;
 DROP TABLE IF EXISTS self_intros CASCADE;
 DROP TABLE IF EXISTS self_intro_drafts CASCADE;

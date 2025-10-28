@@ -83,6 +83,21 @@ npm run dev
 npm run test
 ```
 
+### 6. Sync Dependencies & Styling
+```bash
+# Align package versions with Base44 reference
+node scripts/compare-packages.mjs /tmp/elev8interview/package.json package.json
+
+# Install any missing shadcn/ui components
+npm run shadcn:sync -- --source /tmp/elev8interview
+
+# Merge Tailwind tokens (runs diff + patch)
+node scripts/merge-tailwind-tokens.mjs --source /tmp/elev8interview/tailwind.config.js --target tailwind.config.ts
+
+# Verify design tokens & typography
+npm run lint:design || echo "Review generated report in tmp/design-diff.html"
+```
+
 ---
 
 ## 📂 Key File Locations
@@ -98,6 +113,7 @@ npm run test
 - **Components**: `/tmp/elev8interview/src/components/`
 - **Pages**: `/tmp/elev8interview/src/pages/`
 - **Package**: `/tmp/elev8interview/package.json`
+- **Design Tokens**: `/tmp/elev8interview/tailwind.config.js`, `/tmp/elev8interview/src/styles/`
 
 ### Current P3 Code
 - **Frontend**: `client/src/`
