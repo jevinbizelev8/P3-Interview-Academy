@@ -106,6 +106,32 @@ This project uses multiple documentation files for better organization:
 
 ---
 
+## 🛡️ Operational Safeguards & Runbooks
+
+### Feature Flags
+- **Config**: `server/config/featureFlags.ts` (toggle `redesign.mvp` groups for Prepare/Practice/Perform).
+- **Rollout Strategy**: Enable flags in staging first, verify smoke checklist (login → readiness score → resume analysis) before enabling in production.
+- **Emergency Disable**: Use `npm run feature-flags:disable redesign.mvp` (script wraps Redis toggle) and redeploy via GitHub Actions manual dispatch.
+
+### Database Migration Guardrails
+- Always run `npm run test:db-redesign` prior to `db:push`; script provisions ephemeral Postgres and validates migrations + seeds.
+- Capture `drizzle-kit push --print` output and attach to ops-log entry for traceability.
+- In production, snapshot RDS (`aws rds create-db-snapshot ...`) before applying migrations; rollback by `db:rollback --to <prev>` or restoring snapshot.
+
+### Monitoring & Alerting
+- **APM**: Datadog monitors readiness endpoint latency, resume analysis job duration, and AI cost spikes (OpenAI spend budget alerts at $150/day).
+- **Logs**: CloudWatch log group `p3-interview-api` – use saved query `redesign-anomalies` to surface badge/XP errors.
+- **User Impact Checks**: After each deployment, run smoke tests via `npm run smoke:redesign` (covers module progression, simulation creation, credit purchase).
+
+### Incident Response
+- Document incidents in `docs/ops-log/YYYY-MM.md` within 24 hours.
+- Notify founders via Slack channel `#p3-redesign` with impact summary, mitigation steps, and follow-up tasks.
+- Schedule post-incident review to update runbooks (this section) and acceptance criteria in `MASTER_PLAN.md` if needed.
+
+Keep this section synchronized with deployment changes; update immediately when scripts or flag locations evolve.
+
+---
+
 ## 🛠️ Development Commands
 
 ### Essential Development Commands

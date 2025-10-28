@@ -154,6 +154,25 @@ Response: {
 }
 ```
 
+**Readiness Score Algorithm**:
+1. Pull the latest `user_module_progress` rows grouped by stage and compute completion ratio per stage.
+2. Weight stage completion using `{ hr_screening: 0.25, functional_team: 0.30, manager: 0.25, executive: 0.20 }`.
+3. Apply score modifiers:
+   - +5 points if `practice_sessions.completed >= 3` in trailing 7 days.
+   - +5 points if latest resume feedback score ≥ 80.
+   - +5 points if self-intro AI feedback overall ≥ 4/5.
+4. Clamp final value between 0-100 and round to nearest integer.
+
+```typescript
+const weighted = Object.entries(stageScores).reduce((acc, [stage, score]) => (
+  acc + score * STAGE_WEIGHTS[stage as StageKey]
+), 0);
+const modifiers = calcPracticeBonus(userId) + calcResumeBonus(userId) + calcSelfIntroBonus(userId);
+return clamp(Math.round(weighted + modifiers), 0, 100);
+```
+
+Add Vitest coverage in `server/services/__tests__/readiness-service.test.ts` for thresholds (0%, 50%, 100%), modifier stacking, and regression for negative inputs.
+
 **Database Tables Needed**:
 ```sql
 CREATE TABLE learning_modules (
@@ -254,6 +273,13 @@ CREATE TABLE self_intros (
 );
 ```
 
+**AI Feedback Flow (Self-Intro)**:
+1. Build OpenAI prompt with sections: user persona, module stage, drafted content, and rubric emphasizing STAR storytelling and executive tone.
+2. Call `POST https://api.openai.com/v1/responses` with `model=gpt-4o-mini` and max 800 tokens; temperature 0.4 for deterministic tone.
+3. Parse response into `{ overallScore: 1-5, strengths: string[], improvements: string[], suggestedHook: string }`.
+4. Persist structured feedback in `self_intros.ai_feedback` and broadcast via WebSocket event `selfIntro.feedback.generated` for real-time UI update.
+5. Log prompt/response hashes in `audit_logs` to support moderation and rollback.
+
 ---
 
 ## 📄 Resume Analyzer
@@ -318,6 +344,13 @@ CREATE TABLE resumes (
   created_at TIMESTAMP DEFAULT NOW()
 );
 ```
+
+**AI Feedback Flow (Resume Analyzer)**:
+1. Extract plain text via `pdf-parse` (PDF) or `mammoth` (DOCX) and normalize whitespace.
+2. Build comparison prompt with job description (if provided) including ATS keyword emphasis and bullet rewriting rubric.
+3. Invoke OpenAI `responses` API (`model=gpt-4o-mini`, temperature 0.2, json_mode true) requesting schema `{ score, strengths[], gaps[], keywordMatches[], atsTips[] }`.
+4. Persist analysis snapshot in `resumes.analysis` with `version` metadata for diffing and append summary to `resume_analysis_history` table (see Database Schema doc).
+5. Emit `resume.analysis.completed` event for UI toast and gamification bonus evaluation.
 
 **Notes**:
 - Use existing OpenAI integration for analysis
@@ -592,6 +625,18 @@ Key tables:
 - Resume analysis: 25 XP
 - Daily streak: +5 to +N XP (scaling)
 - Reflection journals: 15-20 XP
+
+**Badge Trigger Matrix**:
+
+| Badge Key | Requirement | Trigger Logic | Notes |
+|-----------|-------------|---------------|-------|
+| `first_steps` | Complete 1 learning module | Fire when `user_module_progress.completed_count === 1` | Grants +50 XP |
+| `stage_master_{stage}` | Finish all modules in stage | Check on module completion when remaining_in_stage === 0 | Creates readiness bump (+3) |
+| `streak_warrior` | 7-day streak | Evaluate during daily cron when `current_streak >= 7` | Resets if gap >24h |
+| `simulation_pro` | 10 simulations with score ≥80 | Trigger after simulation save by aggregating last 90 days | Adds +100 XP |
+| `resume_ace` | Resume score ≥90 twice | Trigger when storing resume analysis history | Unlocks resume template download |
+
+Record all badge awards via `user_badges` insert + `audit_logs` entry for observability.
 
 ---
 
