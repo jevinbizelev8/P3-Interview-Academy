@@ -25,6 +25,7 @@ env:
   EB_APPLICATION_NAME: p3-interview-academy
   EB_STAGING_ENV: p3-interview-academy-staging
   EB_PRODUCTION_ENV: p3-interview-academy-prod-v2
+  RUN_CI_DB_MIGRATION: 'false'
 
 jobs:
   # ============================================================================
@@ -160,12 +161,41 @@ jobs:
       url: http://${{ env.EB_STAGING_ENV }}.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com
 
     steps:
+      - name: Checkout (for migration scripts)
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (for migrations)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (for migrations)
+        run: npm ci --omit=optional
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run database migration (staging)
+        run: |
+          echo "🗄️ Running database migration on staging..."
+          npm run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        continue-on-error: false
+
+      - name: Verify migration (staging)
+        run: |
+          echo "🔍 Verifying database schema..."
+          npm run db:migrate:verify
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
@@ -310,12 +340,49 @@ jobs:
       url: http://${{ env.EB_PRODUCTION_ENV }}.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com
 
     steps:
+      - name: Checkout (for migration scripts)
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js (for migrations)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies (for migrations)
+        run: npm ci --omit=optional
+        env:
+          NPM_CONFIG_PRODUCTION: "false"
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create RDS snapshot (production)
+        run: |
+          echo "📸 Creating RDS snapshot before migration..."
+          bash deployment-scripts/backup-rds.sh production
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          NO_WAIT: "true"
+
+      - name: Run database migration (production)
+        run: |
+          echo "🗄️ Running database migration on production..."
+          npm run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+        continue-on-error: false
+
+      - name: Verify migration (production)
+        run: |
+          echo "🔍 Verifying database schema..."
+          npm run db:migrate:verify
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
 
       - name: Download build artifact
         uses: actions/download-artifact@v4

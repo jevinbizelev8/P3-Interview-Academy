@@ -58,6 +58,10 @@ GitHub Environments provide deployment protection rules and environment-specific
    - `DATABASE_URL`: Staging database connection string
    - `SESSION_SECRET`: Staging session secret
    - `OPENAI_API_KEY`: OpenAI API key (shared or staging-specific)
+   - `STRIPE_MODE`: Set to `test` for staging
+   - `STRIPE_TEST_SECRET_KEY`: Stripe test mode secret key
+   - `STRIPE_TEST_PUBLISHABLE_KEY`: Stripe test mode publishable key
+   - `STRIPE_TEST_WEBHOOK_SECRET`: Stripe test mode webhook signing secret
    - Any other staging-specific secrets
 4. **Deployment branches**: Select `main` only
 5. Click **Save protection rules**
@@ -73,6 +77,13 @@ GitHub Environments provide deployment protection rules and environment-specific
    - `DATABASE_URL`: Production database connection string
    - `SESSION_SECRET`: Production session secret
    - `OPENAI_API_KEY`: OpenAI API key (production-specific)
+   - `STRIPE_MODE`: Set to `test` initially (change to `live` when ready for real payments)
+   - `STRIPE_TEST_SECRET_KEY`: Stripe test mode secret key (for initial setup)
+   - `STRIPE_TEST_PUBLISHABLE_KEY`: Stripe test mode publishable key
+   - `STRIPE_TEST_WEBHOOK_SECRET`: Stripe production webhook signing secret
+   - `STRIPE_LIVE_SECRET_KEY`: Stripe live mode secret key (add when ready for production)
+   - `STRIPE_LIVE_PUBLISHABLE_KEY`: Stripe live mode publishable key (add when ready)
+   - `STRIPE_LIVE_WEBHOOK_SECRET`: Stripe live webhook signing secret (add when ready)
    - Any other production-specific secrets
 4. **Deployment branches**: Select `main` only
 5. Click **Save protection rules**
@@ -452,7 +463,7 @@ aws elasticbeanstalk describe-environment-health \
 
 For additional help:
 - Check **[CLAUDE.md](CLAUDE.md)** for architecture overview
-- Review **[ops-log/](deployment-scripts/ops-log/)** for recent deployment history
+- Review **[ops-log/](docs/ops-log/)** for recent deployment history
 - Check **[SECURITY.md](SECURITY.md)** for credential management
 
 ---
