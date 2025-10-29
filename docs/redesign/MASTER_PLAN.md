@@ -935,6 +935,10 @@ Add test artifacts and signoffs to `docs/ops-log/` after each milestone before p
 
 **Blockers**: None
 
+**CI/CD Notes (2025-10-29)**:
+- Re-ran PR workflow after GitGuardian dismissal; staging deploy succeeded; only PR comment step had permission issue
+- Updated staging workflow to grant `pull-requests: write` and not fail if comment is blocked
+
 **Next Session Priorities**:
 1. Monitor staging CI job for migration success
 2. Validate schema via verification script on staging
