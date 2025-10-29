@@ -25,6 +25,7 @@ env:
   EB_APPLICATION_NAME: p3-interview-academy
   EB_STAGING_ENV: p3-interview-academy-staging
   EB_PRODUCTION_ENV: p3-interview-academy-prod-v2
+  RUN_CI_DB_MIGRATION: 'false'
 
 jobs:
   # ============================================================================
