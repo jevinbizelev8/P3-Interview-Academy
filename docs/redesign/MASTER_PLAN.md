@@ -926,6 +926,7 @@ Add test artifacts and signoffs to `docs/ops-log/` after each milestone before p
 - [x] Preserved local `.codex/config.toml` (skip-worktree) for local MCP context
 - [x] Reviewed redesign docs and validated Phase 1 readiness
 - [x] Created PR to `main` to trigger staging migration: PR #13
+ - [x] Re-ran staging workflow; migration step failed due to missing `STAGING_DATABASE_URL` secret in GitHub Actions
 
 **In Progress**:
 - [ ] Monitor CI/CD staging workflow and migration logs

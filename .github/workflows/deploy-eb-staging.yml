@@ -10,6 +10,7 @@ env:
   AWS_REGION: ap-southeast-1
   EB_APPLICATION_NAME: p3-interview-academy
   EB_ENVIRONMENT_NAME: p3-interview-academy-staging
+  RUN_CI_DB_MIGRATION: 'false'
 
 jobs:
   test:
@@ -74,16 +75,18 @@ jobs:
           NPM_CONFIG_OPTIONAL: "false"
 
       - name: Run database migration (staging)
+        if: env.RUN_CI_DB_MIGRATION == 'true'
         run: |
-          echo "🗄️ Running database migration on staging..."
+          echo "Running database migration on staging from CI..."
           npm run db:migrate
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
         continue-on-error: false
 
       - name: Verify migration (staging)
+        if: env.RUN_CI_DB_MIGRATION == 'true'
         run: |
-          echo "🔍 Verifying database schema..."
+          echo "Verifying database schema from CI..."
           npm run db:migrate:verify
         env:
           DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
@@ -149,7 +152,7 @@ jobs:
             --description "$DESCRIPTION" \
             --source-bundle S3Bucket=elasticbeanstalk-ap-southeast-1-${{ secrets.AWS_ACCOUNT_ID }},S3Key=${{ env.EB_APPLICATION_NAME }}/"$BUNDLE_NAME"
 
-          # Deploy to staging environment with required environment variables
+          # Update environment to new version
           aws elasticbeanstalk update-environment \
             --environment-name "${{ env.EB_ENVIRONMENT_NAME }}" \
             --version-label "$VERSION_LABEL" \
@@ -179,9 +182,9 @@ jobs:
           echo "Waiting for staging deployment to complete..."
           # Wait with timeout and better error handling
           if timeout 600 aws elasticbeanstalk wait environment-updated --environment-name ${{ env.EB_ENVIRONMENT_NAME }}; then
-            echo "✅ Deployment completed successfully"
+            echo "Deployment completed successfully"
           else
-            echo "⚠️ Deployment wait timed out, checking environment status..."
+            echo "Deployment wait timed out, checking environment status..."
             ENV_STATUS=$(aws elasticbeanstalk describe-environments \
               --environment-names ${{ env.EB_ENVIRONMENT_NAME }} \
               --query 'Environments[0].{Status:Status,Health:Health}' --output json)
@@ -190,9 +193,9 @@ jobs:
             # If environment is Ready but health is not perfect, continue anyway
             STATUS=$(echo "$ENV_STATUS" | jq -r '.Status')
             if [ "$STATUS" = "Ready" ]; then
-              echo "✅ Environment is Ready, proceeding with verification"
+              echo "Environment is Ready, proceeding with verification"
             else
-              echo "❌ Environment is not Ready: $STATUS"
+              echo "Environment is not Ready: $STATUS"
               exit 1
             fi
           fi
@@ -223,16 +226,16 @@ jobs:
           for i in {1..3}; do
             echo "Health check attempt $i..."
             if curl -f --max-time 30 "http://$CNAME/api/health"; then
-              echo "✅ Staging deployment verified successfully!"
+              echo "Staging deployment verified successfully!"
               break
             else
-              echo "❌ Health check failed (attempt $i/3)"
+              echo "Health check failed (attempt $i/3)"
               if [ $i -lt 3 ]; then
                 echo "Waiting 30 seconds before retry..."
                 sleep 30
               else
                 # If all health checks fail, still report deployment status but don't fail the job
-                echo "⚠️ Health checks failed, but deployment was completed. Environment may need additional time to become healthy."
+                echo "Health checks failed, but deployment was completed. Environment may need additional time to become healthy."
                 echo "Staging URL: http://$CNAME"
               fi
             fi
@@ -254,5 +257,6 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `🚀 **Staging Deployment Successful**\n\nYour changes have been deployed to staging:\n- **URL**: ${stagingUrl}\n- **Version**: ${process.env.VERSION_LABEL}\n- **Health**: ✅ Verified\n\nTest your changes and then merge to deploy to production.`
+              body: `Staging Deployment Successful\n\nYour changes have been deployed to staging:\n- URL: ${stagingUrl}\n- Version: ${process.env.VERSION_LABEL}\n- Health: Verified\n\nTest your changes and then merge to deploy to production.`
             });
+
