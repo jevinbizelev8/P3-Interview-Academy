@@ -1,7 +1,5 @@
 
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,59 +7,37 @@ import { Badge } from "@/components/ui/badge";
 import { Users, Copy, Check, Gift, Mail, Share2, Trophy } from "lucide-react";
 import { motion } from "framer-motion";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  useReferralCode,
+  useReferralStats,
+  useUserReferrals,
+  useCreateReferralCode
+} from "@/hooks/useApi";
 
 export default function Referral() {
-  const [referralCode, setReferralCode] = useState("");
   const [email, setEmail] = useState("");
   const [copied, setCopied] = useState(false);
-  const queryClient = useQueryClient();
 
-  const { data: user } = useQuery({
-    queryKey: ['currentUser'],
-    queryFn: () => base44.auth.me()
-  });
+  // Get or create referral code
+  const { data: referralCodeData, isLoading: codeLoading } = useReferralCode();
+  const createCodeMutation = useCreateReferralCode();
 
-  const { data: myReferrals = [] } = useQuery({
-    queryKey: ['myReferrals'],
-    queryFn: async () => {
-      const currentUser = await base44.auth.me();
-      return await base44.entities.Referral.filter({ referrer_email: currentUser.email });
-    }
-  });
+  // Get referral stats
+  const { data: stats, isLoading: statsLoading } = useReferralStats();
 
-  // Generate or get referral code
+  // Get referral list
+  const { data: referralsData } = useUserReferrals({ limit: 50 });
+
+  const referralCode = referralCodeData?.code || '';
+  const referralUrl = referralCodeData?.referral_url || '';
+  const myReferrals = referralsData?.referrals || [];
+
+  // Auto-create referral code if doesn't exist
   React.useEffect(() => {
-    if (user) {
-      const code = `P3IA-${user.email.substring(0, 4).toUpperCase()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      setReferralCode(code);
+    if (!codeLoading && !referralCode && !createCodeMutation.isPending) {
+      createCodeMutation.mutate();
     }
-  }, [user]);
-
-  const sendInviteMutation = useMutation({
-    mutationFn: async (recipientEmail) => {
-      const referral = await base44.entities.Referral.create({
-        referrer_email: user.email,
-        referee_email: recipientEmail,
-        referral_code: referralCode,
-        status: "pending"
-      });
-
-      // Send email invitation
-      await base44.integrations.Core.SendEmail({
-        from_name: user.full_name || "P³ Interview Academy",
-        to: recipientEmail,
-        subject: `${user.full_name || 'Your friend'} invited you to P³ Interview Academy!`,
-        body: `Hi there!\n\n${user.full_name || 'Your friend'} thinks you'd benefit from P³ Interview Academy - the AI-powered platform to ace your interviews.\n\nUse referral code: ${referralCode} to get 30 bonus credits when you sign up!\n\nSign up now: ${window.location.origin}/signup?ref=${referralCode}\n\nBest regards,\nP³ Interview Academy Team`
-      });
-
-      return referral;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['myReferrals']);
-      setEmail("");
-      alert("Invitation sent successfully!");
-    }
-  });
+  }, [codeLoading, referralCode, createCodeMutation]);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(referralCode);
@@ -70,7 +46,7 @@ export default function Referral() {
   };
 
   const handleCopyLink = () => {
-    const link = `${window.location.origin}/signup?ref=${referralCode}`;
+    const link = referralUrl || `${window.location.origin}/signup?ref=${referralCode}`;
     navigator.clipboard.writeText(link);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -79,13 +55,21 @@ export default function Referral() {
   const handleSendInvite = (e) => {
     e.preventDefault();
     if (email.trim() && email.includes('@')) {
-      sendInviteMutation.mutate(email);
+      // Share via mailto link
+      const subject = encodeURIComponent("Join P³ Interview Academy with my referral!");
+      const body = encodeURIComponent(
+        `Hi!\n\nI've been using P³ Interview Academy to prepare for interviews and thought you might find it helpful too!\n\nUse my referral code: ${referralCode} to get bonus credits when you sign up.\n\nSign up here: ${referralUrl || `${window.location.origin}/signup?ref=${referralCode}`}\n\nBest regards`
+      );
+      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      setEmail("");
     }
   };
 
-  const totalReferred = myReferrals.length;
-  const successfulReferrals = myReferrals.filter(r => r.status === 'signed_up' || r.status === 'converted').length;
-  const pendingReferrals = myReferrals.filter(r => r.status === 'pending').length;
+  // Use stats from API
+  const totalReferred = stats?.total_referrals || 0;
+  const successfulReferrals = stats?.completed_referrals || 0;
+  const pendingReferrals = stats?.pending_referrals || 0;
+  const creditsEarned = stats?.total_credits_earned || 0;
 
   return (
     <div className="min-h-screen p-6 md:p-8">
@@ -129,7 +113,7 @@ export default function Referral() {
               <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Gift className="w-8 h-8 text-yellow-600" />
               </div>
-              <p className="text-3xl font-bold text-yellow-600 mb-1">{successfulReferrals * 30}</p>
+              <p className="text-3xl font-bold text-yellow-600 mb-1">{creditsEarned}</p>
               <p className="text-sm text-gray-600">Credits Earned</p>
             </CardContent>
           </Card>
@@ -255,9 +239,8 @@ export default function Referral() {
                 <Button
                   type="submit"
                   className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
-                  disabled={sendInviteMutation.isPending}
                 >
-                  {sendInviteMutation.isPending ? "Sending..." : "Send Invitation"}
+                  Open Email Client
                 </Button>
               </form>
 
@@ -268,15 +251,14 @@ export default function Referral() {
                     {myReferrals.map((referral) => (
                       <div key={referral.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
-                          <p className="text-sm font-medium">{referral.referee_email || "Pending"}</p>
+                          <p className="text-sm font-medium">{referral.referred_email || "Pending"}</p>
                           <p className="text-xs text-gray-500">
-                            {new Date(referral.created_date).toLocaleDateString()}
+                            {new Date(referral.referred_at).toLocaleDateString()}
                           </p>
                         </div>
                         <Badge
                           className={
-                            referral.status === 'converted' ? 'bg-green-100 text-green-800' :
-                            referral.status === 'signed_up' ? 'bg-blue-100 text-blue-800' :
+                            referral.status === 'completed' ? 'bg-green-100 text-green-800' :
                             'bg-yellow-100 text-yellow-800'
                           }
                         >
