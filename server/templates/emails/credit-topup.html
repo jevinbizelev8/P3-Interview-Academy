@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Credit Top-Up Confirmation - P3 Interview Academy</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      color: #ffffff;
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .header p {
+      color: #e0e7ff;
+      margin: 10px 0 0 0;
+      font-size: 14px;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .content h2 {
+      color: #1f2937;
+      font-size: 24px;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    .content p {
+      color: #4b5563;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .success-banner {
+      text-align: center;
+      padding: 30px 20px;
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+    .success-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+    .success-message {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+    }
+    .purchase-summary {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 24px;
+      margin: 24px 0;
+      border: 1px solid #e5e7eb;
+    }
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .summary-row:last-child {
+      border-bottom: none;
+      font-weight: 700;
+      font-size: 18px;
+      padding-top: 16px;
+    }
+    .summary-label {
+      color: #6b7280;
+      font-size: 16px;
+    }
+    .summary-value {
+      color: #1f2937;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .balance-highlight {
+      text-align: center;
+      padding: 24px;
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+    .balance-label {
+      font-size: 16px;
+      color: #78350f;
+      margin: 0 0 8px 0;
+    }
+    .balance-value {
+      font-size: 36px;
+      font-weight: 700;
+      color: #92400e;
+      margin: 0;
+    }
+    .button {
+      display: inline-block;
+      padding: 14px 32px;
+      margin: 24px 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 16px;
+      text-align: center;
+    }
+    .info-box {
+      background-color: #f9fafb;
+      border-left: 4px solid #667eea;
+      padding: 16px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .info-box p {
+      margin: 8px 0;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 24px 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      color: #6b7280;
+      font-size: 14px;
+      margin: 8px 0;
+    }
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>P3 Interview Academy</h1>
+      <p>Prepare. Practice. Perform.</p>
+    </div>
+    <div class="content">
+      <h2>Purchase Successful, {userName}! ✅</h2>
+
+      <div class="success-banner">
+        <div class="success-icon">💎</div>
+        <p class="success-message">Credits Added Successfully</p>
+      </div>
+
+      <p>Thank you for your purchase! Your credits have been added to your account and are ready to use.</p>
+
+      <div class="purchase-summary">
+        <div class="summary-row">
+          <span class="summary-label">Credits Purchased</span>
+          <span class="summary-value">{creditsAdded} credits</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Amount Paid</span>
+          <span class="summary-value">${purchaseAmount}</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Transaction ID</span>
+          <span class="summary-value">{transactionId}</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">New Balance</span>
+          <span class="summary-value">{newBalance} credits</span>
+        </div>
+      </div>
+
+      <div class="balance-highlight">
+        <p class="balance-label">Your Current Balance</p>
+        <p class="balance-value">{newBalance} Credits</p>
+      </div>
+
+      <div class="info-box">
+        <p><strong>Important Information:</strong></p>
+        <p>✨ Your top-up credits <strong>never expire</strong></p>
+        <p>🎯 Use credits for AI interview simulations and practice sessions</p>
+        <p>📊 Track your usage in your billing dashboard</p>
+        <p>💳 A receipt has been sent to your email</p>
+      </div>
+
+      <p>Ready to put your credits to work? Start practicing and improve your interview skills today!</p>
+
+      <div style="text-align: center;">
+        <a href="{dashboardUrl}" class="button">Start Practicing Now</a>
+      </div>
+
+      <p style="text-align: center; margin-top: 16px;">
+        <a href="{billingUrl}" style="color: #667eea; text-decoration: none;">View billing history →</a>
+      </p>
+    </div>
+    <div class="footer">
+      <p>&copy; {currentYear} P3 Interview Academy. All rights reserved.</p>
+      <p><a href="{appUrl}">Visit our website</a> | <a href="{supportUrl}">Contact Support</a></p>
+    </div>
+  </div>
+</body>
+</html>

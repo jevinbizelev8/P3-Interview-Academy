@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Referral Success - P3 Interview Academy</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      color: #ffffff;
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+    }
+    .header p {
+      color: #e0e7ff;
+      margin: 10px 0 0 0;
+      font-size: 14px;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .content h2 {
+      color: #1f2937;
+      font-size: 24px;
+      margin-top: 0;
+      margin-bottom: 20px;
+    }
+    .content p {
+      color: #4b5563;
+      margin: 16px 0;
+      font-size: 16px;
+    }
+    .referral-banner {
+      text-align: center;
+      padding: 30px 20px;
+      background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+      border-radius: 8px;
+      margin: 24px 0;
+    }
+    .referral-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+    }
+    .referral-message {
+      font-size: 20px;
+      font-weight: 600;
+      color: #ffffff;
+      margin: 0 0 12px 0;
+    }
+    .referral-user {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 0;
+    }
+    .credits-earned {
+      display: inline-block;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #78350f;
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 28px;
+      margin: 24px 0;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .stat-card {
+      background-color: #f9fafb;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      border: 1px solid #e5e7eb;
+    }
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #667eea;
+      margin: 0 0 8px 0;
+    }
+    .stat-label {
+      font-size: 14px;
+      color: #6b7280;
+      margin: 0;
+    }
+    .button {
+      display: inline-block;
+      padding: 14px 32px;
+      margin: 24px 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #ffffff !important;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 16px;
+      text-align: center;
+    }
+    .info-box {
+      background-color: #f9fafb;
+      border-left: 4px solid #667eea;
+      padding: 16px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .info-box p {
+      margin: 8px 0;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .footer {
+      background-color: #f9fafb;
+      padding: 24px 30px;
+      text-align: center;
+      border-top: 1px solid #e5e7eb;
+    }
+    .footer p {
+      color: #6b7280;
+      font-size: 14px;
+      margin: 8px 0;
+    }
+    .footer a {
+      color: #667eea;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>P3 Interview Academy</h1>
+      <p>Prepare. Practice. Perform.</p>
+    </div>
+    <div class="content">
+      <h2>Thank You, {userName}! 🎁</h2>
+      <p>Great news! Someone just joined P3 Interview Academy using your referral code.</p>
+
+      <div class="referral-banner">
+        <div class="referral-icon">🤝</div>
+        <p class="referral-message">Welcome to</p>
+        <p class="referral-user">{referredUserName}</p>
+      </div>
+
+      <div style="text-align: center;">
+        <div class="credits-earned">+{creditsEarned} Credits</div>
+        <p style="color: #6b7280; margin-top: 8px;">Added to your account!</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <p class="stat-value">{totalReferrals}</p>
+          <p class="stat-label">Total Referrals</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-value">{totalCreditsEarned}</p>
+          <p class="stat-label">Credits Earned</p>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <p><strong>Keep Sharing, Keep Earning:</strong></p>
+        <p>• Get {creditsEarned} credits for each successful referral</p>
+        <p>• Your friend gets {friendBonus} bonus credits too</p>
+        <p>• Help others succeed while growing your credit balance</p>
+      </div>
+
+      <p>Thank you for spreading the word about P3 Interview Academy! Your support helps others achieve their career goals.</p>
+
+      <div style="text-align: center;">
+        <a href="{referralPageUrl}" class="button">Invite More Friends</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>&copy; {currentYear} P3 Interview Academy. All rights reserved.</p>
+      <p><a href="{appUrl}">Visit our website</a></p>
+    </div>
+  </div>
+</body>
+</html>
