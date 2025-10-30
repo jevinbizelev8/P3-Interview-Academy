@@ -1,6 +1,5 @@
 
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client"; // Added this import
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -107,15 +106,15 @@ export default function Landing() {
               </div>
             </Link>
             <div className="flex gap-3">
-              <Button 
+              <Button
                 variant="outline"
-                onClick={() => base44.auth.redirectToLogin(createPageUrl("Home"))}
+                onClick={() => window.location.href = '/auth'}
               >
                 Sign In
               </Button>
-              <Button 
+              <Button
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                onClick={() => base44.auth.redirectToLogin(createPageUrl("Home"))}
+                onClick={() => window.location.href = '/auth'}
               >
                 Start Free
               </Button>
@@ -147,9 +146,10 @@ export default function Landing() {
             </p>
 
             <div className="flex gap-4 justify-center flex-wrap">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-6 text-lg"
+                onClick={() => window.location.href = '/auth'}
               >
                 Start Free - 50 Credits
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -302,9 +302,10 @@ export default function Landing() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <Button 
+                    <Button
                       className={`w-full bg-gradient-to-r ${plan.color} hover:opacity-90 text-white`}
                       size="lg"
+                      onClick={() => window.location.href = '/auth'}
                     >
                       {plan.cta}
                     </Button>
@@ -470,9 +471,10 @@ export default function Landing() {
             <p className="text-xl text-white/90 mb-8">
               Join thousands of successful candidates who mastered their interviews with P³
             </p>
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="bg-white text-purple-700 hover:bg-gray-100 px-12 py-6 text-lg font-bold shadow-2xl"
+              onClick={() => window.location.href = '/auth'}
             >
               Start Free - Get 50 Credits
               <ArrowRight className="w-5 h-5 ml-2" />
