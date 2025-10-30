@@ -10,7 +10,9 @@ env:
   AWS_REGION: ap-southeast-1
   EB_APPLICATION_NAME: p3-interview-academy
   EB_ENVIRONMENT_NAME: p3-interview-academy-staging
-  RUN_CI_DB_MIGRATION: 'true'
+  # Migration runs post-deployment from EB instance due to security group restrictions
+  # GitHub Actions runners cannot connect to RDS, but EB instances can
+  RUN_CI_DB_MIGRATION: 'false'  # Run post-deployment from EB instance
 
 jobs:
   test:
