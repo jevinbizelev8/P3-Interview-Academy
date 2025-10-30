@@ -78,6 +78,9 @@ export default function Billing() {
     }
   });
 
+  // Placeholder for invoices - will be implemented later
+  const invoices = [];
+
   const upgradePlan = useMutation({
     mutationFn: async ({ planType }) => {
       const response = await fetch('/api/subscription/create-checkout', {
