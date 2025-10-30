@@ -2,7 +2,7 @@
 
 This document outlines security best practices, credential management, and incident response procedures for the P3 Interview Academy project.
 
-**Last Updated**: 2025-10-23
+**Last Updated**: 2025-10-30
 
 ---
 
@@ -128,8 +128,103 @@ Before committing code, verify:
 - **GitGuardian**: Automated secret detection in commits
 - **git-secrets**: AWS tool to prevent committing secrets
 - **TruffleHog**: Find secrets in git history
+- **Session Code Reviewer Agent** ✅ ACTIVE: Claude Code agent with automated secret detection (see details below)
 
-**Setup git-secrets** (recommended):
+**Session Code Reviewer Agent (Enhanced 2025-10-30)**:
+
+**Status**: ✅ Active and operational
+
+The session-code-reviewer agent now includes automated secret detection that runs before every commit, providing the first line of defense against credential leaks.
+
+**Features**:
+- **Automated Pattern Matching**: Scans `git diff --staged` for secrets before commit
+- **Multi-Layer Detection**: Covers AWS, Stripe, OpenAI, database URLs, session secrets
+- **Smart Exclusions**: Skips `.env.example`, documentation, historical logs with `[REDACTED]`
+- **Code Quality Checks**: Also detects debug statements, large files, TODOs, dead code
+- **Blocking Behavior**: Stops commits immediately when HIGH-confidence secrets detected
+- **Warning System**: Requests confirmation for code quality issues
+
+**Secret Patterns Detected**:
+```
+HIGH PRIORITY (BLOCKS COMMIT):
+- AWS Credentials: AKIA[0-9A-Z]{16}, ASIA[0-9A-Z]{16}, secret access keys
+- Stripe Keys: sk_live_*, pk_live_*, whsec_* (PRODUCTION credentials)
+- OpenAI Keys: sk-*, sk-proj-*
+- Database URLs: postgresql://user:password@host/db
+- Session Secrets: Long random tokens in source code
+
+MEDIUM PRIORITY (WARNS):
+- Stripe TEST keys: sk_test_*, pk_test_* (outside test files)
+- Debug statements: console.log, debugger
+- Large files: >1MB
+- Dead code: Comment blocks, commented imports
+- TODOs/FIXMEs: Unfinished work markers
+
+EXCLUDED (SAFE):
+- .env.example files with placeholders
+- Documentation files (*.md)
+- Historical logs with [REDACTED] markers
+- Test fixtures with mock credentials
+```
+
+**How It Works**:
+1. User completes development work and requests session review
+2. Agent is invoked via Task tool with `subagent_type: session-code-reviewer`
+3. Agent runs TypeScript checks, code review, and **security scan**
+4. Security scan runs `git diff --staged` and applies regex patterns
+5. **DECISION POINT**:
+   - If secrets detected → ❌ **BLOCK COMMIT** with file:line references
+   - If code quality issues → ⚠️ **WARN** and request confirmation
+   - If clean → ✅ **APPROVE** for commit
+6. Only proceeds to git operations if scan approves
+
+**Benefits Over Manual Review**:
+- ✅ Consistent detection (never forgets to check)
+- ✅ Pattern-based matching (catches variations)
+- ✅ File:line references (quick remediation)
+- ✅ Past incident awareness (references 2025-09-30 AWS, 2025-10-28 Stripe)
+- ✅ No external tool installation required (built into agent)
+
+**Test Coverage**:
+- 12 documented test cases in `.claude/agents/session-code-reviewer-test-cases.md`
+- Validated against past security incidents
+- Covers BLOCK, WARN, and ALLOW scenarios
+
+**Configuration**:
+- Agent file: `.claude/agents/session-code-reviewer.md`
+- Backup: `.claude/agents/session-code-reviewer.md.backup`
+- Pattern updates: Edit Section 0 of agent file
+- Exclusions: Modify exclusion list in Section 0
+
+**Usage**:
+```typescript
+// User finishes work, then invokes:
+"I've finished the gamification feature, please review"
+
+// Agent responds:
+"I'll use the session-code-reviewer agent to review your work..."
+
+// Agent performs security scan automatically
+// Reports findings before any git operations
+```
+
+**Limitations**:
+- Regex-based detection (not semantic analysis)
+- May have false positives (use exclusion list to refine)
+- Does not prevent force-push bypassing
+- Complements (not replaces) GitHub/GitGuardian scanning
+
+**Future Enhancements**:
+- Phase 2: Install pre-commit git hooks for additional layer
+- Phase 3: Integrate with GitGuardian API for real-time verification
+- Continuous pattern refinement based on new threat patterns
+
+**Documentation**:
+- Full specification: `.claude/agents/session-code-reviewer.md` (16KB)
+- Test cases: `.claude/agents/session-code-reviewer-test-cases.md`
+- Implementation log: `docs/ops-log/2025-10.md` (2025-10-30 entry)
+
+**Setup git-secrets** (recommended for additional layer):
 ```bash
 # Install
 brew install git-secrets  # macOS
