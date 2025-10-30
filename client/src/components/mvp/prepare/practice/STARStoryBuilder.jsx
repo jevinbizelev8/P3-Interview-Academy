@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Plus, Save, Trash2 } from "lucide-react";
+import { CheckCircle2, Plus, Save, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const CATEGORIES = [
   "Teamwork & Collaboration",
@@ -16,7 +18,25 @@ const CATEGORIES = [
 ];
 
 export default function STARStoryBuilder() {
-  const [stories, setStories] = useState([]);
+  const queryClient = useQueryClient();
+
+  // Fetch existing stories from API
+  const { data: storiesData, isLoading, error } = useQuery({
+    queryKey: ['star-stories'],
+    queryFn: async () => {
+      const response = await fetch('/api/prepare/star-stories', {
+        credentials: 'include'
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch stories');
+      }
+      const result = await response.json();
+      return result.data || [];
+    }
+  });
+
+  const stories = storiesData || [];
+
   const [currentStory, setCurrentStory] = useState({
     category: "",
     title: "",
@@ -27,6 +47,48 @@ export default function STARStoryBuilder() {
     learned: ""
   });
   const [showForm, setShowForm] = useState(false);
+
+  // Create story mutation
+  const createStoryMutation = useMutation({
+    mutationFn: async (storyData) => {
+      const response = await fetch('/api/prepare/star-stories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          title: storyData.title,
+          situation: storyData.situation,
+          task: storyData.task,
+          action: storyData.actions.filter(a => a).join('\n'),
+          result: storyData.result || '',
+          tags: [storyData.category]
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save story');
+      }
+
+      const result = await response.json();
+      return result.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['star-stories']);
+      setCurrentStory({
+        category: "",
+        title: "",
+        situation: "",
+        task: "",
+        actions: ["", "", ""],
+        result: "",
+        learned: ""
+      });
+      setShowForm(false);
+    }
+  });
 
   const addAction = () => {
     setCurrentStory({
@@ -48,27 +110,45 @@ export default function STARStoryBuilder() {
 
   const saveStory = () => {
     if (currentStory.category && currentStory.title && currentStory.situation) {
-      setStories([...stories, { ...currentStory, id: Date.now() }]);
-      setCurrentStory({
-        category: "",
-        title: "",
-        situation: "",
-        task: "",
-        actions: ["", "", ""],
-        result: "",
-        learned: ""
-      });
-      setShowForm(false);
+      createStoryMutation.mutate(currentStory);
     }
   };
 
-  const deleteStory = (id) => {
-    setStories(stories.filter(s => s.id !== id));
+  const deleteStory = async (id) => {
+    // Note: Backend delete endpoint not implemented yet, keeping for future
+    // For now, we'll just refresh the stories
+    if (confirm('Delete this story? (Note: Backend delete not yet implemented)')) {
+      // TODO: Implement DELETE endpoint in backend
+      console.warn('Delete endpoint not yet implemented');
+    }
   };
 
   const getStoriesByCategory = (category) => {
-    return stories.filter(s => s.category === category);
+    return stories.filter(s => {
+      // Tags is an array in the API response
+      return s.tags && s.tags.includes(category);
+    });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+        <span className="ml-2 text-gray-600">Loading your STAR stories...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert className="border-red-200 bg-red-50">
+        <AlertCircle className="h-4 w-4 text-red-600" />
+        <AlertDescription className="text-red-900">
+          Failed to load STAR stories: {error.message}
+        </AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -228,13 +308,31 @@ export default function STARStoryBuilder() {
                   />
                 </div>
 
+                {createStoryMutation.error && (
+                  <Alert className="border-red-200 bg-red-50">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <AlertDescription className="text-red-900">
+                      {createStoryMutation.error.message}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <Button
                   onClick={saveStory}
-                  disabled={!currentStory.category || !currentStory.title || !currentStory.situation}
+                  disabled={!currentStory.category || !currentStory.title || !currentStory.situation || createStoryMutation.isPending}
                   className="w-full bg-gradient-to-r from-green-600 to-emerald-600"
                 >
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Story
+                  {createStoryMutation.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Story
+                    </>
+                  )}
                 </Button>
               </CardContent>
             </Card>
