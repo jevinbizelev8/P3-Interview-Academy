@@ -1,11 +1,39 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Minus, Target } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Target, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useReadinessScore } from "@/hooks/useApi";
 
-export default function ReadinessScoreBadge({ score, previousScore, size = "large", showDetails = true }) {
+export default function ReadinessScoreBadge({
+  score: propScore,
+  previousScore: propPreviousScore,
+  size = "large",
+  showDetails = true,
+  fetchFromApi = true // Enable API fetching by default
+}) {
+  const [previousScore, setPreviousScore] = useState(propPreviousScore);
+
+  // Fetch from API if enabled, otherwise use prop value
+  const { data: apiData, isLoading } = useReadinessScore({
+    enabled: fetchFromApi,
+    refetchInterval: 30000, // Refetch every 30 seconds
+  });
+
+  // Use API data if fetching from API, otherwise use prop
+  const score = fetchFromApi ? (apiData?.score ?? 0) : (propScore ?? 0);
+
+  // Track previous score for trend indicator
+  useEffect(() => {
+    if (fetchFromApi && apiData?.score !== undefined) {
+      if (previousScore === undefined) {
+        setPreviousScore(apiData.score);
+      } else if (apiData.score !== score) {
+        setPreviousScore(score);
+      }
+    }
+  }, [fetchFromApi, apiData?.score, score, previousScore]);
   const getScoreColor = (score) => {
     if (score >= 80) return { bg: "from-green-500 to-emerald-600", text: "text-green-600", badge: "bg-green-600" };
     if (score >= 60) return { bg: "from-blue-500 to-blue-600", text: "text-blue-600", badge: "bg-blue-600" };
@@ -33,6 +61,30 @@ export default function ReadinessScoreBadge({ score, previousScore, size = "larg
   };
 
   const colors = getScoreColor(score);
+
+  // Show loading state only when fetching from API
+  if (fetchFromApi && isLoading) {
+    if (size === "compact") {
+      return (
+        <div className="flex items-center gap-2">
+          <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center shadow">
+            <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-gray-400">Loading...</p>
+            <p className="text-xs text-gray-400">Readiness</p>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <Card className="border-2 border-gray-200 bg-gray-50">
+        <CardContent className="p-6 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (size === "compact") {
     return (

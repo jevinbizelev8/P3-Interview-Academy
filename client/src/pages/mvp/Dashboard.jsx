@@ -1,70 +1,43 @@
 
-import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  BookOpen, Target, TrendingUp, Award, ArrowRight, 
+import {
+  BookOpen, Target, TrendingUp, Award, ArrowRight,
   CheckCircle2, Clock, Zap, Trophy, Flame
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
-import { updateStreak } from "../components/utils/scoring";
+import {
+  useReadinessScore,
+  useXPPoints,
+  useStreak,
+  useUpdateStreak,
+  useUserBadges,
+  useSimulationHistory,
+  useUserModuleProgress
+} from '@/hooks/useApi';
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
+  // Fetch data using P3 API hooks
+  const { data: readinessData } = useReadinessScore();
+  const { data: xpData } = useXPPoints();
+  const { data: streakData } = useStreak();
+  const { data: moduleProgress = [] } = useUserModuleProgress();
+  const { data: historyData } = useSimulationHistory({ limit: 5 });
+  const { data: allBadges = [] } = useUserBadges();
+  const updateStreakMutation = useUpdateStreak();
 
-  const { data: userProfile } = useQuery({
-    queryKey: ['userProfile'],
-    queryFn: async () => {
-      const currentUser = await base44.auth.me();
-      const profiles = await base44.entities.UserProfile.filter({ user_id: currentUser.id });
-      
-      if (profiles.length === 0) {
-        return await base44.entities.UserProfile.create({
-          user_id: currentUser.id,
-          xp_points: 0,
-          current_streak: 0,
-          total_simulations: 0,
-          readiness_score: 0
-        });
-      }
-      return profiles[0];
-    }
-  });
-
-  const { data: completedModules = [] } = useQuery({
-    queryKey: ['completedModules'],
-    queryFn: () => base44.entities.UserModuleProgress.filter({ completed: true })
-  });
-
-  const { data: simulations = [] } = useQuery({
-    queryKey: ['simulations'],
-    queryFn: () => base44.entities.InterviewSimulation.list('-created_date', 5)
-  });
-
-  const { data: badges = [] } = useQuery({
-    queryKey: ['userBadges'],
-    queryFn: () => base44.entities.UserBadge.list('-earned_date', 3)
-  });
+  // Derived data
+  const completedModules = moduleProgress.filter(m => m.completed);
+  const simulations = historyData?.sessions || [];
+  const badges = allBadges.slice(0, 3); // Get 3 most recent
 
   useEffect(() => {
-    const initializeDashboard = async () => {
-      try {
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-        
-        // Update streak when user visits dashboard
-        await updateStreak(currentUser.id);
-      } catch (error) {
-        console.error("Error initializing dashboard:", error);
-      }
-    };
-    
-    initializeDashboard();
+    // Update streak when user visits dashboard
+    updateStreakMutation.mutate();
   }, []);
 
   const stages = [
@@ -91,7 +64,7 @@ export default function Dashboard() {
       subtitle: "Track Your Growth",
       icon: TrendingUp,
       color: "from-pink-500 to-pink-600",
-      progress: userProfile?.readiness_score || 0,
+      progress: readinessData?.overall_score || 0,
       url: createPageUrl("Perform"),
       description: "Analytics, insights & achievements"
     }
@@ -100,28 +73,28 @@ export default function Dashboard() {
   const stats = [
     {
       label: "Rewards Points",
-      value: userProfile?.xp_points || 0,
+      value: xpData?.points || 0,
       icon: Zap,
       color: "text-yellow-600",
       bgColor: "bg-yellow-100"
     },
     {
       label: "Current Streak",
-      value: `${userProfile?.current_streak || 0} days`,
+      value: `${streakData?.current_streak || 0} days`,
       icon: Flame,
       color: "text-orange-600",
       bgColor: "bg-orange-100"
     },
     {
       label: "Simulations",
-      value: userProfile?.total_simulations || 0,
+      value: simulations.length,
       icon: Trophy,
       color: "text-purple-600",
       bgColor: "bg-purple-100"
     },
     {
       label: "Readiness",
-      value: `${Math.round(userProfile?.readiness_score || 0)}%`,
+      value: `${Math.round(readinessData?.overall_score || 0)}%`,
       icon: CheckCircle2,
       color: "text-green-600",
       bgColor: "bg-green-100"

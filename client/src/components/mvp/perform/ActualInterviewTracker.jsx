@@ -1,6 +1,4 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +10,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, CheckCircle2, XCircle, Clock, Mail, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  useActualInterviews,
+  useCreateActualInterview,
+  useUpdateActualInterview
+} from '@/hooks/useApi';
 
 export default function ActualInterviewTracker() {
   const [showForm, setShowForm] = useState(false);
@@ -26,17 +29,9 @@ export default function ActualInterviewTracker() {
     thank_you_sent: false
   });
 
-  const queryClient = useQueryClient();
-
-  const { data: interviews = [] } = useQuery({
-    queryKey: ['actualInterviews'],
-    queryFn: () => base44.entities.ActualInterview.list('-interview_date')
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ActualInterview.create(data),
+  const { data: interviews = [] } = useActualInterviews();
+  const createMutation = useCreateActualInterview({
     onSuccess: () => {
-      queryClient.invalidateQueries(['actualInterviews']);
       setShowForm(false);
       setFormData({
         company_name: "",
@@ -50,13 +45,7 @@ export default function ActualInterviewTracker() {
       });
     }
   });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.ActualInterview.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['actualInterviews']);
-    }
-  });
+  const updateMutation = useUpdateActualInterview();
 
   const handleSubmit = (e) => {
     e.preventDefault();

@@ -26,7 +26,12 @@ import { errorLogger, logAPIError } from "./services/error-logger";
 // import { // coachingRouter } from "./routes/coaching"; // QUARANTINED
 // import { coachingEngineService } from "./services/coaching-engine-service"; // QUARANTINED
 import { prepareAIRouter } from "./routes/prepare-ai";
+import prepareRouter from "./routes/prepare";
+import gamificationRouter from "./routes/gamification";
 import practiceRouter from "./routes/practice";
+import performRouter from "./routes/perform";
+import referralsRouter from "./routes/referrals";
+import supportRouter from "./routes/support";
 import voiceServicesRouter from "./routes/voice-services-mvp";
 import creditsRouter from "./routes/credits";
 import adminRouter from "./routes/admin";
@@ -1934,13 +1939,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ================================
 
   app.use('/api/prepare-ai', requireAuthWithBypass, prepareAIRouter);
+  app.use('/api/prepare', requireAuthWithBypass, prepareRouter);
+  app.use('/api/gamification', requireAuthWithBypass, gamificationRouter);
   app.use('/api/practice', requireAuthWithBypass, practiceRouter);
+  app.use('/api/perform', requireAuthWithBypass, performRouter);
 
   // ================================
-  // CREDIT MANAGEMENT ROUTES
+  // CREDIT & REFERRAL MANAGEMENT ROUTES
   // ================================
 
   app.use('/api/credits', requireAuthWithBypass, creditsRouter);
+  app.use('/api/referrals', requireAuthWithBypass, referralsRouter);
+
+  // ================================
+  // SUPPORT & FEEDBACK ROUTES
+  // ================================
+
+  app.use('/api/support', requireAuthWithBypass, supportRouter);
 
   // ================================
   // ADMIN ROUTES

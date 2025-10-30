@@ -1,472 +1,271 @@
-# DEPLOYMENT.md
-
-Comprehensive deployment guide for P3 Interview Academy.
+# DEPLOYMENT.md  
+Comprehensive hybrid deployment guide for **P3 Interview Academy**.  
+**Version:** 2.0 (October 2025)  
+**Maintainer:** AI Engineering Lead  
 
 ---
 
 ## 📋 Table of Contents
-
-1. [Overview](#overview)
-2. [GitHub Environments Setup](#github-environments-setup)
-3. [CI/CD Workflows](#cicd-workflows)
-4. [Deployment Procedures](#deployment-procedures)
-5. [Approval Workflow](#approval-workflow)
-6. [Manual Deployment](#manual-deployment)
-7. [Troubleshooting](#troubleshooting)
+1. [Overview](#overview)  
+2. [Architecture](#architecture)  
+3. [GitHub Environments](#github-environments)  
+4. [CI/CD Workflows](#cicd-workflows)  
+5. [Deployment Procedures](#deployment-procedures)  
+6. [Promotion & Review Flow](#promotion--review-flow)  
+7. [Manual Deployment](#manual-deployment)  
+8. [Failure Handling](#failure-handling)  
+9. [Stripe HTTPS Configuration](#stripe-https-configuration)  
+10. [Troubleshooting](#troubleshooting)  
 
 ---
 
 ## Overview
 
-P3 Interview Academy uses a multi-stage deployment pipeline with automated testing and manual approval gates to ensure safe production deployments.
+P3 Interview Academy uses a **hybrid CI/CD model** combining:
+- **GitHub Actions** for orchestration and logging  
+- **AWS CLI** (via OIDC) for secure deployments  
+- **Codex Cloud** for AI-assisted triage and auto-fix PRs  
+- **Manual review by the engineering lead** (you) before promotion to production  
+
+Unlike older flows, there is **no formal GitHub approval gate**.  
+You review staging with the founders offline, then promote to production yourself.
+
+---
+
+## Architecture
 
 ### Deployment Flow
-
 ```
-Feature Branch → PR → Staging (Auto) → Review
-                                       ↓
-Main Branch → Staging (Auto) → Smoke Tests → Approval Gate → Production (Auto)
+Feature Branch → PR → Ephemeral Staging (optional)
+                               ↓
+Main Branch → Staging (Auto, HTTPS) → Smoke Tests → Manual Review → Promotion to Production
 ```
 
 ### Environments
 
-- **Development**: Local development (`npm run dev`)
-- **Staging**: `p3-interview-academy-staging` (AWS EB)
-- **Production**: `p3-interview-academy-prod-v2` (AWS EB)
+| Environment | AWS EB Name | Deployment | Stripe Mode | Notes |
+|--------------|-------------|-------------|--------------|-------|
+| **Development** | Local | Manual | Test | `npm run dev` |
+| **Staging** | p3-interview-academy-staging | Auto on merge | Test | HTTPS enforced |
+| **Production** | p3-interview-academy-prod-v2 | Manual promote | Live | Manual review before deploy |
 
 ---
 
-## GitHub Environments Setup
+## GitHub Environments
 
-GitHub Environments provide deployment protection rules and environment-specific secrets.
+### Setup
 
-### Prerequisites
+1. Navigate to **Settings → Environments**
+2. Create two environments: `staging` and `production`
 
-- Repository admin access
-- GitHub Pro/Team/Enterprise account (for required reviewers)
+#### Staging
+- **Protection:** none (auto-deploy)
+- **AWS role:** `AWS_STAGING_ROLE_ARN`
+- **Secrets:**
+  - `DATABASE_URL`, `SESSION_SECRET`, `OPENAI_API_KEY`
+  - `STRIPE_MODE=test`, `STRIPE_TEST_SECRET_KEY`, `STRIPE_TEST_PUBLISHABLE_KEY`
+  - Any staging credentials
+- **Branch:** `main`
 
-### Step 1: Create Environments
+#### Production
+- **Protection:** none (manual trigger only)
+- **AWS role:** `AWS_PROD_ROLE_ARN`
+- **Secrets:**
+  - Same keys as staging, plus live Stripe keys when ready:
+    - `STRIPE_MODE=live`, `STRIPE_LIVE_SECRET_KEY`, `STRIPE_LIVE_PUBLISHABLE_KEY`
+- **Branch:** `main`
 
-1. Navigate to repository **Settings** → **Environments**
-2. Click **New environment**
-
-#### Create Staging Environment
-
-1. **Name**: `staging`
-2. **Protection Rules**: None (auto-deploy)
-3. **Environment Secrets**:
-   - `DATABASE_URL`: Staging database connection string
-   - `SESSION_SECRET`: Staging session secret
-   - `OPENAI_API_KEY`: OpenAI API key (shared or staging-specific)
-   - `STRIPE_MODE`: Set to `test` for staging
-   - `STRIPE_TEST_SECRET_KEY`: Stripe test mode secret key
-   - `STRIPE_TEST_PUBLISHABLE_KEY`: Stripe test mode publishable key
-   - `STRIPE_TEST_WEBHOOK_SECRET`: Stripe test mode webhook signing secret
-   - Any other staging-specific secrets
-4. **Deployment branches**: Select `main` only
-5. Click **Save protection rules**
-
-#### Create Production Environment
-
-1. **Name**: `production`
-2. **Protection Rules**:
-   - ✅ **Required reviewers**: Add repository admins (e.g., yourself)
-   - ✅ **Wait timer**: 0 minutes (optional: add delay if needed)
-   - ⚠️ **Prevent self-review**: Recommended if multiple admins
-3. **Environment Secrets**:
-   - `DATABASE_URL`: Production database connection string
-   - `SESSION_SECRET`: Production session secret
-   - `OPENAI_API_KEY`: OpenAI API key (production-specific)
-   - `STRIPE_MODE`: Set to `test` initially (change to `live` when ready for real payments)
-   - `STRIPE_TEST_SECRET_KEY`: Stripe test mode secret key (for initial setup)
-   - `STRIPE_TEST_PUBLISHABLE_KEY`: Stripe test mode publishable key
-   - `STRIPE_TEST_WEBHOOK_SECRET`: Stripe production webhook signing secret
-   - `STRIPE_LIVE_SECRET_KEY`: Stripe live mode secret key (add when ready for production)
-   - `STRIPE_LIVE_PUBLISHABLE_KEY`: Stripe live mode publishable key (add when ready)
-   - `STRIPE_LIVE_WEBHOOK_SECRET`: Stripe live webhook signing secret (add when ready)
-   - Any other production-specific secrets
-4. **Deployment branches**: Select `main` only
-5. Click **Save protection rules**
-
-### Step 2: Verify Environment Configuration
-
-1. Go to **Settings** → **Environments**
-2. Verify both `staging` and `production` environments exist
-3. Verify production has **Required reviewers** configured
-4. Verify secrets are set for each environment
-
-### Step 3: Test the Setup
-
-1. Make a small change to code (e.g., update a comment)
-2. Commit and push to `main` branch
-3. Navigate to **Actions** tab
-4. Watch the workflow progress:
-   - ✅ Tests should pass
-   - ✅ Build should complete
-   - ✅ Staging deployment should succeed
-   - ✅ Smoke tests should pass
-   - ⏸️ Production deployment should wait for approval
+> 🔒 OIDC is used — no long-lived AWS keys in secrets.
 
 ---
 
 ## CI/CD Workflows
 
-### Workflow Files
-
 Located in `.github/workflows/`:
 
-1. **`deploy-main.yml`** - Main branch deployment (staging → production)
-2. **`deploy-eb-staging.yml`** - PR-based staging deployments
-3. **`opslog-seed.yml`** - Monthly ops log generation
+| File | Purpose |
+|------|----------|
+| `ci-staging.yml` | Auto-deploy to staging on `main` |
+| `promote.yml` | Promote tested artifact to production |
+| `codex-review.yml` | Auto-trigger Codex on failures |
+| `opslog-seed.yml` | Monthly ops log generation |
 
-### Main Branch Deployment Workflow
-
-**File**: `.github/workflows/deploy-main.yml`
-
-**Trigger**: Push to `main` branch (excluding markdown/docs changes)
-
-**Jobs**:
-1. **test** - Run TypeScript checks and test suite
-2. **build** - Build application once, upload artifact
-3. **deploy-staging** - Deploy to staging environment
-4. **smoke-tests** - Run automated validation tests
-5. **deploy-production** - Deploy to production (requires approval)
-6. **summary** - Generate deployment summary
-
-**Key Features**:
-- Single build artifact for both environments
-- Automated smoke tests before production
-- Manual approval gate via GitHub Environments
-- Health verification after each deployment
-- Automatic cleanup of old versions
-
-### PR-Based Staging Workflow
-
-**File**: `.github/workflows/deploy-eb-staging.yml`
-
-**Trigger**: Pull request to `main` branch
-
-**Purpose**: Test changes in staging before merging
-
-**Features**:
-- Automatic staging deployment on PR creation/updates
-- PR comment with staging URL
-- Independent of main branch workflow
+### Key Highlights
+- Single **build artifact** shared between staging and production.  
+- **Codex AI triage** on any failed or cancelled workflow.  
+- HTTPS enforced on staging (for Stripe).  
+- **No approval gates** — you promote manually.
 
 ---
 
 ## Deployment Procedures
 
-### Standard Deployment (Recommended)
+### 1. Develop & Test Locally
+```bash
+npm run dev
+npm run check
+npm run test
+```
 
-1. **Develop & Test Locally**
-   ```bash
-   npm run dev
-   npm run check
-   npm run test:run
-   ```
+### 2. Create PR
+- Push to GitHub → auto PR deploy to staging.  
+- PR comment includes staging URL and version.
 
-2. **Create Pull Request**
-   - Push branch to GitHub
-   - Create PR to `main`
-   - Automatic staging deployment triggered
-   - Review staging URL in PR comment
+### 3. Review & Verify Staging
+- Access the **HTTPS staging URL**:
+  - Example: `https://staging.p3academy.com`
+- Verify Stripe test payments (`4242 4242 4242 4242`)
+- Validate logs and API health endpoints.
 
-3. **Review & Test in Staging**
-   - Test functionality in staging environment
-   - Verify changes work as expected
-   - Get code review approval
+### 4. Merge to `main`
+- Auto-deploys to staging again.
+- Smoke tests run (E2E, DB migration, health).
+- Workflow uploads logs automatically.
 
-4. **Merge to Main**
-   - Merge PR to `main` branch
-   - **Main deployment workflow triggered automatically**:
-     - ✅ Tests run
-     - ✅ Application built
-     - ✅ Deployed to staging
-     - ✅ Smoke tests run
-     - ⏸️ **Waits for production approval**
+### 5. Review with Founders (Offline)
+- You and founders test the staging build.  
+- Confirm readiness for production.
 
-5. **Approve Production Deployment**
-   - See [Approval Workflow](#approval-workflow) section
-   - Navigate to Actions → Select workflow run
-   - Click **Review deployments**
-   - Select **production**
-   - Click **Approve and deploy**
+### 6. Promote to Production
+Run manually via one of two ways:
 
-6. **Monitor Production Deployment**
-   - Watch workflow complete production deployment
-   - Verify health checks pass
-   - Test production environment
+**A) GitHub UI**
+1. Go to **Actions → Promote workflow**
+2. Input artifact SHA or version
+3. Click “Run workflow”
 
-### Emergency Hotfix Deployment
-
-For critical production issues:
-
-1. **Create hotfix branch from main**
-   ```bash
-   git checkout main
-   git pull
-   git checkout -b hotfix/critical-issue
-   ```
-
-2. **Make minimal changes**
-   - Fix only the critical issue
-   - Test locally
-
-3. **Fast-track deployment**
-   - Create PR (triggers staging deployment)
-   - Test in staging immediately
-   - Merge to main as soon as validated
-   - Approve production deployment immediately
-
-### Rollback Procedure
-
-If production deployment fails or introduces issues:
-
-1. **Via GitHub Actions** (recommended):
-   ```bash
-   # Find previous successful deployment version
-   aws elasticbeanstalk describe-application-versions \
-     --application-name p3-interview-academy \
-     --query 'ApplicationVersions[?Status==`PROCESSED`].[VersionLabel,DateCreated]' \
-     --output table
-
-   # Deploy previous version
-   aws elasticbeanstalk update-environment \
-     --environment-name p3-interview-academy-prod-v2 \
-     --version-label <PREVIOUS_VERSION_LABEL>
-   ```
-
-2. **Via AWS Console**:
-   - Navigate to Elastic Beanstalk
-   - Select `p3-interview-academy-prod-v2`
-   - Click **Application versions**
-   - Select previous working version
-   - Click **Deploy**
+**B) Comment trigger**
+Comment anywhere:
+```
+/promote <sha>
+```
+(Your GitHub handle is authorized to trigger.)
 
 ---
 
-## Approval Workflow
+## Promotion & Review Flow
 
-### How to Approve Production Deployments
+| Step | Trigger | Result |
+|------|----------|---------|
+| Auto Deploy to Staging | Merge to `main` | `https://staging...` live |
+| Manual Review | You + founders | Confirm readiness |
+| `/promote <sha>` | Comment or manual trigger | Prod deploy |
+| Post-deploy | Automated | Smoke tests + summary comment |
+| Failure | Auto | Codex review with log artifacts |
 
-When a deployment to `main` is triggered, the workflow will pause at the production deployment job.
-
-#### Step 1: Receive Notification
-
-- GitHub will send notifications to required reviewers
-- Check email or GitHub notifications
-- Look for "Waiting for approval" status
-
-#### Step 2: Review Deployment
-
-1. Go to repository **Actions** tab
-2. Click on the waiting workflow run
-3. Review the workflow progress:
-   - ✅ Verify tests passed
-   - ✅ Verify build succeeded
-   - ✅ Verify staging deployment succeeded
-   - ✅ Verify smoke tests passed
-4. Click on **Review deployments** button (yellow banner at top)
-
-#### Step 3: Approve or Reject
-
-**Approval Dialog**:
-- Environment: `production`
-- Checkbox: Select `production`
-- Comment (optional): Add approval notes
-- Click **Approve and deploy**
-
-**To Reject**:
-- Leave checkbox unchecked
-- Add comment explaining rejection
-- Click **Reject**
-
-#### Step 4: Monitor Production Deployment
-
-After approval:
-- Workflow resumes automatically
-- Production deployment proceeds
-- Health checks run
-- Workflow completes
-
-### Approval Best Practices
-
-✅ **Do**:
-- Verify all smoke tests passed
-- Check staging environment works correctly
-- Review code changes being deployed
-- Add approval comments for audit trail
-- Approve within reasonable time (workflow times out after 30 days)
-
-❌ **Don't**:
-- Approve without reviewing smoke test results
-- Approve if staging has issues
-- Skip verification steps
-- Approve deployments you didn't initiate (unless expected)
+### Codex Cloud Integration
+- On any failure, workflow auto-comments:
+  ```
+  @codex review
+  Artifacts: staging-logs-<run_id>
+  Run: https://github.com/org/repo/actions/runs/<id>
+  ```
+- Codex analyzes logs and proposes a PR with fixes.
 
 ---
 
 ## Manual Deployment
 
-For situations where CI/CD is unavailable or troubleshooting is needed.
+Fallback only.
 
 ### Prerequisites
-
 ```bash
-# Install dependencies
 npm ci
-
-# Configure AWS CLI
-aws configure
-# Or use environment variables:
-export AWS_ACCESS_KEY_ID="your-access-key"
-export AWS_SECRET_ACCESS_KEY="your-secret-key"
-export AWS_DEFAULT_REGION="ap-southeast-1"
+aws configure sso   # or use OIDC assumed role
 ```
 
-### Manual Deployment to Staging
-
+### Manual Staging Deployment
 ```bash
-# 1. Build application
 npm run build
-
-# 2. Create deployment bundle
 bash deployment-scripts/create-deployment-bundle.sh
-
-# 3. Deploy to staging
 bash deployment-scripts/deploy-to-eb.sh staging
-
-# 4. Verify deployment
-curl http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/health
 ```
 
-### Manual Deployment to Production
-
+### Manual Production Deployment
 ```bash
-# 1. Build application
 npm run build
-
-# 2. Create deployment bundle
 bash deployment-scripts/create-deployment-bundle.sh
-
-# 3. Deploy to production
 bash deployment-scripts/deploy-to-eb.sh production
-
-# 4. Verify deployment
-curl http://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/health
 ```
 
-### Full Deployment Script
-
+Verify:
 ```bash
-# Interactive deployment script (recommended)
-bash deployment-scripts/full-deployment.sh
+curl https://p3-interview-academy-prod-v2.ap-southeast-1.elasticbeanstalk.com/api/health
 ```
 
-This script will:
-1. Validate environment
-2. Run tests
-3. Build application
-4. Create deployment bundle
-5. Deploy to selected environment
-6. Verify deployment
+---
+
+## Failure Handling
+
+| Situation | Action |
+|------------|--------|
+| Workflow stuck or cancelled | Auto-triggers Codex review |
+| E2E timeout | Retry failed job only |
+| DB migration stuck | Manually terminate session, retry |
+| Docker push fails | Re-run from “build-package” |
+| AWS EB health red | Roll back via `update-environment` |
+
+Rollback example:
+```bash
+aws elasticbeanstalk update-environment   --environment-name p3-interview-academy-prod-v2   --version-label <PREVIOUS_VERSION_LABEL>
+```
+
+---
+
+## Stripe HTTPS Configuration
+
+Stripe requires **HTTPS** for all webhook and checkout URLs.  
+
+| Requirement | Stage | Setting |
+|--------------|--------|----------|
+| Protocol | HTTPS only | Enforced by EB load balancer |
+| TLS | ≥ 1.2 | AWS ACM cert |
+| Mode | Test | Staging |
+| Mode | Live | Production |
+| Redirects | Both | Configured via `.ebextensions/01-https-redirect.config` |
+
+**.ebextensions/01-https-redirect.config**
+```yaml
+option_settings:
+  aws:elasticbeanstalk:environment:proxy:staticfiles:
+    /: public
+files:
+  "/etc/nginx/conf.d/https_redirect.conf":
+    content: |
+      server {
+        listen 80;
+        return 301 https://$host$request_uri;
+      }
+```
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
-
-#### Issue: "Waiting for approval" times out
-
-**Solution**:
-- Approvals expire after 30 days
-- Re-run the workflow from GitHub Actions
-- Or merge a new commit to trigger fresh deployment
-
-#### Issue: Smoke tests fail
-
-**Causes**:
-- Staging deployment unhealthy
-- Database connectivity issues
-- API endpoint changes
-
-**Solution**:
-1. Check staging health: `curl http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/health`
-2. Review smoke test logs in GitHub Actions
-3. Fix issues and push new commit
-4. Or skip smoke tests via manual workflow dispatch (not recommended)
-
-#### Issue: Production deployment fails
-
-**Solution**:
-1. Check AWS EB logs:
-   ```bash
-   aws elasticbeanstalk describe-events \
-     --environment-name p3-interview-academy-prod-v2 \
-     --max-items 20
-   ```
-2. Check health status:
-   ```bash
-   aws elasticbeanstalk describe-environments \
-     --environment-names p3-interview-academy-prod-v2
-   ```
-3. Rollback to previous version (see [Rollback Procedure](#rollback-procedure))
-
-#### Issue: Environment secrets missing
-
-**Solution**:
-1. Go to **Settings** → **Environments** → Select environment
-2. Add missing secrets
-3. Re-run workflow
-
-### Deployment Scripts
-
-Useful scripts in `deployment-scripts/`:
-
-- **`check-environment-status.sh`** - Check EB environment health
-- **`verify-database.sh`** - Verify database connectivity
-- **`smoke-tests.ts`** - Run smoke tests manually
-  ```bash
-  npx tsx deployment-scripts/smoke-tests.ts http://staging-url
-  ```
-
-### AWS CLI Commands
-
-```bash
-# Check environment status
-aws elasticbeanstalk describe-environments \
-  --environment-names p3-interview-academy-prod-v2
-
-# View recent events
-aws elasticbeanstalk describe-events \
-  --environment-name p3-interview-academy-prod-v2 \
-  --max-items 20
-
-# List application versions
-aws elasticbeanstalk describe-application-versions \
-  --application-name p3-interview-academy
-
-# View environment health
-aws elasticbeanstalk describe-environment-health \
-  --environment-name p3-interview-academy-prod-v2 \
-  --attribute-names All
-```
+| Issue | Likely Cause | Solution |
+|--------|---------------|-----------|
+| “Waiting for approval” timeout | Old workflow | Use new hybrid flow (no approvals) |
+| Codex not triggered | Comment failed | Check `codex-review.yml` step |
+| Stripe checkout fails | HTTP staging URL | Switch to HTTPS |
+| DB errors | Stale migrations | Rollback and rebuild |
+| EB unhealthy | Instance init failed | View `eb logs --all` |
 
 ### Health Check URLs
-
-- **Production**: `http://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/health`
-- **Staging**: `http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com/api/health`
-
-### Support
-
-For additional help:
-- Check **[CLAUDE.md](CLAUDE.md)** for architecture overview
-- Review **[ops-log/](docs/ops-log/)** for recent deployment history
-- Check **[SECURITY.md](SECURITY.md)** for credential management
+- **Staging:** `https://p3-interview-academy-staging.../api/health`  
+- **Production:** `https://p3-interview-academy-prod-v2.../api/health`
 
 ---
 
-**Last Updated**: 2025-10-28
-**Document Version**: 1.0 (Initial)
+## Summary
+
+This streamlined hybrid model provides:
+✅ Secure OIDC-based AWS deployments  
+✅ Single-artifact promotion  
+✅ HTTPS staging for Stripe compliance  
+✅ Manual but auditable promotion  
+✅ Automatic AI triage via Codex Cloud  
+
+---
+
+**Last Updated:** 2025-10-29  
+**Document Version:** 2.0 (Hybrid Codex CI/CD)

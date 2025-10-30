@@ -7,8 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { base44 } from "@/api/base44Client";
-import { useMutation } from "@tanstack/react-query";
+import { useSubmitFeedback, useCreateTicket } from "@/hooks/useApi";
 
 const contextualTips = {
   Dashboard: [
@@ -43,7 +42,7 @@ export default function FloatingAICoach({ currentPage = "Dashboard" }) {
   
   // Feedback form state
   const [feedbackData, setFeedbackData] = useState({
-    feedback_type: "general_feedback",
+    feedback_type: "general",
     subject: "",
     message: ""
   });
@@ -57,28 +56,15 @@ export default function FloatingAICoach({ currentPage = "Dashboard" }) {
 
   const tips = contextualTips[currentPage] || contextualTips.Dashboard;
 
-  const feedbackMutation = useMutation({
-    mutationFn: async (data) => {
-      return await base44.entities.Feedback.create({
-        ...data,
-        page: currentPage
-      });
-    },
+  const feedbackMutation = useSubmitFeedback({
     onSuccess: () => {
       alert("Thank you for your feedback! We'll review it and get back to you soon.");
-      setFeedbackData({ feedback_type: "general_feedback", subject: "", message: "" });
+      setFeedbackData({ feedback_type: "general", subject: "", message: "" });
       setShowFeedback(false);
     }
   });
 
-  const supportMutation = useMutation({
-    mutationFn: async (data) => {
-      const ticketNumber = `TICKET-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
-      return await base44.entities.SupportTicket.create({
-        ...data,
-        ticket_number: ticketNumber
-      });
-    },
+  const supportMutation = useCreateTicket({
     onSuccess: (ticket) => {
       alert(`Support ticket created! Your ticket number is: ${ticket.ticket_number}\n\nOur team will respond within 24 hours.`);
       setSupportData({ category: "technical", subject: "", message: "" });
@@ -250,11 +236,10 @@ export default function FloatingAICoach({ currentPage = "Dashboard" }) {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="feature_request">Feature Request</SelectItem>
-                            <SelectItem value="bug_report">Bug Report</SelectItem>
-                            <SelectItem value="general_feedback">General Feedback</SelectItem>
-                            <SelectItem value="complaint">Complaint</SelectItem>
-                            <SelectItem value="praise">Praise</SelectItem>
+                            <SelectItem value="feature">Feature Request</SelectItem>
+                            <SelectItem value="bug">Bug Report</SelectItem>
+                            <SelectItem value="improvement">Improvement</SelectItem>
+                            <SelectItem value="general">General Feedback</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>

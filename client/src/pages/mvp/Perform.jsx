@@ -1,10 +1,15 @@
 
 import React from "react";
-import { base44 } from "@/api/base44Client";
-import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Award, Target, Zap, BookOpen } from "lucide-react";
 import { motion } from "framer-motion";
+import {
+  useReadinessScore,
+  useXPPoints,
+  useUserBadges,
+  useSimulationHistory,
+  usePerformanceStats
+} from '@/hooks/useApi';
 
 import PerformanceChart from "../components/perform/PerformanceChart";
 import BadgeGallery from "../components/perform/BadgeGallery";
@@ -13,43 +18,33 @@ import ActualInterviewTracker from "../components/perform/ActualInterviewTracker
 import ReflectionJournalList from "../components/perform/ReflectionJournalList";
 
 export default function Perform() {
-  const { data: userProfile } = useQuery({
-    queryKey: ['userProfile'],
-    queryFn: async () => {
-      const currentUser = await base44.auth.me();
-      const profiles = await base44.entities.UserProfile.filter({ user_id: currentUser.id });
-      return profiles[0] || { xp_points: 0, current_streak: 0, total_simulations: 0, readiness_score: 0 };
-    }
-  });
+  // Fetch data using P3 API hooks
+  const { data: readinessData } = useReadinessScore();
+  const { data: xpData } = useXPPoints();
+  const { data: badges = [] } = useUserBadges();
+  const { data: historyData } = useSimulationHistory();
+  const { data: performanceStats } = usePerformanceStats();
 
-  const { data: simulations = [] } = useQuery({
-    queryKey: ['simulations'],
-    queryFn: () => base44.entities.InterviewSimulation.list('-created_date')
-  });
-
-  const { data: badges = [] } = useQuery({
-    queryKey: ['userBadges'],
-    queryFn: () => base44.entities.UserBadge.list('-earned_date')
-  });
+  const simulations = historyData?.sessions || [];
 
   const stats = [
     {
       label: "Readiness Score",
-      value: `${Math.round(userProfile?.readiness_score || 0)}%`,
+      value: `${Math.round(readinessData?.overall_score || 0)}%`,
       icon: Target,
       color: "from-blue-500 to-blue-600",
       change: "+12% this week"
     },
     {
-      label: "Total Rewards Points", // Changed from "Total XP"
-      value: userProfile?.xp_points || 0,
+      label: "Total Rewards Points",
+      value: xpData?.points || 0,
       icon: Zap,
       color: "from-yellow-500 to-orange-500",
       change: "Keep earning!"
     },
     {
       label: "Simulations",
-      value: userProfile?.total_simulations || 0,
+      value: performanceStats?.total_simulations || simulations.length,
       icon: TrendingUp,
       color: "from-purple-500 to-pink-500",
       change: "Great progress!"
@@ -105,10 +100,10 @@ export default function Perform() {
 
         <div className="grid lg:grid-cols-3 gap-6 mb-8">
           <div className="lg:col-span-2">
-            <PerformanceChart simulations={simulations} />
+            <PerformanceChart />
           </div>
           <div>
-            <InsightsPanel simulations={simulations} userProfile={userProfile} />
+            <InsightsPanel />
           </div>
         </div>
 
@@ -120,7 +115,7 @@ export default function Perform() {
           <ReflectionJournalList />
         </div>
 
-        <BadgeGallery badges={badges} />
+        <BadgeGallery />
       </div>
     </div>
   );
