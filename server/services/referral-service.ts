@@ -218,6 +218,7 @@ export class ReferralService {
       await CreditService.addCredits(
         referral.referrerId,
         rewardAmount,
+        'top-up',
         `Referral reward for referring ${referral.referredEmail}`
       );
 
@@ -225,6 +226,7 @@ export class ReferralService {
       await CreditService.addCredits(
         referral.referredUserId,
         rewardAmount,
+        'top-up',
         `Welcome bonus for using referral code ${referral.referralCode}`
       );
 

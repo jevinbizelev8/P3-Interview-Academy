@@ -182,7 +182,7 @@ export class ResumeService {
         resumeId,
         resume.userId,
         analysis,
-        resume.jobDescriptionId
+        resume.jobDescriptionId || undefined
       );
 
       console.log(
@@ -241,15 +241,19 @@ Respond with ONLY a JSON object in this exact format:
   "suggestions": ["suggestion1", "suggestion2", "suggestion3"]
 }`;
 
-      const response = await this.openAIService.chat([
-        {
-          role: "user",
-          content: prompt,
-        },
-      ]);
+      const response = await this.openAIService.generateResponse({
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        maxTokens: 2000,
+        temperature: 0.7,
+      });
 
       // Parse AI response
-      const analysisText = response.content?.trim() || "{}";
+      const analysisText = response.trim() || "{}";
 
       // Extract JSON from potential markdown code blocks
       const jsonMatch = analysisText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);

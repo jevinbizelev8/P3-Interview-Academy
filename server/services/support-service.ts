@@ -323,7 +323,7 @@ export class SupportService {
       let averageResolutionTime: number | null = null;
       if (resolvedWithTime.length > 0) {
         const totalResolutionTime = resolvedWithTime.reduce((sum, ticket) => {
-          const created = new Date(ticket.createdAt).getTime();
+          const created = new Date(ticket.createdAt!).getTime();
           const resolved = new Date(ticket.resolvedAt!).getTime();
           return sum + (resolved - created);
         }, 0);

@@ -22,21 +22,17 @@ export class BadgeService {
    */
   static async getAllBadges(category?: string): Promise<Badge[]> {
     try {
-      let query = db
-        .select()
-        .from(badges)
-        .where(eq(badges.isActive, true));
+      const conditions = [eq(badges.isActive, true)];
 
       if (category) {
-        query = query.where(
-          and(
-            eq(badges.isActive, true),
-            eq(badges.category, category)
-          )
-        );
+        conditions.push(eq(badges.category, category));
       }
 
-      const allBadges = await query.orderBy(badges.sortOrder, badges.category);
+      const allBadges = await db
+        .select()
+        .from(badges)
+        .where(and(...conditions))
+        .orderBy(badges.sortOrder, badges.category);
 
       console.log(
         `✅ Retrieved ${allBadges.length} badge(s)${category ? ` in category: ${category}` : ''}`

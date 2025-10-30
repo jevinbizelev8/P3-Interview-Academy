@@ -1,6 +1,7 @@
 import { db } from "../db";
 import {
   practiceSessions,
+  practiceReports,
   actualInterviews,
   userModuleProgress,
   reflectionJournals,
@@ -45,20 +46,24 @@ export class AnalyticsService {
     recommendations: string[];
   }> {
     try {
-      // Practice sessions stats
+      // Practice sessions stats with reports
       const allPracticeSessions = await db
-        .select()
+        .select({
+          session: practiceSessions,
+          report: practiceReports,
+        })
         .from(practiceSessions)
+        .leftJoin(practiceReports, eq(practiceSessions.id, practiceReports.sessionId))
         .where(eq(practiceSessions.userId, userId));
 
       const completedPracticeSessions = allPracticeSessions.filter(
-        (s) => s.status === "completed"
+        (s) => s.session.status === "completed" && s.report
       );
 
       const practiceScores = completedPracticeSessions
-        .filter((s) => s.overallStarScore !== null)
-        .map((s) => s.overallStarScore!);
-
+        .filter((s) => s.report?.overallScore !== null)
+        .map((s) => parseFloat(s.report!.overallScore!))
+        .filter((s) => !isNaN(s));
       const averagePracticeScore =
         practiceScores.length > 0
           ? practiceScores.reduce((sum, score) => sum + score, 0) / practiceScores.length
@@ -199,10 +204,14 @@ export class AnalyticsService {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - days);
 
-      // Get practice sessions
+      // Get practice sessions with reports
       const sessions = await db
-        .select()
+        .select({
+          session: practiceSessions,
+          report: practiceReports,
+        })
         .from(practiceSessions)
+        .leftJoin(practiceReports, eq(practiceSessions.id, practiceReports.sessionId))
         .where(
           and(
             eq(practiceSessions.userId, userId),
@@ -235,19 +244,22 @@ export class AnalyticsService {
       // Group by date
       const chartData = new Map<string, { practice: number[]; modules: number; reflections: number }>();
 
-      sessions.forEach((session) => {
-        const date = new Date(session.createdAt).toISOString().split("T")[0];
+      sessions.forEach((s) => {
+        const date = new Date(s.session.createdAt!).toISOString().split("T")[0];
         if (!chartData.has(date)) {
           chartData.set(date, { practice: [], modules: 0, reflections: 0 });
         }
-        if (session.overallStarScore) {
-          chartData.get(date)!.practice.push(session.overallStarScore);
+        if (s.report?.overallScore) {
+          const score = parseFloat(s.report.overallScore);
+          if (!isNaN(score)) {
+            chartData.get(date)!.practice.push(score);
+          }
         }
       });
 
       modules.forEach((module) => {
         if (!module.completedAt) return;
-        const date = new Date(module.completedAt).toISOString().split("T")[0];
+        const date = new Date(module.completedAt!).toISOString().split("T")[0];
         if (!chartData.has(date)) {
           chartData.set(date, { practice: [], modules: 0, reflections: 0 });
         }
@@ -255,7 +267,7 @@ export class AnalyticsService {
       });
 
       reflections.forEach((reflection) => {
-        const date = new Date(reflection.createdAt).toISOString().split("T")[0];
+        const date = new Date(reflection.createdAt!).toISOString().split("T")[0];
         if (!chartData.has(date)) {
           chartData.set(date, { practice: [], modules: 0, reflections: 0 });
         }
@@ -307,9 +319,10 @@ export class AnalyticsService {
       const insights = await this.getPerformanceInsights(userId);
 
       // Get streak info from users table
-      const [user] = await db.execute(
+      const result = await db.execute(
         sql`SELECT current_streak, longest_streak FROM users WHERE id = ${userId}`
       );
+      const user = result.rows?.[0];
 
       const currentStreak = (user as any)?.current_streak || 0;
       const longestStreak = (user as any)?.longest_streak || 0;

@@ -180,15 +180,19 @@ Respond with ONLY a JSON object in this exact format:
   "suggestions": ["suggestion1", "suggestion2"]
 }`;
 
-      const response = await this.openAIService.chat([
-        {
-          role: "user",
-          content: prompt,
-        },
-      ]);
+      const response = await this.openAIService.generateResponse({
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        maxTokens: 1500,
+        temperature: 0.7,
+      });
 
       // Parse AI response
-      const feedbackText = response.content?.trim() || "{}";
+      const feedbackText = response.trim() || "{}";
 
       // Extract JSON from potential markdown code blocks
       const jsonMatch = feedbackText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);

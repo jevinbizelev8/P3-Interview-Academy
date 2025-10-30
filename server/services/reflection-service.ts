@@ -64,21 +64,17 @@ export class ReflectionService {
     practiceSessionId?: string
   ): Promise<ReflectionJournal[]> {
     try {
-      let query = db
-        .select()
-        .from(reflectionJournals)
-        .where(eq(reflectionJournals.userId, userId));
+      const conditions = [eq(reflectionJournals.userId, userId)];
 
       if (practiceSessionId) {
-        query = query.where(
-          and(
-            eq(reflectionJournals.userId, userId),
-            eq(reflectionJournals.practiceSessionId, practiceSessionId)
-          )
-        );
+        conditions.push(eq(reflectionJournals.practiceSessionId, practiceSessionId));
       }
 
-      const reflections = await query.orderBy(desc(reflectionJournals.createdAt));
+      const reflections = await db
+        .select()
+        .from(reflectionJournals)
+        .where(and(...conditions))
+        .orderBy(desc(reflectionJournals.createdAt));
 
       console.log(
         `✅ Retrieved ${reflections.length} reflection(s) for user ${userId}`
@@ -146,7 +142,7 @@ export class ReflectionService {
       const now = new Date();
       const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const recentReflections = reflections.filter(
-        (r) => new Date(r.createdAt) >= oneWeekAgo
+        (r) => new Date(r.createdAt!) >= oneWeekAgo
       );
       const reflectionFrequency = recentReflections.length;
 

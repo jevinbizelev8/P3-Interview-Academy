@@ -24,22 +24,18 @@ export class LearningModuleService {
    */
   static async getModules(stage?: string): Promise<LearningModule[]> {
     try {
-      const query = db
-        .select()
-        .from(learningModules)
-        .where(eq(learningModules.isActive, true));
+
+      const conditions = [eq(learningModules.isActive, true)];
 
       if (stage) {
-        query.where(
-          and(
-            eq(learningModules.isActive, true),
-            eq(learningModules.stage, stage)
-          )
-        );
+        conditions.push(eq(learningModules.stage, stage));
       }
 
-      const modules = await query.orderBy(learningModules.sortOrder);
-
+      const modules = await db
+        .select()
+        .from(learningModules)
+        .where(and(...conditions))
+        .orderBy(learningModules.sortOrder);
       console.log(`✅ Retrieved ${modules.length} learning modules${stage ? ` for stage: ${stage}` : ''}`);
       return modules;
     } catch (error) {
@@ -63,21 +59,17 @@ export class LearningModuleService {
     moduleId?: string
   ): Promise<UserModuleProgress[]> {
     try {
-      let query = db
-        .select()
-        .from(userModuleProgress)
-        .where(eq(userModuleProgress.userId, userId));
+      const conditions = [eq(userModuleProgress.userId, userId)];
 
       if (moduleId) {
-        query = query.where(
-          and(
-            eq(userModuleProgress.userId, userId),
-            eq(userModuleProgress.moduleId, moduleId)
-          )
-        );
+        conditions.push(eq(userModuleProgress.moduleId, moduleId));
       }
 
-      const progress = await query.orderBy(desc(userModuleProgress.updatedAt));
+      const progress = await db
+        .select()
+        .from(userModuleProgress)
+        .where(and(...conditions))
+        .orderBy(desc(userModuleProgress.updatedAt));
 
       console.log(
         `✅ Retrieved progress for user ${userId}: ${progress.length} module(s)`

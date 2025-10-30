@@ -167,7 +167,7 @@ export class GamificationService {
       if (existingBadge) {
         // Update progress if not already earned
         if (!existingBadge.earnedDate) {
-          const newProgress = progress !== undefined ? progress : existingBadge.progress + 1;
+          const newProgress = progress !== undefined ? progress : (existingBadge.progress || 0) + 1;
           const shouldAward = newProgress >= badge.requirementValue;
 
           const updateData: Partial<InsertUserBadge> = {

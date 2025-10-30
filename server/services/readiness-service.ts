@@ -2,6 +2,7 @@ import { db } from "../db";
 import {
   users,
   practiceSessions,
+  practiceReports,
   userModuleProgress,
   learningModules,
   selfIntros,
@@ -136,8 +137,12 @@ export class ReadinessService {
     try {
       // Get last 5 completed practice sessions
       const sessions = await db
-        .select()
+        .select({
+          session: practiceSessions,
+          report: practiceReports,
+        })
         .from(practiceSessions)
+        .leftJoin(practiceReports, eq(practiceSessions.id, practiceReports.sessionId))
         .where(
           and(
             eq(practiceSessions.userId, userId),
@@ -151,9 +156,9 @@ export class ReadinessService {
         return 0; // No simulations completed
       }
 
-      // Calculate average STAR score
-      const totalScore = sessions.reduce((sum, session) => {
-        const starScore = session.overallStarScore || 0;
+      // Calculate average STAR score from reports
+      const totalScore = sessions.reduce((sum, s) => {
+        const starScore = s.report?.overallScore ? parseFloat(s.report.overallScore) : 0;
         return sum + starScore;
       }, 0);
 
