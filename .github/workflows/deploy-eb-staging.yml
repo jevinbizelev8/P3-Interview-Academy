@@ -10,7 +10,7 @@ env:
   AWS_REGION: ap-southeast-1
   EB_APPLICATION_NAME: p3-interview-academy
   EB_ENVIRONMENT_NAME: p3-interview-academy-staging
-  RUN_CI_DB_MIGRATION: 'false'
+  RUN_CI_DB_MIGRATION: 'true'
 
 jobs:
   test:
