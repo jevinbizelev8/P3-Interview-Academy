@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,109 +48,87 @@ export default function Billing() {
   const [user, setUser] = useState(null);
   const queryClient = useQueryClient();
 
-  useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
-  }, []);
-
   const { data: subscription, isLoading } = useQuery({
     queryKey: ['subscription'],
     queryFn: async () => {
-      const user = await base44.auth.me();
-      const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-      
-      if (subs.length === 0) {
-        return await base44.entities.Subscription.create({
-          user_id: user.id,
-          plan_type: "STARTER",
-          billing_cycle: "monthly",
-          seats: 1,
-          monthly_credits: 50,
-          current_credits: 50,
-          price_per_seat: 0,
-          status: "active"
-        });
-      }
-      return subs[0];
+      const response = await fetch('/api/subscription/status');
+      if (!response.ok) throw new Error('Failed to fetch subscription');
+      const result = await response.json();
+      return result.success ? result.data : null;
     }
   });
 
   const { data: creditHistory = [] } = useQuery({
     queryKey: ['creditHistory'],
-    queryFn: () => base44.entities.CreditLedger.list('-created_date', 20)
+    queryFn: async () => {
+      const response = await fetch('/api/subscription/topup-history?limit=20');
+      if (!response.ok) throw new Error('Failed to fetch credit history');
+      const result = await response.json();
+      return result.success ? result.data.history : [];
+    }
   });
 
-  const { data: invoices = [] } = useQuery({
-    queryKey: ['invoices'],
-    queryFn: () => base44.entities.Invoice.list('-created_date', 10)
+  const { data: topUpPackages = [] } = useQuery({
+    queryKey: ['topUpPackages'],
+    queryFn: async () => {
+      const response = await fetch('/api/subscription/topup-packages');
+      if (!response.ok) throw new Error('Failed to fetch top-up packages');
+      const result = await response.json();
+      return result.success ? result.data.packages : [];
+    }
   });
 
   const upgradePlan = useMutation({
-    mutationFn: async ({ planType, billingCycle }) => {
-      const planDetails = PLANS[planType];
-      const nextRenewal = new Date();
-      
-      if (billingCycle === "monthly") {
-        nextRenewal.setMonth(nextRenewal.getMonth() + 1);
-      } else if (billingCycle === "3-month") {
-        nextRenewal.setMonth(nextRenewal.getMonth() + 3);
-      } else {
-        nextRenewal.setMonth(nextRenewal.getMonth() + 6);
+    mutationFn: async ({ planType }) => {
+      const response = await fetch('/api/subscription/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tier: planType
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create checkout session');
       }
 
-      await base44.entities.Subscription.update(subscription.id, {
-        plan_type: planType,
-        billing_cycle: billingCycle,
-        monthly_credits: planDetails.monthlyCredits,
-        current_credits: subscription.current_credits + planDetails.monthlyCredits,
-        price_per_seat: planDetails.price[billingCycle],
-        next_renewal_date: nextRenewal.toISOString().split('T')[0],
-        status: "active"
-      });
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to create checkout session');
+      }
 
-      await base44.entities.CreditLedger.create({
-        user_id: user.id,
-        transaction_type: "allocation",
-        credits_amount: planDetails.monthlyCredits,
-        balance_after: subscription.current_credits + planDetails.monthlyCredits,
-        description: `Plan upgrade to ${planType} - ${billingCycle} billing`
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['subscription']);
-      queryClient.invalidateQueries(['creditHistory']);
+      // Redirect to Stripe Checkout
+      window.location.href = result.data.url;
     }
   });
 
   const purchaseTopUp = useMutation({
-    mutationFn: async ({ credits, price }) => {
-      const newBalance = subscription.current_credits + credits;
-      
-      await base44.entities.Subscription.update(subscription.id, {
-        current_credits: newBalance
+    mutationFn: async ({ packageType }) => {
+      const response = await fetch('/api/subscription/create-topup-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          packageType: packageType
+        }),
       });
 
-      await base44.entities.CreditLedger.create({
-        user_id: user.id,
-        transaction_type: "top-up",
-        credits_amount: credits,
-        balance_after: newBalance,
-        description: `Credit top-up: ${credits} credits for $${price}`
-      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create top-up checkout');
+      }
 
-      await base44.entities.Invoice.create({
-        user_id: user.id,
-        subscription_id: subscription.id,
-        amount: price,
-        invoice_number: `INV-${Date.now()}`,
-        billing_period_start: new Date().toISOString().split('T')[0],
-        billing_period_end: new Date().toISOString().split('T')[0],
-        status: "paid"
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['subscription']);
-      queryClient.invalidateQueries(['creditHistory']);
-      queryClient.invalidateQueries(['invoices']);
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to create top-up checkout');
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = result.data.url;
     }
   });
 
@@ -167,7 +144,7 @@ export default function Billing() {
   }
 
   const currentPlan = PLANS[subscription?.plan_type] || PLANS.STARTER;
-  const creditUsagePercent = (subscription?.current_credits / subscription?.monthly_credits) * 100 || 0;
+  const creditUsagePercent = subscription?.monthlyCredits ? ((subscription?.monthlyCredits - subscription?.creditBalance) / subscription?.monthlyCredits) * 100 : 0;
   const isLowCredit = creditUsagePercent < 20;
 
   return (
@@ -231,10 +208,10 @@ export default function Billing() {
                 </Badge>
               </div>
               <h3 className="text-2xl font-bold mb-1">Credits Balance</h3>
-              <p className="text-3xl font-bold text-yellow-700">
-                {subscription?.current_credits || 0}
-                <span className="text-sm text-gray-600"> / {subscription?.monthly_credits || 50}</span>
-              </p>
+               <p className="text-3xl font-bold text-yellow-700">
+                 {subscription?.creditBalance || 0}
+                 <span className="text-sm text-gray-600"> / {subscription?.monthlyCredits || 50}</span>
+               </p>
               <Progress value={creditUsagePercent} className="mt-3 h-2" />
             </CardContent>
           </Card>
@@ -245,18 +222,16 @@ export default function Billing() {
                 <div className="w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
                   <Calendar className="w-7 h-7 text-white" />
                 </div>
-                <Badge className={subscription?.auto_renew ? 'bg-green-600' : 'bg-gray-600'}>
-                  {subscription?.auto_renew ? 'Auto-Renew On' : 'Auto-Renew Off'}
+                <Badge className={subscription?.subscriptionStatus === 'active' ? 'bg-green-600' : 'bg-gray-600'}>
+                  {subscription?.subscriptionStatus === 'active' ? 'Active' : 'Inactive'}
                 </Badge>
               </div>
-              <h3 className="text-2xl font-bold mb-1">Next Renewal</h3>
+              <h3 className="text-2xl font-bold mb-1">Current Plan</h3>
               <p className="text-lg font-semibold text-blue-700">
-                {subscription?.next_renewal_date 
-                  ? format(new Date(subscription.next_renewal_date), 'MMM d, yyyy')
-                  : 'N/A'}
+                {subscription?.planType || 'STARTER'}
               </p>
               <p className="text-sm text-gray-600 mt-2">
-                {subscription?.monthly_credits} credits will be added
+                {subscription?.monthlyCredits || 50} monthly credits
               </p>
             </CardContent>
           </Card>
@@ -273,7 +248,7 @@ export default function Billing() {
             <div className="grid md:grid-cols-3 gap-6">
               {Object.keys(PLANS).map((planKey) => {
                 const plan = PLANS[planKey];
-                const isCurrent = subscription?.plan_type === planKey;
+                const isCurrent = subscription?.planType === planKey;
                 
                 return (
                   <Card key={planKey} className={`border-none shadow-lg ${isCurrent ? 'border-2 border-purple-500' : ''}`}>
@@ -294,10 +269,9 @@ export default function Billing() {
                     </CardHeader>
                     <CardContent>
                       {!isCurrent && planKey !== 'STARTER' && (
-                        <Button 
-                          onClick={() => upgradePlan.mutate({ 
-                            planType: planKey, 
-                            billingCycle: subscription?.billing_cycle || 'monthly' 
+                        <Button
+                          onClick={() => upgradePlan.mutate({
+                            planType: planKey
                           })}
                           disabled={upgradePlan.isPending}
                           className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
@@ -325,38 +299,43 @@ export default function Billing() {
 
           <TabsContent value="topup">
             <div className="grid md:grid-cols-3 gap-6">
-              {TOP_UPS.map((topup) => (
-                <Card key={topup.credits} className={`border-none shadow-lg hover:shadow-xl transition-all ${topup.popular ? 'border-2 border-purple-500' : ''}`}>
-                  <CardHeader>
-                    {topup.popular && (
-                      <Badge className="bg-purple-600 text-white mb-2 w-fit">Best Value</Badge>
-                    )}
-                    <CardTitle className="text-3xl font-bold text-purple-700">
-                      {topup.credits} Credits
-                    </CardTitle>
-                    <div className="text-4xl font-bold my-3">
-                      ${topup.price}
-                    </div>
-                    {topup.popular && (
-                      <Badge className="bg-green-100 text-green-700">
-                        Save {Math.round((1 - (topup.price / (topup.credits * 0.1))) * 100)}%
-                      </Badge>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <Button 
-                      onClick={() => purchaseTopUp.mutate({ credits: topup.credits, price: topup.price })}
-                      disabled={purchaseTopUp.isPending}
-                      className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
-                    >
-                      {purchaseTopUp.isPending ? 'Processing...' : 'Purchase Top-Up'}
-                    </Button>
-                    <p className="text-xs text-gray-500 mt-3 text-center">
-                      ${(topup.price / topup.credits).toFixed(2)} per credit
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+              {topUpPackages?.map((pkg) => {
+                const packageType = pkg.credits === 100 ? 'SMALL' : pkg.credits === 500 ? 'POPULAR' : 'BULK';
+                const isPopular = packageType === 'POPULAR';
+
+                return (
+                  <Card key={pkg.credits} className={`border-none shadow-lg hover:shadow-xl transition-all ${isPopular ? 'border-2 border-purple-500' : ''}`}>
+                    <CardHeader>
+                      {isPopular && (
+                        <Badge className="bg-purple-600 text-white mb-2 w-fit">Best Value</Badge>
+                      )}
+                      <CardTitle className="text-3xl font-bold text-purple-700">
+                        {pkg.credits} Credits
+                      </CardTitle>
+                      <div className="text-4xl font-bold my-3">
+                        ${pkg.price}
+                      </div>
+                      {pkg.savings && (
+                        <Badge className="bg-green-100 text-green-700">
+                          Save {pkg.savings}%
+                        </Badge>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        onClick={() => purchaseTopUp.mutate({ packageType })}
+                        disabled={purchaseTopUp.isPending}
+                        className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white"
+                      >
+                        {purchaseTopUp.isPending ? 'Processing...' : 'Purchase Top-Up'}
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-3 text-center">
+                        ${(pkg.price / pkg.credits).toFixed(2)} per credit
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
 
             <Alert className="mt-6 bg-blue-50 border-blue-200">

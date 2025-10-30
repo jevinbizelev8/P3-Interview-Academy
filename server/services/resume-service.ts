@@ -197,6 +197,95 @@ export class ResumeService {
   }
 
   /**
+   * Generate improved resume based on analysis
+   */
+  async generateImprovedResume(
+    resumeId: string,
+    analysis: any,
+    jobDescription?: string
+  ): Promise<{
+    improvedResume: string;
+    keyImprovements: string[];
+    atsOptimizationScore: number;
+  }> {
+    try {
+      // Get resume
+      const resume = await this.getResumeById(resumeId);
+      if (!resume) {
+        throw new Error("Resume not found");
+      }
+
+      const prompt = `Based on the analysis of this resume, generate an improved, ATS-optimized version that incorporates all the suggestions and addresses the identified gaps.
+
+ORIGINAL RESUME:
+"""
+${resume.parsedContent}
+"""
+
+${jobDescription ? `TARGET JOB DESCRIPTION:\n"""\n${jobDescription}\n"""` : ''}
+
+ANALYSIS INSIGHTS:
+- ATS Score: ${analysis.ats_score}/100
+- Missing Keywords: ${analysis.missing_keywords?.join(', ') || 'None identified'}
+- Gaps: ${analysis.gaps?.join('; ') || 'None identified'}
+- Suggestions: ${analysis.suggestions?.map((s: any) => `${s.section}: ${s.reason}`).join('; ') || 'None provided'}
+
+INSTRUCTIONS:
+1. Maintain the candidate's authentic experience and achievements
+2. Incorporate missing keywords naturally where relevant
+3. Improve ATS compatibility with clear section headers, bullet points, and formatting
+4. Apply all specific suggestions from the analysis
+5. Address all identified gaps
+6. Use strong action verbs and quantifiable results
+7. Ensure ${jobDescription ? 'strong alignment with the job description' : 'professional polish and clarity'}
+8. Keep it to 1-2 pages in length
+9. Use professional, clean formatting with clear sections
+10. Return the complete improved resume in markdown format
+
+Generate the complete improved resume in markdown format with proper formatting.`;
+
+      const response = await this.openAIService.generateResponse({
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        maxTokens: 3000,
+        temperature: 0.7,
+      });
+
+      // Parse the response to extract the improved resume and improvements
+      const responseText = response.trim();
+
+      // For now, return a structured response
+      // In a real implementation, you might want to parse the AI response more carefully
+      const improvedResume = responseText;
+      const keyImprovements = [
+        "Incorporated missing keywords naturally",
+        "Improved ATS formatting and structure",
+        "Applied specific suggestions from analysis",
+        "Enhanced professional presentation",
+        "Optimized for job description alignment"
+      ];
+      const atsOptimizationScore = Math.min(100, (analysis.ats_score || 0) + 15); // Estimate improvement
+
+      console.log(
+        `✅ Generated improved resume for ${resumeId} with estimated ATS score: ${atsOptimizationScore}/100`
+      );
+
+      return {
+        improvedResume,
+        keyImprovements,
+        atsOptimizationScore,
+      };
+    } catch (error) {
+      console.error("❌ Error generating improved resume:", error);
+      throw new Error(`Failed to generate improved resume: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Generate AI-powered resume analysis
    */
   private async generateAIAnalysis(

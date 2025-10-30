@@ -88,6 +88,22 @@ export const users = pgTable("users", {
   readinessScore: integer("readiness_score").default(0),
   referralCode: varchar("referral_code", { length: 50 }).unique(),
 
+  // Extended profile fields (Profile Page Integration)
+  fullName: varchar("full_name"), // Combined first and last name for display
+  mobileNumber: varchar("mobile_number"),
+  linkedinUrl: varchar("linkedin_url"),
+  timezone: varchar("timezone").default(sql`'(UTC+08:00) Singapore, Kuala Lumpur, Hong Kong, Beijing, Perth'::varchar`),
+  country: varchar("country"),
+  currentRole: varchar("current_role"),
+  targetRole: varchar("target_role"),
+  targetIndustry: varchar("target_industry"),
+  yearsExperience: varchar("years_experience"),
+  keySkills: jsonb("key_skills").$type<string[]>(), // Array of skill strings
+  twoFactorEnabled: boolean("two_factor_enabled").default(sql`false`),
+  notificationEmail: boolean("notification_email").default(sql`true`),
+  notificationWhatsapp: boolean("notification_whatsapp").default(sql`false`),
+  notificationSms: boolean("notification_sms").default(sql`false`),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -381,11 +397,17 @@ export const reflectionJournals = pgTable("reflection_journals", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   practiceSessionId: uuid("practice_session_id").references(() => practiceSessions.id, { onDelete: "set null" }),
+  // Legacy fields for backward compatibility
   strengths: text("strengths").notNull(),
   improvements: text("improvements").notNull(),
   actionItems: text("action_items"),
   overallFeeling: varchar("overall_feeling", { length: 50 }),
   moodScore: integer("mood_score"),
+  // New fields for AI-powered reflections
+  reflectionText: text("reflection_text"),
+  aiSummary: text("ai_summary"),
+  aiFollowUpQuestions: jsonb("ai_follow_up_questions"),
+  suggestedResources: jsonb("suggested_resources"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

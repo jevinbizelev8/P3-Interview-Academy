@@ -37,6 +37,7 @@ import creditsRouter from "./routes/credits";
 import adminRouter from "./routes/admin";
 import subscriptionRouter from "./routes/subscriptions";
 import stripeWebhookRouter from "./routes/stripe-webhooks";
+import usersRouter from "./routes/users";
 import testEndpoints from "./test-endpoints";
 import crypto from "crypto";
 
@@ -1943,6 +1944,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/gamification', requireAuthWithBypass, gamificationRouter);
   app.use('/api/practice', requireAuthWithBypass, practiceRouter);
   app.use('/api/perform', requireAuthWithBypass, performRouter);
+
+  // ================================
+  // USER MANAGEMENT ROUTES
+  // ================================
+
+  app.use('/api/user', requireAuthWithBypass, usersRouter);
 
   // ================================
   // CREDIT & REFERRAL MANAGEMENT ROUTES

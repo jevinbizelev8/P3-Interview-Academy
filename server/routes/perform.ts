@@ -363,14 +363,14 @@ router.get(
         return;
       }
 
-      const { practiceSessionId } = req.query;
+      const practiceSessionId = req.query.practiceSessionId as string | undefined;
 
       const reflections = await ReflectionService.getUserReflections(
         userId,
-        practiceSessionId as string | undefined
+        practiceSessionId
       );
 
-      res.status(200).json({
+      res.json({
         success: true,
         data: reflections,
       });
@@ -379,6 +379,69 @@ router.get(
       res.status(500).json({
         success: false,
         error: "Failed to get reflections",
+        details: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/perform/reflections/ai
+ * Create an AI-powered reflection journal entry
+ */
+const createAIReflectionSchema = z.object({
+  practiceSessionId: z.string().uuid("Invalid practice session ID"),
+  reflectionText: z.string().min(10, "Reflection text must be at least 10 characters"),
+  aiSummary: z.string().min(1, "AI summary is required"),
+  aiFollowUpQuestions: z.array(z.string()).min(1, "At least one follow-up question required"),
+  suggestedResources: z.array(z.object({
+    title: z.string(),
+    description: z.string(),
+    link: z.string().optional()
+  })).min(1, "At least one suggested resource required"),
+});
+
+router.post(
+  "/reflections/ai",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: "User not authenticated",
+        });
+        return;
+      }
+
+      const validation = createAIReflectionSchema.safeParse(req.body);
+      if (!validation.success) {
+        res.status(400).json({
+          success: false,
+          error: "Invalid request data",
+          details: validation.error.errors,
+        });
+        return;
+      }
+
+      const reflection = await ReflectionService.createAIReflection(
+        userId,
+        validation.data.practiceSessionId,
+        validation.data.reflectionText,
+        validation.data.aiSummary,
+        validation.data.aiFollowUpQuestions,
+        validation.data.suggestedResources
+      );
+
+      res.status(201).json({
+        success: true,
+        data: reflection,
+      });
+    } catch (error) {
+      console.error("Error creating AI reflection:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to create AI reflection",
         details: error instanceof Error ? error.message : "Unknown error",
       });
     }

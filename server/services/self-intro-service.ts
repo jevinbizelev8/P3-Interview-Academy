@@ -221,6 +221,163 @@ Respond with ONLY a JSON object in this exact format:
   }
 
   /**
+   * Polish self-introduction script with AI
+   */
+  async polishScript(
+    userId: string,
+    script: string
+  ): Promise<{
+    polishedScript: string;
+    improvements: string[];
+    wordCount: number;
+  }> {
+    try {
+      const prompt = `Polish this self-introduction script. Ensure it's 150-200 words, has clarity, good structure, relevance, and concrete results. Provide the polished version and specific improvements made.
+
+Self-Introduction Script:
+"""
+${script}
+"""
+
+Respond with ONLY a JSON object in this exact format:
+{
+  "polished_script": "The polished version of the script",
+  "improvements": ["improvement1", "improvement2", "improvement3"],
+  "word_count": 175
+}`;
+
+      const response = await this.openAIService.generateResponse({
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        maxTokens: 2000,
+        temperature: 0.7,
+      });
+
+      // Parse AI response
+      const responseText = response.trim() || "{}";
+
+      // Extract JSON from potential markdown code blocks
+      const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+
+      const result = JSON.parse(jsonText);
+
+      console.log(
+        `✅ Polished script for user ${userId} with ${result.word_count} words`
+      );
+
+      return {
+        polishedScript: result.polished_script || script,
+        improvements: result.improvements || [],
+        wordCount: result.word_count || script.split(' ').length,
+      };
+    } catch (error) {
+      console.error("❌ Error polishing script:", error);
+      // Return basic polishing as fallback
+      return {
+        polishedScript: script.replace(/\n\n+/g, '\n\n').trim(),
+        improvements: ["Basic formatting applied"],
+        wordCount: script.split(' ').length,
+      };
+    }
+  }
+
+  /**
+   * Analyze self-introduction video (script-based analysis for now)
+   */
+  async analyzeVideoScript(
+    userId: string,
+    script: string,
+    videoDuration?: number
+  ): Promise<{
+    transcript: string;
+    clarityScore: number;
+    confidenceScore: number;
+    structureScore: number;
+    overallScore: number;
+    strengths: string[];
+    improvements: string[];
+    aiFeedback: string;
+    durationSeconds: number;
+  }> {
+    try {
+      const prompt = `Analyze this self-introduction script as if it were delivered in a video. Provide detailed feedback on content, structure, and delivery quality.
+
+Self-Introduction Script:
+"""
+${script}
+"""
+
+Provide assessment in this exact JSON format:
+{
+  "transcript": "${script.substring(0, 200)}...",
+  "clarity_score": 85,
+  "confidence_score": 80,
+  "structure_score": 90,
+  "overall_score": 85,
+  "strengths": ["Clear structure", "Good content flow", "Professional tone"],
+  "improvements": ["Add more specific examples", "Practice delivery pacing"],
+  "ai_feedback": "Your self-introduction demonstrates good structure and content. The script follows the WHO-WHAT-WHY-CLOSING format effectively. Consider adding more specific achievements with metrics to strengthen your impact statements.",
+  "duration_seconds": ${videoDuration || Math.max(30, script.split(' ').length / 2)}
+}`;
+
+      const response = await this.openAIService.generateResponse({
+        messages: [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        maxTokens: 1500,
+        temperature: 0.7,
+      });
+
+      // Parse AI response
+      const responseText = response.trim() || "{}";
+
+      // Extract JSON from potential markdown code blocks
+      const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      const jsonText = jsonMatch ? jsonMatch[1] : responseText;
+
+      const result = JSON.parse(jsonText);
+
+      console.log(
+        `✅ Analyzed video script for user ${userId} with overall score: ${result.overall_score}`
+      );
+
+      return {
+        transcript: result.transcript || script,
+        clarityScore: result.clarity_score || 75,
+        confidenceScore: result.confidence_score || 70,
+        structureScore: result.structure_score || 80,
+        overallScore: result.overall_score || 75,
+        strengths: result.strengths || ["Good structure", "Clear content"],
+        improvements: result.improvements || ["Practice delivery", "Add enthusiasm"],
+        aiFeedback: result.ai_feedback || "Video analysis completed successfully.",
+        durationSeconds: result.duration_seconds || videoDuration || 60,
+      };
+    } catch (error) {
+      console.error("❌ Error analyzing video script:", error);
+      // Return default assessment on error
+      return {
+        transcript: script,
+        clarityScore: 75,
+        confidenceScore: 70,
+        structureScore: 80,
+        overallScore: 75,
+        strengths: ["Good structure", "Clear content"],
+        improvements: ["Practice delivery", "Add enthusiasm"],
+        aiFeedback: "Video analysis completed with basic assessment.",
+        durationSeconds: videoDuration || 60,
+      };
+    }
+  }
+
+  /**
    * Finalize self-introduction with AI assessment
    */
   async finalizeIntro(

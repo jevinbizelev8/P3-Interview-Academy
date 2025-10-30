@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Target, Play, Award, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSimulationHistory } from "@/hooks/useApi";
 
 import SimulationSetup from "../components/practice/SimulationSetup";
 import SimulationInterface from "../components/practice/SimulationInterface";
@@ -19,10 +19,8 @@ export default function Practice() {
   const [selectedSimId, setSelectedSimId] = useState(null);
   const [viewingSimulation, setViewingSimulation] = useState(null);
 
-  const { data: simulations = [] } = useQuery({
-    queryKey: ['simulations'],
-    queryFn: () => base44.entities.InterviewSimulation.list('-created_date')
-  });
+  const { data: simulationData } = useSimulationHistory();
+  const simulations = simulationData?.sessions || [];
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);

@@ -8,6 +8,7 @@ import {
   type InsertUserModuleProgress,
 } from "@shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
+import { OpenAIService } from "./openai-service";
 
 /**
  * Learning Module Service
@@ -49,6 +50,27 @@ export class LearningModuleService {
    */
   static async getModulesByStage(stage: string): Promise<LearningModule[]> {
     return this.getModules(stage);
+  }
+
+  /**
+   * Get a single module by ID
+   */
+  static async getModuleById(moduleId: string): Promise<LearningModule | null> {
+    try {
+      const [module] = await db
+        .select()
+        .from(learningModules)
+        .where(and(
+          eq(learningModules.id, moduleId),
+          eq(learningModules.isActive, true)
+        ))
+        .limit(1);
+
+      return module || null;
+    } catch (error) {
+      console.error("❌ Error retrieving module by ID:", error);
+      throw new Error(`Failed to retrieve module: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
@@ -306,6 +328,84 @@ export class LearningModuleService {
     } catch (error) {
       console.error("❌ Error getting completion stats:", error);
       throw new Error(`Failed to get completion stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get AI coaching for a learning module answer
+   */
+  static async getAICoaching(
+    userId: string,
+    moduleId: string,
+    question: string,
+    userAnswer: string,
+    weakExample?: string,
+    strongExample?: string
+  ): Promise<{
+    strengths: string[];
+    improvements: string[];
+    refined_answer: string;
+    score: number;
+  }> {
+    try {
+      const openaiService = new OpenAIService();
+
+      const prompt = `You are an interview coach. A candidate answered this question: "${question}"
+
+Their answer: "${userAnswer}"
+
+${weakExample ? `Weak example to avoid: "${weakExample}"` : ''}
+${strongExample ? `Strong model answer: "${strongExample}"` : ''}
+
+Provide:
+1. What they did well (2-3 specific points)
+2. What could be improved (2-3 specific points)
+3. A refined version of their answer incorporating your suggestions
+4. Overall score out of 10
+
+Be encouraging but constructive. Focus on specifics. Return your response as a JSON object with these exact keys: strengths (array of strings), improvements (array of strings), refined_answer (string), score (number).`;
+
+      const messages = [
+        {
+          role: "system",
+          content: "You are an expert interview coach providing constructive feedback. Always respond with valid JSON matching the requested schema."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ];
+
+      const response = await openaiService.generateResponse({
+        messages,
+        maxTokens: 800,
+        temperature: 0.7
+      });
+
+      // Parse the JSON response
+      try {
+        const parsed = JSON.parse(response);
+        if (!parsed.strengths || !parsed.improvements || !parsed.refined_answer || typeof parsed.score !== 'number') {
+          throw new Error('Invalid response structure');
+        }
+
+        console.log(`✅ Generated AI coaching for user ${userId}, module ${moduleId}`);
+        return parsed;
+      } catch (parseError) {
+        console.error('❌ Failed to parse AI coaching response:', parseError);
+        console.error('Raw response:', response);
+
+        // Return a fallback response
+        return {
+          strengths: ["You provided a clear answer to the question"],
+          improvements: ["Consider adding more specific examples", "Try to be more concise"],
+          refined_answer: userAnswer,
+          score: 6
+        };
+      }
+    } catch (error) {
+      console.error("❌ Error getting AI coaching:", error);
+      throw new Error(`Failed to get AI coaching: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

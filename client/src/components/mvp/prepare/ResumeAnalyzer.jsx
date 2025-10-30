@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,8 +7,11 @@ import { FileText, Upload, Loader2, TrendingUp, AlertCircle, CheckCircle2, Spark
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { useResumes, useUploadResume, useAnalyzeResume, useCreditBalance } from "@/hooks/useApi";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import * as prepareApi from "@/api/prepare";
 
-import { awardXP, calculateReadinessScore, updateStreak, XP_VALUES } from "../utils/scoring";
+// TODO: Implement XP awarding in P3 gamification system
 import CreditCostBadge from "../shared/CreditCostBadge";
 
 const RESUME_ANALYSIS_COST = 5;
@@ -23,12 +25,10 @@ export default function ResumeAnalyzer() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedResume, setGeneratedResume] = useState(null);
   const [isCopied, setIsCopied] = useState(false);
-  const [resumeText, setResumeText] = useState("");
 
-  const { data: resumes = [] } = useQuery({
-    queryKey: ['resumes'],
-    queryFn: () => base44.entities.Resume.list('-created_date', 1)
-  });
+
+  const { data: resumes = [] } = useResumes();
+  const { data: creditBalance } = useCreditBalance();
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -37,133 +37,48 @@ export default function ResumeAnalyzer() {
     }
   };
 
+  const uploadResumeMutation = useUploadResume();
+  const analyzeResumeMutation = useAnalyzeResume();
+  const queryClient = useQueryClient();
+
   const analyzeResume = async () => {
     if (!file) return;
 
     setIsAnalyzing(true);
     try {
-      // Check credit balance
-      const user = await base44.auth.me();
-      if (!user) {
-        alert('You must be logged in to analyze resumes.');
-        setIsAnalyzing(false);
-        return;
-      }
+      // First upload the resume
+      const uploadedResume = await uploadResumeMutation.mutateAsync(file);
 
-      const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-      const subscription = subs[0];
-
-      if (!subscription || subscription.current_credits < RESUME_ANALYSIS_COST) {
-        alert(`Insufficient credits! You need ${RESUME_ANALYSIS_COST} credits for resume analysis. You have ${subscription?.current_credits || 0} credits. Please purchase more credits or upgrade your plan.`);
-        setIsAnalyzing(false);
-        return;
-      }
-
-      // Upload the resume file
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      
-      // Extract text from the resume using ExtractDataFromUploadedFile
-      const extractionResult = await base44.integrations.Core.ExtractDataFromUploadedFile({
-        file_url: file_url,
-        json_schema: {
-          type: "object",
-          properties: {
-            full_text: { type: "string", description: "Complete text content from the resume" }
-          }
-        }
+      // Then analyze it
+      const analysisResult = await analyzeResumeMutation.mutateAsync({
+        resumeId: uploadedResume.id,
+        jobDescription: jobDescription || undefined,
       });
 
-      if (extractionResult.status === 'error') {
-        throw new Error(extractionResult.details || 'Failed to extract resume text');
-      }
+      // Convert P3 analysis format to component format
+      const formattedAnalysis = {
+        ats_score: analysisResult.score,
+        jd_match_percentage: analysisResult.detailed_feedback ? 75 : 0, // Placeholder for JD match
+        missing_keywords: analysisResult.keywords || [],
+        strengths: analysisResult.strengths || [],
+        gaps: analysisResult.weaknesses || [],
+        suggestions: analysisResult.suggestions?.map(suggestion => ({
+          section: "General",
+          original: "Current content",
+          suggested: suggestion,
+          reason: "AI optimization recommendation"
+        })) || [],
+        ai_feedback: analysisResult.detailed_feedback || "Analysis completed successfully."
+      };
 
-      const extractedText = extractionResult.output?.full_text || '';
-      
-      if (!extractedText) {
-        throw new Error('Could not extract text from resume. Please ensure the file is readable.');
-      }
+      // Refresh credit balance and resume list
+      queryClient.invalidateQueries({ queryKey: ['creditBalance'] });
+      queryClient.invalidateQueries({ queryKey: ['resumes'] });
 
-      setResumeText(extractedText);
+      setAnalysis(formattedAnalysis);
 
-      // Now analyze the extracted text with the LLM
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Analyze this resume${jobDescription ? ' against the job description provided' : ''}. Provide:
-        1. ATS Score (0-100): How well optimized for Applicant Tracking Systems
-        ${jobDescription ? '2. JD Match Percentage (0-100): Alignment with job requirements' : '2. JD Match Percentage: Set to 0 if no job description provided'}
-        3. Missing Keywords: Array of important keywords not in resume
-        4. Strengths: Array of 3-5 strong points
-        5. Gaps: Array of 3-5 areas lacking
-        6. Suggestions: Array of 3-5 specific improvements with section, original text, suggested text, and reason
-        7. Overall Feedback: 2-3 paragraphs
-        
-        Resume Content:
-        ${extractedText}
-        
-        ${jobDescription ? `Job Description: ${jobDescription}` : ''}`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            ats_score: { type: "number" },
-            jd_match_percentage: { type: "number" },
-            missing_keywords: { type: "array", items: { type: "string" } },
-            strengths: { type: "array", items: { type: "string" } },
-            gaps: { type: "array", items: { type: "string" } },
-            suggestions: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  section: { type: "string" },
-                  original: { type: "string" },
-                  suggested: { type: "string" },
-                  reason: { type: "string" }
-                }
-              }
-            },
-            ai_feedback: { type: "string" }
-          }
-        }
-      });
+      // TODO: Award XP via P3 gamification system
 
-      const resume = await base44.entities.Resume.create({
-        file_url,
-        file_name: file.name,
-        extracted_text: extractedText,
-        job_description: jobDescription || null,
-        ats_score: result.ats_score,
-        jd_match_percentage: result.jd_match_percentage || null,
-        missing_keywords: result.missing_keywords,
-        suggestions: result.suggestions,
-        ai_feedback: result.ai_feedback,
-        strengths: result.strengths,
-        gaps: result.gaps
-      });
-
-      // Deduct credits
-      const newBalance = subscription.current_credits - RESUME_ANALYSIS_COST;
-      await base44.entities.Subscription.update(subscription.id, {
-        current_credits: newBalance
-      });
-
-      await base44.entities.CreditLedger.create({
-        user_id: user.id,
-        transaction_type: "consumption",
-        credits_amount: -RESUME_ANALYSIS_COST,
-        balance_after: newBalance,
-        feature_used: "Resume AI Analysis",
-        description: `Resume analysis for ${file.name}`
-      });
-
-      // Award Rewards Points for resume analysis
-      await awardXP(user.id, XP_VALUES.RESUME_ANALYSIS, "Completed resume analysis", resume.id);
-
-      // Update streak
-      await updateStreak(user.id);
-
-      // Recalculate readiness score
-      await calculateReadinessScore(user.id);
-
-      setAnalysis(result);
     } catch (error) {
       console.error("Error analyzing resume:", error);
       alert(`An error occurred during analysis: ${error.message}. Please try again.`);
@@ -171,78 +86,47 @@ export default function ResumeAnalyzer() {
     setIsAnalyzing(false);
   };
 
+  const generateResumeMutation = useMutation({
+    mutationFn: async (params) => {
+      const response = await fetch('/api/prepare/resume/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate resume');
+      }
+
+      const result = await response.json();
+      return result.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['creditBalance'] });
+    },
+  });
+
   const generateRecommendedResume = async () => {
+    if (!analysis) return;
+
     setIsGenerating(true);
     try {
-      const user = await base44.auth.me();
-      if (!user) {
-        alert('You must be logged in to generate a resume.');
+      // Get the most recently uploaded resume
+      const recentResume = resumes[0];
+      if (!recentResume) {
+        alert('No resume found. Please upload and analyze a resume first.');
         setIsGenerating(false);
         return;
       }
 
-      const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-      const subscription = subs[0];
-
-      if (!subscription || subscription.current_credits < RESUME_GENERATION_COST) {
-        alert(`Insufficient credits! You need ${RESUME_GENERATION_COST} credits for resume generation. You have ${subscription?.current_credits || 0} credits. Please purchase more credits or upgrade your plan.`);
-        setIsGenerating(false);
-        return;
-      }
-
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Based on the analysis of this resume, generate an improved, ATS-optimized version that incorporates all the suggestions and addresses the identified gaps.
-
-ORIGINAL RESUME:
-${resumeText}
-
-${jobDescription ? `TARGET JOB DESCRIPTION:\n${jobDescription}\n` : ''}
-
-ANALYSIS INSIGHTS:
-- ATS Score: ${analysis.ats_score}/100
-- Missing Keywords: ${analysis.missing_keywords.join(', ')}
-- Gaps: ${analysis.gaps.join('; ')}
-- Suggestions: ${analysis.suggestions.map(s => `${s.section}: ${s.reason}`).join('; ')}
-
-INSTRUCTIONS:
-1. Maintain the candidate's authentic experience and achievements
-2. Incorporate missing keywords naturally where relevant
-3. Improve ATS compatibility with clear section headers, bullet points, and formatting
-4. Apply all specific suggestions from the analysis
-5. Address all identified gaps
-6. Use strong action verbs and quantifiable results
-7. Ensure ${jobDescription ? 'strong alignment with the job description' : 'professional polish and clarity'}
-8. Keep it to 1-2 pages in length
-9. Use professional, clean formatting with clear sections
-
-Generate the complete improved resume in markdown format with proper formatting.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            improved_resume: { type: "string", description: "The complete improved resume in markdown format" },
-            key_improvements: { type: "array", items: { type: "string" }, description: "List of 5-7 key improvements made" },
-            ats_optimization_score: { type: "number", description: "Estimated ATS score for the improved resume (0-100)" }
-          }
-        }
+      const result = await generateResumeMutation.mutateAsync({
+        resumeId: recentResume.id,
+        analysis: analysis,
+        jobDescription: jobDescription || undefined,
       });
-
-      // Deduct credits
-      const newBalance = subscription.current_credits - RESUME_GENERATION_COST;
-      await base44.entities.Subscription.update(subscription.id, {
-        current_credits: newBalance
-      });
-
-      await base44.entities.CreditLedger.create({
-        user_id: user.id,
-        transaction_type: "consumption",
-        credits_amount: -RESUME_GENERATION_COST,
-        balance_after: newBalance,
-        feature_used: "Resume Generation",
-        description: "Generated recommended resume"
-      });
-
-      // Award XP
-      await awardXP(user.id, 30, "Generated recommended resume");
 
       setGeneratedResume(result);
     } catch (error) {

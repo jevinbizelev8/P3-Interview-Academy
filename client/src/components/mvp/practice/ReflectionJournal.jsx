@@ -1,6 +1,5 @@
 
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,58 +29,103 @@ export default function ReflectionJournal({ simulationId, onClose }) {
 
   const { data: existingReflections = [] } = useQuery({
     queryKey: ['reflections', simulationId],
-    queryFn: () => base44.entities.ReflectionJournal.filter({ simulation_id: simulationId }),
+    queryFn: async () => {
+      const response = await fetch(`/api/perform/reflections?practiceSessionId=${simulationId}`);
+      if (!response.ok) throw new Error('Failed to fetch reflections');
+      const result = await response.json();
+      return result.success ? result.data : [];
+    },
     enabled: !!simulationId
   });
 
   const submitReflectionMutation = useMutation({
     mutationFn: async (data) => {
-      const user = await base44.auth.me();
-
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `The user has reflected on their interview simulation. Provide a supportive AI summary, 2-3 follow-up questions for deeper reflection, and 2-3 relevant learning resources.
-
-User's reflection:
-${data.reflection_text}`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            ai_summary: { type: "string" },
-            follow_up_questions: { type: "array", items: { type: "string" } },
-            suggested_resources: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  link: { type: "string" }
-                },
-                required: ["title", "description"]
-              }
-            }
-          },
-          required: ["ai_summary", "follow_up_questions", "suggested_resources"]
-        }
+      // First, generate AI analysis
+      const aiResponse = await fetch('/api/prepare/modules/screening-interview/coaching', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: "Reflect on your interview performance",
+          userAnswer: data.reflection_text,
+          weakExample: "I did okay but could have been better.",
+          strongExample: "I struggled with the technical questions but excelled in behavioral scenarios. I need to practice more coding problems and work on my communication skills."
+        }),
       });
 
-      const reflection = await base44.entities.ReflectionJournal.create({
-        simulation_id: simulationId,
-        reflection_text: data.reflection_text,
-        ai_summary: result.ai_summary,
-        ai_follow_up_questions: result.follow_up_questions,
-        suggested_resources: result.suggested_resources
-      });
-
-      // Award Rewards Points for reflection and update streak if user is authenticated
-      if (user?.id) {
-        await awardXP(user.id, XP_VALUES.REFLECTION_JOURNAL, "Submitted reflection journal", reflection.id);
-        await updateStreak(user.id);
-      } else {
-        console.warn("User not authenticated, Rewards Points and streak not updated for reflection.");
+      if (!aiResponse.ok) {
+        throw new Error('Failed to generate AI analysis');
       }
 
-      return reflection;
+      const aiResult = await aiResponse.json();
+      if (!aiResult.success) {
+        throw new Error(aiResult.error || 'AI analysis failed');
+      }
+
+      // Create the reflection with AI data
+      const reflectionResponse = await fetch('/api/perform/reflections/ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          practiceSessionId: simulationId,
+          reflectionText: data.reflection_text,
+          aiSummary: aiResult.data.strengths.join(' ') + ' ' + aiResult.data.improvements.join(' '),
+          aiFollowUpQuestions: aiResult.data.improvements,
+          suggestedResources: [
+            {
+              title: "Practice More Interview Simulations",
+              description: "Continue practicing with AI-powered interview simulations to build confidence.",
+              link: "/practice"
+            },
+            {
+              title: "Review STAR Method",
+              description: "Study the STAR method for structuring behavioral interview responses.",
+              link: "/prepare"
+            }
+          ]
+        }),
+      });
+
+      if (!reflectionResponse.ok) {
+        throw new Error('Failed to create reflection');
+      }
+
+      const reflectionResult = await reflectionResponse.json();
+      if (!reflectionResult.success) {
+        throw new Error(reflectionResult.error || 'Failed to create reflection');
+      }
+
+      const reflection = reflectionResult.data;
+
+      // Award XP for reflection
+      try {
+        await awardXP('current-user', XP_VALUES.REFLECTION_JOURNAL, "Submitted reflection journal", reflection.id);
+        await updateStreak('current-user');
+      } catch (xpError) {
+        console.warn("XP/Streak update failed:", xpError);
+      }
+
+      return {
+        ...reflection,
+        reflection_text: data.reflection_text,
+        ai_summary: aiResult.data.strengths.join(' ') + ' ' + aiResult.data.improvements.join(' '),
+        ai_follow_up_questions: aiResult.data.improvements,
+        suggested_resources: [
+          {
+            title: "Practice More Interview Simulations",
+            description: "Continue practicing with AI-powered interview simulations to build confidence.",
+            link: "/practice"
+          },
+          {
+            title: "Review STAR Method",
+            description: "Study the STAR method for structuring behavioral interview responses.",
+            link: "/prepare"
+          }
+        ]
+      };
     },
     onSuccess: (data) => {
       setAiResponse(data);
@@ -114,25 +158,32 @@ ${data.reflection_text}`,
         .map(msg => `${msg.role === 'user' ? 'User' : 'AI Coach'}: ${msg.content}`)
         .join('\n');
 
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are an AI coach helping a user reflect on their interview performance. 
-        
-        Conversation so far:
-        ${conversationPrompt}
-        
-        Provide supportive, insightful feedback. Ask probing questions to encourage deeper reflection. 
-        If appropriate, suggest specific learning modules or practice areas.
-        Keep your response warm, encouraging, and under 3 sentences.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            message: { type: "string" }
-          },
-          required: ["message"]
-        }
+      // Use the same coaching API for chat
+      const response = await fetch('/api/prepare/modules/screening-interview/coaching', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: `AI Coach Conversation: ${conversationPrompt}`,
+          userAnswer: userMessage,
+          weakExample: "I need help with this.",
+          strongExample: "I'm looking for specific advice on how to improve my interview performance."
+        }),
       });
 
-      setChatMessages(prevMessages => [...prevMessages, { role: "ai", content: result.message }]);
+      if (!response.ok) {
+        throw new Error('Failed to get AI coaching response');
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'AI coaching failed');
+      }
+
+      const aiMessage = result.data.strengths.join(' ') + ' ' + result.data.improvements.join(' ') + ' Consider practicing more simulations to build confidence.';
+
+      setChatMessages(prevMessages => [...prevMessages, { role: "ai", content: aiMessage }]);
     } catch (error) {
       console.error("Error in chat:", error);
       setChatMessages(currentChatHistory);

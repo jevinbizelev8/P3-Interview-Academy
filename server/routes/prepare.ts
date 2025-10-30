@@ -8,6 +8,7 @@ import { LearningModuleService } from "../services/learning-module-service";
 import { SelfIntroService } from "../services/self-intro-service";
 import { ResumeService } from "../services/resume-service";
 import { ReadinessService } from "../services/readiness-service";
+import { requireCredits } from "../middleware/credit-middleware.js";
 import { db } from "../db";
 import { starStories, type InsertStarStory } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -188,6 +189,65 @@ router.get('/modules/progress', async (req, res) => {
   }
 });
 
+/**
+ * POST /modules/:moduleId/coaching
+ * Get AI coaching for a learning module answer
+ * Credit cost: 2 credits
+ */
+const moduleCoachingSchema = z.object({
+  question: z.string().min(1, 'Question is required'),
+  userAnswer: z.string().min(10, 'User answer must be at least 10 characters'),
+  weakExample: z.string().optional(),
+  strongExample: z.string().optional(),
+});
+
+router.post('/modules/:moduleId/coaching', requireCredits('module-coaching'), async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const moduleId = req.params.moduleId;
+    const validatedData = moduleCoachingSchema.parse(req.body);
+
+    // Validate module exists and user has access
+    const module = await LearningModuleService.getModuleById(moduleId);
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        error: 'Learning module not found',
+      });
+    }
+
+    // Get AI coaching using the learning module service
+    const coaching = await LearningModuleService.getAICoaching(
+      req.user.id,
+      moduleId,
+      validatedData.question,
+      validatedData.userAnswer,
+      validatedData.weakExample,
+      validatedData.strongExample
+    );
+
+    return res.json({ success: true, data: coaching });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation error',
+        details: error.errors,
+      });
+    }
+
+    console.error('❌ Error getting AI coaching:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get AI coaching',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 //
 // ======================
 // Self-Introduction Routes
@@ -327,6 +387,85 @@ router.post('/self-intro/finalize', async (req, res) => {
   }
 });
 
+/**
+ * POST /self-intro/polish
+ * Polish self-introduction script with AI
+ * Requires credits: 3 credits
+ */
+const polishScriptSchema = z.object({
+  script: z.string().min(10, 'Script must be at least 10 characters'),
+});
+
+router.post('/self-intro/polish', requireCredits('self-intro-polish'), async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const validatedData = polishScriptSchema.parse(req.body);
+
+    const selfIntroService = new SelfIntroService();
+    const result = await selfIntroService.polishScript(req.user.id, validatedData.script);
+
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation error',
+        details: error.errors,
+      });
+    }
+
+    console.error('❌ Error polishing self-intro script:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to polish script',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * POST /self-intro/analyze-video
+ * Analyze self-introduction video (placeholder - script-based analysis)
+ * Requires credits: 5 credits
+ */
+const analyzeVideoSchema = z.object({
+  script: z.string().min(10, 'Script must be at least 10 characters'),
+  videoDuration: z.number().optional(),
+});
+
+router.post('/self-intro/analyze-video', requireCredits('self-intro-analyze-video'), async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const validatedData = analyzeVideoSchema.parse(req.body);
+
+    const selfIntroService = new SelfIntroService();
+    const result = await selfIntroService.analyzeVideoScript(req.user.id, validatedData.script, validatedData.videoDuration);
+
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation error',
+        details: error.errors,
+      });
+    }
+
+    console.error('❌ Error analyzing self-intro video:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to analyze video',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 //
 // ======================
 // Resume Analyzer Routes
@@ -390,7 +529,7 @@ const analyzeResumeSchema = z.object({
   jobDescriptionText: z.string().optional(),
 });
 
-router.post('/resume/analyze', async (req, res) => {
+router.post('/resume/analyze', requireCredits('resume-analysis'), async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -425,6 +564,63 @@ router.post('/resume/analyze', async (req, res) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to analyze resume',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * POST /resume/generate
+ * Generate improved resume based on analysis
+ */
+const generateResumeSchema = z.object({
+  resumeId: z.string().uuid('Invalid resume ID'),
+  analysis: z.object({
+    ats_score: z.number(),
+    jd_match_percentage: z.number().optional(),
+    missing_keywords: z.array(z.string()),
+    strengths: z.array(z.string()),
+    gaps: z.array(z.string()),
+    suggestions: z.array(z.object({
+      section: z.string(),
+      original: z.string(),
+      suggested: z.string(),
+      reason: z.string()
+    })),
+    ai_feedback: z.string()
+  }),
+  jobDescription: z.string().optional(),
+});
+
+router.post('/resume/generate', requireCredits('resume-generation'), async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const validatedData = generateResumeSchema.parse(req.body);
+
+    const resumeService = new ResumeService();
+    const result = await resumeService.generateImprovedResume(
+      validatedData.resumeId,
+      validatedData.analysis,
+      validatedData.jobDescription
+    );
+
+    return res.json({ success: true, data: result });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation error',
+        details: error.errors,
+      });
+    }
+
+    console.error('❌ Error generating improved resume:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to generate improved resume',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
   }

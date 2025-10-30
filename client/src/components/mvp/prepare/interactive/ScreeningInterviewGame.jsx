@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+// TODO: Implement AI coaching API endpoint for interactive modules
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -163,35 +163,34 @@ export default function ScreeningInterviewGame() {
 
     try {
       const scenario = rapidFireScenarios.find(s => s.id === scenarioId);
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are an interview coach. A candidate answered this question: "${scenario.title}"
 
-Their answer: "${userAnswer}"
-
-Weak example to avoid: "${scenario.weak}"
-Strong model answer: "${scenario.strong}"
-
-Provide:
-1. What they did well (2-3 specific points)
-2. What could be improved (2-3 specific points)
-3. A refined version of their answer incorporating your suggestions
-4. Overall score out of 10
-
-Be encouraging but constructive. Focus on specifics.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            strengths: { type: "array", items: { type: "string" } },
-            improvements: { type: "array", items: { type: "string" } },
-            refined_answer: { type: "string" },
-            score: { type: "number" }
-          }
-        }
+      const response = await fetch('/api/prepare/modules/screening-interview/coaching', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: scenario.title,
+          userAnswer: userAnswer,
+          weakExample: scenario.weak,
+          strongExample: scenario.strong,
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to get AI coaching');
+      }
 
       setAiCoaching({
         ...aiCoaching,
-        [scenarioId]: result
+        [scenarioId]: result.data
       });
 
       setScore(score + 10);

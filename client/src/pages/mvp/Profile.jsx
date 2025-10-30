@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { getUserProfile, updateUserProfile, uploadProfilePhoto } from "@/api/user";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -122,8 +122,8 @@ export default function Profile() {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const currentUser = await base44.auth.me();
-        
+        const currentUser = await getUserProfile();
+
         let userToSet = currentUser;
         // Set default timezone to Singapore if not set
         if (!currentUser.timezone) {
@@ -141,7 +141,7 @@ export default function Profile() {
   }, []);
 
   const updateProfileMutation = useMutation({
-    mutationFn: (data) => base44.auth.updateMe(data),
+    mutationFn: (data) => updateUserProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries(['userProfile']);
       setSaveStatus('success');
@@ -159,9 +159,9 @@ export default function Profile() {
 
     setUploadingPhoto(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      setProfilePhoto(file_url);
-      await updateProfileMutation.mutateAsync({ profile_photo_url: file_url });
+      const { profile_photo_url } = await uploadProfilePhoto(file);
+      setProfilePhoto(profile_photo_url);
+      await updateProfileMutation.mutateAsync({ profile_photo_url });
     } catch (error) {
       console.error("Error uploading photo:", error);
     } finally {

@@ -12,6 +12,10 @@
  * Default Credit Costs:
  *   - practice-session: 1 credit
  *   - prepare-session: 1 credit
+ *   - self-intro-polish: 3 credits
+ *   - self-intro-analyze-video: 5 credits
+ *   - resume-analysis: 5 credits
+ *   - resume-generation: 10 credits
  */
 
 import { db } from '../db';
@@ -34,6 +38,36 @@ async function seedCreditCosts() {
       description: 'Credits required to start an AI-powered preparation session',
       isActive: true,
     },
+    {
+      featureName: 'self-intro-polish',
+      creditCost: 3,
+      description: 'Credits required to polish self-introduction script with AI',
+      isActive: true,
+    },
+    {
+      featureName: 'self-intro-analyze-video',
+      creditCost: 5,
+      description: 'Credits required to analyze self-introduction video with AI',
+      isActive: true,
+    },
+    {
+      featureName: 'resume-analysis',
+      creditCost: 5,
+      description: 'Credits required to analyze resume with AI',
+      isActive: true,
+    },
+     {
+       featureName: 'resume-generation',
+       creditCost: 10,
+       description: 'Credits required to generate improved resume with AI',
+       isActive: true,
+     },
+     {
+       featureName: 'module-coaching',
+       creditCost: 2,
+       description: 'Credits required to get AI coaching on learning module answers',
+       isActive: true,
+     },
   ];
 
   try {

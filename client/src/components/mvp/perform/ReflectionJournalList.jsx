@@ -1,21 +1,17 @@
 import React from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, ChevronRight, Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
+import { useReflections, useSimulationHistory } from "@/hooks/useApi";
 
 export default function ReflectionJournalList() {
-  const { data: reflections = [] } = useQuery({
-    queryKey: ['allReflections'],
-    queryFn: () => base44.entities.ReflectionJournal.list('-created_date', 10)
-  });
+  const { data: reflectionData } = useReflections({ limit: 10 });
+  const reflections = reflectionData?.reflections || [];
 
-  const { data: simulations = [] } = useQuery({
-    queryKey: ['simulationsForReflections'],
-    queryFn: () => base44.entities.InterviewSimulation.list('-created_date')
-  });
+  const { data: simulationData } = useSimulationHistory();
+  const simulations = simulationData?.sessions || [];
 
   const getSimulationDetails = (simId) => {
     return simulations.find(s => s.id === simId);

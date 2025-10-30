@@ -1,6 +1,5 @@
 
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import CreditCostBadge from "../shared/CreditCostBadge";
+import { useSelfIntroDraft, useSaveSelfIntroDraft, useFinalizeSelfIntro, useCreditBalance, usePurchaseCredits } from "@/hooks/useApi";
 
 import { awardXP, calculateReadinessScore, updateStreak, XP_VALUES } from "../utils/scoring";
 
@@ -106,19 +106,8 @@ export default function SelfIntroScriptingWizard() {
 
   const queryClient = useQueryClient();
 
-  // Load saved draft
-  const { data: savedDraft } = useQuery({
-    queryKey: ['selfIntroDraft'],
-    queryFn: async () => {
-      const user = await base44.auth.me();
-      if (!user) return null; // No user, no draft to load
-      const drafts = await base44.entities.SelfIntroDraft.filter({ created_by: user.email });
-      if (drafts.length > 0) {
-        return drafts[0];
-      }
-      return null;
-    }
-  });
+  const { data: savedDraft } = useSelfIntroDraft();
+  const { data: creditBalance } = useCreditBalance();
 
   // Load draft data on mount
   React.useEffect(() => {
@@ -134,30 +123,9 @@ export default function SelfIntroScriptingWizard() {
   }, [savedDraft]);
 
   // Auto-save draft mutation
-  const saveDraftMutation = useMutation({
-    mutationFn: async (data) => {
-      const user = await base44.auth.me();
-      if (!user) return; // Cannot save draft if not logged in
-      const drafts = await base44.entities.SelfIntroDraft.filter({ created_by: user.email });
-      
-      const draftDataToSave = {
-        who: data.who,
-        what: data.what,
-        why: data.why,
-        closingHook: data.closingHook,
-        finalScript: data.finalScript,
-        last_updated: new Date().toISOString(),
-        created_by: user.email // Ensure created_by is set for new drafts
-      };
-
-      if (drafts.length > 0) {
-        return await base44.entities.SelfIntroDraft.update(drafts[0].id, draftDataToSave);
-      } else {
-        return await base44.entities.SelfIntroDraft.create(draftDataToSave);
-      }
-    },
+  const saveDraftMutation = useSaveSelfIntroDraft({
     onSuccess: () => {
-      queryClient.invalidateQueries(['selfIntroDraft']);
+      queryClient.invalidateQueries({ queryKey: ['selfIntroDraft'] });
     }
   });
 
@@ -165,51 +133,26 @@ export default function SelfIntroScriptingWizard() {
   React.useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (scriptData.who || scriptData.what || scriptData.why || scriptData.closingHook || scriptData.finalScript) {
-        // Only trigger save if user is logged in
-        base44.auth.me().then(user => {
-          if (user) {
-            saveDraftMutation.mutate(scriptData);
-          }
-        }).catch(console.error);
+        // Save draft data (authentication handled by API)
+        saveDraftMutation.mutate({
+          stepNumber: 1, // Use step 1 for combined data
+          stepData: scriptData
+        });
       }
     }, 1000); // Debounce for 1 second
 
     return () => clearTimeout(timeoutId);
-  }, [scriptData]);
+  }, [scriptData, saveDraftMutation]);
 
-  // Fetch credits
-  React.useEffect(() => {
-    const fetchCredits = async () => {
-      try {
-        const user = await base44.auth.me();
-        if (user) {
-          const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-          if (subs.length > 0) {
-            setCurrentCredits(subs[0].current_credits);
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching credits:", error);
-      }
-    };
-    fetchCredits();
-  }, []);
+  // Credit balance is handled by useCreditBalance hook
 
   const getAICoaching = async (prompt, context) => {
     setIsProcessing(true);
     try {
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `${prompt}\n\nUser's input: ${context}`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            feedback: { type: "string" },
-            suggestions: { type: "array", items: { type: "string" } }
-          }
-        }
-      });
-      setAiCoaching(result.feedback);
-      return result;
+      // TODO: Implement AI coaching endpoint in P3
+      // For now, provide basic feedback
+      setAiCoaching("AI coaching feature coming soon. Please continue with the script polishing step.");
+      return { feedback: "AI coaching feature coming soon." };
     } catch (error) {
       console.error("Error getting AI coaching:", error);
       setAiCoaching("An error occurred while getting AI coaching. Please try again.");
@@ -219,65 +162,45 @@ export default function SelfIntroScriptingWizard() {
   };
 
   const handlePolishing = async () => {
-    if (currentCredits !== null && currentCredits < SCRIPT_POLISHING_COST) {
+    if (!creditBalance || creditBalance.balance < SCRIPT_POLISHING_COST) {
       alert(`Insufficient credits! You need ${SCRIPT_POLISHING_COST} credits for script polishing.`);
       return;
     }
 
     setIsProcessing(true);
     try {
-      const user = await base44.auth.me();
-      if (!user) {
-        alert('You must be logged in to polish your script.');
-        setIsProcessing(false);
-        return;
-      }
-      const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-      const subscription = subs[0];
-
-      if (!subscription || subscription.current_credits < SCRIPT_POLISHING_COST) {
-        alert(`Insufficient credits! You need ${SCRIPT_POLISHING_COST} credits for script polishing. Please purchase more credits or upgrade your plan.`);
-        setIsProcessing(false);
-        return;
-      }
-
       const fullScript = `${scriptData.who}\n\n${scriptData.what}\n\n${scriptData.why}\n\n${scriptData.closingHook}`;
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Polish this self-introduction script. Ensure it's 150-200 words, has clarity, good structure, relevance, and concrete results. Provide the polished version and specific improvements made.\n\nScript: ${fullScript}`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            polished_script: { type: "string" },
-            improvements: { type: "array", items: { type: "string" } },
-            word_count: { type: "number" }
-          }
-        }
+
+      // Call the P3 API for script polishing
+      const response = await fetch('/api/prepare/self-intro/polish', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ script: fullScript }),
       });
-      
-      const updatedScript = { ...scriptData, finalScript: result.polished_script };
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to polish script');
+      }
+
+      const result = await response.json();
+
+      const updatedScript = { ...scriptData, finalScript: result.data.polishedScript };
       setScriptData(updatedScript);
-      
+
       // Save the polished script immediately
-      await saveDraftMutation.mutateAsync(updatedScript);
-      
-      setAiCoaching(`Your script has been polished! Word count: ${result.word_count}. Improvements made: ${result.improvements.join(', ')}`);
-
-      // Deduct credits
-      const newBalance = subscription.current_credits - SCRIPT_POLISHING_COST;
-      await base44.entities.Subscription.update(subscription.id, {
-        current_credits: newBalance
+      await saveDraftMutation.mutateAsync({
+        stepNumber: 1,
+        stepData: updatedScript
       });
 
-      await base44.entities.CreditLedger.create({
-        user_id: user.id,
-        transaction_type: "consumption",
-        credits_amount: -SCRIPT_POLISHING_COST,
-        balance_after: newBalance,
-        feature_used: "Script Polishing",
-        description: "Self-introduction script polishing"
-      });
+      setAiCoaching(`Your script has been polished! Word count: ${result.data.wordCount}. Improvements made: ${result.data.improvements.join(', ')}`);
 
-      setCurrentCredits(newBalance);
+      // Refresh credit balance
+      queryClient.invalidateQueries({ queryKey: ['creditBalance'] });
+
     } catch (error) {
       console.error("Error polishing script:", error);
       setAiCoaching("An error occurred while polishing your script. Please try again.");
@@ -289,7 +212,10 @@ export default function SelfIntroScriptingWizard() {
   const handleSaveEditedScript = async () => {
     const updatedScript = { ...scriptData, finalScript: editedScript };
     setScriptData(updatedScript);
-    await saveDraftMutation.mutateAsync(updatedScript);
+    await saveDraftMutation.mutateAsync({
+      stepNumber: 1,
+      stepData: updatedScript
+    });
     setIsEditingScript(false);
   };
 
@@ -305,101 +231,50 @@ export default function SelfIntroScriptingWizard() {
 
   const analyzeUploadedVideo = async () => {
     if (!uploadedVideoFile) return;
-    if (currentCredits !== null && currentCredits < VIDEO_ASSESSMENT_COST) {
+    if (!creditBalance || creditBalance.balance < VIDEO_ASSESSMENT_COST) {
       alert(`Insufficient credits! You need ${VIDEO_ASSESSMENT_COST} credits for video assessment.`);
       return;
     }
 
     setIsTranscribing(true);
     try {
-      const user = await base44.auth.me();
-      if (!user) {
-        alert('You must be logged in to analyze videos.');
-        setIsTranscribing(false);
-        return;
-      }
-
-      const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-      const subscription = subs[0];
-
-      if (!subscription || subscription.current_credits < VIDEO_ASSESSMENT_COST) {
-        alert(`Insufficient credits! You need ${VIDEO_ASSESSMENT_COST} credits for video assessment. Please purchase more credits or upgrade your plan.`);
-        setIsTranscribing(false);
-        return;
-      }
-
-      // Upload the video
-      const { file_url } = await base44.integrations.Core.UploadFile({ file: uploadedVideoFile });
-
-      // Get transcript and analysis from the video
-      const assessment = await base44.integrations.Core.InvokeLLM({
-        prompt: `Analyze this self-introduction video recording. First, transcribe the spoken content, then evaluate the performance based on content and delivery.
-
-Provide detailed assessment:
-1. Transcript: Full transcription of what was said
-2. Clarity Score (0-100): How clearly the person communicated
-3. Confidence Score (0-100): Level of confidence demonstrated in delivery
-4. Structure Score (0-100): How well organized the self-introduction was (WHO-WHAT-WHY-CLOSING)
-5. Overall Score (0-100): Overall performance quality
-6. Strengths (array): 3-5 things done well
-7. Improvements (array): 3-5 specific areas for improvement
-8. AI Feedback (string): Detailed 2-3 paragraph feedback on content and delivery
-9. Duration: Video duration in seconds
-
-${scriptData.finalScript ? `Expected Script (for comparison):\n${scriptData.finalScript}` : ''}`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            transcript: { type: "string" },
-            clarity_score: { type: "number" },
-            confidence_score: { type: "number" },
-            structure_score: { type: "number" },
-            overall_score: { type: "number" },
-            strengths: { type: "array", items: { type: "string" } },
-            improvements: { type: "array", items: { type: "string" } },
-            ai_feedback: { type: "string" },
-            duration_seconds: { type: "number" }
-          }
+      // For now, analyze based on script content (video file upload analysis coming later)
+      const response = await fetch('/api/prepare/self-intro/analyze-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        file_urls: [file_url]
+        body: JSON.stringify({
+          script: scriptData.finalScript || scriptData.who + scriptData.what + scriptData.why + scriptData.closingHook,
+          videoDuration: 60 // Placeholder duration for uploaded videos
+        }),
       });
 
-      const selfIntro = await base44.entities.SelfIntro.create({
-        video_url: file_url,
-        transcript: assessment.transcript || "",
-        duration_seconds: assessment.duration_seconds || 0,
-        clarity_score: assessment.clarity_score,
-        confidence_score: assessment.confidence_score,
-        structure_score: assessment.structure_score,
-        overall_score: assessment.overall_score,
-        ai_feedback: assessment.ai_feedback,
-        strengths: assessment.strengths,
-        improvements: assessment.improvements
-      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze video');
+      }
 
-      // Deduct credits
-      const newBalance = subscription.current_credits - VIDEO_ASSESSMENT_COST;
-      await base44.entities.Subscription.update(subscription.id, {
-        current_credits: newBalance
-      });
+      const result = await response.json();
 
-      await base44.entities.CreditLedger.create({
-        user_id: user.id,
-        transaction_type: "consumption",
-        credits_amount: -VIDEO_ASSESSMENT_COST,
-        balance_after: newBalance,
-        feature_used: "Video AI Assessment",
-        description: "Self-introduction uploaded video assessment"
-      });
-
-      setCurrentCredits(newBalance);
-
-      // Award XP
-      await awardXP(user.id, XP_VALUES.SELF_INTRO_COMPLETE, "Completed self-introduction video assessment", selfIntro.id);
-      await updateStreak(user.id);
-      await calculateReadinessScore(user.id);
+      // Convert API response to component format
+      const assessment = {
+        transcript: result.data.transcript,
+        clarity_score: result.data.clarityScore,
+        confidence_score: result.data.confidenceScore,
+        structure_score: result.data.structureScore,
+        overall_score: result.data.overallScore,
+        strengths: result.data.strengths,
+        improvements: result.data.improvements,
+        ai_feedback: result.data.aiFeedback,
+        duration_seconds: result.data.durationSeconds
+      };
 
       setFinalAssessment(assessment);
+
+      // Refresh credit balance
+      queryClient.invalidateQueries({ queryKey: ['creditBalance'] });
+
     } catch (error) {
       console.error("Error analyzing uploaded video:", error);
       alert(`An error occurred during analysis: ${error.message}. Please try again.`);
@@ -467,40 +342,8 @@ ${scriptData.finalScript ? `Expected Script (for comparison):\n${scriptData.fina
           videoRef.current.muted = false; // Unmute for playback
         }
 
-        // Deduct credits for recording
-        try {
-          const user = await base44.auth.me();
-          if (!user) { // Ensure user is logged in before deducting
-            console.error("User not logged in, cannot deduct credits for recording.");
-            return;
-          }
-          const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-          const subscription = subs[0];
-
-          if (!subscription || subscription.current_credits < VIDEO_RECORDING_COST) {
-            alert(`Insufficient credits! You need ${VIDEO_RECORDING_COST} credits for video recording.`);
-            return;
-          }
-
-          const newBalance = subscription.current_credits - VIDEO_RECORDING_COST;
-          
-          await base44.entities.Subscription.update(subscription.id, {
-            current_credits: newBalance
-          });
-
-          await base44.entities.CreditLedger.create({
-            user_id: user.id,
-            transaction_type: "consumption",
-            credits_amount: -VIDEO_RECORDING_COST,
-            balance_after: newBalance,
-            feature_used: "Video Recording",
-            description: "Self-introduction video recording"
-          });
-
-          setCurrentCredits(newBalance);
-        } catch (error) {
-          console.error("Error deducting credits for recording:", error);
-        }
+        // TODO: Deduct credits for recording via P3 API
+        alert(`Video recording would deduct ${VIDEO_RECORDING_COST} credits.`);
       };
 
       mediaRecorder.start();
@@ -537,124 +380,51 @@ ${scriptData.finalScript ? `Expected Script (for comparison):\n${scriptData.fina
 
     setIsProcessing(true);
     try {
-      const user = await base44.auth.me();
-      if (!user) { // Ensure user is logged in before deducting
-        console.error("User not logged in, cannot deduct credits for assessment.");
-        setIsProcessing(false);
-        return;
-      }
-      const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-      const subscription = subs[0];
-
-      if (!subscription || subscription.current_credits < VIDEO_ASSESSMENT_COST) {
+      if (!creditBalance || creditBalance.balance < VIDEO_ASSESSMENT_COST) {
         alert(`Insufficient credits! You need ${VIDEO_ASSESSMENT_COST} credits for video assessment.`);
         setIsProcessing(false);
         return;
       }
 
-      // Determine file extension based on the recordedBlob's type
-      const fileType = recordedBlob.type;
-      const fileExtension = fileType.includes('mp4') ? 'mp4' : fileType.includes('webm') ? 'webm' : 'bin';
-      
-      const file = new File([recordedBlob], `self-intro.${fileExtension}`, { type: fileType });
-      
-      // Upload the video
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      // Call the P3 API for video analysis (script-based for now)
+      const response = await fetch('/api/prepare/self-intro/analyze-video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          script: scriptData.finalScript || scriptData.who + scriptData.what + scriptData.why + scriptData.closingHook,
+          videoDuration: recordedBlob ? Math.max(30, (scriptData.finalScript || "").split(' ').length / 2) : undefined
+        }),
+      });
 
-      let assessment;
-      let descriptionForLedger = "Self-introduction video assessment";
-
-      if (fileExtension === 'webm') {
-        // If the file is webm, we need to handle it differently for AI analysis.
-        // The LLM cannot directly analyze webm, so we'll use text-based analysis of the script.
-        assessment = await base44.integrations.Core.InvokeLLM({
-          prompt: `Analyze this self-introduction script and provide detailed feedback. Since the recorded video is in WebM format which is not directly supported for AI video analysis, please provide scores and feedback based on the script quality, structure, and content.
-The script used was:
-${scriptData.finalScript}
-
-Provide:
-1. Clarity Score (0-100): How clear and well-structured the script is, assuming it was delivered well.
-2. Confidence Score (0-100): Estimated confidence based on the strength and assertiveness of the script content.
-3. Structure Score (0-100): How well the script follows the WHO-WHAT-WHY-CLOSING structure.
-4. Overall Score (0-100): Overall quality assessment of the script's content and structure.
-5. Strengths (array): 3-5 strong points about the script.
-6. Improvements (array): 3-5 suggestions for improving the script's content, structure, or potential delivery.
-7. AI Feedback (string): Detailed 2-3 paragraph feedback on the script.
-8. Duration: Estimate the speaking duration in seconds, assuming a normal speaking pace (e.g., 150 words ~ 60 seconds).`,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              transcript: { type: "string" }, // Add transcript field, even if it's generated from script for webm
-              clarity_score: { type: "number" },
-              confidence_score: { type: "number" },
-              structure_score: { type: "number" },
-              overall_score: { type: "number" },
-              strengths: { type: "array", items: { type: "string" } },
-              improvements: { type: "array", items: { type: "string" } },
-              ai_feedback: { type: "string" },
-              duration_seconds: { type: "number" }
-            }
-          }
-        });
-        descriptionForLedger = "Self-introduction script assessment (video recorded in unsupported format)";
-      } else {
-        // For MP4 (or other directly supported formats), perform full video analysis
-        assessment = await base44.integrations.Core.InvokeLLM({
-          prompt: `Analyse this self-introduction video. Provide scores (0-100) for clarity, confidence, structure, and overall performance. Also provide strengths, improvements, detailed feedback, and a full transcript of the spoken content. The script used was:\n\n${scriptData.finalScript}`,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              transcript: { type: "string" }, // Add this
-              clarity_score: { type: "number" },
-              confidence_score: { type: "number" },
-              structure_score: { type: "number" },
-              overall_score: { type: "number" },
-              strengths: { type: "array", items: { type: "string" } },
-              improvements: { type: "array", items: { type: "string" } },
-              ai_feedback: { type: "string" },
-              duration_seconds: { type: "number" }
-            }
-          },
-          file_urls: [file_url] // This enables video analysis
-        });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to analyze video');
       }
 
-      const selfIntro = await base44.entities.SelfIntro.create({
-        video_url: file_url,
-        transcript: assessment.transcript || "",
-        duration_seconds: assessment.duration_seconds || 0,
-        clarity_score: assessment.clarity_score,
-        confidence_score: assessment.confidence_score,
-        structure_score: assessment.structure_score,
-        overall_score: assessment.overall_score,
-        ai_feedback: assessment.ai_feedback,
-        strengths: assessment.strengths,
-        improvements: assessment.improvements
-      });
+      const result = await response.json();
 
-      // Deduct credits for assessment
-      const newBalance = subscription.current_credits - VIDEO_ASSESSMENT_COST;
-      await base44.entities.Subscription.update(subscription.id, {
-        current_credits: newBalance
-      });
-
-      await base44.entities.CreditLedger.create({
-        user_id: user.id,
-        transaction_type: "consumption",
-        credits_amount: -VIDEO_ASSESSMENT_COST,
-        balance_after: newBalance,
-        feature_used: "Video AI Assessment",
-        description: descriptionForLedger
-      });
-
-      setCurrentCredits(newBalance);
-
-      // Award XP
-      await awardXP(user.id, XP_VALUES.SELF_INTRO_COMPLETE, "Completed self-introduction video", selfIntro.id);
-      await updateStreak(user.id);
-      await calculateReadinessScore(user.id);
+      // Convert API response to component format
+      const assessment = {
+        transcript: result.data.transcript,
+        clarity_score: result.data.clarityScore,
+        confidence_score: result.data.confidenceScore,
+        structure_score: result.data.structureScore,
+        overall_score: result.data.overallScore,
+        strengths: result.data.strengths,
+        improvements: result.data.improvements,
+        ai_feedback: result.data.aiFeedback,
+        duration_seconds: result.data.durationSeconds
+      };
 
       setFinalAssessment(assessment);
+
+      // Refresh credit balance
+      queryClient.invalidateQueries({ queryKey: ['creditBalance'] });
+
+      // TODO: Award XP via P3 gamification system
+
     } catch (error) {
       console.error("Error analysing video:", error);
       alert("An error occurred during analysis. Please try again.");

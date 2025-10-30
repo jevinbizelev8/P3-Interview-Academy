@@ -27,6 +27,11 @@ export class ReflectionService {
       actionItems?: string;
       overallFeeling?: string;
       moodScore?: number;
+      // New AI-powered reflection fields
+      reflectionText?: string;
+      aiSummary?: string;
+      aiFollowUpQuestions?: string[];
+      suggestedResources?: Array<{ title: string; description: string; link?: string }>;
     }
   ): Promise<ReflectionJournal> {
     try {
@@ -38,6 +43,10 @@ export class ReflectionService {
         actionItems: data.actionItems || null,
         overallFeeling: data.overallFeeling || null,
         moodScore: data.moodScore || null,
+        reflectionText: data.reflectionText || null,
+        aiSummary: data.aiSummary || null,
+        aiFollowUpQuestions: data.aiFollowUpQuestions || null,
+        suggestedResources: data.suggestedResources || null,
       };
 
       const [reflection] = await db
@@ -53,6 +62,48 @@ export class ReflectionService {
     } catch (error) {
       console.error("❌ Error creating reflection:", error);
       throw new Error(`Failed to create reflection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Create an AI-powered reflection journal entry (for Base44 compatibility)
+   */
+  static async createAIReflection(
+    userId: string,
+    practiceSessionId: string,
+    reflectionText: string,
+    aiSummary: string,
+    aiFollowUpQuestions: string[],
+    suggestedResources: Array<{ title: string; description: string; link?: string }>
+  ): Promise<ReflectionJournal> {
+    try {
+      const reflectionData: InsertReflectionJournal = {
+        userId,
+        practiceSessionId,
+        // Map to legacy fields for backward compatibility
+        strengths: aiSummary,
+        improvements: aiFollowUpQuestions.join('; '),
+        actionItems: suggestedResources.map(r => `${r.title}: ${r.description}`).join('; '),
+        // New AI fields
+        reflectionText,
+        aiSummary,
+        aiFollowUpQuestions,
+        suggestedResources,
+      };
+
+      const [reflection] = await db
+        .insert(reflectionJournals)
+        .values(reflectionData)
+        .returning();
+
+      console.log(
+        `✅ Created AI-powered reflection journal for user ${userId} (session: ${practiceSessionId})`
+      );
+
+      return reflection;
+    } catch (error) {
+      console.error("❌ Error creating AI reflection:", error);
+      throw new Error(`Failed to create AI reflection: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

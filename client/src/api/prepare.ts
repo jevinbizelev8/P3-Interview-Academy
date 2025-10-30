@@ -166,8 +166,8 @@ export async function updateModuleProgress(params: {
  */
 export async function saveSelfIntroDraft(params: {
   content?: string;
-  step: number;
-  data: any;
+  stepNumber: number;
+  stepData: any;
 }): Promise<SelfIntroDraft> {
   const { data } = await apiClient.post<ApiResponse<{ draft: SelfIntroDraft }>>(
     '/prepare/self-intro/draft',

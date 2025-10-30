@@ -1,6 +1,5 @@
 
-import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Play, AlertCircle, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useResumes, useCreditBalance } from "@/hooks/useApi";
 import CreditCostBadge from "../shared/CreditCostBadge";
 
 const STAGES = [
@@ -30,24 +30,15 @@ export default function SimulationSetup({ onStart, onCancel }) {
   });
   const [currentCredits, setCurrentCredits] = useState(null);
 
-  const { data: resumes = [] } = useQuery({
-    queryKey: ['resumes'],
-    queryFn: () => base44.entities.Resume.list('-created_date')
-  });
+  const { data: resumes = [] } = useResumes();
+  const { data: creditData } = useCreditBalance();
 
-  // Fetch user's credit balance
-  useQuery({
-    queryKey: ['creditBalance'],
-    queryFn: async () => {
-      const user = await base44.auth.me();
-      const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-      if (subs.length > 0) {
-        setCurrentCredits(subs[0].current_credits);
-        return subs[0].current_credits;
-      }
-      return 0;
+  // Set current credits when data loads
+  useEffect(() => {
+    if (creditData) {
+      setCurrentCredits(creditData.balance);
     }
-  });
+  }, [creditData]);
 
   const handleStart = () => {
     if (config.stage && config.jobTitle) {

@@ -1,7 +1,6 @@
 
 import React, { useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookOpen, CheckCircle2, ArrowRight, Target, Users, Briefcase, Code, Award as AwardIcon, X, ArrowLeft, Rocket, Trophy } from "lucide-react";
@@ -10,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { createPageUrl } from "@/utils";
+import { useUserModuleProgress, useUpdateModuleProgress, useLearningModules } from "@/hooks/useApi";
 
 import STARStoryBuilder from "./practice/STARStoryBuilder";
 import ConflictScenarioPractice from "./practice/ConflictScenarioPractice";
@@ -235,59 +235,15 @@ export default function LearningHub() {
   const [showStageCompletion, setShowStageCompletion] = useState(null);
   const queryClient = useQueryClient();
 
-  const { data: completedModules = [] } = useQuery({
-    queryKey: ['completedModules'],
-    queryFn: async () => {
-      const user = await base44.auth.me();
-      return await base44.entities.UserModuleProgress.filter({
-        created_by: user.email,
-        completed: true
-      });
-    }
-  });
+  const { data: moduleProgress = [] } = useUserModuleProgress();
+  const { data: learningModules = [] } = useLearningModules();
 
-  const completeModuleMutation = useMutation({
-    mutationFn: async (moduleName) => {
-      const user = await base44.auth.me();
-
-      const existing = await base44.entities.UserModuleProgress.filter({
-        created_by: user.email,
-        module_name: moduleName
-      });
-
-      if (existing.length > 0 && existing[0].completed) {
-        return existing[0];
-      }
-
-      let moduleProgress;
-      if (existing.length > 0) {
-        moduleProgress = await base44.entities.UserModuleProgress.update(existing[0].id, {
-          completed: true,
-          completion_date: new Date().toISOString(),
-          time_spent_minutes: 15
-        });
-      } else {
-        moduleProgress = await base44.entities.UserModuleProgress.create({
-          module_name: moduleName,
-          stage: selectedModule.parentStage,
-          completed: true,
-          completion_date: new Date().toISOString(),
-          time_spent_minutes: 15
-        });
-      }
-
-      const isAdvancedModule = moduleName.includes('STAR') || moduleName.includes('Technical') || moduleName.includes('Strategic') || moduleName.includes('Elevator Pitch') || moduleName.includes('Branding') || moduleName.includes('HR Questions') || moduleName.includes('Executive');
-      const rewardsPointsAmount = isAdvancedModule ? REWARDS_POINTS_VALUES.LEARNING_MODULE_ADVANCED : REWARDS_POINTS_VALUES.LEARNING_MODULE_BASIC;
-      await awardRewardsPoints(user.id, rewardsPointsAmount, `Completed module: ${moduleName}`, moduleProgress.id);
-
-      await updateStreak(user.id);
-      await calculateReadinessScore(user.id);
-
-      return moduleProgress;
-    },
+  const completeModuleMutation = useUpdateModuleProgress({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['completedModules'] });
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+      queryClient.invalidateQueries({ queryKey: ['userModuleProgress'] });
+      queryClient.invalidateQueries({ queryKey: ['readinessScore'] });
+      queryClient.invalidateQueries({ queryKey: ['xpPoints'] });
+      queryClient.invalidateQueries({ queryKey: ['streak'] });
     }
   });
 
@@ -296,12 +252,23 @@ export default function LearningHub() {
   };
 
   const handleCompleteModule = async () => {
-    await completeModuleMutation.mutateAsync(selectedModule.name);
-    
+    // Find the module ID from the learning modules data
+    const moduleData = learningModules.find(m =>
+      m.title === selectedModule.name && m.stage === selectedModule.parentStage
+    );
+
+    if (moduleData) {
+      await completeModuleMutation.mutateAsync({
+        moduleId: moduleData.id,
+        completed: true,
+        timeSpent: 15
+      });
+    }
+
     // Check if all modules in this stage are completed
     const currentStage = STAGES[selectedModule.stageIndex];
     const stageModules = currentStage.modules;
-    const completedInStage = completedModules.filter(m => m.stage === currentStage.stage);
+    const completedInStage = moduleProgress.filter(m => m.stage === currentStage.stage && m.completed);
     
     if (completedInStage.length + 1 >= stageModules.length) {
       // All modules completed, show stage completion
@@ -340,7 +307,10 @@ export default function LearningHub() {
   };
 
   const isModuleCompleted = (moduleName) => {
-    return completedModules.some(m => m.module_name === moduleName);
+    // Find the module to get its ID, then check if it's completed
+    const module = learningModules.find(m => m.title === moduleName);
+    if (!module) return false;
+    return moduleProgress.some(p => p.module_id === module.id && p.completed);
   };
 
   const getStageProgress = (stage) => {
