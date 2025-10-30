@@ -30,7 +30,7 @@ const stripe = require('stripe')('sk_live_REDACTED');
 ```
 
 **Expected Result**: ❌ BLOCK COMMIT (PRODUCTION CREDENTIAL)
-**Pattern Match**: `sk_live_[0-9a-zA-Z]{24,}`
+**Pattern Match**: `sk_live_[0-9a-zA-Z]{24,}` (actual keys are 99 chars)
 **Agent Action**: Report finding at `server/services/payment-service.ts:2`, STOP with HIGH PRIORITY alert
 
 ---
