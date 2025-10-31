@@ -36,6 +36,125 @@ Your AWS Bedrock account has extremely low rate limits for Claude Sonnet 4.5:
 - 1M Context model: 200 RPM / 2M TPM (100x current capacity)
 - This exceeds Claude Code Pro subscription baseline (5 RPM) by 40x
 
+## Temporary Workaround: Using opencode-developer Agent
+
+**Status**: ✅ Available Now - No AWS Quota Limitations
+
+While waiting for AWS Bedrock quota approval, you can use the **opencode-developer agent** for development tasks. This agent uses the **Anthropic Claude API** directly (not AWS Bedrock), completely bypassing the 2 RPM AWS rate limit.
+
+### Key Advantages
+
+| Feature | Standard Claude (AWS Bedrock) | opencode-developer Agent |
+|---------|------------------------------|--------------------------|
+| **API Provider** | AWS Bedrock | Anthropic Claude API (Direct) |
+| **Rate Limit** | 2 RPM (restricted) | ~50 RPM (Anthropic standard) |
+| **Affected by AWS Quota** | ✅ Yes | ❌ No |
+| **Best For** | Quick questions, single-step tasks | Multi-step implementations, coding, testing |
+| **Context Awareness** | Standard conversation context | Enhanced with codebase awareness |
+| **Autonomous Execution** | No | Yes (can execute multiple steps) |
+
+### When to Use opencode-developer
+
+**Ideal Use Cases**:
+- 🔧 **Multi-step implementations** - Complex features requiring multiple file edits
+- 🧪 **Development & testing** - Running tests, debugging, and verification workflows
+- 📝 **Code generation** - Writing new features, refactoring existing code
+- 🔄 **Iterative tasks** - Tasks requiring multiple rounds of execution and validation
+- 🚀 **Rapid prototyping** - Building and testing new functionality quickly
+
+**When to Use Standard Claude**:
+- 💬 Quick questions about code or architecture
+- 📖 Documentation reading and explanation requests
+- 🤔 Conceptual discussions and planning
+- 🔍 Simple code searches and reviews
+
+### How to Use opencode-developer
+
+**Syntax**: Use `@agent-opencode-developer` at the start of your message to invoke the agent.
+
+**Example Usage Patterns**:
+
+```plaintext
+@agent-opencode-developer implement the readiness score calculation service
+according to docs/redesign/MASTER_PLAN.md Phase 2. Include unit tests.
+
+@agent-opencode-developer debug the 429 error in the practice module API
+and implement exponential backoff retry logic.
+
+@agent-opencode-developer create database migration for the new gamification
+tables in DATABASE_SCHEMA.md, then run tests to verify schema.
+
+@agent-opencode-developer refactor the AI service layer to support multiple
+providers (OpenAI, Anthropic, Qwen) with fallback logic.
+```
+
+**Agent Capabilities**:
+- ✅ Read and analyze multiple files across the codebase
+- ✅ Execute shell commands (npm, git, database migrations)
+- ✅ Edit multiple files in sequence
+- ✅ Run tests and validate changes
+- ✅ Iterate based on test results and errors
+- ✅ Commit changes with proper git messages
+- ✅ Create pull requests with testing documentation
+
+### Important Notes
+
+**Limitations**:
+- ⚠️ **Not a permanent solution** - Use while waiting for AWS quota approval
+- ⚠️ **Different API** - Uses Anthropic API pricing (separate from AWS costs)
+- ⚠️ **Manual supervision** - Review agent actions before approving destructive operations
+
+**Best Practices**:
+1. **Be specific** - Provide clear instructions and reference documentation
+2. **Use for batches** - Combine related tasks to minimize API calls
+3. **Review changes** - Always review code changes before committing
+4. **Monitor costs** - Track Anthropic API usage separately from AWS
+
+**Cost Comparison**:
+- AWS Bedrock: ~$0.003-0.015 per 1K tokens (usage-based)
+- Anthropic API: ~$0.003-0.015 per 1K tokens (similar pricing)
+- **Net impact**: Negligible cost difference, significantly better performance
+
+### Example Workflow
+
+**Before (Standard Claude with AWS Limits)**:
+```plaintext
+You: "Help me implement the badge system"
+Claude: [Provides code example]
+You: "Now write the tests"
+Claude: [429 Error - Rate limit exceeded]
+⏳ Wait 30+ seconds...
+You: "Write tests for badge system"
+Claude: [Provides test example]
+⏳ Total time: 5+ minutes with waiting
+```
+
+**After (Using opencode-developer)**:
+```plaintext
+You: "@agent-opencode-developer implement the badge system from
+DATABASE_SCHEMA.md including service layer, API routes, and tests"
+Agent: [Reads schema] → [Creates service] → [Creates routes] → [Writes tests]
+       → [Runs tests] → [Reports results]
+✅ Total time: 2-3 minutes, no waiting
+```
+
+### Transition Plan
+
+**Current Phase**: Using opencode-developer for development work
+- ✅ No rate limit constraints
+- ✅ Full development velocity maintained
+- ⏳ AWS quota approval pending (5-15 min or 1-3 business days)
+
+**After AWS Approval**: Return to standard Claude + selective agent use
+- ✅ AWS Bedrock quotas restored (200 RPM)
+- ✅ Standard Claude for conversations
+- ✅ opencode-developer for complex multi-step tasks
+
+**Long-term**: Hybrid approach based on task complexity
+- Use standard Claude for most interactions
+- Reserve opencode-developer for intensive development sessions
+- Monitor AWS quota usage to stay within limits
+
 ## Current Quotas (as of 2025-10-31 05:00 UTC - Before Increase)
 
 ### Claude Sonnet 4.5 V1 Limits

@@ -10,6 +10,10 @@ This project uses multiple documentation files for better organization:
 - **[SECURITY.md](SECURITY.md)** - Security best practices, AWS credentials, incident history
 - **[INTEGRATION.md](INTEGRATION.md)** - Bizelev8.ai, email verification, Google OAuth
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Comprehensive deployment procedures and guides
+- **[statusline/](docs/statusline/)** - AWS Bedrock cost tracking statusline
+  - [README.md](docs/statusline/README.md) - Quick overview and links
+  - [GUIDE.md](docs/statusline/GUIDE.md) - Complete user guide
+  - [PRICING_REFERENCE.md](docs/statusline/PRICING_REFERENCE.md) - AWS pricing breakdown
 - **[ops-log/](docs/ops-log/)** - Monthly operational updates and historical changes
   - [2025-09.md](docs/ops-log/2025-09.md) - September deployment history
   - [2025-10.md](docs/ops-log/2025-10.md) - October deployment history
@@ -29,6 +33,9 @@ This project uses multiple documentation files for better organization:
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 
 ### Recent Updates
+- **2025-10-31**: ✅ **Statusline Documentation Organized** - AWS Bedrock cost tracking docs moved to `docs/statusline/`
+- **2025-10-31**: ✅ **Statusline Token Tracking Fixed** - Now uses real token counts from transcripts (not estimates)
+- **2025-10-31**: ✅ **Cache Pricing Added** - Accurate AWS Bedrock cache write ($0.00375) and read ($0.0003) costs
 - **2025-10-30**: ✅ **Stripe CLI installed** - Local webhook testing and payment flow verification now available
 - **2025-10-28**: 🎯 **REDESIGN PROJECT KICKOFF** - Base44 MVP integration (16-20 week timeline)
 - **2025-10-28**: Removed SeaLion AI service - now OpenAI-only (Qwen planned for 3 months)
