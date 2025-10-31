@@ -648,10 +648,33 @@ The following Phase 5 enhancement features have been implemented:
 
 **Staging Deployment**:
 - [x] Create deployment checklist ✅ (2025-10-31)
+- [ ] **SSL Setup for p3app-staging.bizelev8.ai** ⏳ (IN PROGRESS - Resume next session)
+  - [x] Request ACM certificate (ARN: `arn:aws:acm:ap-southeast-1:417132395013:certificate/8e2e99dd-dc3b-4538-a433-51796d33b355`)
+  - [ ] Add DNS validation CNAME record (see below)
+  - [ ] Wait for certificate validation (5-10 minutes)
+  - [ ] Configure HTTPS listener on staging ELB
+  - [ ] Test HTTPS access
+  - [ ] Update documentation
 - [ ] Deploy to staging environment
 - [ ] Run database migrations on staging
 - [ ] Run smoke tests
 - [ ] Verify all features working
+
+**SSL Setup - Resume Instructions** (for next session):
+```
+DNS Validation CNAME Record to Add in Cloudflare:
+Type:  CNAME
+Name:  _9fa67cc44b87619e82704dbb971b6b37.p3app-staging
+Value: _9b3ee3fccd6e3a582fd7168934b33b4a.jkddzztszm.acm-validations.aws.
+TTL:   300
+
+After adding, run:
+aws acm wait certificate-validated \
+  --region ap-southeast-1 \
+  --certificate-arn arn:aws:acm:ap-southeast-1:417132395013:certificate/8e2e99dd-dc3b-4538-a433-51796d33b355
+
+Then continue with HTTPS listener configuration (opencode-deploy-expert will handle this)
+```
 
 **User Acceptance Testing**:
 - [ ] Test as new user (signup → prepare → practice → perform)
