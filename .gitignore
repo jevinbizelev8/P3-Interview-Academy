@@ -45,3 +45,10 @@ uploads/profile-photos/*
 # Backup files
 *.backup
 *.bak
+
+# Test outputs
+coverage/
+test-results/
+.vitest/
+junit*.xml
+**/coverage*.json

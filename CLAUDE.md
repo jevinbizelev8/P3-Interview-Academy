@@ -234,18 +234,36 @@ Keep this section synchronized with deployment changes; update immediately when 
 - `npm run check` - Run TypeScript type checking
 
 ### Testing Commands
-- `npm test` - Run all tests in watch mode
-- `npm run test:run` - Run all tests once
+- `npm test` - Run all tests in watch mode (321 tests: client + server)
+- `npm run test:run` - Run all tests once (client + server)
 - `npm run test:coverage` - Run tests with coverage report
 - `npm run test:ui` - Launch Vitest UI for interactive testing
+- `npm run test:client` - Run client tests only (118 tests, jsdom environment)
+- `npm run test:server` - Run server tests only (203 tests, node environment)
+- `npm run test:api` - Run server API tests with verbose output
 - `npm run test:prepare` - Run specific component tests for validation
 - `npm run test:integration` - Run integration tests only
-- `npm run test:api` - Run API tests only
+
+**Test Architecture**:
+- **Vitest Workspace**: Configured in `vitest.workspace.ts` with two projects
+- **Client Project**: React component tests (jsdom), 118 tests, 58 passing (49%)
+- **Server Project**: API route tests (node), 203 tests, 174 passing (86%)
+- **Total**: 321 tests, 232 passing (72%)
 
 **Key Test Coverage**:
-- Component tests: `LanguageSelector.test.tsx`, `JobDescriptionUpload.test.tsx`, `SignupForm.test.tsx`
-- Integration tests: `prepare-session.integration.test.tsx`, `perform-dashboard.integration.test.tsx`
-- API tests: `prepare-ai.routes.test.ts`, `practice.routes.test.ts`
+- **Client Component Tests**: `LanguageSelector.test.tsx`, `JobDescriptionUpload.test.tsx`, `SignupForm.test.tsx`
+- **Client Integration Tests**: `prepare-session.integration.test.tsx`, `perform-dashboard.integration.test.tsx`
+- **Server API Tests** (10 files):
+  - `prepare-ai.routes.test.ts` (15 tests)
+  - `practice.routes.test.ts` (12 tests)
+  - `prepare.routes.test.ts` (17 tests)
+  - `perform.routes.test.ts` (22 tests)
+  - `gamification.routes.test.ts` (28 tests)
+  - `support.routes.test.ts` (24 tests)
+  - `referrals.routes.test.ts` (20 tests)
+  - `practice-enhancements.test.ts` (18 tests)
+  - `model-answer-service.test.ts` (8 tests)
+  - `migrations/redesign-schema.test.ts` (25 tests)
 
 ### Payment Testing Commands (Stripe CLI)
 - `stripe listen --forward-to localhost:5000/api/webhooks/stripe` - Forward webhooks to local server
