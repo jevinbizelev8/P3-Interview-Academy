@@ -102,6 +102,7 @@ The statusline automatically detects which Claude API is being used:
 
 ### Recent Updates
 
+- **2025-10-31**: **CRITICAL FIX** - Switched to token-based cost calculation (was showing $1 instead of actual $20+ costs)
 - **2025-10-31**: Added accurate cache pricing (write $0.00375, read $0.0003)
 - **2025-10-31**: Fixed token tracking to use real counts from transcripts
 - **2025-10-31**: Added API auto-detection for Bedrock vs Standard API
