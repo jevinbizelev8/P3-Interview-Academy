@@ -11,7 +11,7 @@ import { ReadinessService } from "../services/readiness-service";
 import { requireCredits } from "../middleware/credit-middleware.js";
 import { db } from "../db";
 import { starStories, type InsertStarStory } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
@@ -240,6 +240,47 @@ router.post('/modules/:moduleId/coaching', requireCredits('module-coaching'), as
     }
 
     console.error('❌ Error getting AI coaching:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get AI coaching',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * POST /modules/screening-interview/coaching
+ * Get AI coaching for screening interview game rapid-fire scenarios
+ */
+router.post('/modules/screening-interview/coaching', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const validatedData = moduleCoachingSchema.parse(req.body);
+
+    // Get AI coaching for the screening interview scenario
+    const coaching = await LearningModuleService.getAICoaching(
+      req.user.id,
+      'screening-interview', // module identifier
+      validatedData.question,
+      validatedData.userAnswer,
+      validatedData.weakExample,
+      validatedData.strongExample
+    );
+
+    return res.json({ success: true, data: coaching });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation error',
+        details: error.errors,
+      });
+    }
+
+    console.error('❌ Error getting screening interview coaching:', error);
     return res.status(500).json({
       success: false,
       error: 'Failed to get AI coaching',
@@ -756,6 +797,61 @@ router.get('/star-stories', async (req, res) => {
     return res.status(500).json({
       success: false,
       error: 'Failed to retrieve STAR stories',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * DELETE /star-stories/:id
+ * Delete a specific STAR story
+ */
+router.delete('/star-stories/:id', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const storyId = req.params.id;
+
+    // Verify story exists and belongs to user
+    const [story] = await db
+      .select()
+      .from(starStories)
+      .where(
+        and(
+          eq(starStories.id, storyId),
+          eq(starStories.userId, req.user.id)
+        )
+      );
+
+    if (!story) {
+      return res.status(404).json({
+        success: false,
+        error: 'STAR story not found or you do not have permission to delete it',
+      });
+    }
+
+    // Delete the story
+    await db
+      .delete(starStories)
+      .where(
+        and(
+          eq(starStories.id, storyId),
+          eq(starStories.userId, req.user.id)
+        )
+      );
+
+    return res.json({
+      success: true,
+      message: 'STAR story deleted successfully',
+      data: { id: storyId },
+    });
+  } catch (error) {
+    console.error('❌ Error deleting STAR story:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to delete STAR story',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
   }

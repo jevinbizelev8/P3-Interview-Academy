@@ -29,6 +29,7 @@ This project uses multiple documentation files for better organization:
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 
 ### Recent Updates
+- **2025-10-30**: ✅ **Stripe CLI installed** - Local webhook testing and payment flow verification now available
 - **2025-10-28**: 🎯 **REDESIGN PROJECT KICKOFF** - Base44 MVP integration (16-20 week timeline)
 - **2025-10-28**: Removed SeaLion AI service - now OpenAI-only (Qwen planned for 3 months)
 - **2025-10-28**: Created comprehensive database schema (13 new tables, 6 user columns)
@@ -103,6 +104,20 @@ This project uses multiple documentation files for better organization:
 - **Quick Start**: Double-click `launch-chrome-debug.bat` then restart Claude Code
 - **Capabilities**: Navigate URLs, take screenshots, inspect DOM, execute JavaScript, monitor network
 - **Documentation**: See `C:\Users\User\.claude\chrome-mcp-tools\README.md`
+
+#### Stripe CLI
+- **Stripe CLI**: Installed for local payment testing and webhook forwarding
+- **Capabilities**:
+  - Forward webhooks to local development server: `stripe listen --forward-to localhost:5000/api/webhooks/stripe`
+  - Trigger test webhook events: `stripe trigger payment_intent.succeeded`
+  - View webhook logs and debugging information
+  - Test payment flows without deploying to staging
+- **Documentation**: Run `stripe --help` for commands or see [Stripe CLI Docs](https://stripe.com/docs/stripe-cli)
+- **Common Commands**:
+  - `stripe login` - Authenticate with Stripe account
+  - `stripe listen` - Listen for webhook events
+  - `stripe trigger <event>` - Trigger test events
+  - `stripe logs tail` - View real-time API logs
 
 ---
 
@@ -224,6 +239,12 @@ Keep this section synchronized with deployment changes; update immediately when 
 - Component tests: `LanguageSelector.test.tsx`, `JobDescriptionUpload.test.tsx`, `SignupForm.test.tsx`
 - Integration tests: `prepare-session.integration.test.tsx`, `perform-dashboard.integration.test.tsx`
 - API tests: `prepare-ai.routes.test.ts`, `practice.routes.test.ts`
+
+### Payment Testing Commands (Stripe CLI)
+- `stripe listen --forward-to localhost:5000/api/webhooks/stripe` - Forward webhooks to local server
+- `stripe trigger payment_intent.succeeded` - Simulate successful payment
+- `stripe trigger checkout.session.completed` - Simulate checkout completion
+- `stripe logs tail` - Monitor Stripe API activity in real-time
 
 ### Database Commands
 - `npm run db:push` - Push database schema changes using Drizzle Kit

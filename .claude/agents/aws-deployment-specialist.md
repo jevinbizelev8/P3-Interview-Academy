@@ -65,6 +65,7 @@ Before any deployment, verify:
 4. **Available tools** (use if accessible):
    - AWS CLI for infrastructure operations
    - GitHub CLI (gh) for workflow monitoring and approvals
+   - Stripe CLI for payment testing and webhook verification
    - Codex CLI for additional automation
 
 ### Error Resolution Protocol
@@ -106,6 +107,10 @@ Ensure smoke tests validate:
 - Authentication endpoints (login, session validation)
 - Prepare module API functionality
 - Practice module API functionality
+- Stripe webhook endpoints (use Stripe CLI to trigger test events)
+  - `stripe trigger payment_intent.succeeded`
+  - `stripe trigger checkout.session.completed`
+  - Verify webhook processing in application logs
 
 ### Production Deployment Approval
 Before approving production deployment:

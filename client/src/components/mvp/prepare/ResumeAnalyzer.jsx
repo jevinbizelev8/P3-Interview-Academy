@@ -9,9 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { useResumes, useUploadResume, useAnalyzeResume, useCreditBalance } from "@/hooks/useApi";
 import * as prepareApi from "@/api/prepare";
+import * as gamificationApi from "@/api/gamification";
 import { toast } from "@/hooks/use-toast";
-
-// TODO: Implement XP awarding in P3 gamification system
 import CreditCostBadge from "../shared/CreditCostBadge";
 
 const RESUME_ANALYSIS_COST = 5;
@@ -77,7 +76,22 @@ export default function ResumeAnalyzer() {
 
       setAnalysis(formattedAnalysis);
 
-      // TODO: Award XP via P3 gamification system
+      // Award XP for resume analysis (25 XP)
+      try {
+        await gamificationApi.addPoints({
+          points: 25,
+          source: 'resume_analysis',
+          reference_id: uploadedResume.id
+        });
+        // Refresh XP points and badges in case of level up or badge unlock
+        queryClient.invalidateQueries({ queryKey: ['xpPoints'] });
+        queryClient.invalidateQueries({ queryKey: ['userBadges'] });
+      } catch (xpError) {
+        // Don't fail the whole operation if XP awarding fails
+        if (import.meta.env.DEV) {
+          console.error("Failed to award XP:", xpError);
+        }
+      }
 
     } catch (error) {
       if (import.meta.env.DEV) {

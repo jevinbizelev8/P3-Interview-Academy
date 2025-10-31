@@ -15,8 +15,9 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import CreditCostBadge from "../shared/CreditCostBadge";
 import { useSelfIntroDraft, useSaveSelfIntroDraft, useFinalizeSelfIntro, useCreditBalance, usePurchaseCredits } from "@/hooks/useApi";
-
-import { awardXP, calculateReadinessScore, updateStreak, XP_VALUES } from "../utils/scoring";
+import * as gamificationApi from "@/api/gamification";
+import * as creditsApi from "@/api/credits";
+import { toast } from "@/hooks/use-toast";
 
 const SCRIPT_POLISHING_COST = 3;
 const VIDEO_RECORDING_COST = 3;
@@ -147,10 +148,18 @@ export default function SelfIntroScriptingWizard() {
   // Credit balance is handled by useCreditBalance hook
 
   const getAICoaching = async (prompt, context) => {
+    // NOTE: This function is a placeholder for future real-time AI coaching during script building.
+    // Currently not called in the UI flow. The main AI features are:
+    // - Script polishing (handlePolishing) - IMPLEMENTED ✓
+    // - Video assessment (analyzeRecording) - IMPLEMENTED ✓
+    //
+    // To implement this feature in the future:
+    // 1. Add a "Get AI Coaching" button in steps 1-4
+    // 2. Create backend endpoint: POST /api/prepare/self-intro/coaching
+    // 3. Send current step data (who/what/why/closing) for real-time feedback
+    // 4. Display coaching tips alongside the textarea
     setIsProcessing(true);
     try {
-      // TODO: Implement AI coaching endpoint in P3
-      // For now, provide basic feedback
       setAiCoaching("AI coaching feature coming soon. Please continue with the script polishing step.");
       return { feedback: "AI coaching feature coming soon." };
     } catch (error) {
@@ -332,7 +341,7 @@ export default function SelfIntroScriptingWizard() {
       mediaRecorder.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: mimeType }); // Use the determined mimeType
         setRecordedBlob(blob);
-        
+
         // Set the recorded video as the source for playback
         if (videoRef.current) {
           const url = URL.createObjectURL(blob);
@@ -342,8 +351,28 @@ export default function SelfIntroScriptingWizard() {
           videoRef.current.muted = false; // Unmute for playback
         }
 
-        // TODO: Deduct credits for recording via P3 API
-        alert(`Video recording would deduct ${VIDEO_RECORDING_COST} credits.`);
+        // Deduct credits for recording
+        // NOTE: This is client-side recording with no server costs. Consider removing this charge.
+        try {
+          await creditsApi.deductCredits({
+            amount: VIDEO_RECORDING_COST,
+            reason: 'self_intro_video_recording',
+            reference_id: 'video_recording'
+          });
+          // Refresh credit balance
+          queryClient.invalidateQueries({ queryKey: ['creditBalance'] });
+          toast({
+            title: "Video Recorded",
+            description: `${VIDEO_RECORDING_COST} credits deducted. You can now proceed to assessment.`
+          });
+        } catch (error) {
+          console.error("Failed to deduct credits:", error);
+          toast({
+            variant: "destructive",
+            title: "Credit Deduction Failed",
+            description: `Video recorded but failed to deduct ${VIDEO_RECORDING_COST} credits. Please contact support.`
+          });
+        }
       };
 
       mediaRecorder.start();
@@ -423,7 +452,24 @@ export default function SelfIntroScriptingWizard() {
       // Refresh credit balance
       queryClient.invalidateQueries({ queryKey: ['creditBalance'] });
 
-      // TODO: Award XP via P3 gamification system
+      // Award XP for self-intro video assessment (25-50 XP based on score)
+      try {
+        const xpAmount = assessment.overall_score >= 80 ? 50 :
+                        assessment.overall_score >= 60 ? 35 : 25;
+        await gamificationApi.addPoints({
+          points: xpAmount,
+          source: 'self_intro_assessment',
+          reference_id: 'video_assessment'
+        });
+        // Refresh XP points and badges in case of level up or badge unlock
+        queryClient.invalidateQueries({ queryKey: ['xpPoints'] });
+        queryClient.invalidateQueries({ queryKey: ['userBadges'] });
+      } catch (xpError) {
+        // Don't fail the whole operation if XP awarding fails
+        if (import.meta.env.DEV) {
+          console.error("Failed to award XP:", xpError);
+        }
+      }
 
     } catch (error) {
       console.error("Error analysing video:", error);

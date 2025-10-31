@@ -107,6 +107,16 @@ npm run check
 npm run test
 ```
 
+**Testing Stripe Webhooks Locally**:
+```bash
+# In a separate terminal, forward webhooks to your local server
+stripe listen --forward-to localhost:5000/api/webhooks/stripe
+
+# Trigger test events
+stripe trigger payment_intent.succeeded
+stripe trigger checkout.session.completed
+```
+
 ### 2. Create PR
 - Push to GitHub → auto PR deploy to staging.  
 - PR comment includes staging URL and version.
@@ -115,6 +125,10 @@ npm run test
 - Access the **HTTPS staging URL**:
   - Example: `https://staging.p3academy.com`
 - Verify Stripe test payments (`4242 4242 4242 4242`)
+- Test webhook delivery using Stripe CLI:
+  ```bash
+  stripe listen --forward-to https://staging-url/api/webhooks/stripe
+  ```
 - Validate logs and API health endpoints.
 
 ### 4. Merge to `main`
@@ -179,6 +193,9 @@ aws configure sso   # or use OIDC assumed role
 npm run build
 bash deployment-scripts/create-deployment-bundle.sh
 bash deployment-scripts/deploy-to-eb.sh staging
+
+# Test webhooks after deployment
+stripe listen --forward-to https://staging-url/api/webhooks/stripe
 ```
 
 ### Manual Production Deployment

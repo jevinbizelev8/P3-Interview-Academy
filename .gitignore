@@ -32,3 +32,16 @@ test-email-security.js
 
 # Claude Code local settings (may contain secrets)
 .claude/settings.local.json
+
+# Generated HTML files (keep only essential index.html)
+*.html
+!client/index.html
+
+# Uploads directory (keep structure, exclude user content)
+uploads/*
+!uploads/profile-photos/
+uploads/profile-photos/*
+
+# Backup files
+*.backup
+*.bak

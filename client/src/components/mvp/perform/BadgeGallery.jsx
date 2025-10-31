@@ -12,7 +12,7 @@ const SAMPLE_BADGES = [
   { name: "Interview Ready", icon: Crown, color: "from-indigo-500 to-purple-500", description: "Achieved 80% readiness score" }
 ];
 
-export default function BadgeGallery({ badges }) {
+export default function BadgeGallery({ badges = [], userBadges = [] }) {
   return (
     <Card className="border-none shadow-xl">
       <CardHeader>

@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Plus, Save, Trash2, Loader2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import * as prepareApi from "@/api/prepare";
+import { toast } from "@/hooks/use-toast";
 
 const CATEGORIES = [
   "Teamwork & Collaboration",
@@ -114,12 +116,30 @@ export default function STARStoryBuilder() {
     }
   };
 
+  // Delete story mutation
+  const deleteStoryMutation = useMutation({
+    mutationFn: async (storyId) => {
+      await prepareApi.deleteStarStory(storyId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['star-stories']);
+      toast({
+        title: "Story Deleted",
+        description: "Your STAR story has been deleted successfully."
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Delete Failed",
+        description: `Failed to delete story: ${error.message}`
+      });
+    }
+  });
+
   const deleteStory = async (id) => {
-    // Note: Backend delete endpoint not implemented yet, keeping for future
-    // For now, we'll just refresh the stories
-    if (confirm('Delete this story? (Note: Backend delete not yet implemented)')) {
-      // TODO: Implement DELETE endpoint in backend
-      console.warn('Delete endpoint not yet implemented');
+    if (confirm('Are you sure you want to delete this STAR story? This action cannot be undone.')) {
+      deleteStoryMutation.mutate(id);
     }
   };
 
@@ -372,7 +392,10 @@ export default function STARStoryBuilder() {
                 <div>
                   <span className="font-semibold text-purple-700">A:</span>
                   <ul className="list-disc ml-6 mt-1">
-                    {story.actions.filter(a => a).map((action, i) => (
+                    {(Array.isArray(story.actions)
+                      ? story.actions.filter(a => a)
+                      : (story.action || '').split('\n').filter(a => a.trim())
+                    ).map((action, i) => (
                       <li key={i}>{action}</li>
                     ))}
                   </ul>

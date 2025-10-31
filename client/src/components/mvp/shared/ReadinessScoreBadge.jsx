@@ -7,8 +7,8 @@ import { motion } from "framer-motion";
 import { useReadinessScore } from "@/hooks/useApi";
 
 export default function ReadinessScoreBadge({
-  score: propScore,
-  previousScore: propPreviousScore,
+  score: propScore = undefined,
+  previousScore: propPreviousScore = undefined,
   size = "large",
   showDetails = true,
   fetchFromApi = true // Enable API fetching by default
