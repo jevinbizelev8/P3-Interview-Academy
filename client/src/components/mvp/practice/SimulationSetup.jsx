@@ -10,6 +10,7 @@ import { ArrowLeft, Play, AlertCircle, Zap } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useResumes, useCreditBalance } from "@/hooks/useApi";
 import CreditCostBadge from "../shared/CreditCostBadge";
+import { toast } from "@/hooks/use-toast";
 
 const STAGES = [
   { value: "hr_screening", label: "HR/Recruiter Screening" },
@@ -21,7 +22,7 @@ const STAGES = [
 
 const SIMULATION_COST = 15; // Credits required per simulation
 
-export default function SimulationSetup({ onStart, onCancel }) {
+export default function SimulationSetup({ onStart = () => {}, onCancel = () => {} }) {
   const [config, setConfig] = useState({
     stage: "",
     jobTitle: "",
@@ -43,7 +44,11 @@ export default function SimulationSetup({ onStart, onCancel }) {
   const handleStart = () => {
     if (config.stage && config.jobTitle) {
       if (currentCredits !== null && currentCredits < SIMULATION_COST) {
-        alert(`Insufficient credits! You need ${SIMULATION_COST} credits for an AI interview simulation. You have ${currentCredits} credits. Please purchase more credits.`);
+        toast({
+          variant: "destructive",
+          title: "Insufficient Credits",
+          description: `You need ${SIMULATION_COST} credits for an AI interview simulation. You have ${currentCredits} credits. Please purchase more credits.`
+        });
         return;
       }
       onStart(config);

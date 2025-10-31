@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,8 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { useResumes, useUploadResume, useAnalyzeResume, useCreditBalance } from "@/hooks/useApi";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as prepareApi from "@/api/prepare";
+import { toast } from "@/hooks/use-toast";
 
 // TODO: Implement XP awarding in P3 gamification system
 import CreditCostBadge from "../shared/CreditCostBadge";
@@ -80,8 +80,14 @@ export default function ResumeAnalyzer() {
       // TODO: Award XP via P3 gamification system
 
     } catch (error) {
-      console.error("Error analyzing resume:", error);
-      alert(`An error occurred during analysis: ${error.message}. Please try again.`);
+      if (import.meta.env.DEV) {
+        console.error("Error analyzing resume:", error);
+      }
+      toast({
+        variant: "destructive",
+        title: "Analysis Failed",
+        description: `An error occurred during analysis: ${error.message}. Please try again.`
+      });
     }
     setIsAnalyzing(false);
   };
@@ -117,7 +123,11 @@ export default function ResumeAnalyzer() {
       // Get the most recently uploaded resume
       const recentResume = resumes[0];
       if (!recentResume) {
-        alert('No resume found. Please upload and analyze a resume first.');
+        toast({
+          variant: "destructive",
+          title: "No Resume Found",
+          description: "Please upload and analyze a resume first."
+        });
         setIsGenerating(false);
         return;
       }
@@ -130,8 +140,14 @@ export default function ResumeAnalyzer() {
 
       setGeneratedResume(result);
     } catch (error) {
-      console.error("Error generating resume:", error);
-      alert(`An error occurred during generation: ${error.message}. Please try again.`);
+      if (import.meta.env.DEV) {
+        console.error("Error generating resume:", error);
+      }
+      toast({
+        variant: "destructive",
+        title: "Generation Failed",
+        description: `An error occurred during generation: ${error.message}. Please try again.`
+      });
     }
     setIsGenerating(false);
   };
