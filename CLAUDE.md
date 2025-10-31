@@ -33,6 +33,7 @@ This project uses multiple documentation files for better organization:
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
 
 ### Recent Updates
+- **2025-10-31**: ✅ **CRITICAL: Statusline State File Fixed** - Daily/weekly costs and session duration tracking now working correctly
 - **2025-10-31**: ✅ **CRITICAL: Statusline Cost Calculation Fixed** - Now uses accurate token-based costs (~$20/session) instead of inaccurate Claude Code values ($1)
 - **2025-10-31**: ✅ **Statusline Documentation Organized** - AWS Bedrock cost tracking docs moved to `docs/statusline/`
 - **2025-10-31**: ✅ **Statusline Token Tracking Fixed** - Now uses real token counts from transcripts (not estimates)
