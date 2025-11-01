@@ -21,7 +21,7 @@ This project uses multiple documentation files for better organization:
 
 ---
 
-## 🚀 Current Status (2025-10-28)
+## 🚀 Current Status (2025-11-01)
 
 **✅ ALL SYSTEMS OPERATIONAL**: Production and staging environments healthy
 
@@ -31,8 +31,12 @@ This project uses multiple documentation files for better organization:
 - **CI/CD Pipeline**: ✅ Fully operational (GitHub Actions)
 - **Database**: ✅ PostgreSQL RDS with 7-day backups, staging/prod separated
 - **Testing**: ✅ All tests passing (TypeScript + Vitest + Component)
+- **Statusline**: ✅ Production-ready with Replit persistence solution
 
 ### Recent Updates
+- **2025-11-01**: ✅ **CRITICAL: Statusline Replit Persistence Solved** - Added automatic restoration script for container restarts (30-second recovery vs "many sessions")
+- **2025-11-01**: ✅ **Statusline Weekly Cost Fixed** - Now correctly aggregates all days in current ISO week across month boundaries
+- **2025-11-01**: ✅ **Statusline Documentation Consolidated** - 11 comprehensive guides created (68KB), committed to git
 - **2025-10-31**: ✅ **CRITICAL: Statusline State File Fixed** - Daily/weekly costs and session duration tracking now working correctly
 - **2025-10-31**: ✅ **CRITICAL: Statusline Cost Calculation Fixed** - Now uses accurate token-based costs (~$20/session) instead of inaccurate Claude Code values ($1)
 - **2025-10-31**: ✅ **Statusline Documentation Organized** - AWS Bedrock cost tracking docs moved to `docs/statusline/`
@@ -127,6 +131,63 @@ This project uses multiple documentation files for better organization:
   - `stripe listen` - Listen for webhook events
   - `stripe trigger <event>` - Trigger test events
   - `stripe logs tail` - View real-time API logs
+
+#### Claude Code Statusline (AWS Bedrock Cost Tracking)
+- **Purpose**: Real-time AWS Bedrock API usage and cost tracking
+- **Status**: ✅ Production-ready with Replit persistence solution
+- **Display Format**: `Session: 7.3M↑/16.8K↓ $12.83 │ Today: $17.00 │ Week: $50.46 │ 21m │ 07:31 │ ~/workspace [branch]`
+- **Features**:
+  - Real token counts from transcript files (100% accurate)
+  - Cache-aware pricing (fresh, cache write, cache read, output)
+  - Daily and weekly cost aggregation
+  - Session duration tracking
+  - Git branch display
+- **Documentation**: See `docs/statusline/` for complete guides
+- **Replit-Specific**: Container restarts wipe `/home/runner/.claude/` but preserve `/home/runner/workspace/.claude/`
+
+**⚡ After Container Restart (Every 1-24 Hours in Replit):**
+```bash
+~/workspace/.claude/restore-config.sh
+```
+**Time required**: 30 seconds
+
+**Common Commands**:
+```bash
+# Restore configuration after container restart
+~/workspace/.claude/restore-config.sh
+
+# Check system health and verify configuration
+~/workspace/.claude/check-health.sh
+
+# Sync versions after editing script
+cp ~/.claude/statusline-command.sh ~/workspace/.claude/
+
+# View current costs
+cat ~/workspace/.claude/data/usage-stats.json | jq .
+
+# View cost breakdown
+tail -50 ~/workspace/.claude/data/statusline-debug.log | grep "COST BREAKDOWN"
+```
+
+**Key Files**:
+- **Active**: `~/.claude/statusline-command.sh` (ephemeral, lost on restart)
+- **Backup**: `~/workspace/.claude/statusline-command.sh` (persistent)
+- **Settings**: `~/.claude/settings.json` (ephemeral) + `~/workspace/.claude/settings.json` (persistent)
+- **Data**: `~/workspace/.claude/data/usage-stats.json` (persistent, symlinked)
+- **Scripts**: `~/workspace/.claude/restore-config.sh`, `check-health.sh`, `aliases.sh`
+
+**Pricing (AWS Bedrock Sonnet 4.5)**:
+- Fresh input: $0.003 per 1K tokens
+- Cache write: $0.00375 per 1K tokens (25% premium)
+- Cache read: $0.0003 per 1K tokens (90% discount!)
+- Output: $0.015 per 1K tokens (5x input cost)
+
+**Documentation**:
+- `docs/statusline/README.md` - Quick overview
+- `docs/statusline/GUIDE.md` - Complete user guide
+- `docs/statusline/REPLIT_PERSISTENCE_DEFINITIVE_ANSWER.md` - Deep technical analysis
+- `.claude/USAGE_INSTRUCTIONS.md` - Quick reference
+- `.claude/QUICK_FIX_INSTRUCTIONS.md` - Troubleshooting
 
 ---
 
