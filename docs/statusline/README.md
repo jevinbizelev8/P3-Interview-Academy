@@ -54,8 +54,8 @@ See [Pricing Reference](PRICING_REFERENCE.md) for detailed breakdown.
 - **Settings**: `~/.claude/settings.json` - Claude Code configuration
 
 ### Data
-- **State**: `~/.claude/data/usage-stats.json` - Session history and totals
-- **Debug Log**: `~/.claude/data/statusline-debug.log` - Detailed activity log
+- **State**: `~/workspace/.claude/data/usage-stats.json` - Session history and totals (Replit: persistent workspace storage)
+- **Debug Log**: `~/workspace/.claude/data/statusline-debug.log` - Detailed activity log
 
 ### Documentation
 - **Guide**: `docs/statusline/GUIDE.md` - Complete user guide
@@ -66,19 +66,19 @@ See [Pricing Reference](PRICING_REFERENCE.md) for detailed breakdown.
 
 ```bash
 # View usage stats
-cat ~/.claude/data/usage-stats.json | jq .
+cat ~/workspace/.claude/data/usage-stats.json | jq .
 
 # Check today's cost
-cat ~/.claude/data/usage-stats.json | jq '.daily["2025-10-31"].cost'
+cat ~/workspace/.claude/data/usage-stats.json | jq '.daily["2025-10-31"].cost'
 
 # View recent debug log
-tail -20 ~/.claude/data/statusline-debug.log
+tail -20 ~/workspace/.claude/data/statusline-debug.log
 
 # Calculate all-time total
-cat ~/.claude/data/usage-stats.json | jq '[.sessions[].cost] | add'
+cat ~/workspace/.claude/data/usage-stats.json | jq '[.sessions[].cost] | add'
 
 # View cost breakdown
-tail -50 ~/.claude/data/statusline-debug.log | grep -A 8 "COST BREAKDOWN"
+tail -50 ~/workspace/.claude/data/statusline-debug.log | grep -A 8 "COST BREAKDOWN"
 ```
 
 ## API Detection
@@ -109,11 +109,19 @@ The statusline automatically detects which Claude API is being used:
 - **2025-10-31**: Added API auto-detection for Bedrock vs Standard API
 - **2025-10-31**: Enhanced cost breakdown in debug logs
 
+## Replit Environment Note
+
+In Replit, the state file is stored in the **workspace directory** for persistence:
+- **State**: `~/workspace/.claude/data/usage-stats.json` (persistent across restarts)
+- **Why?** `/home/runner/workspace/` uses persistent btrfs storage, while `/home/runner/` uses ephemeral overlay filesystem
+
+See [Quick Fix Guide](REPLIT_QUICK_FIX.md) for details.
+
 ## Support
 
 For issues or questions:
 1. Check the [User Guide](GUIDE.md) for troubleshooting
-2. View debug log: `tail -50 ~/.claude/data/statusline-debug.log`
+2. View debug log: `tail -50 ~/workspace/.claude/data/statusline-debug.log`
 3. Test script manually: `echo '{"session_id":"test","cost":{"total_cost_usd":0.01},"workspace":{"current_dir":"/home/runner/workspace"}}' | ~/.claude/statusline-command.sh`
 
 ## Customization

@@ -21,26 +21,33 @@ if [ ! -f "$STATE_FILE" ]; then
 fi
 
 # ==================== TOKEN COUNTING ====================
-INPUT_TOKENS=0
+FRESH_INPUT=0
+CACHE_WRITE=0
+CACHE_READ=0
 OUTPUT_TOKENS=0
 
 if [ -n "$TRANSCRIPT_PATH" ] && [ -f "$TRANSCRIPT_PATH" ]; then
-  # Parse transcript for token usage
-  # Look for assistant responses and sum their token usage
-  INPUT_TOKENS=$(jq '[.interactions[]?.input_tokens // 0] | add // 0' "$TRANSCRIPT_PATH" 2>/dev/null || echo 0)
-  OUTPUT_TOKENS=$(jq '[.interactions[]?.output_tokens // 0] | add // 0' "$TRANSCRIPT_PATH" 2>/dev/null || echo 0)
-
-  # If interactions don't exist, try alternative parsing
-  if [ "$OUTPUT_TOKENS" -eq 0 ]; then
-    # Count messages as rough estimate (if no token data available)
-    # This is a fallback - actual token data is preferred
-    OUTPUT_TOKENS=$(jq '[.messages[]? | select(.role == "assistant") | .content | length] | add // 0' "$TRANSCRIPT_PATH" 2>/dev/null | awk '{print int($1/4)}' || echo 0)
-    INPUT_TOKENS=$(jq '[.messages[]? | select(.role == "user") | .content | length] | add // 0' "$TRANSCRIPT_PATH" 2>/dev/null | awk '{print int($1/4)}' || echo 0)
-  fi
+  # Parse JSONL transcript - each line is a separate JSON object
+  while IFS= read -r line; do
+    # Extract token counts from message.usage
+    FRESH_INPUT=$((FRESH_INPUT + $(echo "$line" | jq -r '.message.usage.input_tokens // 0' 2>/dev/null || echo 0)))
+    CACHE_WRITE=$((CACHE_WRITE + $(echo "$line" | jq -r '.message.usage.cache_creation_input_tokens // 0' 2>/dev/null || echo 0)))
+    CACHE_READ=$((CACHE_READ + $(echo "$line" | jq -r '.message.usage.cache_read_input_tokens // 0' 2>/dev/null || echo 0)))
+    OUTPUT_TOKENS=$((OUTPUT_TOKENS + $(echo "$line" | jq -r '.message.usage.output_tokens // 0' 2>/dev/null || echo 0)))
+  done < "$TRANSCRIPT_PATH"
 fi
 
+# Total input tokens for display
+INPUT_TOKENS=$((FRESH_INPUT + CACHE_WRITE + CACHE_READ))
+
 # ==================== COST CALCULATION ====================
-SESSION_COST=$(awk "BEGIN {printf \"%.4f\", ($INPUT_TOKENS * $BEDROCK_INPUT_COST_PER_1K / 1000) + ($OUTPUT_TOKENS * $BEDROCK_OUTPUT_COST_PER_1K / 1000)}")
+# AWS Bedrock Sonnet 4.5 pricing
+FRESH_COST=$(awk "BEGIN {printf \"%.6f\", ($FRESH_INPUT * 0.003 / 1000)}")
+CACHE_WRITE_COST=$(awk "BEGIN {printf \"%.6f\", ($CACHE_WRITE * 0.00375 / 1000)}")
+CACHE_READ_COST=$(awk "BEGIN {printf \"%.6f\", ($CACHE_READ * 0.0003 / 1000)}")
+OUTPUT_COST=$(awk "BEGIN {printf \"%.6f\", ($OUTPUT_TOKENS * 0.015 / 1000)}")
+
+SESSION_COST=$(awk "BEGIN {printf \"%.4f\", $FRESH_COST + $CACHE_WRITE_COST + $CACHE_READ_COST + $OUTPUT_COST}")
 
 # ==================== TIME CALCULATIONS ====================
 TODAY=$(date +%Y-%m-%d)
@@ -94,10 +101,19 @@ SESSION_DATA=$(echo "$SESSION_DATA" | jq --arg today "$TODAY" \
     "date": $today
   }')
 
-# Update weekly total
-WEEKLY_COST=$(echo "$SESSION_DATA" | jq --arg week "$WEEK" \
-  --arg today "$TODAY" \
-  '[.sessions[] | select(.last_update | startswith($today[:4])) | select(.last_update | .[5:7] | tonumber >= (($today | .[5:7] | tonumber) - 7)) | .cost] | add // 0')
+# Update weekly total - sum all daily costs from current week
+WEEKLY_COST=0
+for date_key in $(echo "$SESSION_DATA" | jq -r '.daily | keys[]' 2>/dev/null); do
+  # Calculate week number for this date
+  date_week=$(date -d "$date_key" +%Y-W%V 2>/dev/null || echo "")
+
+  # If this date is in the current week, add its cost
+  if [ "$date_week" = "$WEEK" ]; then
+    day_cost=$(echo "$SESSION_DATA" | jq -r ".daily[\"$date_key\"].cost // 0")
+    WEEKLY_COST=$(awk "BEGIN {printf \"%.4f\", $WEEKLY_COST + $day_cost}")
+  fi
+done
+
 SESSION_DATA=$(echo "$SESSION_DATA" | jq --arg week "$WEEK" \
   --arg cost "$WEEKLY_COST" \
   '.weekly[$week] = {

@@ -75,13 +75,13 @@ Session: 442.9K↑/11.9K↓ $0.74 │ Today: $1.47 │ Week: $1.47 │ 1h10m │
 ### 3. Monitor Your Costs
 ```bash
 # Check today's spending
-cat ~/.claude/data/usage-stats.json | jq '.daily["2025-10-31"].cost'
+cat ~/workspace/.claude/data/usage-stats.json | jq '.daily["2025-10-31"].cost'
 
 # Check weekly spending
-cat ~/.claude/data/usage-stats.json | jq '.weekly["2025-W43"].cost'
+cat ~/workspace/.claude/data/usage-stats.json | jq '.weekly["2025-W43"].cost'
 
 # Find most expensive session
-cat ~/.claude/data/usage-stats.json | jq '.sessions | to_entries | max_by(.value.cost)'
+cat ~/workspace/.claude/data/usage-stats.json | jq '.sessions | to_entries | max_by(.value.cost)'
 ```
 
 ## Typical Session Costs

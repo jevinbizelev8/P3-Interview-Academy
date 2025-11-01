@@ -85,9 +85,10 @@ The statusline script:
 - **Debug Log**: `/home/runner/workspace/.claude/data/statusline-debug.log` (raw input data)
 
 ### State File
-- **Location**: `/home/runner/.claude/data/usage-stats.json`
+- **Location**: `/home/runner/workspace/.claude/data/usage-stats.json`
 - **Purpose**: Persists session history, daily, and weekly totals
 - **Retention**: Keeps session data for historical tracking
+- **Storage**: Workspace directory for persistence across Replit restarts
 
 ### Settings
 - **Location**: `/home/runner/.claude/settings.json`
@@ -230,7 +231,50 @@ This is normal and depends on the task:
 ### State File Issues
 If the state file gets corrupted, simply delete it and it will be recreated:
 ```bash
-rm ~/.claude/data/usage-stats.json
+rm ~/workspace/.claude/data/usage-stats.json
+```
+
+## Replit Environment
+
+### File Locations in Replit
+
+In Replit, files are stored in the **workspace directory** for persistence:
+
+**Configuration** (ephemeral, managed by Claude Code):
+- Script: `/home/runner/.claude/statusline-command.sh`
+- Settings: `/home/runner/.claude/settings.json`
+
+**Data** (persistent, part of workspace):
+- State: `/home/runner/workspace/.claude/data/usage-stats.json`
+- Debug: `/home/runner/workspace/.claude/data/statusline-debug.log`
+
+### Why Workspace Storage?
+
+Replit's `/home/runner/` directory uses an **overlay filesystem** that may be reset between container restarts. To ensure your cost history persists, the state file is stored in the workspace directory which uses **persistent btrfs storage**.
+
+### Accessing Your Data in Replit
+
+```bash
+# View usage stats
+cat ~/workspace/.claude/data/usage-stats.json | jq .
+
+# Check today's cost
+TODAY=$(date +%Y-%m-%d)
+cat ~/workspace/.claude/data/usage-stats.json | jq ".daily[\"$TODAY\"].cost"
+
+# View debug log
+tail -50 ~/workspace/.claude/data/statusline-debug.log
+```
+
+### Optional Convenience Symlink
+
+```bash
+# Create symlink for shorter path (optional)
+mkdir -p ~/.claude/data
+ln -s ~/workspace/.claude/data/usage-stats.json ~/.claude/data/usage-stats.json
+
+# Now you can use both paths interchangeably
+cat ~/.claude/data/usage-stats.json | jq .
 ```
 
 ## Future Modifications
@@ -254,16 +298,16 @@ Use the statusline-setup agent to configure my statusline to show XYZ...
 
 ```bash
 # Find most expensive session
-cat ~/.claude/data/usage-stats.json | jq '.sessions | to_entries | max_by(.value.cost)'
+cat ~/workspace/.claude/data/usage-stats.json | jq '.sessions | to_entries | max_by(.value.cost)'
 
 # Calculate average daily cost
-cat ~/.claude/data/usage-stats.json | jq '[.daily[].cost] | add / length'
+cat ~/workspace/.claude/data/usage-stats.json | jq '[.daily[].cost] | add / length'
 
 # List sessions over $1
-cat ~/.claude/data/usage-stats.json | jq '.sessions[] | select(.cost > 1)'
+cat ~/workspace/.claude/data/usage-stats.json | jq '.sessions[] | select(.cost > 1)'
 
 # View cost breakdown from debug log
-tail -50 ~/.claude/data/statusline-debug.log | grep -A 8 "COST BREAKDOWN"
+tail -50 ~/workspace/.claude/data/statusline-debug.log | grep -A 8 "COST BREAKDOWN"
 
 # Calculate total cache savings (requires manual calculation based on cache read tokens)
 # Example: If you see "Cache read: 384000 tokens = $0.115200"
