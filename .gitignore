@@ -57,3 +57,19 @@ junit*.xml
 .claude/data/usage-stats.json
 .claude/data/usage-stats.json.backup-*
 .claude/data/statusline-debug.log
+
+# Telegram runtime files (state directories)
+.inbox/
+.pending/
+/tmp/telegram/
+/tmp/telegram_messages/
+/tmp/telegram_replies/
+/tmp/telegram_notify_enabled
+/tmp/claude_approval_notifications_enabled
+
+# Telegram logs
+/tmp/telegram-webhook.log
+/tmp/telegram/command-audit.log
+
+# Telegram environment (contains bot token and chat ID)
+scripts/telegram/.env

@@ -132,6 +132,56 @@ This project uses multiple documentation files for better organization:
   - `stripe trigger <event>` - Trigger test events
   - `stripe logs tail` - View real-time API logs
 
+#### Telegram Remote Control
+- **Purpose**: Remote approval and notifications for Claude Code agents
+- **Status**: ✅ **PRODUCTION** - Fully operational since 2025-11-03
+- **Bot**: @JevinCC_Bot (Chat ID: 449555452)
+- **Webhook**: Running on port 8080
+- **Features**:
+  - Remote approval gates for AWS deployments and database migrations
+  - User-initiated slash commands (/status, /monitor, /test, /deploy, /help)
+  - Notifications for long-running operations
+  - Rate limiting and audit logging
+
+**Quick Commands**:
+```bash
+# Enable/disable notifications
+./scripts/telegram/core/notifyctl {on|off|status}
+
+# Send notification
+./scripts/telegram/core/notify.sh "Deployment complete"
+
+# Request approval (blocking)
+if await_reply.sh "Deploy to production?" 600; then
+  npm run deploy:prod
+fi
+
+# System monitoring
+./scripts/telegram/tools/monitor.sh
+./scripts/telegram/tools/webhook_info.sh
+```
+
+**User-Initiated Commands** (via Telegram):
+- `/status` - System health check
+- `/monitor` - Detailed metrics
+- `/test` - Run test suite (~5 min)
+- `/deploy <env>` - Deploy to AWS (staging, production)
+- `/help [command]` - Command documentation
+
+**Rate Limits**:
+- Readonly (`/status`, `/help`): 10 per minute
+- General: 5 per minute
+- Intensive (`/test`, `/deploy`): 1 per 5 minutes
+
+**Documentation**:
+- [README.md](docs/telegram/README.md) - Quick start
+- [SETUP_GUIDE.md](docs/telegram/SETUP_GUIDE.md) - Complete installation
+- [COMMAND_GUIDE.md](docs/telegram/COMMAND_GUIDE.md) - User commands
+- [ARCHITECTURE.md](docs/telegram/ARCHITECTURE.md) - System design
+- [TROUBLESHOOTING.md](docs/telegram/TROUBLESHOOTING.md) - Common issues
+
+**Deployment Log**: [ops-log/2025-11.md](docs/ops-log/2025-11.md) (Phase E section)
+
 #### Claude Code Statusline (AWS Bedrock Cost Tracking)
 - **Purpose**: Real-time AWS Bedrock API usage and cost tracking
 - **Status**: ✅ Production-ready with Replit persistence solution

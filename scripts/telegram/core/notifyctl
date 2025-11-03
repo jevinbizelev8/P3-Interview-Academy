@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Script: notifyctl
+# Purpose: Toggle Telegram notifications on/off
+# Usage: notifyctl {on|off|status}
+
+# Get project root (2 levels up from scripts/telegram/core/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+STATE_FILE="$PROJECT_ROOT/.notify.enabled"
+
+usage() {
+  cat >&2 <<EOF
+Usage: $(basename "$0") {on|off|status}
+
+Commands:
+  on      Enable Telegram notifications
+  off     Disable Telegram notifications
+  status  Check current notification status
+
+Examples:
+  $(basename "$0") on      # Enable notifications
+  $(basename "$0") off     # Disable notifications
+  $(basename "$0") status  # Check if enabled
+EOF
+  exit 2
+}
+
+case "${1:-}" in
+  on)
+    touch "$STATE_FILE"
+    echo "✓ Notifications: ON"
+    ;;
+  off)
+    rm -f "$STATE_FILE"
+    echo "✓ Notifications: OFF"
+    ;;
+  status)
+    if [[ -f "$STATE_FILE" ]]; then
+      echo "ON"
+    else
+      echo "OFF"
+    fi
+    ;;
+  *)
+    usage
+    ;;
+esac
