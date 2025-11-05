@@ -43,7 +43,7 @@ jobs:
           NPM_CONFIG_PRODUCTION: "false"
 
       - name: Run tests
-        run: npm run test:run -- --exclude "**/*.integration.test.{ts,tsx}"
+        run: npm run test:run
         env:
           NODE_ENV: test
           NPM_CONFIG_PRODUCTION: "false"

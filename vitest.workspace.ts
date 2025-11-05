@@ -11,6 +11,7 @@ export default defineWorkspace([
       globals: true,
       root: path.resolve(import.meta.dirname, 'client'),
       include: ['src/__tests__/**/*.test.{ts,tsx}'],
+      exclude: ['src/__tests__/integration/**/*.integration.test.tsx'],
       setupFiles: ['src/__tests__/setup.ts'],
     },
   },
@@ -27,6 +28,7 @@ export default defineWorkspace([
       globals: true,
       root: import.meta.dirname,
       include: ['server/__tests__/**/*.test.ts'],
+      exclude: ['server/__tests__/integration/**/*.integration.test.ts'],
     },
   },
 ]);
