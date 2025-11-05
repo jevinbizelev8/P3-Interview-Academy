@@ -118,7 +118,7 @@ describe("Gamification API Routes", () => {
             name: "First Steps",
             progress: 1,
             isEarned: true,
-            earnedDate: new Date(),
+            earnedDate: new Date().toISOString(),
             progressPercentage: 100,
           },
         ];
@@ -186,7 +186,7 @@ describe("Gamification API Routes", () => {
             userId: TEST_USER_ID,
             badgeId: TEST_BADGE_ID,
             progress: 1,
-            earnedDate: new Date(),
+            earnedDate: new Date().toISOString(),
           },
           xpAwarded: 50,
         };
@@ -427,6 +427,7 @@ describe("Gamification API Routes", () => {
         expect(res.body.success).toBe(true);
         expect(res.body.data.currentStreak).toBe(3);
         expect(res.body.data.longestStreak).toBe(7);
+        expect(res.body.data.lastActivityDate).toEqual(expect.any(String));
         expect(gamificationServiceMocks.getStreak).toHaveBeenCalledWith(TEST_USER_ID);
       });
     });

@@ -76,11 +76,11 @@ describe("Perform Module Routes", () => {
         userId: "test-user-123",
         companyName: "Tech Corp",
         position: "Senior Engineer",
-        interviewDate: new Date("2025-10-30"),
+        interviewDate: new Date("2025-10-30").toISOString(),
         outcome: "offer",
         confidenceLevel: 8,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       performanceServiceMocks.createActualInterview.mockResolvedValue(mockInterview);
@@ -309,7 +309,7 @@ describe("Perform Module Routes", () => {
         strengths: "Good communication",
         improvements: "More examples",
         moodScore: 8,
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       reflectionServiceMocks.createReflection.mockResolvedValue(mockReflection);

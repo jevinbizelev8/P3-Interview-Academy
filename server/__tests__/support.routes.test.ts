@@ -57,7 +57,7 @@ describe("Support Module Routes", () => {
         message: "I cannot log in to my account",
         status: "open",
         priority: "high",
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       supportServiceMocks.createTicket.mockResolvedValue(mockTicket);
@@ -306,7 +306,7 @@ describe("Support Module Routes", () => {
       const updatedTicket = {
         id: "ticket-1",
         status: "resolved",
-        resolvedAt: new Date(),
+        resolvedAt: new Date().toISOString(),
       };
 
       supportServiceMocks.updateTicket.mockResolvedValue(updatedTicket);
@@ -425,7 +425,7 @@ describe("Support Module Routes", () => {
         message: "The submit button doesn't respond",
         status: "open",
         priority: "high",
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       supportServiceMocks.submitFeedback.mockResolvedValue(mockFeedback);

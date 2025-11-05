@@ -1,4 +1,49 @@
 {
+  "permissions": {
+    "allow": [
+      "Read(//tmp/**)",
+      "Bash(npm run test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run check:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(./scripts/telegram/core/notify.sh:*)",
+      "Bash(./scripts/telegram/core/notifyctl:*)",
+      "Bash(./deployment-scripts/check-environment-status.sh:*)",
+      "Bash(npx tsx:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(tail:*)",
+      "Bash(head:*)",
+      "Bash(ls:*)",
+      "Bash(echo:*)",
+      "Bash(chmod:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git add:*)",
+      "Bash(npm run deploy:*)",
+      "Bash(./deployment-scripts/deploy-to-eb.sh:*)",
+      "Bash(aws:*)",
+      "Bash(gh:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/runner/workspace/.claude/bash-approval-notifier-v2.sh",
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  },
   "statusLine": {
     "type": "command",
     "command": "/home/runner/.claude/statusline-command.sh"

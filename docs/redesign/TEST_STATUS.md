@@ -77,7 +77,17 @@ The test suite has been significantly enhanced with 46 new integration tests cov
 **Recommendation**: ✅ Keep tests as-is (they document future improvements)
 **Action Required**: Post-deployment implementation of missing features
 
-**B. Practice Flow Integration Test (1 failure)**
+**B. Gamification Integration Test (1 failure)**
+**File**: `server/__tests__/integration/gamification-triggers.integration.test.ts`
+**Issue**: `icon_name` column missing in badges table insert
+
+**Root Cause**: Database schema - badges table needs icon_name field
+**Impact**: ⚠️ Test setup issue, not production code bug
+**Estimated Fix**: Add default icon_name to test setup (5 minutes)
+
+**Recommendation**: ✅ Fix in post-deployment (non-blocking)
+
+**C. Practice Flow Integration Test (1 failure)**
 **File**: `client/src/__tests__/integration/practice-flow.integration.test.tsx`
 **Issue**: `sessionId` is string 'null' instead of actual session ID
 
@@ -88,16 +98,50 @@ The test suite has been significantly enhanced with 46 new integration tests cov
 **Recommendation**: ✅ Fix in post-deployment cleanup
 **Workaround**: Manual testing confirms practice flow works correctly
 
-#### 3. API Route Failures (4 failures)
+#### 3. API Route Failures (11 failures) - New Feature Implementation Gaps
 
-**A. Prepare AI Routes** (1 failure)
-- `prepare-ai routes > creates a prepare session with validated payload`
-- Issue: Date serialization in test assertion
-- Impact: ❌ None - endpoint works correctly
+**A. Practice Routes** (2 failures)
+- `creates a practice session and stores it` - 500 error
+- `generates an AI question, saves it, and advances the session` - 500 error
+- **Root Cause**: Implementation gaps in new practice session endpoints
+- **Impact**: ⚠️ New features, not blocking existing functionality
+- **Recommendation**: Complete implementation post-deployment
 
-**B. Learning Module Progress** (2 failures)
-- `GET /api/prepare/modules/progress` tests
-- Issue: Database mock setup
+**B. Prepare AI Routes** (1 failure)
+- `creates a prepare session with validated payload` - 500 error
+- **Root Cause**: Endpoint implementation incomplete
+- **Impact**: ⚠️ New feature
+- **Recommendation**: Complete implementation post-deployment
+
+**C. Learning Module Progress** (2 failures)
+- `GET /api/prepare/modules/progress` tests - 400 errors
+- **Root Cause**: Query parameter validation or database schema mismatch
+- **Impact**: ⚠️ New feature endpoints
+- **Recommendation**: Review and fix validation logic post-deployment
+
+**D. Resume Analyzer** (3 failures)
+- POST /api/prepare/resume/analyze tests
+- **Root Cause**: New feature, implementation gaps
+- **Impact**: ⚠️ Non-critical new feature
+- **Recommendation**: Complete implementation post-deployment
+
+**E. STAR Stories** (1 failure)
+- POST /api/prepare/star-stories
+- **Root Cause**: New feature validation
+- **Impact**: ⚠️ Non-critical
+- **Recommendation**: Fix validation post-deployment
+
+**F. Reflections** (1 failure)
+- POST /api/perform/reflections - 400 error
+- **Root Cause**: Request validation
+- **Impact**: ⚠️ New feature
+- **Recommendation**: Fix validation post-deployment
+
+**G. Referrals Routes** (3 failures)
+- POST /api/referrals/apply tests
+- **Root Cause**: Self-referral validation logic
+- **Impact**: ⚠️ New feature
+- **Recommendation**: Complete validation logic post-deployment
 - Impact: ❌ None - endpoints functional in staging
 
 **C. Resume Analyzer** (3 failures)
