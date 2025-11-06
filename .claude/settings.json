@@ -17,17 +17,81 @@
       "Bash(tail:*)",
       "Bash(head:*)",
       "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(diff:*)",
       "Bash(echo:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(jq:*)",
+      "Bash(aws elasticbeanstalk describe-environments:*)",
+      "Bash(aws elasticbeanstalk describe-:*)",
+      "Bash(aws elasticbeanstalk list-:*)",
+      "Bash(aws elasticbeanstalk update-environment:*)",
+      "Bash(aws elasticbeanstalk create-application-version:*)",
+      "Bash(aws elasticbeanstalk update-application-version:*)",
+      "Bash(aws rds describe-:*)",
+      "Bash(aws elb describe-:*)",
+      "Bash(aws elbv2 describe-:*)",
+      "Bash(aws ec2 describe-:*)",
+      "Bash(aws acm describe-:*)",
+      "Bash(aws acm list-:*)",
+      "Bash(aws acm wait:*)",
+      "Bash(aws cloudwatch get-:*)",
+      "Bash(aws cloudformation describe-:*)",
+      "Bash(aws cloudformation list-:*)",
+      "Bash(aws cloudformation get-:*)",
+      "Bash(aws logs describe-:*)",
+      "Bash(aws logs tail:*)",
+      "Bash(aws s3 cp:*)",
+      "Bash(aws s3 sync:*)",
+      "Bash(aws s3 ls:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh workflow list:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh api:*)",
+      "Bash(./deployment-scripts/smoke-tests.ts:*)",
+      "Bash(node ./deployment-scripts/smoke-tests.ts:*)",
+      "Bash(npx tsx ./deployment-scripts/smoke-tests.ts:*)"
     ],
     "ask": [
       "Bash(git push:*)",
       "Bash(git commit:*)",
       "Bash(git add:*)",
+      "Bash(git rm:*)",
       "Bash(npm run deploy:*)",
       "Bash(./deployment-scripts/deploy-to-eb.sh:*)",
-      "Bash(aws:*)",
-      "Bash(gh:*)"
+      "Bash(aws elasticbeanstalk delete-:*)",
+      "Bash(aws elasticbeanstalk terminate-:*)",
+      "Bash(aws elasticbeanstalk create-environment:*)",
+      "Bash(aws elasticbeanstalk swap-:*)",
+      "Bash(aws elasticbeanstalk rebuild-:*)",
+      "Bash(aws elb create-:*)",
+      "Bash(aws elb delete-:*)",
+      "Bash(aws elb modify-:*)",
+      "Bash(aws elb register-:*)",
+      "Bash(aws elb deregister-:*)",
+      "Bash(aws elbv2 create-:*)",
+      "Bash(aws elbv2 delete-:*)",
+      "Bash(aws elbv2 modify-:*)",
+      "Bash(aws elbv2 add-:*)",
+      "Bash(aws elbv2 remove-:*)",
+      "Bash(aws ec2 create-:*)",
+      "Bash(aws ec2 delete-:*)",
+      "Bash(aws ec2 modify-:*)",
+      "Bash(aws ec2 authorize-:*)",
+      "Bash(aws ec2 revoke-:*)",
+      "Bash(aws rds create-:*)",
+      "Bash(aws rds delete-:*)",
+      "Bash(aws rds modify-:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh release create:*)"
     ]
   },
   "hooks": {
@@ -38,6 +102,18 @@
           {
             "type": "command",
             "command": "/home/runner/workspace/.claude/bash-approval-notifier-v2.sh",
+            "timeout": 2
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/runner/workspace/.claude/bash-post-execution-notifier.sh",
             "timeout": 2
           }
         ]

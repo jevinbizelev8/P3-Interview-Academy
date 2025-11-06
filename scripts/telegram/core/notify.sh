@@ -49,18 +49,14 @@ if [[ -z "${CHAT_ID:-}" ]]; then
   exit 1
 fi
 
-# Add timestamp prefix
-TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S')"
-FORMATTED_MESSAGE="[$TIMESTAMP] $MESSAGE"
-
-# Send message via Telegram API
+# Send message via Telegram API (no timestamp - Telegram shows it)
 API_URL="https://api.telegram.org/bot${BOT_TOKEN}/sendMessage"
 
 RESPONSE=$(curl -s -X POST "$API_URL" \
   -H "Content-Type: application/json" \
   -d "{
     \"chat_id\": \"$CHAT_ID\",
-    \"text\": $(printf '%s' "$FORMATTED_MESSAGE" | jq -Rs .),
+    \"text\": $(printf '%s' "$MESSAGE" | jq -Rs .),
     \"parse_mode\": \"Markdown\"
   }")
 

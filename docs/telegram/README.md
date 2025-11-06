@@ -258,9 +258,24 @@ notify.sh "Research complete. Results ready for review."
 
 ## Documentation
 
+### Core Documentation
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System design, components, and workflows
-- [API_REFERENCE.md](./API_REFERENCE.md) - Complete script reference and examples
+- [SETUP_GUIDE.md](./SETUP_GUIDE.md) - Complete installation and configuration
+- [COMMAND_GUIDE.md](./COMMAND_GUIDE.md) - User commands reference
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Common issues and solutions
+
+### Permissions & Configuration (NEW - 2025-11-06)
+- [PERMISSIONS_AND_NOTIFICATIONS.md](./PERMISSIONS_AND_NOTIFICATIONS.md) - **How Claude Code permissions and Telegram notifications work together**
+- [PERMISSIONS_QUICK_REFERENCE.md](./PERMISSIONS_QUICK_REFERENCE.md) - **One-page cheat sheet for quick lookup**
+- [EXPORT_GUIDE.md](./EXPORT_GUIDE.md) - **Export and share this system with other projects**
+- [SESSION_SUMMARY_2025-11-06.md](./SESSION_SUMMARY_2025-11-06.md) - **Recent fixes and improvements**
+
+### Key Insights
+📌 **Important**: This system uses TWO layers of permissions:
+1. **Claude Code permissions** (`.claude/settings.json`) - Controls if commands CAN execute
+2. **Telegram notification hook** (`bash-approval-notifier-v2.sh`) - Controls if notifications are sent
+
+Both must be configured for commands to run silently. See [PERMISSIONS_AND_NOTIFICATIONS.md](./PERMISSIONS_AND_NOTIFICATIONS.md) for details.
 
 ## Limitations
 
@@ -293,6 +308,6 @@ Part of the P3 Interview Academy project. See main repository LICENSE.
 
 ---
 
-**Last Updated**: 2025-11-01
-**Version**: 1.0.0
-**Status**: Specification & Implementation Guide
+**Last Updated**: 2025-11-06
+**Version**: 1.1.0
+**Status**: Production Ready with Comprehensive Documentation
