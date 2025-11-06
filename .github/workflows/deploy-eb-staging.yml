@@ -115,6 +115,7 @@ jobs:
           cp -r client/ deployment-bundle/
           cp -r shared/ deployment-bundle/
           cp -r .ebextensions/ deployment-bundle/
+          cp -r .platform/ deployment-bundle/ || echo "No .platform directory"
 
           # Copy package files
           cp package.json deployment-bundle/
