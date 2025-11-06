@@ -14,6 +14,11 @@ const mocks = vi.hoisted(() => ({
   emitToSession: vi.fn(),
 }));
 
+const creditServiceMock = vi.hoisted(() => ({
+  checkCredits: vi.fn(),
+  deductCredits: vi.fn(),
+}));
+
 const TEST_USER_ID = "11111111-1111-4111-8111-333333333333";
 vi.mock("../services/prepare-ai-service.js", () => ({
   PrepareAIService: vi.fn(() => ({
@@ -32,9 +37,32 @@ vi.mock("../services/realtime-gateway.js", () => ({
   emitToSession: mocks.emitToSession,
 }));
 
+vi.mock("../services/credit-service", () => ({
+  CreditService: creditServiceMock,
+}));
+
 describe("prepare-ai routes", () => {
   beforeEach(async () => {
     Object.values(mocks).forEach(mockFn => mockFn.mockReset?.());
+
+    // Mock credit service to always allow credit checks
+    creditServiceMock.checkCredits.mockReset();
+    creditServiceMock.checkCredits.mockResolvedValue({
+      hasEnoughCredits: true,
+      currentBalance: 100,
+      creditsNeeded: 10,
+      monthlyCredits: 100,
+      topUpCredits: 0,
+    });
+
+    creditServiceMock.deductCredits.mockReset();
+    creditServiceMock.deductCredits.mockResolvedValue({
+      success: true,
+      balanceAfter: 90,
+      monthlyCreditsUsed: 10,
+      topUpCreditsUsed: 0,
+    });
+
     await vi.resetModules();
   });
 

@@ -378,6 +378,71 @@ Keep this section synchronized with deployment changes; update immediately when 
   - `model-answer-service.test.ts` (8 tests)
   - `migrations/redesign-schema.test.ts` (25 tests)
 
+### E2E Testing Commands
+
+**⚠️ Important**: Playwright E2E tests are **NOT feasible in Replit** due to environment constraints:
+- ❌ No X11 display server (Playwright requires GUI environment)
+- ❌ Browser binaries (300-500MB) lost on container restart
+- ❌ Resource constraints (500MB+ RAM per browser instance)
+- ❌ MCP Playwright server has same limitations
+
+**Research Documentation**: See [docs/testing/BROWSER_AUTOMATION_RESEARCH.md](docs/testing/BROWSER_AUTOMATION_RESEARCH.md) for comprehensive analysis.
+
+**Recommended Architecture**:
+- **Replit**: Component tests (jsdom) + Integration tests (fixtures) - ✅ Fast, reliable
+- **GitHub Actions**: E2E tests (Playwright) - ✅ Full browser automation
+- **Cost**: $0/month (GitHub Actions free for public repos)
+
+**GitHub Actions E2E Workflow**:
+```bash
+# E2E tests run automatically in GitHub Actions
+# .github/workflows/e2e-tests.yml
+
+# Manual trigger from GitHub UI:
+# Actions → E2E Tests → Run workflow
+```
+
+**Local E2E Testing** (requires Playwright installation outside Replit):
+```bash
+# One-time setup (on local machine, not Replit)
+npm install -D @playwright/test
+npx playwright install chromium
+
+# Run E2E tests
+npm run test:e2e              # Run all E2E tests
+npm run test:e2e:ui           # Interactive UI mode
+npm run test:e2e:debug        # Debug mode with DevTools
+
+# Run specific E2E test
+npx playwright test e2e/auth-flow.spec.ts
+
+# View test report
+npx playwright show-report
+```
+
+**E2E Test Examples**:
+```typescript
+// e2e/auth-flow.spec.ts
+test('user can sign up and login', async ({ page }) => {
+  await page.goto('/');
+  await page.click('text=Sign Up');
+  await page.fill('input[name="email"]', 'test@example.com');
+  await page.click('button[type="submit"]');
+  await expect(page).toHaveURL(/\/dashboard/);
+});
+
+// e2e/practice-module.spec.ts
+test('complete practice session', async ({ page }) => {
+  await page.goto('/practice');
+  await page.click('text=Start Practice');
+  await page.fill('textarea', 'My STAR response...');
+  await page.click('text=Submit');
+  await expect(page.getByText('Evaluation')).toBeVisible();
+});
+```
+
+**For Complete Testing Guide**: See [docs/testing/TESTING_GUIDE.md](docs/testing/TESTING_GUIDE.md)
+
 ### Payment Testing Commands (Stripe CLI)
 - `stripe listen --forward-to localhost:5000/api/webhooks/stripe` - Forward webhooks to local server
 - `stripe trigger payment_intent.succeeded` - Simulate successful payment

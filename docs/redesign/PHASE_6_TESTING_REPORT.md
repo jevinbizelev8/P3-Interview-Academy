@@ -607,6 +607,189 @@ Based on test failures, verify these work despite failed tests:
 
 ---
 
+## UAT Automation Strategy
+
+### Overview
+
+Based on comprehensive research (see [UAT_AUTOMATION_STRATEGY.md](../testing/UAT_AUTOMATION_STRATEGY.md)), **60-70% of UAT tasks can be automated** using a three-tier testing approach, reducing manual QA time from 4 hours to 1.5 hours per release while maintaining quality.
+
+### Key Findings
+
+**Automation Potential**:
+- ✅ **API functionality**: 95% automatable (unit + integration tests)
+- ✅ **Business logic**: 95% automatable (unit tests with mocks)
+- ✅ **AI response structure**: 95% automatable (schema validation)
+- ✅ **Score calculation**: 100% automatable (unit tests)
+- ✅ **Multi-language format**: 90% automatable (structure validation)
+- ⚠️ **AI content quality**: 20% automatable (human review needed)
+
+**Cost-Benefit Analysis**:
+- Manual QA: $800/month
+- Automated Testing: $0.32/month
+- Annual Savings: **$8,396**
+- ROI Timeline: **4.3 months**
+
+### Three-Tier Testing Architecture
+
+```
+                   ┌─────────────┐
+                   │  Manual QA  │  5% - Human judgment
+                   │   (Samples) │     (Quality, relevance)
+                   └─────────────┘
+                 ┌─────────────────┐
+                 │   Smoke Tests   │  10% - Real API calls
+                 │  (Production)   │      (Critical flows)
+                 └─────────────────┘
+             ┌───────────────────────┐
+             │  Integration Tests    │  25% - Fixtures + Mocks
+             │  (AI Response Shape)  │      (Structure, schema)
+             └───────────────────────┘
+         ┌─────────────────────────────┐
+         │      Unit Tests             │  60% - Full Mocks
+         │   (Business Logic)          │      (Fast, deterministic)
+         └─────────────────────────────┘
+```
+
+### Test Distribution
+
+| Test Type | Tool | Environment | Count | Frequency |
+|-----------|------|-------------|-------|-----------|
+| **Unit Tests** | Vitest | Replit | 203 | Every save |
+| **Component Tests** | Testing Library + jsdom | Replit | 118 | Every commit |
+| **Integration Tests** | Vitest + Fixtures | Replit | 37 | Every commit |
+| **E2E Tests** | Playwright | GitHub Actions | 50+ | Every PR |
+| **Smoke Tests** | Playwright | GitHub Actions | 10 | Pre-deploy |
+| **Manual QA** | Human | Staging | Samples | Per release |
+
+### E2E Testing Strategy
+
+**Research Finding**: Playwright and MCP Playwright server are **NOT feasible in Replit** due to:
+- ❌ No X11 display server
+- ❌ Resource constraints (RAM/CPU)
+- ❌ Browser binaries (300-500MB) lost on container restart
+- ❌ System dependency requirements
+
+**Recommended Approach**: **GitHub Actions E2E + Replit Component Tests**
+
+**Architecture**:
+```
+┌─────────────────────────────────────┐
+│  Replit Environment                 │
+│  ✅ Component Tests (jsdom)         │
+│  ✅ Integration Tests (fixtures)    │
+│  ✅ Fast local development          │
+└─────────────────────────────────────┘
+            │
+            ↓
+┌─────────────────────────────────────┐
+│  GitHub Actions CI/CD               │
+│  ✅ E2E Tests (Playwright)          │
+│  ✅ Full browser automation         │
+│  ✅ Free for public repos           │
+└─────────────────────────────────────┘
+```
+
+**Cost**: $0/month using GitHub Actions (free for public repos)
+
+**See Documentation**:
+- [BROWSER_AUTOMATION_RESEARCH.md](../testing/BROWSER_AUTOMATION_RESEARCH.md) - Comprehensive research findings
+- [UAT_AUTOMATION_STRATEGY.md](../testing/UAT_AUTOMATION_STRATEGY.md) - Implementation roadmap
+- [TESTING_GUIDE.md](../testing/TESTING_GUIDE.md) - Complete testing guide
+
+### Implementation Roadmap
+
+**Phase 1: Foundation (Week 1-2)**
+- Create AI response fixtures library (30 questions, 15 evaluations)
+- Implement AI service unit tests (45 test cases)
+- Fix integration test timing bugs
+- **Target**: Test count 365 → 430+, Server pass rate 86% → 95%
+
+**Phase 2: Integration & Smoke Tests (Week 3-4)**
+- Create integration tests with fixtures (12 scenarios)
+- Implement smoke tests for real AI (7 tests)
+- Set up CI smoke test workflow
+- **Target**: Integration coverage 90%, Smoke tests <$0.50/month
+
+**Phase 3: UAT Automation (Week 5-6)**
+- Create automated UAT test suite (33 scenarios)
+- Implement visual regression testing (optional)
+- Document manual QA procedures
+- **Target**: 60-70% UAT automated, Manual QA time 4h → 1.5h
+
+### What Cannot Be Automated
+
+The following require human review (5-10% of UAT):
+- AI question relevance to specific job positions
+- Question difficulty appropriateness for interview stage
+- Evaluation accuracy vs. expert judgment
+- Feedback helpfulness and actionability
+- Cultural sensitivity across languages
+- Translation quality and naturalness
+- Overall user experience assessment
+
+**Recommended Approach**: Sample 10-20 AI responses per release for expert review.
+
+### Test Patterns for Non-Deterministic AI
+
+**1. Schema Validation** - Test structure, not content:
+```typescript
+const questionSchema = z.object({
+  questionText: z.string().min(10).max(500),
+  questionCategory: z.enum(['behavioral', 'technical', 'situational', 'cultural']),
+  difficultyLevel: z.enum(['beginner', 'intermediate', 'advanced'])
+});
+
+test('generates question with valid schema', async () => {
+  const question = await generateQuestion(params);
+  expect(() => questionSchema.parse(question)).not.toThrow();
+});
+```
+
+**2. Fixture-Based Integration** - Use pre-recorded AI responses:
+```typescript
+import aiFixtures from './fixtures/ai-responses.json';
+
+test('evaluates response with comprehensive feedback', async () => {
+  mockEvaluationService.evaluateResponse.mockResolvedValue(
+    aiFixtures.evaluations.strong_star_response
+  );
+
+  const response = await request(app).post('/api/practice/sessions/123/response');
+  expect(response.body.data.evaluation.overallRating).toBe("Pass");
+});
+```
+
+**3. Constraint Testing** - Verify AI adheres to requirements:
+```typescript
+test('enforces stage-difficulty constraints', async () => {
+  const question = await generateQuestion({
+    interviewStage: "phone-screening",
+    difficultyLevel: "advanced" // Should auto-correct
+  });
+
+  expect(question.difficultyLevel).toMatch(/beginner|intermediate/);
+});
+```
+
+### Success Criteria
+
+✅ **Test Pass Rate**: >90% (current: 66.3%)
+✅ **Test Execution Time**: <2 minutes (current: ~2 minutes)
+✅ **Manual QA Time**: <2 hours per release (current: 4 hours)
+✅ **Monthly Costs**: <$1 (target: $0.32)
+✅ **Production Incidents**: Zero AI regressions
+
+### Next Steps for UAT Automation
+
+1. **Create fixture library** (Week 1)
+2. **Add 65+ new unit tests** (Week 1-2)
+3. **Fix 116 failing tests** (Week 2-3)
+4. **Implement E2E tests in GitHub Actions** (Week 3-4)
+5. **Set up smoke test workflow** (Week 4)
+6. **Document manual QA procedures** (Week 5-6)
+
+---
+
 ## Recommendations
 
 ### For Production Deployment

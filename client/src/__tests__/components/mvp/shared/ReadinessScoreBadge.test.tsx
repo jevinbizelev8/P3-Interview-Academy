@@ -30,7 +30,9 @@ describe('ReadinessScoreBadge', () => {
   it('renders the readiness score badge', () => {
     render(<ReadinessScoreBadge score={75} fetchFromApi={false} />);
 
-    expect(screen.getByText(/75|readiness/i)).toBeTruthy();
+    // Check for either 75% or readiness text (use getAllByText for multiple matches)
+    const textElements = screen.getAllByText(/75|readiness/i);
+    expect(textElements.length).toBeGreaterThan(0);
   });
 
   it('displays score with percentage', () => {
@@ -72,7 +74,9 @@ describe('ReadinessScoreBadge', () => {
   it('shows details when showDetails is true', () => {
     render(<ReadinessScoreBadge score={75} fetchFromApi={false} showDetails={true} />);
 
-    expect(screen.queryByText(/Learning|Practice|Profile|Consistency/i)).toBeTruthy();
+    // Check for multiple detail elements (use getAllByText)
+    const detailElements = screen.getAllByText(/Learning|Practice|Profile|Consistency/i);
+    expect(detailElements.length).toBeGreaterThan(0);
   });
 
   it('hides details when showDetails is false', () => {
@@ -98,15 +102,17 @@ describe('ReadinessScoreBadge', () => {
   it('shows trend indicator when score increases', () => {
     render(<ReadinessScoreBadge score={80} previousScore={70} fetchFromApi={false} />);
 
-    // Should show upward trend (+10)
-    expect(screen.queryByText(/10|trending/i)).toBeTruthy();
+    // Should show upward trend (+10) - use getAllByText for multiple matches
+    const trendElements = screen.getAllByText(/10|trending/i);
+    expect(trendElements.length).toBeGreaterThan(0);
   });
 
   it('shows trend indicator when score decreases', () => {
     render(<ReadinessScoreBadge score={60} previousScore={70} fetchFromApi={false} />);
 
-    // Should show downward trend (-10)
-    expect(screen.queryByText(/10/i)).toBeTruthy();
+    // Should show downward trend (-10) - use getAllByText for multiple matches
+    const trendElements = screen.getAllByText(/10/i);
+    expect(trendElements.length).toBeGreaterThan(0);
   });
 
   it('uses green color for high scores (>= 80)', () => {
@@ -144,8 +150,9 @@ describe('ReadinessScoreBadge', () => {
     render(<ReadinessScoreBadge fetchFromApi={true} />);
 
     await waitFor(() => {
-      // Should display score from API (75 from mock)
-      expect(screen.getByText(/75%/i)).toBeInTheDocument();
+      // Should display score from API (75 from mock) - use getAllByText for multiple matches
+      const scoreElements = screen.getAllByText(/75%/i);
+      expect(scoreElements.length).toBeGreaterThan(0);
     });
   });
 
@@ -158,13 +165,18 @@ describe('ReadinessScoreBadge', () => {
 
     render(<ReadinessScoreBadge fetchFromApi={true} />);
 
-    expect(screen.queryByText(/Loading/i) || screen.queryByRole('status')).toBeTruthy();
+    // Check for loading text or spinner
+    const loadingText = screen.queryByText(/Loading/i);
+    const spinner = screen.queryByRole('status') || document.querySelector('.animate-spin');
+    expect(loadingText || spinner).toBeTruthy();
   });
 
   it('handles zero score gracefully', () => {
     render(<ReadinessScoreBadge score={0} fetchFromApi={false} />);
 
-    expect(screen.getByText(/0%/i)).toBeInTheDocument();
+    // Use getAllByText since there might be multiple elements with 0%
+    const scoreElements = screen.getAllByText(/0%/i);
+    expect(scoreElements.length).toBeGreaterThan(0);
     expect(screen.getByText(/Just Starting/i)).toBeInTheDocument();
   });
 

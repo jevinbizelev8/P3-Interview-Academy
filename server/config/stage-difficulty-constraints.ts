@@ -274,6 +274,10 @@ export function normalizeStageName(stageName: string): InterviewStage {
     'executive-leadership': 'executive-leadership'
   };
 
+  if (!stageName || typeof stageName !== 'string') {
+    return 'phone-screening';
+  }
+
   const normalized = stageName.toLowerCase();
   return mappings[normalized] || 'phone-screening';
 }

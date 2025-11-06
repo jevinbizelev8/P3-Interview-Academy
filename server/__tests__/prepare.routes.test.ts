@@ -35,6 +35,12 @@ const readinessServiceMocks = vi.hoisted(() => ({
   calculateReadinessScore: vi.fn(),
 }));
 
+// Mock CreditService
+const creditServiceMock = vi.hoisted(() => ({
+  checkCredits: vi.fn(),
+  deductCredits: vi.fn(),
+}));
+
 // Mock database for STAR stories
 const dbMocks = vi.hoisted(() => ({
   insert: vi.fn(),
@@ -60,6 +66,10 @@ vi.mock("../services/readiness-service", () => ({
   ReadinessService: readinessServiceMocks,
 }));
 
+vi.mock("../services/credit-service", () => ({
+  CreditService: creditServiceMock,
+}));
+
 vi.mock("../db", () => ({
   db: dbMocks,
 }));
@@ -72,6 +82,25 @@ describe("Prepare API Routes", () => {
     Object.values(resumeServiceMocks).forEach(mockFn => mockFn.mockReset?.());
     Object.values(readinessServiceMocks).forEach(mockFn => mockFn.mockReset?.());
     Object.values(dbMocks).forEach(mockFn => mockFn.mockReset?.());
+
+    // Mock credit service to always allow credit checks
+    creditServiceMock.checkCredits.mockReset();
+    creditServiceMock.checkCredits.mockResolvedValue({
+      hasEnoughCredits: true,
+      currentBalance: 100,
+      creditsNeeded: 5,
+      monthlyCredits: 100,
+      topUpCredits: 0,
+    });
+
+    creditServiceMock.deductCredits.mockReset();
+    creditServiceMock.deductCredits.mockResolvedValue({
+      success: true,
+      balanceAfter: 95,
+      monthlyCreditsUsed: 5,
+      topUpCreditsUsed: 0,
+    });
+
     await vi.resetModules();
   });
 
