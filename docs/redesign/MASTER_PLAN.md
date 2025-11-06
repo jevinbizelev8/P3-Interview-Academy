@@ -760,7 +760,24 @@ The following Phase 5 enhancement features have been implemented:
 
 ### Phase 7: Production Deployment (1 week) ⏳ PENDING
 
+**Optional Follow-ups** (can be done post-production):
+- [ ] Review remaining 11 test failures (3.4%, non-blocking)
+  - Referral self-application validation (1 test)
+  - Module progress query edge cases (2 tests)
+  - Practice enhancements (1 test)
+  - Minor API validation (7 tests)
+- [ ] Plan E2E test implementation in GitHub Actions
+  - Create Playwright test workflow
+  - Add critical user flow tests (auth, practice, credit purchase)
+  - Set up visual regression testing (optional)
+  - Target: 10-15 E2E tests covering main user journeys
+
 **Pre-Deployment**:
+- [ ] **Founder UAT Testing on Staging** (https://p3app-staging.bizelev8.ai)
+  - [ ] Deploy latest code to staging (includes test fixes from Nov 7)
+  - [ ] Register Stripe webhook endpoint in Stripe Dashboard
+  - [ ] Founders test all new features and provide feedback
+  - [ ] Address any critical issues found during UAT
 - [ ] Review all code changes
 - [ ] Update CHANGELOG.md
 - [ ] Create deployment checklist
