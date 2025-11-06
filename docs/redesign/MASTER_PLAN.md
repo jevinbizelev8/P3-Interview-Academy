@@ -775,7 +775,10 @@ The following Phase 5 enhancement features have been implemented:
 **Pre-Deployment**:
 - [ ] **Founder UAT Testing on Staging** (https://p3app-staging.bizelev8.ai)
   - [ ] Deploy latest code to staging (includes test fixes from Nov 7)
-  - [ ] Register Stripe webhook endpoint in Stripe Dashboard
+  - [x] Register Stripe webhook endpoint via Stripe CLI ✅ (2025-11-07)
+    - Webhook ID: `we_1SQMkQRYjG8QUIcydUOPT29V`
+    - Signing secret updated in AWS environment
+    - Credit purchases now functional
   - [ ] Founders test all new features and provide feedback
   - [ ] Address any critical issues found during UAT
 - [ ] Review all code changes
