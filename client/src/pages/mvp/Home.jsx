@@ -106,52 +106,21 @@ export default function Home() {
   }, [readinessData?.score, previousReadiness]);
 
 
-  const { data: completedModules = [] } = useQuery({
-    queryKey: ['completedModules'],
-    queryFn: async () => {
-      return await base44.entities.UserModuleProgress.filter({
-        created_by: user.email,
-        completed: true
-      });
-    },
-    enabled: !!user,
-  });
+  // Get user module progress from P3 API
+  const { data: allModuleProgress = [] } = useUserModuleProgress();
+  const completedModules = allModuleProgress.filter(m => m.completed);
 
-  const { data: simulations = [] } = useQuery({
-    queryKey: ['simulations'],
-    queryFn: async () => {
-      return await base44.entities.InterviewSimulation.filter(
-        { created_by: user.email },
-        '-created_date',
-        10
-      );
-    },
-    enabled: !!user,
-  });
+  // Get simulation history from P3 API
+  const { data: simulationHistoryData } = useSimulationHistory({ limit: 10 });
+  const simulations = simulationHistoryData?.sessions || [];
 
-  const { data: selfIntros = [] } = useQuery({
-    queryKey: ['selfIntros'],
-    queryFn: async () => {
-      return await base44.entities.SelfIntro.filter(
-        { created_by: user.email },
-        '-created_date',
-        10
-      );
-    },
-    enabled: !!user,
-  });
+  // Get self-intro from P3 API
+  const { data: selfIntroData } = useSelfIntro();
+  const selfIntros = selfIntroData ? [selfIntroData] : [];
 
-  const { data: resumes = [] } = useQuery({
-    queryKey: ['resumes'],
-    queryFn: async () => {
-      return await base44.entities.Resume.filter(
-        { created_by: user.email },
-        '-created_date',
-        10
-      );
-    },
-    enabled: !!user,
-  });
+  // Get resumes from P3 API
+  const { data: allResumes = [] } = useResumes();
+  const resumes = allResumes.slice(0, 10); // Get latest 10
 
   // Get user badges from P3 API
   const { data: badges = [] } = useUserBadges();
