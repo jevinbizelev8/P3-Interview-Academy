@@ -15,6 +15,18 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import ReadinessScoreBadge from "@/components/mvp/shared/ReadinessScoreBadge";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  useReadinessScore,
+  useXPPoints,
+  useUserBadges,
+  useStreak,
+  useUpdateStreak,
+  useLearningModules,
+  useUserModuleProgress,
+  useSimulationHistory,
+  useSelfIntro,
+  useResumes
+} from "@/hooks/useApi";
 import { base44 } from "@/api/mvp/base44Client";
 import { updateStreak } from "@/components/mvp/utils/scoring";
 
@@ -80,50 +92,18 @@ export default function Home() {
   const { user, isLoading: authLoading } = useAuth();
   const [previousReadiness, setPreviousReadiness] = useState(null); // State to store the previous readiness score
 
-  const { data: userProfile, refetch: refetchProfile } = useQuery({ // Destructure refetch function
-    queryKey: ['userProfile'],
-    queryFn: async () => {
-      const profiles = await base44.entities.UserProfile.filter({ user_id: user.id });
+  // P3 Gamification Hooks - Backend handles all calculations automatically
+  const { data: readinessData } = useReadinessScore();
+  const { data: xpData } = useXPPoints();
+  const { data: streakData } = useStreak();
+  const updateStreakMutation = useUpdateStreak();
 
-      if (profiles.length === 0) {
-        const newProfile = await base44.entities.UserProfile.create({
-          user_id: user.id,
-          xp_points: 0,
-          current_streak: 0,
-          total_simulations: 0,
-          readiness_score: 0
-        });
-        // If a new profile is created, previous readiness is 0
-        setPreviousReadiness(0);
-        return newProfile;
-      }
-
-      // Store the readiness score from the currently fetched profile data
-      // This will be used as the 'previous' score for the next fetch/update cycle if the score changes.
-      // On initial load, this will set previousReadiness to the initial score.
-      if (profiles[0].readiness_score !== undefined) {
-        // Only update if current userProfile data is available and previousReadiness isn't already capturing a value
-        // This ensures the initial previousReadiness is set, and subsequent fetches rely on the `useEffect` below.
-        setPreviousReadiness(profiles[0].readiness_score);
-      }
-
-      return profiles[0];
-    },
-    enabled: !!user, // Only run query when user is available
-    // Refetch profile data periodically to keep readiness score updated
-    refetchInterval: 30000, // Refetch every 30 seconds
-  });
-
-  // Use a separate useEffect to truly capture the 'previous' readiness score before `userProfile` updates
+  // Track previous readiness score for badge animation
   useEffect(() => {
-    // This effect runs after `userProfile` has been updated by the query.
-    // However, if `previousReadiness` is set inside `queryFn` and this effect runs, it might be the same.
-    // A more robust way to get "previous" data is to rely on `userProfile` changing.
-    // If `userProfile.readiness_score` is defined and has changed from the currently displayed value,
-    // then the `previousReadiness` should update to what `userProfile.readiness_score` *was* before this render.
-    // For simplicity and to adhere to the outline's structure, we rely on the `queryFn` to set `previousReadiness`
-    // on each fetch, and the badge component will interpret if `score === previousScore`.
-  }, [userProfile?.readiness_score]);
+    if (readinessData?.score !== undefined && readinessData.score !== previousReadiness) {
+      setPreviousReadiness(readinessData.score);
+    }
+  }, [readinessData?.score, previousReadiness]);
 
 
   const { data: completedModules = [] } = useQuery({
@@ -173,17 +153,8 @@ export default function Home() {
     enabled: !!user,
   });
 
-  const { data: badges = [] } = useQuery({
-    queryKey: ['userBadges'],
-    queryFn: async () => {
-      return await base44.entities.UserBadge.filter(
-        { created_by: user.email },
-        '-earned_date',
-        3
-      );
-    },
-    enabled: !!user,
-  });
+  // Get user badges from P3 API
+  const { data: badges = [] } = useUserBadges();
 
   // Combine all activities into a unified feed
   const recentActivities = React.useMemo(() => {
@@ -264,20 +235,18 @@ export default function Home() {
       if (!user) return;
 
       try {
-        await updateStreak(user.id);
+        // Update streak on page load using P3 mutation
+        await updateStreakMutation.mutateAsync();
 
-        // Recalculate readiness score on page load
-        await calculateReadinessScore(user.id, user.email);
-
-        // Refetch profile to get updated score from the backend
-        refetchProfile();
+        // Note: Readiness score is now calculated automatically by backend
+        // No need for manual calculation - backend updates on activity
       } catch (error) {
         console.error("Error initializing home:", error);
       }
     };
 
     initializeHome();
-  }, [user, refetchProfile]); 
+  }, [user, updateStreakMutation]); 
 
   const stages = [
     {
@@ -303,7 +272,7 @@ export default function Home() {
       subtitle: "Track Your Growth",
       icon: TrendingUp,
       color: "from-pink-500 to-pink-600",
-      progress: userProfile?.readiness_score || 0,
+      progress: readinessData?.score || 0,
       url: createPageUrl("Perform"),
       description: "Analytics, insights & achievements"
     }
@@ -312,28 +281,28 @@ export default function Home() {
   const stats = [
     {
       label: "Rewards Points",
-      value: userProfile?.xp_points || 0,
+      value: xpData?.points || 0,
       icon: Zap,
       color: "text-yellow-600",
       bgColor: "bg-yellow-100"
     },
     {
       label: "Current Streak",
-      value: `${userProfile?.current_streak || 0} days`,
+      value: `${streakData?.currentStreak || 0} days`,
       icon: Flame,
       color: "text-orange-600",
       bgColor: "bg-orange-100"
     },
     {
       label: "Simulations",
-      value: userProfile?.total_simulations || 0,
+      value: simulations.length || 0,
       icon: Trophy,
       color: "text-purple-600",
       bgColor: "bg-purple-100"
     },
     {
       label: "Readiness",
-      value: `${Math.round(userProfile?.readiness_score || 0)}%`,
+      value: `${Math.round(readinessData?.score || 0)}%`,
       icon: CheckCircle2,
       color: "text-green-600",
       bgColor: "bg-green-100"
@@ -360,11 +329,8 @@ export default function Home() {
 
         {/* Add Readiness Score Badge */}
         <div className="mb-8">
-          <ReadinessScoreBadge 
-            score={userProfile?.readiness_score || 0}
-            // `previousReadiness` here will reflect the score from the last successful fetch.
-            // If the score hasn't changed since the last fetch, it will be the same as `score`.
-            // The `ReadinessScoreBadge` component should handle this by not showing a trend.
+          <ReadinessScoreBadge
+            score={readinessData?.score || 0}
             previousScore={previousReadiness}
             size="large"
             showDetails={true}
