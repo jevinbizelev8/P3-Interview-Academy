@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, TrendingUp, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { createPageUrl } from "@/utils";
-import { Link } from "react-router-dom";
+import { Link } from "wouter";
 
 export default function SimulationHistory({ simulations }) {
   if (simulations.length === 0) {
