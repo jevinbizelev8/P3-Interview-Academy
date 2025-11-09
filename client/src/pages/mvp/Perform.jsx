@@ -11,11 +11,11 @@ import {
   usePerformanceStats
 } from '@/hooks/useApi';
 
-import PerformanceChart from "../components/perform/PerformanceChart";
-import BadgeGallery from "../components/perform/BadgeGallery";
-import InsightsPanel from "../components/perform/InsightsPanel";
-import ActualInterviewTracker from "../components/perform/ActualInterviewTracker";
-import ReflectionJournalList from "../components/perform/ReflectionJournalList";
+import PerformanceChart from "@/components/mvp/perform/PerformanceChart";
+import BadgeGallery from "@/components/mvp/perform/BadgeGallery";
+import InsightsPanel from "@/components/mvp/perform/InsightsPanel";
+import ActualInterviewTracker from "@/components/mvp/perform/ActualInterviewTracker";
+import ReflectionJournalList from "@/components/mvp/perform/ReflectionJournalList";
 
 export default function Perform() {
   // Fetch data using P3 API hooks

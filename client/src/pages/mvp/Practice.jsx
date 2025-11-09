@@ -6,11 +6,11 @@ import { Target, Play, Award, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { useSimulationHistory } from "@/hooks/useApi";
 
-import SimulationSetup from "../components/practice/SimulationSetup";
-import SimulationInterface from "../components/practice/SimulationInterface";
-import SimulationHistory from "../components/practice/SimulationHistory";
-import ReflectionJournal from "../components/practice/ReflectionJournal";
-import AssessmentViewer from "../components/practice/AssessmentViewer";
+import SimulationSetup from "@/components/mvp/practice/SimulationSetup";
+import SimulationInterface from "@/components/mvp/practice/SimulationInterface";
+import SimulationHistory from "@/components/mvp/practice/SimulationHistory";
+import ReflectionJournal from "@/components/mvp/practice/ReflectionJournal";
+import AssessmentViewer from "@/components/mvp/practice/AssessmentViewer";
 
 export default function Practice() {
   const [activeSimulation, setActiveSimulation] = useState(null);

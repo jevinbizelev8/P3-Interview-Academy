@@ -3,9 +3,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookOpen, Video, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 
-import LearningHub from "../components/prepare/LearningHub";
-import SelfIntroScriptingWizard from "../components/prepare/SelfIntroScriptingWizard";
-import ResumeAnalyzer from "../components/prepare/ResumeAnalyzer";
+import LearningHub from "@/components/mvp/prepare/LearningHub";
+import SelfIntroScriptingWizard from "@/components/mvp/prepare/SelfIntroScriptingWizard";
+import ResumeAnalyzer from "@/components/mvp/prepare/ResumeAnalyzer";
 
 export default function Prepare() {
   const [activeTab, setActiveTab] = useState("learning");
