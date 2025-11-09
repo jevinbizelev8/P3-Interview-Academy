@@ -4,16 +4,16 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Landing from "@/pages/landing";
+import Landing from "@/pages/mvp/Landing";
 import NotFound from "@/pages/not-found";
-import Practice from "@/pages/practice";
-import Prepare from "@/pages/prepare";
-import Perform from "@/pages/perform";
-import Billing from "@/pages/billing";
+import Practice from "@/pages/mvp/Practice";
+import Prepare from "@/pages/mvp/Prepare";
+import Perform from "@/pages/mvp/Perform";
+import Billing from "@/pages/mvp/Billing";
+import Dashboard from "@/pages/mvp/Dashboard";
 import AdminDashboard from "@/pages/admin/dashboard";
 import VerifyEmail from "@/pages/verify-email";
 import ResetPassword from "@/pages/reset-password";
-import AuthenticatedLanding from "@/components/AuthenticatedLanding";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -27,7 +27,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/dashboard">
         <ProtectedRoute>
-          {user && <AuthenticatedLanding user={user} />}
+          {user && <Dashboard />}
         </ProtectedRoute>
       </Route>
       <Route path="/billing">
