@@ -23,8 +23,6 @@ import ManagerPerspectiveGame from "./interactive/ManagerPerspectiveGame";
 import TechnicalFrameworkGame from "./interactive/TechnicalFrameworkGame";
 import ExecutivePresenceBuilder from "./interactive/ExecutivePresenceBuilder";
 
-import { awardRewardsPoints, calculateReadinessScore, updateStreak, REWARDS_POINTS_VALUES } from "../utils/scoring";
-
 const STAGES = [
   {
     stage: "hr_screening",
