@@ -1,44 +1,39 @@
 
 import React, { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link } from "wouter";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  BookOpen, Target, TrendingUp, Award, ArrowRight, 
+import {
+  BookOpen, Target, TrendingUp, Award, ArrowRight,
   CheckCircle2, Clock, Zap, Trophy, Flame, Video, FileText
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { updateStreak } from "../components/utils/scoring";
 import { format } from "date-fns";
-import ReadinessScoreBadge from "../components/shared/ReadinessScoreBadge";
+import ReadinessScoreBadge from "@/components/mvp/shared/ReadinessScoreBadge";
+import { useAuth } from "@/hooks/use-auth";
+import { base44 } from "@/api/mvp/base44Client";
+import { updateStreak } from "@/components/mvp/utils/scoring";
 
 // Helper function to calculate and update readiness score in the backend
-const calculateReadinessScore = async (userId) => {
+const calculateReadinessScore = async (userId, userEmail) => {
     try {
-        const currentUser = await base44.auth.me();
-        if (currentUser.id !== userId) {
-            console.warn("User ID mismatch for readiness score calculation.");
-            return;
-        }
-
         // Fetch user activities to calculate score
-        const modules = await base44.entities.UserModuleProgress.filter({ 
-            created_by: currentUser.email,
-            completed: true 
+        const modules = await base44.entities.UserModuleProgress.filter({
+            created_by: userEmail,
+            completed: true
         });
         const sims = await base44.entities.InterviewSimulation.filter(
-            { created_by: currentUser.email }
+            { created_by: userEmail }
         );
         const intros = await base44.entities.SelfIntro.filter(
-            { created_by: currentUser.email }
+            { created_by: userEmail }
         );
         const resumesAnalyzed = await base44.entities.Resume.filter(
-            { created_by: currentUser.email }
+            { created_by: userEmail }
         );
 
         let score = 0;
@@ -82,28 +77,27 @@ const calculateReadinessScore = async (userId) => {
 
 
 export default function Home() {
-  const [user, setUser] = useState(null);
+  const { user, isLoading: authLoading } = useAuth();
   const [previousReadiness, setPreviousReadiness] = useState(null); // State to store the previous readiness score
 
   const { data: userProfile, refetch: refetchProfile } = useQuery({ // Destructure refetch function
     queryKey: ['userProfile'],
     queryFn: async () => {
-      const currentUser = await base44.auth.me();
-      const profiles = await base44.entities.UserProfile.filter({ user_id: currentUser.id });
-      
+      const profiles = await base44.entities.UserProfile.filter({ user_id: user.id });
+
       if (profiles.length === 0) {
         const newProfile = await base44.entities.UserProfile.create({
-          user_id: currentUser.id,
+          user_id: user.id,
           xp_points: 0,
           current_streak: 0,
           total_simulations: 0,
           readiness_score: 0
         });
         // If a new profile is created, previous readiness is 0
-        setPreviousReadiness(0); 
+        setPreviousReadiness(0);
         return newProfile;
       }
-      
+
       // Store the readiness score from the currently fetched profile data
       // This will be used as the 'previous' score for the next fetch/update cycle if the score changes.
       // On initial load, this will set previousReadiness to the initial score.
@@ -112,9 +106,10 @@ export default function Home() {
         // This ensures the initial previousReadiness is set, and subsequent fetches rely on the `useEffect` below.
         setPreviousReadiness(profiles[0].readiness_score);
       }
-      
+
       return profiles[0];
     },
+    enabled: !!user, // Only run query when user is available
     // Refetch profile data periodically to keep readiness score updated
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -134,60 +129,60 @@ export default function Home() {
   const { data: completedModules = [] } = useQuery({
     queryKey: ['completedModules'],
     queryFn: async () => {
-      const currentUser = await base44.auth.me();
-      return await base44.entities.UserModuleProgress.filter({ 
-        created_by: currentUser.email,
-        completed: true 
+      return await base44.entities.UserModuleProgress.filter({
+        created_by: user.email,
+        completed: true
       });
-    }
+    },
+    enabled: !!user,
   });
 
   const { data: simulations = [] } = useQuery({
     queryKey: ['simulations'],
     queryFn: async () => {
-      const currentUser = await base44.auth.me();
       return await base44.entities.InterviewSimulation.filter(
-        { created_by: currentUser.email },
+        { created_by: user.email },
         '-created_date',
         10
       );
-    }
+    },
+    enabled: !!user,
   });
 
   const { data: selfIntros = [] } = useQuery({
     queryKey: ['selfIntros'],
     queryFn: async () => {
-      const currentUser = await base44.auth.me();
       return await base44.entities.SelfIntro.filter(
-        { created_by: currentUser.email },
+        { created_by: user.email },
         '-created_date',
         10
       );
-    }
+    },
+    enabled: !!user,
   });
 
   const { data: resumes = [] } = useQuery({
     queryKey: ['resumes'],
     queryFn: async () => {
-      const currentUser = await base44.auth.me();
       return await base44.entities.Resume.filter(
-        { created_by: currentUser.email },
+        { created_by: user.email },
         '-created_date',
         10
       );
-    }
+    },
+    enabled: !!user,
   });
 
   const { data: badges = [] } = useQuery({
     queryKey: ['userBadges'],
     queryFn: async () => {
-      const currentUser = await base44.auth.me();
       return await base44.entities.UserBadge.filter(
-        { created_by: currentUser.email },
+        { created_by: user.email },
         '-earned_date',
         3
       );
-    }
+    },
+    enabled: !!user,
   });
 
   // Combine all activities into a unified feed
@@ -266,27 +261,23 @@ export default function Home() {
 
   useEffect(() => {
     const initializeHome = async () => {
+      if (!user) return;
+
       try {
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-        
-        await updateStreak(currentUser.id);
-        
+        await updateStreak(user.id);
+
         // Recalculate readiness score on page load
-        await calculateReadinessScore(currentUser.id);
-        
+        await calculateReadinessScore(user.id, user.email);
+
         // Refetch profile to get updated score from the backend
         refetchProfile();
       } catch (error) {
         console.error("Error initializing home:", error);
       }
     };
-    
-    // Only run this effect once on component mount
-    // refetchProfile is a stable function provided by useQuery, so it doesn't need to be in deps.
-    // If it were a changing function, it should be in deps.
+
     initializeHome();
-  }, []); 
+  }, [user, refetchProfile]); 
 
   const stages = [
     {
