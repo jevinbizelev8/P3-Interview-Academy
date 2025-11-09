@@ -1,6 +1,5 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { base44 } from "@/api/mvp/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { createPageUrl } from "@/utils";
+import { useCreditBalance } from "@/hooks/useApi";
+import apiClient from "@/api/base-client";
 
 const STAGE_QUESTION_POOLS = {
   hr_screening: [
@@ -113,10 +114,12 @@ export default function SimulationInterface({ config, onComplete }) {
   const [questionCount, setQuestionCount] = useState(0); // Tracks how many questions have been asked
   const [targetQuestions, setTargetQuestions] = useState(0); // Total questions for this specific interview (5-8)
   const [askedQuestions, setAskedQuestions] = useState([]); // List of questions already asked
+  const [sessionId, setSessionId] = useState(null); // P3 practice session ID
 
   const recognitionRef = useRef(null);
   const timerRef = useRef(null);
   const queryClient = useQueryClient();
+  const { data: creditBalance } = useCreditBalance();
 
   useEffect(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -250,46 +253,50 @@ export default function SimulationInterface({ config, onComplete }) {
     // Randomly determine 5-8 questions for this interview
     const numQuestions = Math.floor(Math.random() * 4) + 5; // 5 to 8 questions
     setTargetQuestions(numQuestions);
-    
+
     setInterviewStarted(true);
     setIsAIThinking(true);
     try {
-      const firstQuestion = getRandomQuestion();
-      
-      if (!firstQuestion) {
-        throw new Error("No questions available for this stage.");
+      // Check credit balance (15 credits required)
+      if (!creditBalance || creditBalance.total < 15) {
+        alert('Insufficient credits! You need 15 credits to complete a simulation. Please purchase more credits or upgrade your plan.');
+        setIsAIThinking(false);
+        onComplete();
+        return;
       }
 
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are conducting a ${config.stage.replace(/_/g, ' ')} interview for ${config.jobTitle}${config.companyName ? ` at ${config.companyName}` : ''}. 
-Start with a warm, natural greeting, then ask this question: "${firstQuestion}"
-Be conversational and professional, like a real interviewer. Keep your response natural and under 3 sentences.`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            message: { type: "string" }
-          },
-          required: ["message"]
-        }
+      // Create P3 practice session
+      const sessionResponse = await apiClient.post('/practice/sessions', {
+        scenarioId: `mvp-${config.stage}`,
+        jobPosition: config.jobTitle,
+        companyName: config.companyName || undefined,
+        interviewStage: config.stage,
+        difficultyLevel: 'intermediate',
+        preferredLanguage: 'en',
+        totalQuestions: numQuestions
       });
 
-      if (!result || !result.message) {
-        throw new Error("Invalid response from AI");
-      }
+      const newSessionId = sessionResponse.data.data.id;
+      setSessionId(newSessionId);
+
+      // Request first AI question
+      const questionResponse = await apiClient.post(`/practice/sessions/${newSessionId}/ai-question`);
+      const questionData = questionResponse.data.data;
 
       setConversation([{
         role: "interviewer",
-        message: result.message,
+        message: questionData.question.questionText,
         timestamp: new Date().toISOString(),
-        question: firstQuestion // Store the specific question asked from the pool
+        question: questionData.question.questionText
       }]);
-      setQuestionCount(1); // Increment count for the first question
-      
+      setQuestionCount(1);
+
       // Speak the question
-      speakText(result.message);
+      speakText(questionData.question.questionText);
     } catch (error) {
       console.error("Error starting simulation:", error);
-      alert(`Failed to start simulation: ${error.message || 'Network error'}. Please check your connection and try again.`);
+      const errorMessage = error.response?.data?.error || error.message || 'Network error';
+      alert(`Failed to start simulation: ${errorMessage}. Please check your connection and try again.`);
       onComplete();
     } finally {
       setIsAIThinking(false);
@@ -346,7 +353,7 @@ Be conversational and professional, like a real interviewer. Keep your response 
   };
 
   const sendVoiceMessage = async (transcript) => {
-    if (!transcript.trim()) return;
+    if (!transcript.trim() || !sessionId) return;
 
     const userMessage = {
       role: "candidate",
@@ -359,60 +366,36 @@ Be conversational and professional, like a real interviewer. Keep your response 
     setIsAIThinking(true);
 
     try {
-      const conversationHistory = [...conversation, userMessage]
-        .map(msg => `${msg.role === 'interviewer' ? 'Interviewer' : 'Candidate'}: ${msg.message}`)
-        .join('\n');
+      // Submit user response to P3
+      await apiClient.post(`/practice/sessions/${sessionId}/user-response`, {
+        content: transcript,
+        inputMethod: 'voice',
+        questionNumber: questionCount
+      });
 
       // Check if we should ask another question or wrap up
       if (questionCount < targetQuestions) {
-        const nextQuestion = getRandomQuestion();
-        
-        // If we ran out of unique questions before hitting targetQuestions
-        if (!nextQuestion) {
-          await completeSimulation([...conversation, userMessage]);
-          return;
-        }
-
-        const result = await base44.integrations.Core.InvokeLLM({
-          prompt: `You're conducting a natural, conversational ${config.stage.replace(/_/g, ' ')} interview. The candidate just answered. 
-
-Previous conversation:
-${conversationHistory}
-
-Based on their response, either:
-1. Ask a brief follow-up question to dig deeper into what they just said (if their answer needs clarification or more detail), OR
-2. Acknowledge their answer briefly and transition naturally to this question: "${nextQuestion}"
-
-Be conversational, professional, and human-like. Keep your response natural and under 3 sentences. Don't be robotic or formulaic.`,
-          response_json_schema: {
-            type: "object",
-            properties: {
-              message: { type: "string" }
-            },
-            required: ["message"]
-          }
-        });
-
-        if (!result || !result.message) {
-          throw new Error("Invalid response from AI");
-        }
+        // Request next AI question from P3
+        const questionResponse = await apiClient.post(`/practice/sessions/${sessionId}/ai-question`);
+        const questionData = questionResponse.data.data;
 
         setConversation(prev => [...prev, {
           role: "interviewer",
-          message: result.message,
+          message: questionData.question.questionText,
           timestamp: new Date().toISOString(),
-          question: nextQuestion // Store the specific question asked from the pool
+          question: questionData.question.questionText
         }]);
         setQuestionCount(prev => prev + 1);
-        
-        speakText(result.message);
+
+        speakText(questionData.question.questionText);
       } else {
         // Interview complete after reaching targetQuestions
         await completeSimulation([...conversation, userMessage]);
       }
     } catch (error) {
       console.error("Error sending message:", error);
-      alert(`Failed to process your response: ${error.message || 'Network error'}. Please try again.`);
+      const errorMessage = error.response?.data?.error || error.message || 'Network error';
+      alert(`Failed to process your response: ${errorMessage}. Please try again.`);
       setConversation(prev => prev.slice(0, -1)); // Revert the last user message if AI fails
     } finally {
       setIsAIThinking(false);
@@ -433,139 +416,43 @@ Be conversational, professional, and human-like. Keep your response natural and 
   };
 
   const completeSimulation = async (finalConversation) => {
+    if (!sessionId) return;
+
     setIsAIThinking(true);
     try {
-      const user = await base44.auth.me();
-      const subs = await base44.entities.Subscription.filter({ user_id: user.id });
-      const subscription = subs[0];
+      // Complete the P3 practice session
+      const completeResponse = await apiClient.post(`/practice/sessions/${sessionId}/complete`);
+      const { session, report } = completeResponse.data.data;
 
-      if (!subscription || subscription.current_credits < 15) { // Updated credit check
-        alert('Insufficient credits! You need 15 credits to complete a simulation. Please purchase more credits or upgrade your plan.'); // Updated alert message
-        setIsAIThinking(false);
-        return;
-      }
+      // Map P3 report to analysis format for display
+      const analysisResult = {
+        relevance_score: parseFloat(report.relevanceScore) || 0,
+        star_structure_score: parseFloat(report.starStructureScore) || 0,
+        specific_evidence_score: parseFloat(report.specificEvidenceScore) || 0,
+        role_alignment_score: parseFloat(report.roleAlignmentScore) || 0,
+        outcome_oriented_score: parseFloat(report.outcomeOrientedScore) || 0,
+        communication_score: parseFloat(report.communicationScore) || 0,
+        problem_solving_score: parseFloat(report.problemSolvingScore) || 0,
+        cultural_fit_score: parseFloat(report.culturalFitScore) || 0,
+        learning_agility_score: parseFloat(report.learningAgilityScore) || 0,
+        overall_score: parseFloat(report.overallScore) || 0,
+        strengths: JSON.parse(report.strengths || '[]'),
+        improvement_areas: JSON.parse(report.improvements || '[]'),
+        ai_feedback: report.detailedFeedback || '',
+        model_answers: JSON.parse(report.modelAnswers || '[]')
+      };
 
-      const conversationText = finalConversation
-        .map(msg => `${msg.role === 'interviewer' ? 'Interviewer' : 'Candidate'}: ${msg.message}`)
-        .join('\n\n');
-
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Evaluate this ${config.stage.replace(/_/g, ' ')} interview for ${config.jobTitle}${config.companyName ? ` at ${config.companyName}` : ''}.
-
-Full conversation transcript:
-${conversationText}
-
-Provide detailed scores (0-100) for each criterion based on the assessment rubric:
-
-1. **Relevance of Response (15%)**: Direct, focused answers without digressions
-2. **Structured using STAR Method (15%)**: Logical flow with Situation, Task, Action, Result
-3. **Specific Evidence Usage (15%)**: Concrete examples with measurable data
-4. **Aligned with Role (15%)**: Skills match job requirements, shows enthusiasm
-5. **Outcome-Oriented (15%)**: Emphasizes measurable results and business impact
-6. **Communication Skills (10%)**: Clear, confident, professional delivery
-7. **Problem-Solving / Critical Thinking (10%)**: Analytical thinking and creative solutions
-8. **Cultural Fit / Values Alignment (5%)**: Compatibility with company culture
-9. **Learning Agility / Adaptability (5%)**: Ability to learn and adapt quickly
-
-For each score, use this scale:
-- Poor (1-40): Major deficiencies
-- Average (41-70): Some strengths, room for improvement
-- Great (71-100): Excellent performance
-
-Provide:
-- Individual scores for all 9 criteria
-- Weighted overall score
-- 3-5 key strengths
-- 3-5 specific improvement areas
-- Comprehensive feedback
-- 2-3 model answer examples with explanations`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            relevance_score: { type: "number" },
-            star_structure_score: { type: "number" },
-            specific_evidence_score: { type: "number" },
-            role_alignment_score: { type: "number" },
-            outcome_oriented_score: { type: "number" },
-            communication_score: { type: "number" },
-            problem_solving_score: { type: "number" },
-            cultural_fit_score: { type: "number" },
-            learning_agility_score: { type: "number" },
-            overall_score: { type: "number" },
-            strengths: { type: "array", items: { type: "string" } },
-            improvement_areas: { type: "array", items: { type: "string" } },
-            ai_feedback: { type: "string" },
-            model_answers: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  question: { type: "string" },
-                  your_response: { type: "string" },
-                  model_answer: { type: "string" },
-                  why_better: { type: "string" }
-                },
-                required: ["question", "your_response", "model_answer", "why_better"]
-              }
-            }
-          },
-          required: ["relevance_score", "star_structure_score", "specific_evidence_score", "role_alignment_score", "outcome_oriented_score", "communication_score", "problem_solving_score", "cultural_fit_score", "learning_agility_score", "overall_score", "strengths", "improvement_areas", "ai_feedback", "model_answers"]
-        }
-      });
-
-      if (!result || typeof result.overall_score !== 'number') {
-        throw new Error("Invalid analysis response");
-      }
-
-      const simulation = await base44.entities.InterviewSimulation.create({
-        stage: config.stage,
-        job_title: config.jobTitle,
-        company_name: config.companyName || null,
-        resume_id: config.resumeId || null,
-        conversation: finalConversation,
-        duration_minutes: Math.round((600 - timeRemaining) / 60),
-        relevance_score: result.relevance_score,
-        star_structure_score: result.star_structure_score,
-        specific_evidence_score: result.specific_evidence_score,
-        role_alignment_score: result.role_alignment_score,
-        outcome_oriented_score: result.outcome_oriented_score,
-        communication_score: result.communication_score,
-        problem_solving_score: result.problem_solving_score,
-        cultural_fit_score: result.cultural_fit_score,
-        learning_agility_score: result.learning_agility_score,
-        overall_score: result.overall_score,
-        strengths: result.strengths,
-        improvement_areas: result.improvement_areas,
-        ai_feedback: result.ai_feedback,
-        model_answers: result.model_answers || [],
-        completed: true
-      });
-
-      // Deduct 15 credits
-      const newBalance = subscription.current_credits - 15; // Updated credit deduction
-      await base44.entities.Subscription.update(subscription.id, {
-        current_credits: newBalance
-      });
-
-      await base44.entities.CreditLedger.create({
-        user_id: user.id,
-        transaction_type: "consumption",
-        credits_amount: -15, // Updated credit ledger entry
-        balance_after: newBalance,
-        feature_used: "AI Interview Simulation",
-        description: `${config.stage.replace(/_/g, ' ')} simulation for ${config.jobTitle}`
-      });
-
-      setAnalysis(result);
+      setAnalysis(analysisResult);
       setIsComplete(true);
-      
-      queryClient.invalidateQueries({ queryKey: ['simulations'] });
-      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+
+      // Invalidate React Query caches
+      queryClient.invalidateQueries({ queryKey: ['practiceHistory'] });
+      queryClient.invalidateQueries({ queryKey: ['creditBalance'] });
       queryClient.invalidateQueries({ queryKey: ['creditHistory'] });
-      queryClient.invalidateQueries({ queryKey: ['userProfile'] });
     } catch (error) {
       console.error("Error completing simulation:", error);
-      alert(`Failed to complete simulation: ${error.message || 'Unknown error'}. Please try again.`);
+      const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      alert(`Failed to complete simulation: ${errorMessage}. Please try again.`);
     } finally {
       setIsAIThinking(false);
     }
