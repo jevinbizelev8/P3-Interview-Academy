@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/mvp/base44Client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { createPageUrl } from "@/utils";
-import { calculateSimulationXP, awardXP, calculateReadinessScore, updateStreak, incrementSimulationCount } from "../utils/scoring";
 
 const STAGE_QUESTION_POOLS = {
   hr_screening: [
@@ -556,19 +555,6 @@ Provide:
         feature_used: "AI Interview Simulation",
         description: `${config.stage.replace(/_/g, ' ')} simulation for ${config.jobTitle}`
       });
-
-      // Award XP based on simulation performance
-      const simulationXP = calculateSimulationXP(config.stage, result.overall_score);
-      await awardXP(user.id, simulationXP, `Completed ${config.stage} simulation`, simulation.id);
-
-      // Update streak
-      await updateStreak(user.id);
-
-      // Increment simulation count
-      await incrementSimulationCount(user.id);
-
-      // Recalculate readiness score
-      await calculateReadinessScore(user.id);
 
       setAnalysis(result);
       setIsComplete(true);
