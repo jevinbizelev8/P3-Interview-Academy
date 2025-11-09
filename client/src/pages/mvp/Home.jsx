@@ -27,65 +27,6 @@ import {
   useSelfIntro,
   useResumes
 } from "@/hooks/useApi";
-import { base44 } from "@/api/mvp/base44Client";
-import { updateStreak } from "@/components/mvp/utils/scoring";
-
-// Helper function to calculate and update readiness score in the backend
-const calculateReadinessScore = async (userId, userEmail) => {
-    try {
-        // Fetch user activities to calculate score
-        const modules = await base44.entities.UserModuleProgress.filter({
-            created_by: userEmail,
-            completed: true
-        });
-        const sims = await base44.entities.InterviewSimulation.filter(
-            { created_by: userEmail }
-        );
-        const intros = await base44.entities.SelfIntro.filter(
-            { created_by: userEmail }
-        );
-        const resumesAnalyzed = await base44.entities.Resume.filter(
-            { created_by: userEmail }
-        );
-
-        let score = 0;
-        // Base points for completing activities
-        score += modules.length * 5; // e.g., 5 points per completed module
-        score += sims.length * 10;   // e.g., 10 points per simulation
-        score += intros.length * 5;  // e.g., 5 points per self-intro
-        score += resumesAnalyzed.length * 5; // e.g., 5 points per resume analysis
-
-        // Add weighted points based on average scores from activities
-        if (sims.length > 0) {
-            const avgSimScore = sims.reduce((acc, s) => acc + (s.overall_score || 0), 0) / sims.length;
-            score += (avgSimScore / 100) * 20; // Max 20 points from average simulation score
-        }
-        if (intros.length > 0) {
-            const avgIntroScore = intros.reduce((acc, i) => acc + (i.overall_score || 0), 0) / intros.length;
-            score += (avgIntroScore / 100) * 10; // Max 10 points from average intro score
-        }
-        if (resumesAnalyzed.length > 0) {
-            const avgResumeScore = resumesAnalyzed.reduce((acc, r) => acc + (r.ats_score || 0), 0) / resumesAnalyzed.length;
-            score += (avgResumeScore / 100) * 10; // Max 10 points from average resume score
-        }
-
-        // Ensure score is within 0-100 range
-        score = Math.min(Math.round(score), 100);
-        score = Math.max(0, score);
-
-        // Update the UserProfile in the database
-        const profiles = await base44.entities.UserProfile.filter({ user_id: userId });
-        if (profiles.length > 0) {
-            await base44.entities.UserProfile.update(profiles[0].id, {
-                readiness_score: score
-            });
-        } else {
-            console.error("User profile not found for updating readiness score.");
-        }
-    } catch (error) {
-        console.error("Error calculating and updating readiness score:", error);
-    }
-};
 
 
 export default function Home() {
