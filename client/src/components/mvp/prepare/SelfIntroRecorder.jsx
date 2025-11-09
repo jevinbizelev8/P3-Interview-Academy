@@ -1,24 +1,25 @@
 import React, { useState, useRef } from "react";
-import { base44 } from "@/api/base44Client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Video, StopCircle, Upload, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
+import { useFinalizeSelfIntro } from "@/hooks/useApi";
+import apiClient from "@/api/base-client";
 
 export default function SelfIntroRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [analysis, setAnalysis] = useState(null);
-  
+  const [transcript, setTranscript] = useState(""); // Store transcript from speech recognition
+
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const queryClient = useQueryClient();
+  const finalizeMutation = useFinalizeSelfIntro();
 
   const startRecording = async () => {
     try {
@@ -63,53 +64,48 @@ export default function SelfIntroRecorder() {
   };
 
   const analyzeVideo = async () => {
-    if (!recordedBlob) return;
-    
+    if (!recordedBlob && !transcript) {
+      alert('Please record a video or provide a transcript first.');
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      const file = new File([recordedBlob], `self-intro-${Date.now()}.webm`, { type: 'video/webm' });
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      
-      const result = await base44.integrations.Core.InvokeLLM({
-        prompt: `Analyze this self-introduction video transcript. Provide detailed feedback on:
-        1. Clarity (0-100): How clear and articulate is the speech?
-        2. Confidence (0-100): How confident does the speaker appear?
-        3. Structure (0-100): How well-structured is the introduction (opening, body, closing)?
-        4. Overall Score (0-100): Average of the three metrics
-        5. Strengths: List 3-5 specific strengths
-        6. Improvements: List 3-5 specific areas to improve
-        7. Detailed Feedback: 2-3 paragraphs of constructive feedback`,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            clarity_score: { type: "number" },
-            confidence_score: { type: "number" },
-            structure_score: { type: "number" },
-            overall_score: { type: "number" },
-            strengths: { type: "array", items: { type: "string" } },
-            improvements: { type: "array", items: { type: "string" } },
-            ai_feedback: { type: "string" }
-          }
-        },
-        file_urls: file_url
+      // For MVP: Use transcript-based analysis (no video upload)
+      // In future: Implement video upload to S3 and pass URL
+      const videoDuration = recordedBlob ? Math.floor(recordedBlob.size / (1024 * 10)) : 120; // Estimate duration
+
+      // Use P3 self-intro analyze-video endpoint
+      const response = await apiClient.post('/prepare/self-intro/analyze-video', {
+        script: transcript || 'Self-introduction video recorded',
+        videoDuration: videoDuration
       });
 
-      await base44.entities.SelfIntro.create({
-        video_url: file_url,
-        duration_seconds: 120,
-        clarity_score: result.clarity_score,
-        confidence_score: result.confidence_score,
-        structure_score: result.structure_score,
-        overall_score: result.overall_score,
-        ai_feedback: result.ai_feedback,
-        strengths: result.strengths,
-        improvements: result.improvements
+      const result = response.data.data;
+
+      // Map P3 response to expected format
+      const analysisResult = {
+        clarity_score: result.clarity || 0,
+        confidence_score: result.confidence || 0,
+        structure_score: result.structure || 0,
+        overall_score: result.overall || 0,
+        strengths: result.strengths || [],
+        improvements: result.improvements || [],
+        ai_feedback: result.feedback || ''
+      };
+
+      // Finalize self-intro using P3 API
+      await finalizeMutation.mutateAsync({
+        content: transcript || 'Self-introduction completed',
+        video_url: recordedBlob ? URL.createObjectURL(recordedBlob) : undefined,
+        transcript: transcript
       });
 
-      setAnalysis(result);
-      queryClient.invalidateQueries(['selfIntros']);
+      setAnalysis(analysisResult);
     } catch (error) {
       console.error("Error analyzing video:", error);
+      const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      alert(`Failed to analyze video: ${errorMessage}. Please try again.`);
     }
     setIsProcessing(false);
   };
