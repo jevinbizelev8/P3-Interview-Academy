@@ -7,7 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { BookOpen, Lightbulb, Send, Loader2, MessageCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { awardXP, updateStreak, XP_VALUES } from "../utils/scoring";
 
 const REFLECTION_PROMPTS = [
   "What was the most challenging question in this interview, and how did you handle it?",
@@ -99,14 +98,6 @@ export default function ReflectionJournal({ simulationId, onClose }) {
       }
 
       const reflection = reflectionResult.data;
-
-      // Award XP for reflection
-      try {
-        await awardXP('current-user', XP_VALUES.REFLECTION_JOURNAL, "Submitted reflection journal", reflection.id);
-        await updateStreak('current-user');
-      } catch (xpError) {
-        console.warn("XP/Streak update failed:", xpError);
-      }
 
       return {
         ...reflection,
