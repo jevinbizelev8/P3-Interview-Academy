@@ -1,9 +1,10 @@
 
 
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, Navigate } from "wouter";
 import { createPageUrl } from "@/utils";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/hooks/useAuth";
+import { useReadinessScore, useXPPoints, useCreditBalance } from "@/hooks/useApi";
 import { Home, BookOpen, Target, TrendingUp, Award, Zap, ArrowRight, LogOut, User as UserIcon, Users } from "lucide-react";
 import {
   Sidebar,
@@ -64,80 +65,19 @@ const navigationItems = [
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
-  const [credits, setCredits] = React.useState(null);
-  const [user, setUser] = React.useState(null);
-  const [userProgress, setUserProgress] = React.useState({ readiness: 0, xp: 0 });
+  const { user, isLoading } = useAuth();
+  const { data: readinessScore = 0 } = useReadinessScore();
+  const { data: xpData } = useXPPoints();
+  const { data: balance = { credits: 0 } } = useCreditBalance();
 
-  React.useEffect(() => {
-    const fetchUserAndCredits = async () => {
-      try {
-        // Check if user is authenticated first
-        const isAuth = await base44.auth.isAuthenticated();
-        if (!isAuth) {
-          // User not logged in, skip fetching, set state to null to reflect unauthenticated state
-          setUser(null);
-          setCredits(null);
-          setUserProgress({ readiness: 0, xp: 0 });
-          return;
-        }
+  const userProgress = {
+    readiness: Math.round(readinessScore),
+    xp: xpData?.xp_points || 0
+  };
 
-        const currentUser = await base44.auth.me();
-        setUser(currentUser);
-        
-        // Fetch subscription for credits
-        const subs = await base44.entities.Subscription.filter({ user_id: currentUser.id });
-        if (subs.length > 0) {
-          setCredits(subs[0].current_credits);
-        } else {
-          // Create initial subscription for new users if none found
-          const newSub = await base44.entities.Subscription.create({
-            user_id: currentUser.id,
-            plan_type: "STARTER",
-            billing_cycle: "monthly",
-            seats: 1,
-            monthly_credits: 50,
-            current_credits: 50,
-            price_per_seat: 0,
-            status: "active"
-          });
-          setCredits(50); // Set credits from the new subscription
-        }
-
-        // Fetch user profile for progress
-        const profiles = await base44.entities.UserProfile.filter({ user_id: currentUser.id });
-        if (profiles.length > 0) {
-          setUserProgress({
-            readiness: Math.round(profiles[0].readiness_score || 0),
-            xp: profiles[0].xp_points || 0
-          });
-        } else {
-          // Create initial profile
-          await base44.entities.UserProfile.create({
-            user_id: currentUser.id,
-            xp_points: 0,
-            current_streak: 0,
-            total_simulations: 0,
-            readiness_score: 0
-          });
-          setUserProgress({ readiness: 0, xp: 0 });
-        }
-      } catch (error) {
-        // Silently handle error - user might be on a public page or token expired
-        console.error("Error fetching user and credits (possibly unauthenticated):", error);
-        setUser(null);
-        setCredits(null);
-        setUserProgress({ readiness: 0, xp: 0 });
-      }
-    };
-    fetchUserAndCredits();
-    
-    // Set up interval for refreshing user and credits data
-    const interval = setInterval(fetchUserAndCredits, 30000);
-    return () => clearInterval(interval); // Clear interval on component unmount
-  }, []);
-
-  const handleLogout = () => {
-    base44.auth.logout(createPageUrl("Landing"));
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.href = createPageUrl("Landing");
   };
 
   return (
@@ -214,7 +154,7 @@ export default function Layout({ children, currentPageName }) {
                         <ArrowRight className="w-3 h-3 text-yellow-700" />
                       </div>
                       <p className="text-2xl font-bold text-yellow-700">
-                        {credits !== null ? credits : '...'}
+                        {balance.credits}
                       </p>
                       <p className="text-xs text-yellow-600 mt-1">Click to manage</p>
                     </div>
