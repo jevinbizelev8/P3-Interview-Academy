@@ -3,14 +3,14 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Check, Zap, Target, TrendingUp, Award, Star, 
+import {
+  Check, Zap, Target, TrendingUp, Award, Star,
   ArrowRight, Sparkles, Users, BookOpen, Video, CheckCircle2
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createPageUrl } from "@/utils";
-import { Link } from "react-router-dom";
+import { Link } from "wouter";
 
 const PLANS = {
   STARTER: {
