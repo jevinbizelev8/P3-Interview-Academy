@@ -210,7 +210,7 @@ export async function setupSimpleAuth(app: Express) {
         { name: 'linkedin_url', type: 'VARCHAR', default: null },
         { name: 'timezone', type: 'VARCHAR', default: "'(UTC+08:00) Singapore, Kuala Lumpur, Hong Kong, Beijing, Perth'" },
         { name: 'country', type: 'VARCHAR', default: null },
-        { name: 'current_role', type: 'VARCHAR', default: null },
+        { name: 'current_role', type: 'VARCHAR', default: null, quoted: true },
         { name: 'target_role', type: 'VARCHAR', default: null },
         { name: 'target_industry', type: 'VARCHAR', default: null },
         { name: 'years_experience', type: 'VARCHAR', default: null },
@@ -225,7 +225,8 @@ export async function setupSimpleAuth(app: Express) {
         try {
           const defaultClause = col.default ? `DEFAULT ${col.default}` : '';
           const uniqueClause = col.unique ? 'UNIQUE' : '';
-          const sql = `ALTER TABLE users ADD COLUMN IF NOT EXISTS ${col.name} ${col.type} ${defaultClause} ${uniqueClause}`.trim();
+          const columnName = (col as any).quoted ? `"${col.name}"` : col.name;
+          const sql = `ALTER TABLE users ADD COLUMN IF NOT EXISTS ${columnName} ${col.type} ${defaultClause} ${uniqueClause}`.trim();
           await (pool as any).query(sql);
           results.push(`✅ Added column: ${col.name}`);
         } catch (e: any) {
