@@ -10,7 +10,10 @@ import Practice from "@/pages/mvp/Practice";
 import Prepare from "@/pages/mvp/Prepare";
 import Perform from "@/pages/mvp/Perform";
 import Billing from "@/pages/mvp/Billing";
-import Dashboard from "@/pages/mvp/Dashboard";
+import Home from "@/pages/mvp/Home";
+import Profile from "@/pages/mvp/Profile";
+import Referral from "@/pages/mvp/Referral";
+import Layout from "@/pages/mvp/Layout";
 import AdminDashboard from "@/pages/admin/dashboard";
 import VerifyEmail from "@/pages/verify-email";
 import ResetPassword from "@/pages/reset-password";
@@ -27,20 +30,74 @@ function Router() {
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/dashboard">
         <ProtectedRoute>
-          {user && <Dashboard />}
+          <Layout currentPageName="Home">
+            {user && <Home />}
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/profile">
+        <ProtectedRoute>
+          <Layout currentPageName="Profile">
+            {user && <Profile />}
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/referral">
+        <ProtectedRoute>
+          <Layout currentPageName="Referral">
+            {user && <Referral />}
+          </Layout>
         </ProtectedRoute>
       </Route>
       <Route path="/billing">
         <ProtectedRoute>
-          <Billing />
+          <Layout currentPageName="Billing">
+            <Billing />
+          </Layout>
         </ProtectedRoute>
       </Route>
-      <Route path="/prepare" component={Prepare} />
-      <Route path="/prepare/*" component={Prepare} />
-      <Route path="/practice" component={Practice} />
-      <Route path="/practice/*" component={Practice} />
-      <Route path="/perform" component={Perform} />
-      <Route path="/perform/*" component={Perform} />
+      <Route path="/prepare">
+        <ProtectedRoute>
+          <Layout currentPageName="Prepare">
+            <Prepare />
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/prepare/*">
+        <ProtectedRoute>
+          <Layout currentPageName="Prepare">
+            <Prepare />
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/practice">
+        <ProtectedRoute>
+          <Layout currentPageName="Practice">
+            <Practice />
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/practice/*">
+        <ProtectedRoute>
+          <Layout currentPageName="Practice">
+            <Practice />
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/perform">
+        <ProtectedRoute>
+          <Layout currentPageName="Perform">
+            <Perform />
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/perform/*">
+        <ProtectedRoute>
+          <Layout currentPageName="Perform">
+            <Perform />
+          </Layout>
+        </ProtectedRoute>
+      </Route>
       {user?.role === 'admin' && (
         <Route path="/admin/*" component={AdminDashboard} />
       )}

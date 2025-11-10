@@ -3,7 +3,7 @@
 import React from "react";
 import { Link, useLocation, Navigate } from "wouter";
 import { createPageUrl } from "@/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/use-auth";
 import { useReadinessScore, useXPPoints, useCreditBalance } from "@/hooks/useApi";
 import { Home, BookOpen, Target, TrendingUp, Award, Zap, ArrowRight, LogOut, User as UserIcon, Users } from "lucide-react";
 import {
@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import FloatingAICoach from "./components/shared/FloatingAICoach";
+import FloatingAICoach from "@/components/mvp/shared/FloatingAICoach";
 
 const navigationItems = [
   {
