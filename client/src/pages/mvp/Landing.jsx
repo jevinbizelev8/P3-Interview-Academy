@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createPageUrl } from "@/utils";
 import { Link } from "wouter";
+import AuthModal from "@/components/AuthModal";
 
 const PLANS = {
   STARTER: {
@@ -87,6 +88,13 @@ const TOP_UPS = [
 
 export default function Landing() {
   const [billingCycle, setBillingCycle] = useState("monthly");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalView, setAuthModalView] = useState("signup");
+
+  const handleOpenAuthModal = (view = "signup") => {
+    setAuthModalView(view);
+    setIsAuthModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -108,13 +116,13 @@ export default function Landing() {
             <div className="flex gap-3">
               <Button
                 variant="outline"
-                onClick={() => window.location.href = '/auth'}
+                onClick={() => handleOpenAuthModal("login")}
               >
                 Sign In
               </Button>
               <Button
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                onClick={() => window.location.href = '/auth'}
+                onClick={() => handleOpenAuthModal("signup")}
               >
                 Start Free
               </Button>
@@ -149,7 +157,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-6 text-lg"
-                onClick={() => window.location.href = '/auth'}
+                onClick={() => handleOpenAuthModal("signup")}
               >
                 Start Free - 50 Credits
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -305,7 +313,7 @@ export default function Landing() {
                     <Button
                       className={`w-full bg-gradient-to-r ${plan.color} hover:opacity-90 text-white`}
                       size="lg"
-                      onClick={() => window.location.href = '/auth'}
+                      onClick={() => handleOpenAuthModal("signup")}
                     >
                       {plan.cta}
                     </Button>
@@ -474,7 +482,7 @@ export default function Landing() {
             <Button
               size="lg"
               className="bg-white text-purple-700 hover:bg-gray-100 px-12 py-6 text-lg font-bold shadow-2xl"
-              onClick={() => window.location.href = '/auth'}
+              onClick={() => handleOpenAuthModal("signup")}
             >
               Start Free - Get 50 Credits
               <ArrowRight className="w-5 h-5 ml-2" />
@@ -524,6 +532,13 @@ export default function Landing() {
           </div>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialView={authModalView}
+      />
     </div>
   );
 }
