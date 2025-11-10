@@ -182,6 +182,69 @@ export async function setupSimpleAuth(app: Express) {
     }
   });
 
+  // TEMP: Staging-only schema fix endpoint to add missing columns
+  // Guarded by TEST_SEED_KEY header; remove after staging schema is fixed
+  app.post("/api/auth/fix-schema", async (req, res) => {
+    try {
+      const seedKey = req.get('X-Seed-Key');
+      const expected = process.env.TEST_SEED_KEY;
+      if (!expected || seedKey !== expected) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { pool } = await import('./db');
+      const results: string[] = [];
+
+      // Add missing columns to users table
+      const columns = [
+        // Gamification fields
+        { name: 'xp_points', type: 'INTEGER', default: '0' },
+        { name: 'current_streak', type: 'INTEGER', default: '0' },
+        { name: 'longest_streak', type: 'INTEGER', default: '0' },
+        { name: 'last_activity_date', type: 'TIMESTAMP', default: null },
+        { name: 'readiness_score', type: 'INTEGER', default: '0' },
+        { name: 'referral_code', type: 'VARCHAR(50)', default: null, unique: true },
+        // Extended profile fields
+        { name: 'full_name', type: 'VARCHAR', default: null },
+        { name: 'mobile_number', type: 'VARCHAR', default: null },
+        { name: 'linkedin_url', type: 'VARCHAR', default: null },
+        { name: 'timezone', type: 'VARCHAR', default: "'(UTC+08:00) Singapore, Kuala Lumpur, Hong Kong, Beijing, Perth'" },
+        { name: 'country', type: 'VARCHAR', default: null },
+        { name: 'current_role', type: 'VARCHAR', default: null },
+        { name: 'target_role', type: 'VARCHAR', default: null },
+        { name: 'target_industry', type: 'VARCHAR', default: null },
+        { name: 'years_experience', type: 'VARCHAR', default: null },
+        { name: 'key_skills', type: 'JSONB', default: null },
+        { name: 'two_factor_enabled', type: 'BOOLEAN', default: 'FALSE' },
+        { name: 'notification_email', type: 'BOOLEAN', default: 'TRUE' },
+        { name: 'notification_whatsapp', type: 'BOOLEAN', default: 'FALSE' },
+        { name: 'notification_sms', type: 'BOOLEAN', default: 'FALSE' },
+      ];
+
+      for (const col of columns) {
+        try {
+          const defaultClause = col.default ? `DEFAULT ${col.default}` : '';
+          const uniqueClause = col.unique ? 'UNIQUE' : '';
+          const sql = `ALTER TABLE users ADD COLUMN IF NOT EXISTS ${col.name} ${col.type} ${defaultClause} ${uniqueClause}`.trim();
+          await (pool as any).query(sql);
+          results.push(`✅ Added column: ${col.name}`);
+        } catch (e: any) {
+          if (e.message?.includes('already exists')) {
+            results.push(`⏭️  Column already exists: ${col.name}`);
+          } else {
+            results.push(`❌ Failed to add ${col.name}: ${e.message}`);
+          }
+        }
+      }
+
+      res.json({ success: true, message: 'Schema fix completed', results });
+    } catch (e: any) {
+      const msg = e?.message || String(e);
+      console.error('[fix-schema] error', msg);
+      res.status(500).json({ message: 'Failed to fix schema', error: msg });
+    }
+  });
+
   // TEMP: Staging-only seed endpoint to create a verified test user and start a session
   // Guarded by TEST_SEED_KEY header; remove after staging tests complete
   app.post("/api/auth/test-seed", async (req, res) => {
