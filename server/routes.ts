@@ -38,6 +38,7 @@ import adminRouter from "./routes/admin";
 import subscriptionRouter from "./routes/subscriptions";
 import stripeWebhookRouter from "./routes/stripe-webhooks";
 import usersRouter from "./routes/users";
+import schemaMigrationRouter from "./routes/schema-migration";
 import testEndpoints from "./test-endpoints";
 import crypto from "crypto";
 
@@ -1983,7 +1984,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Voice services routes
   app.use('/api/voice-services', voiceServicesRouter);
 
-
+  // Schema migration endpoint (admin only)
+  app.use('/api/schema', schemaMigrationRouter);
 
   // ================================
   // TEST ENDPOINTS FOR SEALION INTEGRATION
