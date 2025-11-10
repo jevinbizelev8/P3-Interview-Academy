@@ -94,7 +94,7 @@ export const users = pgTable("users", {
   linkedinUrl: varchar("linkedin_url"),
   timezone: varchar("timezone").default(sql`'(UTC+08:00) Singapore, Kuala Lumpur, Hong Kong, Beijing, Perth'::varchar`),
   country: varchar("country"),
-  currentRole: varchar("current_role"),
+  currentRole: varchar('"current_role"'), // Quoted because 'current_role' is a SQL reserved keyword
   targetRole: varchar("target_role"),
   targetIndustry: varchar("target_industry"),
   yearsExperience: varchar("years_experience"),

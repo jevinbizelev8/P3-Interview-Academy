@@ -1,0 +1,70 @@
+{
+  "permission": {
+    "bash": {
+      // Global bash permissions (for interactive Claude Code)
+      "npm run test:*": "allow",
+      "npm run build:*": "allow",
+      "npm run check:*": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "npx tsx*": "allow",
+      "cat *": "allow",
+      "grep *": "allow",
+      "tail *": "allow",
+      "head *": "allow",
+      "ls *": "allow",
+      "echo *": "allow",
+      "chmod *": "allow",
+
+      // Telegram notification scripts
+      "./scripts/telegram/core/notify.sh*": "allow",
+      "./scripts/telegram/core/notifyctl*": "allow",
+
+      // Deployment scripts (safe read-only operations)
+      "./deployment-scripts/check-environment-status.sh*": "allow",
+
+      // Default: ask for everything else
+      "*": "ask"
+    }
+  },
+
+  "agents": {
+    "opencode-deploy-expert": {
+      "permission": {
+        "bash": {
+          // Allow all AWS CLI commands for deployment agent
+          "aws *": "allow",
+
+          // Allow deployment scripts
+          "./deployment-scripts/*": "allow",
+          "deployment-scripts/*": "allow",
+
+          // Allow GitHub CLI
+          "gh *": "allow",
+
+          // Allow npm commands
+          "npm *": "allow",
+          "npx *": "allow",
+
+          // Allow common utility commands
+          "curl *": "allow",
+          "wget *": "allow",
+          "cat *": "allow",
+          "grep *": "allow",
+          "ls *": "allow",
+          "echo *": "allow",
+
+          // Still ask for destructive git operations
+          "git push*": "ask",
+          "git commit*": "ask",
+
+          // Allow read-only git operations
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow"
+        }
+      }
+    }
+  }
+}
