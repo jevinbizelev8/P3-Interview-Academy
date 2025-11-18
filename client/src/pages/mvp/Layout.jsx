@@ -33,7 +33,7 @@ import FloatingAICoach from "@/components/mvp/shared/FloatingAICoach";
 const navigationItems = [
   {
     title: "Home",
-    url: createPageUrl("Home"),
+    url: "/dashboard",
     icon: Home,
     description: "Your interview journey overview"
   },
