@@ -59,13 +59,21 @@ const userResponseSchema = z.object({
 router.post('/sessions', requireCredits('practice-session'), async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated',
+        code: 'UNAUTHORIZED',
+        message: 'Please log in to start a practice session'
+      });
     }
 
     const validation = createSessionSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
+        success: false,
         error: 'Invalid session configuration',
+        code: 'VALIDATION_ERROR',
+        message: 'The session settings are invalid. Please check your selections and try again.',
         details: validation.error.issues
       });
     }
@@ -109,15 +117,41 @@ router.post('/sessions', requireCredits('practice-session'), async (req, res) =>
         success: true,
         data: session,
         message: 'Practice session created successfully',
-        warning: 'Credit deduction failed - please contact support'
+        warning: 'Credit deduction failed - please contact support if you were charged incorrectly'
       });
     }
 
   } catch (error) {
     console.error('❌ Create practice session error:', error);
+
+    // Provide specific error codes for different failure types
+    if (error instanceof Error) {
+      if (error.message.includes('database') || error.message.includes('connection')) {
+        return res.status(503).json({
+          success: false,
+          error: 'Database connection failed',
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'We are experiencing technical difficulties. Please try again in a moment or contact support if the issue persists.'
+        });
+      }
+
+      if (error.message.includes('timeout')) {
+        return res.status(504).json({
+          success: false,
+          error: 'Request timeout',
+          code: 'TIMEOUT',
+          message: 'The request took too long to process. Please try again.'
+        });
+      }
+    }
+
+    // Generic server error with helpful message
     res.status(500).json({
-      error: 'Failed to create session',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      success: false,
+      error: 'Failed to create practice session',
+      code: 'SESSION_CREATION_FAILED',
+      message: 'Unable to start the simulation. Please try again or contact support if the problem continues.',
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
     });
   }
 });

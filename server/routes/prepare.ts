@@ -4,11 +4,15 @@
 import { Router } from "express";
 import { z } from "zod";
 import multer from "multer";
+import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
+import crypto from "crypto";
 import { LearningModuleService } from "../services/learning-module-service";
 import { SelfIntroService } from "../services/self-intro-service";
 import { ResumeService } from "../services/resume-service";
 import { ReadinessService } from "../services/readiness-service";
-import { requireCredits } from "../middleware/credit-middleware.js";
+import { requireCredits, checkDuplicateAction, markActionProcessed } from "../middleware/credit-middleware.js";
+import { CreditService } from "../services/credit-service";
 import { db } from "../db";
 import { starStories, type InsertStarStory } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -477,7 +481,7 @@ const analyzeVideoSchema = z.object({
   videoDuration: z.number().optional(),
 });
 
-router.post('/self-intro/analyze-video', requireCredits('self-intro-analyze-video'), async (req, res) => {
+router.post('/self-intro/analyze-video', async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
@@ -485,8 +489,59 @@ router.post('/self-intro/analyze-video', requireCredits('self-intro-analyze-vide
 
     const validatedData = analyzeVideoSchema.parse(req.body);
 
+    // Generate unique resource ID from script hash for idempotency
+    const scriptHash = crypto.createHash('md5').update(validatedData.script).digest('hex');
+    const resourceId = `script-${scriptHash.substring(0, 16)}`;
+
+    // Check for duplicate processing (idempotency)
+    if (checkDuplicateAction(req.user.id, 'video-analysis', resourceId)) {
+      console.log(`⚠️  Duplicate video analysis request detected for user ${req.user.id}, resource: ${resourceId}`);
+      return res.status(409).json({
+        success: false,
+        error: 'This video has already been analyzed recently. Please wait before re-analyzing the same content.',
+        code: 'DUPLICATE_REQUEST',
+      });
+    }
+
+    // Check if user has enough credits BEFORE processing
+    const creditCheck = await CreditService.checkCredits(req.user.id, 'self-intro-analyze-video');
+    if (!creditCheck.hasEnoughCredits) {
+      return res.status(402).json({
+        success: false,
+        error: 'Insufficient credits',
+        code: 'INSUFFICIENT_CREDITS',
+        creditsNeeded: creditCheck.creditsNeeded,
+        currentBalance: creditCheck.currentBalance,
+      });
+    }
+
+    // Perform analysis FIRST (before deducting credits)
     const selfIntroService = new SelfIntroService();
     const result = await selfIntroService.analyzeVideoScript(req.user.id, validatedData.script, validatedData.videoDuration);
+
+    // Deduct credits AFTER successful analysis
+    try {
+      await CreditService.deductCredits(
+        req.user.id,
+        'self-intro-analyze-video',
+        null,
+        'Self-introduction video analysis'
+      );
+
+      // Mark as processed to prevent duplicate charges
+      markActionProcessed(req.user.id, 'video-analysis', resourceId);
+
+      console.log(`✅ Video analysis completed and credits deducted for user ${req.user.id}`);
+    } catch (creditError) {
+      console.error('⚠️  Credit deduction failed after successful analysis:', creditError);
+      // Analysis succeeded, so return the result even if credit deduction had issues
+      // Log this for manual review
+      return res.json({
+        success: true,
+        data: result,
+        warning: 'Analysis completed but credit deduction pending. Please contact support if you were charged incorrectly.',
+      });
+    }
 
     return res.json({ success: true, data: result });
   } catch (error) {
@@ -501,7 +556,7 @@ router.post('/self-intro/analyze-video', requireCredits('self-intro-analyze-vide
     console.error('❌ Error analyzing self-intro video:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to analyze video',
+      error: 'Analysis failed. No credits were deducted. Please try again.',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
@@ -533,9 +588,49 @@ router.post('/resume/upload', upload.single('file'), async (req, res) => {
 
     const jobDescriptionId = req.body.jobDescriptionId as string | undefined;
 
-    // TODO: Parse file content (PDF/DOCX)
-    // For now, store placeholder text - will implement with pdf-parse/mammoth
-    const parsedContent = `[Resume content placeholder - file: ${req.file.originalname}]`;
+    // Parse file content based on MIME type
+    let parsedContent: string;
+
+    try {
+      if (req.file.mimetype === 'application/pdf') {
+        // Parse PDF
+        const pdfData = await pdfParse(req.file.buffer);
+        parsedContent = pdfData.text;
+
+        if (!parsedContent || parsedContent.trim().length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'PDF file appears to be empty or could not be parsed',
+          });
+        }
+      } else if (
+        req.file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+        req.file.mimetype === 'application/msword'
+      ) {
+        // Parse DOCX
+        const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+        parsedContent = result.value;
+
+        if (!parsedContent || parsedContent.trim().length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'DOCX file appears to be empty or could not be parsed',
+          });
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Unsupported file type. Please upload PDF or DOCX files only.',
+        });
+      }
+    } catch (parseError) {
+      console.error('❌ Error parsing resume file:', parseError);
+      return res.status(400).json({
+        success: false,
+        error: 'Failed to parse resume file. Please ensure the file is not corrupted.',
+        details: parseError instanceof Error ? parseError.message : 'Unknown parsing error',
+      });
+    }
 
     // Store file (for now just use filename, later implement S3 or local storage)
     const fileUrl = `/uploads/resumes/${req.user.id}/${req.file.originalname}`;

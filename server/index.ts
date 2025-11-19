@@ -1,5 +1,7 @@
 ﻿import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
+import fs from "fs";
 import { registerRoutes } from "./routes";
 import { serveStatic, log } from "./vite";
 import { validateEmailConfig, verifyEmailTransport } from "./services/email-service";
@@ -135,6 +137,23 @@ app.use((req, res, next) => {
   } catch (error) {
     log(`⚠️  Credit reset cron initialization failed: ${(error as Error).message}`, 'startup');
   }
+
+  // Serve uploaded files (profile photos, resumes, etc.)
+  // Note: In production, migrate to AWS S3 for scalability across multiple instances
+  const uploadsPath = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+    log('✅ Created uploads directory', 'startup');
+  }
+
+  app.use('/uploads', express.static(uploadsPath, {
+    maxAge: '1d',  // Cache for 1 day
+    etag: true,
+    lastModified: true,
+    // Security: Prevent directory listing
+    index: false
+  }));
+  log('✅ Static file serving enabled for /uploads', 'startup');
 
   // CRITICAL: API 404 handler MUST be placed before static file serving
   // to prevent non-existent API routes from serving the frontend HTML

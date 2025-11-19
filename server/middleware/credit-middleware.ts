@@ -2,6 +2,59 @@ import type { RequestHandler } from "express";
 import { CreditService } from "../services/credit-service";
 
 /**
+ * Idempotency tracking for credit-deducting operations
+ * Prevents duplicate charges for the same action
+ */
+interface IdempotencyRecord {
+  timestamp: number;
+  userId: string;
+}
+
+const processedActions = new Map<string, IdempotencyRecord>();
+
+// Clean up old entries every hour to prevent memory leaks
+setInterval(() => {
+  const oneHourAgo = Date.now() - 3600000;
+  for (const [key, value] of processedActions.entries()) {
+    if (value.timestamp < oneHourAgo) {
+      processedActions.delete(key);
+    }
+  }
+}, 3600000);
+
+/**
+ * Check if an action has already been processed (idempotency check)
+ * @param userId - User ID
+ * @param actionType - Type of action (e.g., 'video-analysis', 'resume-upload')
+ * @param resourceId - Unique identifier for the resource (e.g., draftId, sessionId)
+ * @returns true if already processed, false otherwise
+ */
+export function checkDuplicateAction(
+  userId: string,
+  actionType: string,
+  resourceId: string
+): boolean {
+  const key = `${userId}:${actionType}:${resourceId}`;
+  return processedActions.has(key);
+}
+
+/**
+ * Mark an action as processed to prevent future duplicates
+ * @param userId - User ID
+ * @param actionType - Type of action
+ * @param resourceId - Unique identifier for the resource
+ */
+export function markActionProcessed(
+  userId: string,
+  actionType: string,
+  resourceId: string
+): void {
+  const key = `${userId}:${actionType}:${resourceId}`;
+  processedActions.set(key, { timestamp: Date.now(), userId });
+  console.log(`✅ Marked action as processed: ${key}`);
+}
+
+/**
  * Credit Check Middleware Factory
  *
  * Creates middleware that checks if user has sufficient credits for a feature
