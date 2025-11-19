@@ -173,6 +173,31 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // Serve uploaded files (profile photos, etc.)
+  // Must be before Vite static middleware to take precedence
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+    log('Created uploads directory', 'startup');
+  }
+
+  app.use('/uploads', express.static(uploadsDir, {
+    maxAge: '1d',  // Cache for 1 day
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filepath) => {
+      // Security headers for uploaded files
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      // Only allow images to be displayed inline
+      if (filepath.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+        res.setHeader('Content-Disposition', 'inline');
+      } else {
+        res.setHeader('Content-Disposition', 'attachment');
+      }
+    }
+  }));
+  log('Static file serving enabled for /uploads', 'startup');
+
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes

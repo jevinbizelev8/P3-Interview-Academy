@@ -295,8 +295,45 @@ export default function SimulationInterface({ config, onComplete }) {
       speakText(questionData.question.questionText);
     } catch (error) {
       console.error("Error starting simulation:", error);
-      const errorMessage = error.response?.data?.error || error.message || 'Network error';
-      alert(`Failed to start simulation: ${errorMessage}. Please check your connection and try again.`);
+
+      // Handle specific error codes from backend
+      const errorData = error.response?.data;
+      const errorCode = errorData?.code;
+      let errorMessage;
+
+      switch (errorCode) {
+        case 'INSUFFICIENT_CREDITS':
+          errorMessage = `You need ${errorData.creditsNeeded || 15} credits but only have ${errorData.currentBalance || 0}. Please purchase more credits or upgrade your plan.`;
+          break;
+
+        case 'SERVICE_UNAVAILABLE':
+          errorMessage = 'Our servers are temporarily busy. Please wait a moment and try again.';
+          break;
+
+        case 'SESSION_CREATION_FAILED':
+          errorMessage = errorData.message || 'Unable to create simulation session. Please try again or contact support if this persists.';
+          break;
+
+        case 'UNAUTHORIZED':
+          errorMessage = 'Authentication required. Please log in and try again.';
+          break;
+
+        case 'VALIDATION_ERROR':
+          errorMessage = 'Invalid simulation configuration. Please check your settings and try again.';
+          break;
+
+        default:
+          // Check for network errors
+          if (!error.response) {
+            errorMessage = 'Network error. Please check your internet connection and try again.';
+          } else if (error.response.status >= 500) {
+            errorMessage = 'Server error. Please try again in a moment or contact support.';
+          } else {
+            errorMessage = errorData?.error || errorData?.message || error.message || 'Failed to start simulation';
+          }
+      }
+
+      alert(`Failed to start simulation: ${errorMessage}`);
       onComplete();
     } finally {
       setIsAIThinking(false);
