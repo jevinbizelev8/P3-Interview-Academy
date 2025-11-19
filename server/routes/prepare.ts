@@ -4,10 +4,8 @@
 import { Router } from "express";
 import { z } from "zod";
 import multer from "multer";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const pdfParse = require("pdf-parse");
 import mammoth from "mammoth";
+import { extractTextFromPDF } from "../utils/pdf-parser.js";
 import crypto from "crypto";
 import { LearningModuleService } from "../services/learning-module-service";
 import { SelfIntroService } from "../services/self-intro-service";
@@ -595,9 +593,8 @@ router.post('/resume/upload', upload.single('file'), async (req, res) => {
 
     try {
       if (req.file.mimetype === 'application/pdf') {
-        // Parse PDF
-        const pdfData = await pdfParse(req.file.buffer);
-        parsedContent = pdfData.text;
+        // Parse PDF using pdfjs-dist (Mozilla PDF.js)
+        parsedContent = await extractTextFromPDF(req.file.buffer);
 
         if (!parsedContent || parsedContent.trim().length === 0) {
           return res.status(400).json({
