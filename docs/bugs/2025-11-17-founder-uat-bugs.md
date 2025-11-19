@@ -1610,12 +1610,13 @@ Fixed 10 critical issues identified during founder UAT testing:
   - [x] Test all navigation routes
   - [ ] Verify with founder (pending user UAT)
 
-- [ ] **Phase 2: Feature Implementations** (Estimated: 3-4 hours)
-  - [ ] Resume parsing (PDF/DOCX)
-    - [ ] Install pdf-parse and mammoth
-    - [ ] Implement PDF parsing
-    - [ ] Implement DOCX parsing
-    - [ ] Test with real resumes
+- [ ] **Phase 2: Feature Implementations** (In Progress: Started 2025-11-19)
+  - [x] Resume parsing (PDF/DOCX) ✅ COMPLETE
+    - [x] Install pdfjs-dist and mammoth (replaced pdf-parse)
+    - [x] Implement PDF parsing (pdfjs-dist legacy build)
+    - [x] Implement DOCX parsing (mammoth)
+    - [x] Deploy to staging successfully
+    - [ ] Test with real resumes (pending founder UAT)
   - [ ] Video analysis update
     - [ ] Update UI labels
     - [ ] Add video file upload
@@ -1753,22 +1754,67 @@ Fixed 10 critical issues identified during founder UAT testing:
 
 ---
 
-### Session 3: [Date] (Phase 2 Implementation)
+### Session 3: 2025-11-19 (Phase 2 - PDF Parsing Implementation)
 
-**Time**: [Start time] - [End time]
-**Participants**: [Name]
+**Time**: 2025-11-19 ~09:00-09:50 UTC (50 minutes)
+**Participants**: Claude Code, Jevin (Developer)
+**Status**: ✅ COMPLETE - Bug #6 (Resume PDF/DOCX Parsing) Resolved
 
 **Work Completed**:
-- [ ]
+- ✅ Compiled and reviewed comprehensive PDF parsing research from Gemini agent
+- ✅ Removed `pdf-parse` (native Rust dependencies via @napi-rs/canvas)
+- ✅ Installed `pdfjs-dist` (Mozilla PDF.js, pure JavaScript)
+- ✅ Created `server/utils/pdf-parser.ts` helper function (35 lines)
+- ✅ Updated `server/routes/prepare.ts` to use new parser
+- ✅ Fixed Node.js compatibility (switched to legacy build)
+- ✅ Committed changes to git (3 commits)
+- ✅ Deployed to staging successfully
+- ✅ Verified environment health (Instance: Ok, Web Service: Running)
 
 **Issues Encountered**:
-- [ ]
+1. **First deployment failure** (09:28 UTC):
+   - Symptom: "Following services are not running: web"
+   - Root Cause: pdfjs-dist default build tried to access browser globals (DOMMatrix, Canvas) at module load time
+   - Node.js application crashed on startup with "ReferenceError: DOMMatrix is not defined"
+
+2. **TypeScript compilation error**:
+   - Attempted to set `standardFontDataUrl: null` (expects `string | undefined`)
+   - Fixed by removing the line
+
+**Solutions Implemented**:
+1. Used dynamic import (`await import('pdfjs-dist/legacy/build/pdf.mjs')`) to defer loading
+2. Switched to legacy build specifically designed for Node.js (no Canvas/DOM dependencies)
+3. Removed problematic configuration option
+
+**Deployment Timeline**:
+- 09:28 UTC: First deployment (failed - DOMMatrix error)
+- 09:41 UTC: Second deployment with legacy build fix
+- 09:45 UTC: Deployment successful, environment healthy
+
+**Testing Results**:
+- ✅ AWS EB deployment succeeded (no npm install errors)
+- ✅ Node.js application starts and runs
+- ✅ Instance health: Ok
+- ✅ API health check: Passing (status: ok, database: healthy)
+- ⏳ Resume upload testing: Pending founder UAT
+
+**Documentation Created**:
+- `docs/performance/PDF_PARSING_RESEARCH.md` (516 lines) - Root cause analysis, library comparison, migration guide
+- `docs/performance/QUICK_FIX_PDF_DEPLOYMENT.md` (140 lines) - 15-minute implementation guide
+
+**Commits**:
+- `17bcc3cc`: Initial pdfjs-dist migration
+- `0cc4870f`: Legacy build for Node.js compatibility
+- `ac904f42`: TypeScript error fix
 
 **Next Session Goals**:
-- [ ]
+- [ ] Implement Bug #4: Credit deduction idempotency
+- [ ] Implement Bug #7: Simulation error messages
+- [ ] Implement Bug #8: Profile photo static file serving
+- [ ] Test resume upload feature with founder
 
 **Blockers/Questions**:
-- [ ]
+- None - Resume parsing implementation complete and deployed
 
 ---
 
