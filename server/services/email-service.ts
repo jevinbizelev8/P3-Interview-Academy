@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import escapeHtml from 'escape-html';
+import fs from 'fs/promises';
+import path from 'path';
 
 const getAppUrl = (): string => {
   if (process.env.NODE_ENV === 'production') {
@@ -683,4 +685,226 @@ export async function sendFreeTierWelcomeEmail(
 
   await getTransporter().sendMail(mailOptions);
   console.log(`[email] Free tier welcome email sent to ${email}`);
+}
+
+// ============================================================================
+// GAMIFICATION & REDESIGN EMAIL NOTIFICATIONS
+// ============================================================================
+
+/**
+ * Load and process an HTML email template from file
+ */
+async function loadEmailTemplate(templateName: string, variables: Record<string, string>): Promise<string> {
+  const templatePath = path.join(__dirname, '../templates/emails', templateName);
+  let template = await fs.readFile(templatePath, 'utf-8');
+
+  // Replace all variables in the template
+  for (const [key, value] of Object.entries(variables)) {
+    const regex = new RegExp(`\\{${key}\\}`, 'g');
+    template = template.replace(regex, escapeHtml(String(value)));
+  }
+
+  return template;
+}
+
+/**
+ * Send badge awarded email notification
+ */
+export async function sendBadgeAwardedEmail(
+  email: string,
+  userName: string,
+  badgeData: {
+    name: string;
+    description: string;
+    imageUrl: string;
+    xpEarned: number;
+  }
+): Promise<void> {
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email address');
+  }
+
+  const variables = {
+    userName: userName,
+    badgeName: badgeData.name,
+    badgeDescription: badgeData.description,
+    badgeImageUrl: badgeData.imageUrl,
+    xpEarned: String(badgeData.xpEarned),
+    profileUrl: `${getAppUrl()}/profile`,
+    appUrl: getAppUrl(),
+    currentYear: String(new Date().getFullYear())
+  };
+
+  const html = await loadEmailTemplate('badge-awarded.html', variables);
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: `🏆 You earned the ${badgeData.name} badge!`,
+    html,
+  };
+
+  try {
+    const info = await getTransporter().sendMail(mailOptions);
+    console.log(`[email] Badge awarded notification sent to ${email}:`, info.messageId);
+  } catch (error) {
+    console.error('[email] Failed to send badge awarded email:', {
+      code: (error as any).code,
+      command: (error as any).command,
+    });
+    // Don't throw - badge emails are non-critical
+  }
+}
+
+/**
+ * Send milestone reached email notification
+ */
+export async function sendMilestoneEmail(
+  email: string,
+  userName: string,
+  milestoneData: {
+    name: string;
+    description: string;
+    reward: string;
+    nextMilestone: string;
+    progressPercentage: number;
+  }
+): Promise<void> {
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email address');
+  }
+
+  const variables = {
+    userName: userName,
+    milestoneName: milestoneData.name,
+    milestoneDescription: milestoneData.description,
+    reward: milestoneData.reward,
+    nextMilestone: milestoneData.nextMilestone,
+    progressPercentage: String(milestoneData.progressPercentage),
+    dashboardUrl: `${getAppUrl()}/dashboard`,
+    appUrl: getAppUrl(),
+    currentYear: String(new Date().getFullYear())
+  };
+
+  const html = await loadEmailTemplate('milestone-reached.html', variables);
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: `🎉 Milestone Reached: ${milestoneData.name}`,
+    html,
+  };
+
+  try {
+    const info = await getTransporter().sendMail(mailOptions);
+    console.log(`[email] Milestone reached notification sent to ${email}:`, info.messageId);
+  } catch (error) {
+    console.error('[email] Failed to send milestone email:', {
+      code: (error as any).code,
+      command: (error as any).command,
+    });
+    // Don't throw - milestone emails are non-critical
+  }
+}
+
+/**
+ * Send referral success email notification
+ */
+export async function sendReferralSuccessEmail(
+  email: string,
+  userName: string,
+  referralData: {
+    referredUserName: string;
+    creditsEarned: number;
+    totalReferrals: number;
+    totalCreditsEarned: number;
+    friendBonus: number;
+  }
+): Promise<void> {
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email address');
+  }
+
+  const variables = {
+    userName: userName,
+    referredUserName: referralData.referredUserName,
+    creditsEarned: String(referralData.creditsEarned),
+    totalReferrals: String(referralData.totalReferrals),
+    totalCreditsEarned: String(referralData.totalCreditsEarned),
+    friendBonus: String(referralData.friendBonus),
+    referralPageUrl: `${getAppUrl()}/referrals`,
+    appUrl: getAppUrl(),
+    currentYear: String(new Date().getFullYear())
+  };
+
+  const html = await loadEmailTemplate('referral-success.html', variables);
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: `🎁 Referral Success - ${referralData.creditsEarned} Credits Earned!`,
+    html,
+  };
+
+  try {
+    const info = await getTransporter().sendMail(mailOptions);
+    console.log(`[email] Referral success notification sent to ${email}:`, info.messageId);
+  } catch (error) {
+    console.error('[email] Failed to send referral success email:', {
+      code: (error as any).code,
+      command: (error as any).command,
+    });
+    // Don't throw - referral emails are non-critical
+  }
+}
+
+/**
+ * Send credit top-up confirmation email
+ */
+export async function sendCreditTopupEmail(
+  email: string,
+  userName: string,
+  purchaseData: {
+    creditsAdded: number;
+    newBalance: number;
+    purchaseAmount: string;
+    transactionId: string;
+  }
+): Promise<void> {
+  if (!email || !email.includes('@')) {
+    throw new Error('Invalid email address');
+  }
+
+  const variables = {
+    userName: userName,
+    creditsAdded: String(purchaseData.creditsAdded),
+    newBalance: String(purchaseData.newBalance),
+    purchaseAmount: purchaseData.purchaseAmount,
+    transactionId: purchaseData.transactionId,
+    dashboardUrl: `${getAppUrl()}/dashboard`,
+    billingUrl: `${getAppUrl()}/billing`,
+    supportUrl: `${getAppUrl()}/support`,
+    appUrl: getAppUrl(),
+    currentYear: String(new Date().getFullYear())
+  };
+
+  const html = await loadEmailTemplate('credit-topup.html', variables);
+
+  const mailOptions = {
+    from: `"${process.env.EMAIL_FROM_NAME || 'P3 Interview Academy'}" <${process.env.SMTP_USER || process.env.EMAIL_FROM}>`,
+    to: email,
+    subject: `✅ ${purchaseData.creditsAdded} Credits Added to Your Account`,
+    html,
+  };
+
+  try {
+    const info = await getTransporter().sendMail(mailOptions);
+    console.log(`[email] Credit top-up confirmation sent to ${email}:`, info.messageId);
+  } catch (error) {
+    console.error('[email] Failed to send credit top-up email:', {
+      code: (error as any).code,
+      command: (error as any).command,
+    });
+    throw new Error('Failed to send credit top-up confirmation email');
+  }
 }

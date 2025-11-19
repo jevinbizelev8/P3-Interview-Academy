@@ -9,7 +9,7 @@ function main() {
   const now = new Date();
   const year = now.getFullYear();
   const month = fmt(now.getMonth() + 1); // 1-12
-  const dir = path.join("deployment-scripts", "ops-log");
+  const dir = path.join("docs", "ops-log");
   const file = path.join(dir, `${year}-${month}.md`);
 
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -26,7 +26,8 @@ function main() {
     "",
     "References",
     "- Changelog: `CHANGELOG.md`",
-    "- Deployment report: `DEPLOYMENT-STATUS-REPORT.md`",
+    "- Master Plan: `docs/redesign/MASTER_PLAN.md`",
+    "- Deployment: `DEPLOYMENT.md`",
     "",
   ].join("\n");
 
@@ -35,4 +36,3 @@ function main() {
 }
 
 main();
-

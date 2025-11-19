@@ -1,0 +1,41 @@
+#!/bin/bash
+# Control script for Claude Code approval notifications
+# Usage: approval-notifyctl {on|off|status}
+
+FLAG_FILE="/tmp/claude_approval_notifications_enabled"
+
+case "$1" in
+  on)
+    touch "$FLAG_FILE"
+    echo "✅ Approval notifications ENABLED"
+    echo ""
+    echo "You will now receive Telegram alerts when Claude Code needs input."
+    ;;
+
+  off)
+    rm -f "$FLAG_FILE"
+    echo "❌ Approval notifications DISABLED"
+    echo ""
+    echo "You will NOT receive Telegram alerts for approvals."
+    ;;
+
+  status)
+    if [ -f "$FLAG_FILE" ]; then
+      echo "✅ Approval notifications: ENABLED"
+    else
+      echo "❌ Approval notifications: DISABLED"
+    fi
+    ;;
+
+  *)
+    echo "Usage: $0 {on|off|status}"
+    echo ""
+    echo "Commands:"
+    echo "  on     - Enable approval notifications to Telegram"
+    echo "  off    - Disable approval notifications"
+    echo "  status - Check current status"
+    exit 1
+    ;;
+esac
+
+exit 0

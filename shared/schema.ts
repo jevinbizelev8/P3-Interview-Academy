@@ -88,6 +88,22 @@ export const users = pgTable("users", {
   readinessScore: integer("readiness_score").default(0),
   referralCode: varchar("referral_code", { length: 50 }).unique(),
 
+  // Extended profile fields (Profile Page Integration)
+  fullName: varchar("full_name"), // Combined first and last name for display
+  mobileNumber: varchar("mobile_number"),
+  linkedinUrl: varchar("linkedin_url"),
+  timezone: varchar("timezone").default(sql`'(UTC+08:00) Singapore, Kuala Lumpur, Hong Kong, Beijing, Perth'::varchar`),
+  country: varchar("country"),
+  currentRole: varchar("user_current_role"), // Renamed from 'current_role' to avoid SQL reserved keyword
+  targetRole: varchar("target_role"),
+  targetIndustry: varchar("target_industry"),
+  yearsExperience: varchar("years_experience"),
+  keySkills: jsonb("key_skills").$type<string[]>(), // Array of skill strings
+  twoFactorEnabled: boolean("two_factor_enabled").default(sql`false`),
+  notificationEmail: boolean("notification_email").default(sql`true`),
+  notificationWhatsapp: boolean("notification_whatsapp").default(sql`false`),
+  notificationSms: boolean("notification_sms").default(sql`false`),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -381,11 +397,17 @@ export const reflectionJournals = pgTable("reflection_journals", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   practiceSessionId: uuid("practice_session_id").references(() => practiceSessions.id, { onDelete: "set null" }),
+  // Legacy fields for backward compatibility
   strengths: text("strengths").notNull(),
   improvements: text("improvements").notNull(),
   actionItems: text("action_items"),
   overallFeeling: varchar("overall_feeling", { length: 50 }),
   moodScore: integer("mood_score"),
+  // New fields for AI-powered reflections
+  reflectionText: text("reflection_text"),
+  aiSummary: text("ai_summary"),
+  aiFollowUpQuestions: jsonb("ai_follow_up_questions"),
+  suggestedResources: jsonb("suggested_resources"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1110,6 +1132,7 @@ export type InsertLearningModule = z.infer<typeof insertLearningModuleSchema>;
 export type LearningModule = typeof learningModules.$inferSelect;
 export type InsertUserModuleProgress = z.infer<typeof insertUserModuleProgressSchema>;
 export type UserModuleProgressRecord = typeof userModuleProgress.$inferSelect;
+export type UserModuleProgress = UserModuleProgressRecord; // Alias for convenience
 export type InsertSelfIntroDraft = z.infer<typeof insertSelfIntroDraftSchema>;
 export type SelfIntroDraft = typeof selfIntroDrafts.$inferSelect;
 export type InsertSelfIntro = z.infer<typeof insertSelfIntroSchema>;
@@ -1118,6 +1141,7 @@ export type InsertResume = z.infer<typeof insertResumeSchema>;
 export type Resume = typeof resumes.$inferSelect;
 export type InsertResumeAnalysisHistory = z.infer<typeof insertResumeAnalysisHistorySchema>;
 export type ResumeAnalysisHistoryRecord = typeof resumeAnalysisHistory.$inferSelect;
+export type ResumeAnalysisHistory = ResumeAnalysisHistoryRecord; // Alias for convenience
 export type InsertStarStory = z.infer<typeof insertStarStorySchema>;
 export type StarStory = typeof starStories.$inferSelect;
 export type InsertActualInterview = z.infer<typeof insertActualInterviewSchema>;
@@ -1128,6 +1152,7 @@ export type InsertReferral = z.infer<typeof insertReferralSchema>;
 export type Referral = typeof referrals.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 export type FeedbackRecord = typeof feedback.$inferSelect;
+export type Feedback = FeedbackRecord; // Alias for convenience
 export type InsertSupportTicket = z.infer<typeof insertSupportTicketSchema>;
 export type SupportTicket = typeof supportTickets.$inferSelect;
 

@@ -1,0 +1,44 @@
+# Exclude documentation (only include CLAUDE.md)
+docs/
+tmp/
+*.md
+!CLAUDE.md
+!README.md
+
+# Exclude test coverage and results
+coverage/
+test-results/
+.vitest/
+junit*.xml
+
+# Exclude generated files
+dist/
+server/public/
+*.tar.gz
+*.backup
+*.bak
+
+# Exclude uploads (user content)
+uploads/
+
+# Exclude logs
+*.log
+**/statusline-debug.log
+
+# Exclude environment files (already in .gitignore but double-safe)
+.env*
+*.env
+
+# Exclude Claude Code internal files
+.claude/data/
+.claude/*.json.backup-*
+
+# Exclude Telegram runtime
+.inbox/
+.pending/
+scripts/telegram/.env
+
+# Exclude large dependency files
+package-lock.json
+bun.lock
+

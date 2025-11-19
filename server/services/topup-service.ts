@@ -3,6 +3,7 @@ import { db } from '../db';
 import { users, creditTransactions } from '../../shared/schema.js';
 import { eq } from 'drizzle-orm';
 import { CreditService } from './credit-service.js';
+import { sendCreditTopupEmail } from './email-service.js';
 import Stripe from 'stripe';
 
 export class TopUpService {
@@ -116,6 +117,31 @@ export class TopUpService {
         'top-up',
         `Top-up purchase: ${creditsToAdd} credits ($${(session.amount_total ?? 0) / 100})`
       );
+
+      // Get updated user balance
+      const [updatedUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+
+      // Send confirmation email
+      if (user.email && updatedUser) {
+        const userName = `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || 'User';
+        await sendCreditTopupEmail(
+          user.email,
+          userName,
+          {
+            creditsAdded: creditsToAdd,
+            newBalance: updatedUser.creditBalance ?? creditsToAdd,
+            purchaseAmount: ((session.amount_total ?? 0) / 100).toFixed(2),
+            transactionId: session.id
+          }
+        ).catch(error => {
+          console.error('Failed to send credit top-up email:', error);
+          // Don't throw - email failure shouldn't block credit processing
+        });
+      }
 
       console.log(`✅ Top-up processed for user ${user.email}: ${creditsToAdd} credits added`);
     } catch (error) {

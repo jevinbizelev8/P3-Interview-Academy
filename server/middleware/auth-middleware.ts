@@ -2,18 +2,18 @@ import type { RequestHandler } from "express";
 import { storage } from "../storage";
 import { requireAuth as simpleRequireAuth } from "../auth-simple";
 
-// Development flag - set to false for production
-const DEVELOPMENT_MODE = process.env.NODE_ENV === 'development';
+// Development/Staging flag - allow bypass in non-production environments
+const ALLOW_BYPASS = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'staging';
 
 /**
  * Enhanced authentication middleware that requires valid user session
  */
 export const requireAuth: RequestHandler = async (req, res, next) => {
-  // In development, allow bypass for testing but still log
-  if (DEVELOPMENT_MODE && process.env.BYPASS_AUTH === 'true') {
-    console.log('⚠️  DEVELOPMENT: Bypassing authentication - NOT FOR PRODUCTION');
-    req.user = { 
-      id: "11111111-1111-4111-8111-111111111111", 
+  // In development/staging, allow bypass for testing but still log
+  if (ALLOW_BYPASS && process.env.BYPASS_AUTH === 'true') {
+    console.log(`⚠️  ${process.env.NODE_ENV?.toUpperCase()}: Bypassing authentication - NOT FOR PRODUCTION`);
+    req.user = {
+      id: "11111111-1111-4111-8111-111111111111",
       role: "user",
       email: "dev@example.com",
       firstName: "Dev",

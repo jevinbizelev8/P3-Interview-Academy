@@ -19,6 +19,16 @@ const router = Router();
 const questionGenerator = new AIQuestionGenerator();
 const evaluationService = new ResponseEvaluationService();
 
+// Helper function to calculate rating from score
+function calculateRating(score: number): string {
+  if (score >= 90) return 'Excellent';
+  if (score >= 80) return 'Very Good';
+  if (score >= 70) return 'Good';
+  if (score >= 60) return 'Fair';
+  if (score >= 50) return 'Needs Improvement';
+  return 'Poor';
+}
+
 // Validation schemas
 const createSessionSchema = z.object({
   scenarioId: z.string().min(1, "Scenario ID is required"),
@@ -49,13 +59,21 @@ const userResponseSchema = z.object({
 router.post('/sessions', requireCredits('practice-session'), async (req, res) => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: 'User not authenticated' });
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated',
+        code: 'UNAUTHORIZED',
+        message: 'Please log in to start a practice session'
+      });
     }
 
     const validation = createSessionSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
+        success: false,
         error: 'Invalid session configuration',
+        code: 'VALIDATION_ERROR',
+        message: 'The session settings are invalid. Please check your selections and try again.',
         details: validation.error.issues
       });
     }
@@ -99,15 +117,41 @@ router.post('/sessions', requireCredits('practice-session'), async (req, res) =>
         success: true,
         data: session,
         message: 'Practice session created successfully',
-        warning: 'Credit deduction failed - please contact support'
+        warning: 'Credit deduction failed - please contact support if you were charged incorrectly'
       });
     }
 
   } catch (error) {
     console.error('❌ Create practice session error:', error);
+
+    // Provide specific error codes for different failure types
+    if (error instanceof Error) {
+      if (error.message.includes('database') || error.message.includes('connection')) {
+        return res.status(503).json({
+          success: false,
+          error: 'Database connection failed',
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'We are experiencing technical difficulties. Please try again in a moment or contact support if the issue persists.'
+        });
+      }
+
+      if (error.message.includes('timeout')) {
+        return res.status(504).json({
+          success: false,
+          error: 'Request timeout',
+          code: 'TIMEOUT',
+          message: 'The request took too long to process. Please try again.'
+        });
+      }
+    }
+
+    // Generic server error with helpful message
     res.status(500).json({
-      error: 'Failed to create session',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      success: false,
+      error: 'Failed to create practice session',
+      code: 'SESSION_CREATION_FAILED',
+      message: 'Unable to start the simulation. Please try again or contact support if the problem continues.',
+      details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.message : 'Unknown error') : undefined
     });
   }
 });
@@ -707,7 +751,7 @@ router.get('/overview', async (req, res) => {
     }
 
     const overview = await storage.getPracticeOverview(req.user.id);
-    
+
     res.json({
       success: true,
       data: overview
@@ -717,6 +761,234 @@ router.get('/overview', async (req, res) => {
     console.error('❌ Get practice overview error:', error);
     res.status(500).json({
       error: 'Failed to retrieve overview',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /history
+ * Get comprehensive practice session history with filtering and analytics
+ */
+router.get('/history', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { status, limit, offset, sortBy, sortOrder } = req.query;
+
+    // Parse and validate query parameters
+    const limitNum = Math.min(parseInt(limit as string) || 20, 100);
+    const offsetNum = Math.max(parseInt(offset as string) || 0, 0);
+    const sortByField = (sortBy as string) || 'createdAt';
+    const sortOrderDir = (sortOrder as string) === 'asc' ? 'asc' : 'desc';
+
+    // Get sessions
+    let sessions = await storage.getUserPracticeSessions(req.user.id, limitNum + offsetNum);
+
+    // Filter by status if provided
+    if (status && typeof status === 'string') {
+      const validStatuses = ['active', 'completed', 'abandoned'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          error: 'Invalid status filter',
+          validStatuses
+        });
+      }
+      sessions = sessions.filter(s => s.status === status);
+    }
+
+    // Apply pagination
+    const paginatedSessions = sessions.slice(offsetNum, offsetNum + limitNum);
+
+    // Calculate analytics
+    const completedSessions = sessions.filter(s => s.status === 'completed');
+    const totalSessions = sessions.length;
+    const totalQuestions = completedSessions.reduce((sum, s) => sum + (s.totalQuestions || 0), 0);
+    const avgQuestionsPerSession = completedSessions.length > 0
+      ? Math.round(totalQuestions / completedSessions.length)
+      : 0;
+
+    // Calculate average scores
+    let totalScore = 0;
+    let sessionScoresCount = 0;
+
+    for (const session of completedSessions) {
+      try {
+        const report = await storage.getPracticeReport(session.id);
+        if (report && report.overallScore) {
+          const score = parseFloat(report.overallScore);
+          if (!isNaN(score)) {
+            totalScore += score;
+            sessionScoresCount++;
+          }
+        }
+      } catch (error) {
+        console.log(`Warning: Could not get report for session ${session.id}`);
+      }
+    }
+
+    const avgScore = sessionScoresCount > 0 ? Math.round((totalScore / sessionScoresCount) * 10) / 10 : 0;
+
+    res.json({
+      success: true,
+      data: {
+        sessions: paginatedSessions,
+        analytics: {
+          totalSessions,
+          completedSessions: completedSessions.length,
+          activeSessions: sessions.filter(s => s.status === 'active').length,
+          avgScore,
+          avgQuestionsPerSession,
+          totalPracticeTime: sessions.reduce((sum, s) => sum + (s.totalDuration || 0), 0),
+        },
+        pagination: {
+          limit: limitNum,
+          offset: offsetNum,
+          total: sessions.length,
+          hasMore: (offsetNum + limitNum) < sessions.length,
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Get practice history error:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve practice history',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /assessment/:id
+ * Get detailed assessment for a specific practice session
+ * Combines session data, messages, and evaluation report
+ */
+router.get('/assessment/:id', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    const { id } = req.params;
+
+    // Get session
+    const session = await storage.getPracticeSession(id);
+    if (!session) {
+      return res.status(404).json({ error: 'Practice session not found' });
+    }
+
+    // Verify ownership
+    if (session.userId !== req.user.id) {
+      return res.status(403).json({ error: 'Access denied to this session' });
+    }
+
+    // Check if session is completed
+    if (session.status !== 'completed') {
+      return res.status(400).json({
+        error: 'Session not completed',
+        message: 'Assessment is only available for completed sessions'
+      });
+    }
+
+    // Get evaluation report
+    const report = await storage.getPracticeReport(id);
+    if (!report) {
+      return res.status(404).json({
+        error: 'Assessment not found',
+        message: 'Evaluation report not available for this session'
+      });
+    }
+
+    // Parse JSON fields (with type assertions for nullable fields)
+    const strengths = JSON.parse((report.strengths as string) || '[]');
+    const weaknesses = JSON.parse((report.weaknesses as string) || '[]');
+    const improvements = JSON.parse((report.improvements as string) || '[]');
+    const keyInsights = JSON.parse((report.keyInsights as string) || '[]');
+    const recommendedActions = JSON.parse((report.recommendedActions as string) || '[]');
+
+    // Get Q&A pairs (questions and responses)
+    const qaMessages = session.messages.filter(
+      m => m.messageType === 'ai_question' || m.messageType === 'user_response'
+    );
+
+    // Pair questions with responses
+    const qaPairs = [];
+    for (let i = 0; i < qaMessages.length - 1; i++) {
+      if (qaMessages[i].messageType === 'ai_question' && qaMessages[i + 1].messageType === 'user_response') {
+        qaPairs.push({
+          questionNumber: qaMessages[i].questionNumber,
+          question: qaMessages[i].content,
+          response: qaMessages[i + 1].content,
+          responseTime: qaMessages[i + 1].responseTime,
+          inputMethod: qaMessages[i + 1].inputMethod,
+        });
+      }
+    }
+
+    // Construct comprehensive assessment
+    const assessment = {
+      session: {
+        id: session.id,
+        jobPosition: session.jobPosition,
+        companyName: session.companyName,
+        interviewStage: session.interviewStage,
+        difficultyLevel: session.difficultyLevel,
+        preferredLanguage: session.preferredLanguage,
+        totalQuestions: session.totalQuestions,
+        currentQuestionNumber: session.currentQuestionNumber,
+        totalDuration: session.totalDuration,
+        createdAt: session.createdAt,
+        completedAt: session.updatedAt,
+      },
+      evaluation: {
+        overallScore: parseFloat(report.overallScore || '0'),
+        overallRating: calculateRating(parseFloat(report.overallScore || '0')),
+        criteriaScores: {
+          relevanceScore: parseFloat(report.relevanceScore || '0'),
+          starStructureScore: parseFloat(report.starStructureScore || '0'),
+          specificEvidenceScore: parseFloat(report.specificEvidenceScore || '0'),
+          roleAlignmentScore: parseFloat(report.roleAlignmentScore || '0'),
+          outcomeOrientedScore: parseFloat(report.outcomeOrientedScore || '0'),
+          communicationScore: parseFloat(report.communicationScore || '0'),
+          problemSolvingScore: parseFloat(report.problemSolvingScore || '0'),
+          culturalFitScore: parseFloat(report.culturalFitScore || '0'),
+          learningAgilityScore: parseFloat(report.learningAgilityScore || '0'),
+        },
+        feedback: {
+          strengths,
+          weaknesses,
+          improvements,
+          detailedFeedback: report.detailedFeedback,
+        },
+        insights: {
+          keyInsights,
+          recommendedActions,
+        },
+        metadata: {
+          evaluatedBy: report.evaluatedBy,
+          criteriaVersion: '9-criteria-v1', // Default criteria version
+          sessionLanguage: session.preferredLanguage || 'en',
+          totalResponses: qaPairs.length,
+          sessionDuration: session.updatedAt && session.createdAt
+            ? Math.floor((new Date(session.updatedAt).getTime() - new Date(session.createdAt).getTime()) / 1000 / 60)
+            : null,
+        },
+      },
+      questionsAndResponses: qaPairs,
+    };
+
+    res.json({
+      success: true,
+      data: assessment
+    });
+
+  } catch (error) {
+    console.error('❌ Get practice assessment error:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve assessment',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }

@@ -32,3 +32,65 @@ test-email-security.js
 
 # Claude Code local settings (may contain secrets)
 .claude/settings.local.json
+
+# Generated HTML files (keep only essential index.html)
+*.html
+!client/index.html
+
+# Uploads directory (keep structure, exclude user content)
+uploads/*
+!uploads/profile-photos/
+uploads/profile-photos/*
+
+# Backup files
+*.backup
+*.bak
+
+# Test outputs
+coverage/
+test-results/
+.vitest/
+junit*.xml
+**/coverage*.json
+
+# Claude Code statusline - ignore usage data and backups
+.claude/data/usage-stats.json
+.claude/data/usage-stats.json.backup-*
+.claude/data/statusline-debug.log
+
+# Telegram runtime files (state directories)
+.inbox/
+.pending/
+/tmp/telegram/
+/tmp/telegram_messages/
+/tmp/telegram_replies/
+/tmp/telegram_notify_enabled
+/tmp/claude_approval_notifications_enabled
+
+# Telegram logs
+/tmp/telegram-webhook.log
+/tmp/telegram/command-audit.log
+
+# Telegram environment (contains bot token and chat ID)
+scripts/telegram/.env
+
+# Temporary research and analysis files
+tmp/
+temp-deployment/
+.venv/
+
+# Claude Code AWS analysis files
+.claude/data/aws-*.txt
+
+# Backup archives
+*.zip
+!awscliv2.zip
+
+# Test and temporary scripts
+.claude/test-*.sh
+.claude/generate-*.sh
+.claude/monitor-*.sh
+
+# Claude Code markdown docs in .claude/ (keep in docs/ instead)
+.claude/*.md
+!.claude/README.md

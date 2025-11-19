@@ -1,0 +1,8 @@
+# Python dependencies for Telegram webhook server
+
+# Web framework for webhook endpoint
+flask==3.0.0
+werkzeug==3.0.1
+
+# HTTP client for Telegram API calls (used by registration script)
+requests==2.31.0

@@ -1,0 +1,164 @@
+{
+  "sessions": {
+    "bcaeca5f-dad9-495a-aa64-aaaf1fb0a657": {
+      "input_tokens": 30885215,
+      "output_tokens": 145081,
+      "cost": 49.1595,
+      "start_time": "2025-11-01T06:42:32",
+      "last_update": "2025-11-01T14:02:44"
+    },
+    "health-check": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0000,
+      "start_time": "2025-11-01T07:24:51",
+      "last_update": "2025-11-01T07:24:51"
+    },
+    "test": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0000,
+      "start_time": "2025-11-01T07:31:42",
+      "last_update": "2025-11-11T05:18:28"
+    },
+    "3e96ad19-4e04-4119-a6ac-5cb4beeaa9ab": {
+      "input_tokens": 25241958,
+      "output_tokens": 75698,
+      "cost": 30.0233,
+      "start_time": "2025-11-03T03:35:42",
+      "last_update": "2025-11-03T07:02:52"
+    },
+    "57aecb47-cd07-4de9-ab57-6b9d4d5f816a": {
+      "input_tokens": 2988738,
+      "output_tokens": 21792,
+      "cost": 2.8702,
+      "start_time": "2025-11-04T22:28:45",
+      "last_update": "2025-11-04T22:49:26"
+    },
+    "b04f8166-35ab-419c-8a90-788a4701ab3b": {
+      "input_tokens": 7835815,
+      "output_tokens": 37013,
+      "cost": 9.8986,
+      "start_time": "2025-11-04T22:57:30",
+      "last_update": "2025-11-05T01:53:32"
+    },
+    "b82ba932-ac48-4ce9-87f9-e31fc1c5ebb5": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0000,
+      "start_time": "2025-11-05T01:53:35",
+      "last_update": "2025-11-05T01:53:46"
+    },
+    "076d0442-fa48-4ac6-b21f-998d59bace21": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0000,
+      "start_time": "2025-11-05T01:53:51",
+      "last_update": "2025-11-05T01:53:57"
+    },
+    "7acebeb1-6cda-422a-b865-02bb0c4ba40f": {
+      "input_tokens": 20096227,
+      "output_tokens": 42453,
+      "cost": 13.2674,
+      "start_time": "2025-11-05T01:54:43",
+      "last_update": "2025-11-05T02:53:38"
+    },
+    "5d3e1ba6-b488-454c-a61d-2dfeea844980": {
+      "input_tokens": 51153400,
+      "output_tokens": 174861,
+      "cost": 52.8595,
+      "start_time": "2025-11-05T02:53:31",
+      "last_update": "2025-11-05T08:50:02"
+    },
+    "8fb12bff-d8d4-4928-9897-10d4cbf6683a": {
+      "input_tokens": 28704038,
+      "output_tokens": 88296,
+      "cost": 28.4412,
+      "start_time": "2025-11-06T00:38:47",
+      "last_update": "2025-11-06T03:47:33"
+    },
+    "70dca114-cebc-4232-8512-dfede288e3f7": {
+      "input_tokens": 16375890,
+      "output_tokens": 48089,
+      "cost": 17.4941,
+      "start_time": "2025-11-06T04:03:24",
+      "last_update": "2025-11-06T06:54:12"
+    },
+    "c316a684-69c2-4a7c-8cd8-7fcfaa923428": {
+      "input_tokens": 46163218,
+      "output_tokens": 308791,
+      "cost": 56.3056,
+      "start_time": "2025-11-09T08:42:19",
+      "last_update": "2025-11-09T16:59:52"
+    },
+    "ec783a90-7205-4b8a-8cb1-2fc0233f088d": {
+      "input_tokens": 2963490,
+      "output_tokens": 92749,
+      "cost": 4.5058,
+      "start_time": "2025-11-11T05:18:07",
+      "last_update": "2025-11-11T07:35:11"
+    },
+    "5948345a-514b-49f9-808e-bc3b071fcf67": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0000,
+      "start_time": "2025-11-11T07:34:43",
+      "last_update": "2025-11-11T07:34:43"
+    },
+    "754ef4a5-f348-4627-bf1d-128bdf2286cb": {
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cost": 0.0000,
+      "start_time": "2025-11-11T07:34:56",
+      "last_update": "2025-11-11T07:34:56"
+    }
+  },
+  "daily": {
+    "2025-11-01": {
+      "cost": 49.1595,
+      "date": "2025-11-01"
+    },
+    "2025-10-31": {
+      "cost": 33.4566,
+      "date": "2025-10-31"
+    },
+    "2025-11-03": {
+      "cost": 30.0233,
+      "date": "2025-11-03"
+    },
+    "2025-11-04": {
+      "cost": 8.2635,
+      "date": "2025-11-04"
+    },
+    "2025-11-05": {
+      "cost": 76.0255,
+      "date": "2025-11-05"
+    },
+    "2025-11-06": {
+      "cost": 45.9353,
+      "date": "2025-11-06"
+    },
+    "2025-11-09": {
+      "cost": 56.3056,
+      "date": "2025-11-09"
+    },
+    "2025-11-11": {
+      "cost": 4.5058,
+      "date": "2025-11-11"
+    }
+  },
+  "weekly": {
+    "2025-W44": {
+      "cost": 82.6161,
+      "week": "2025-W44"
+    },
+    "2025-W45": {
+      "cost": 216.5532,
+      "week": "2025-W45"
+    },
+    "2025-W46": {
+      "cost": 4.5058,
+      "week": "2025-W46"
+    }
+  }
+}

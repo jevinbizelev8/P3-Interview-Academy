@@ -18,6 +18,10 @@ const storageMocks = vi.hoisted(() => ({
 
 const questionGeneratorMock = vi.hoisted(() => ({ generateQuestion: vi.fn() }));
 const evaluationServiceMock = vi.hoisted(() => ({ evaluateSessionResponses: vi.fn() }));
+const creditServiceMock = vi.hoisted(() => ({
+  checkCredits: vi.fn(),
+  deductCredits: vi.fn(),
+}));
 
 const TEST_USER_ID = "11111111-1111-4111-8111-222222222222";
 
@@ -33,11 +37,34 @@ vi.mock("../services/response-evaluation-service.js", () => ({
   ResponseEvaluationService: vi.fn(() => evaluationServiceMock),
 }));
 
+vi.mock("../services/credit-service", () => ({
+  CreditService: creditServiceMock,
+}));
+
 describe("practice routes", () => {
   beforeEach(async () => {
     Object.values(storageMocks).forEach(mockFn => mockFn.mockReset?.());
     questionGeneratorMock.generateQuestion.mockReset();
     evaluationServiceMock.evaluateSessionResponses.mockReset();
+
+    // Mock credit service to always allow credit checks
+    creditServiceMock.checkCredits.mockReset();
+    creditServiceMock.checkCredits.mockResolvedValue({
+      hasEnoughCredits: true,
+      currentBalance: 100,
+      creditsNeeded: 10,
+      monthlyCredits: 100,
+      topUpCredits: 0,
+    });
+
+    creditServiceMock.deductCredits.mockReset();
+    creditServiceMock.deductCredits.mockResolvedValue({
+      success: true,
+      balanceAfter: 90,
+      monthlyCreditsUsed: 10,
+      topUpCreditsUsed: 0,
+    });
+
     await vi.resetModules();
   });
 
