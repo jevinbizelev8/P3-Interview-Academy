@@ -16,7 +16,6 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
       useWorkerFetch: false,
       isEvalSupported: false,
       useSystemFonts: true,
-      standardFontDataUrl: null, // Prevent loading external fonts in Node.js
     });
 
     const pdf = await loadingTask.promise;
