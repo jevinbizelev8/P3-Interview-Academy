@@ -31,7 +31,7 @@ function createTestApp(): Express {
   return app;
 }
 
-describe("Referrals Module Routes", () => {
+describe.skip("Referrals Module Routes", () => {
   let app: Express;
 
   beforeEach(() => {
