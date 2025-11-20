@@ -142,7 +142,7 @@ describe('ReadinessScoreBadge', () => {
 
   it('fetches score from API when fetchFromApi is true', async () => {
     (useApiHooks.useReadinessScore as any).mockReturnValue({
-      data: mockReadinessScore,
+      data: { score: 75 },
       isLoading: false,
       isError: false,
     });
