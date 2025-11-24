@@ -114,6 +114,7 @@ jobs:
           cp package.json deployment-bundle/
           cp package-lock.json deployment-bundle/
           cp .npmrc deployment-bundle/
+          cp Procfile deployment-bundle/
           cp tsconfig.json deployment-bundle/
           cp vite.config.ts deployment-bundle/
           cp postcss.config.js deployment-bundle/ || echo "No postcss.config.js"
