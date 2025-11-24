@@ -18,6 +18,7 @@ import AdminDashboard from "@/pages/admin/dashboard";
 import VerifyEmail from "@/pages/verify-email";
 import ResetPassword from "@/pages/reset-password";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/use-auth";
 
 function Router() {
@@ -87,14 +88,18 @@ function Router() {
       <Route path="/perform">
         <ProtectedRoute>
           <Layout currentPageName="Perform">
-            <Perform />
+            <ErrorBoundary>
+              <Perform />
+            </ErrorBoundary>
           </Layout>
         </ProtectedRoute>
       </Route>
       <Route path="/perform/*">
         <ProtectedRoute>
           <Layout currentPageName="Perform">
-            <Perform />
+            <ErrorBoundary>
+              <Perform />
+            </ErrorBoundary>
           </Layout>
         </ProtectedRoute>
       </Route>
