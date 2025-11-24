@@ -114,14 +114,51 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
 
   // Fetch dashboard analytics data
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, error, isError } = useQuery({
     queryKey: ["/api/perform/dashboard"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/perform/dashboard");
+      if (!response.ok) {
+        throw new Error(`Failed to load performance data: ${response.statusText}`);
+      }
       return await response.json();
     },
   });
 
+  // Show error state if API fails
+  if (isError) {
+    return (
+      <ProtectedRoute>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <Alert variant="destructive" className="mb-6">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Failed to load performance data. Try refreshing the page.
+              {error instanceof Error && (
+                <div className="mt-2 text-sm opacity-80">
+                  {error.message}
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
+          <div className="flex flex-col items-center justify-center py-12">
+            <Button
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/perform/dashboard"] })}
+              className="mb-4"
+            >
+              Try Again
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = '/dashboard'}
+            >
+              Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -161,20 +198,25 @@ export default function Dashboard() {
     );
   }
 
-  const dashboardStats: DashboardStats = stats || {
-    totalSessions: 0,
-    completedSessions: 0,
-    totalQuestions: 0,
-    averageScore: 0,
-    averageStarScore: 0,
-    totalPracticeTime: 0,
-    improvementRate: 0,
-    voiceUsagePercent: 0,
-    strongestSkills: [],
-    improvementAreas: [],
-    recentSessions: [],
-    performanceTrends: [],
-    skillBreakdown: []
+  // Safely parse dashboard stats with fallback values
+  const dashboardStats: DashboardStats = {
+    totalSessions: stats?.totalSessions ?? 0,
+    completedSessions: stats?.completedSessions ?? 0,
+    totalQuestions: stats?.totalQuestions ?? 0,
+    averageScore: stats?.averageScore ?? 0,
+    averageStarScore: stats?.averageStarScore ?? stats?.averageScore ?? 0,
+    totalPracticeTime: stats?.totalPracticeTime ?? 0,
+    improvementRate: stats?.improvementRate ?? 0,
+    voiceUsagePercent: stats?.voiceUsagePercent ?? 0,
+    strongestSkills: Array.isArray(stats?.strongestSkills) ? stats.strongestSkills : [],
+    improvementAreas: Array.isArray(stats?.improvementAreas) ? stats.improvementAreas : [],
+    recentSessions: Array.isArray(stats?.recentSessions) ? stats.recentSessions : [],
+    performanceTrends: Array.isArray(stats?.performanceTrends) ? stats.performanceTrends : [],
+    skillBreakdown: Array.isArray(stats?.skillBreakdown) ? stats.skillBreakdown : [],
+    interviewSessions: stats?.interviewSessions ?? 0,
+    practiceSessions: stats?.practiceSessions ?? 0,
+    practiceQuestions: stats?.practiceQuestions ?? 0,
+    sessionTypeBreakdown: Array.isArray(stats?.sessionTypeBreakdown) ? stats.sessionTypeBreakdown : []
   };
 
   const formatTime = (minutes: number) => {

@@ -991,7 +991,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error loading dashboard data:", error);
       console.log(`❌ Dashboard API failed after: ${Date.now() - startTime}ms`);
-      res.status(500).json({ message: "Failed to load dashboard data" });
+
+      // Return detailed error in development, generic error in production
+      const errorMessage = process.env.NODE_ENV === 'development' && error instanceof Error
+        ? error.message
+        : "Failed to load dashboard data";
+
+      res.status(500).json({
+        message: "Failed to load dashboard data",
+        error: errorMessage,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
