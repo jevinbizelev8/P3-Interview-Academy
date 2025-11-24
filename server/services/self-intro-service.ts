@@ -378,6 +378,62 @@ Provide assessment in this exact JSON format:
   }
 
   /**
+   * Get AI coaching for specific self-intro step
+   */
+  async getStepCoaching(
+    userId: string,
+    stepData: {
+      who?: string;
+      what?: string;
+      why?: string;
+      closingHook?: string;
+    },
+    currentStep: number
+  ): Promise<string> {
+    const stepNames = ['Who Are You', 'What Do You Do', 'Why This Role/Company', 'Closing Hook'];
+    const stepName = stepNames[currentStep - 1] || 'Current Step';
+
+    const currentText = currentStep === 1 ? stepData.who :
+                       currentStep === 2 ? stepData.what :
+                       currentStep === 3 ? stepData.why :
+                       stepData.closingHook;
+
+    if (!currentText || currentText.trim().length === 0) {
+      return `Please write your ${stepName} first to receive personalized coaching.`;
+    }
+
+    const prompt = `You are an interview coach helping someone craft their self-introduction.
+
+They are working on the "${stepName}" section of their introduction.
+
+Their current draft:
+"""
+${currentText}
+"""
+
+Provide 2-3 specific, actionable coaching tips to improve this section. Be encouraging but honest. Focus on:
+- Clarity and conciseness
+- Specific examples and metrics
+- Professional tone
+- Impact and relevance
+
+Keep your response under 150 words and make it conversational.`;
+
+    const response = await this.openAIService.generateResponse({
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      maxTokens: 300,
+      temperature: 0.7,
+    });
+
+    return response.trim();
+  }
+
+  /**
    * Finalize self-introduction with AI assessment
    */
   async finalizeIntro(

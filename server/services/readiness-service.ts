@@ -123,7 +123,24 @@ export class ReadinessService {
       };
     } catch (error) {
       console.error("❌ Error calculating readiness score:", error);
-      throw new Error(`Failed to calculate readiness score: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Return default values for new users instead of throwing error
+      console.log("  Returning default readiness score for new user");
+      return {
+        overallScore: 0,
+        breakdown: {
+          simulationPerformance: { score: 0, weight: 0.6, weighted: 0 },
+          moduleCompletion: { score: 0, weight: 0.2, weighted: 0 },
+          selfIntroduction: { score: 0, weight: 0.1, weighted: 0 },
+          resumeOptimization: { score: 0, weight: 0.05, weighted: 0 },
+          practiceConsistency: { score: 0, weight: 0.05, weighted: 0 },
+        },
+        recommendations: [
+          "Complete your first practice session to start building your readiness score",
+          "Explore learning modules to understand interview best practices",
+          "Create your self-introduction to make a strong first impression"
+        ],
+      };
     }
   }
 

@@ -100,6 +100,15 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Install production dependencies for bundle
+        run: |
+          # Install ONLY production dependencies for deployment
+          echo "Installing production dependencies..."
+          rm -rf node_modules
+          npm ci --omit=dev --omit=optional
+        env:
+          NPM_CONFIG_PRODUCTION: "true"
+
       - name: Create deployment bundle
         run: |
           # Reuse a single timestamp for bundle and version names
@@ -121,9 +130,15 @@ jobs:
           cp package.json deployment-bundle/
           cp package-lock.json deployment-bundle/
           cp .npmrc deployment-bundle/
+          cp Procfile deployment-bundle/
           cp tsconfig.json deployment-bundle/
           cp vite.config.ts deployment-bundle/
           cp postcss.config.js deployment-bundle/ || echo "No postcss.config.js"
+
+          # Copy production node_modules (already installed)
+          echo "Copying production node_modules to bundle..."
+          cp -r node_modules deployment-bundle/
+          echo "node_modules size: $(du -sh node_modules | cut -f1)"
 
           # Copy ALL built artifacts (backend + frontend)
           mkdir -p deployment-bundle/dist

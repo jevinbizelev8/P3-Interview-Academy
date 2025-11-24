@@ -115,7 +115,14 @@ export class GamificationService {
       };
     } catch (error) {
       console.error("❌ Error getting points:", error);
-      throw new Error(`Failed to get points: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Return default values for new users instead of throwing error
+      console.log("  Returning default XP points for new user");
+      return {
+        totalPoints: 0,
+        currentLevel: 0,
+        pointsToNextLevel: 100, // Points needed for level 1
+      };
     }
   }
 

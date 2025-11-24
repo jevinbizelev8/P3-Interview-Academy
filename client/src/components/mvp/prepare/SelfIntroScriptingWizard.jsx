@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Lightbulb, ArrowRight, ArrowLeft, CheckCircle2,
-  Loader2, Copy, Check, Video, Play, StopCircle, Download, Pencil, Upload
+  Loader2, Copy, Check, Video, Play, StopCircle, Download, Pencil, Upload, Info
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
@@ -148,23 +148,31 @@ export default function SelfIntroScriptingWizard() {
   // Credit balance is handled by useCreditBalance hook
 
   const getAICoaching = async (prompt, context) => {
-    // NOTE: This function is a placeholder for future real-time AI coaching during script building.
-    // Currently not called in the UI flow. The main AI features are:
-    // - Script polishing (handlePolishing) - IMPLEMENTED ✓
-    // - Video assessment (analyzeRecording) - IMPLEMENTED ✓
-    //
-    // To implement this feature in the future:
-    // 1. Add a "Get AI Coaching" button in steps 1-4
-    // 2. Create backend endpoint: POST /api/prepare/self-intro/coaching
-    // 3. Send current step data (who/what/why/closing) for real-time feedback
-    // 4. Display coaching tips alongside the textarea
     setIsProcessing(true);
     try {
-      setAiCoaching("AI coaching feature coming soon. Please continue with the script polishing step.");
-      return { feedback: "AI coaching feature coming soon." };
+      const response = await fetch('/api/prepare/self-intro/coaching', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          stepData: scriptData,
+          currentStep: currentStep
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get coaching');
+      }
+
+      const data = await response.json();
+      setAiCoaching(data.data.coaching);
+      return { feedback: data.data.coaching };
     } catch (error) {
       console.error("Error getting AI coaching:", error);
-      setAiCoaching("An error occurred while getting AI coaching. Please try again.");
+      setAiCoaching("Unable to get AI coaching at this time. Please try again.");
+      return { feedback: "Error getting coaching" };
     } finally {
       setIsProcessing(false);
     }
@@ -887,17 +895,31 @@ export default function SelfIntroScriptingWizard() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-2xl">🎯 AI Video Assessment</CardTitle>
-                        <p className="text-gray-600">Get detailed feedback on your video performance</p>
+                        <CardTitle className="text-2xl">🎯 AI Script Assessment</CardTitle>
+                        <p className="text-gray-600 mt-1">Get detailed feedback on your self-introduction content and delivery recommendations</p>
                       </div>
                       <CreditCostBadge credits={VIDEO_ASSESSMENT_COST} />
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {/* Capability Alert */}
+                    <Alert className="bg-blue-50 border-blue-200">
+                      <Info className="w-5 h-5 text-blue-600" />
+                      <AlertDescription className="text-blue-900 ml-2">
+                        <strong>Current Analysis:</strong> We analyze your script content and provide delivery recommendations.
+                        <span className="block mt-1 text-sm">
+                          Full video analysis (facial expressions, body language tracking) coming in Q1 2026!
+                        </span>
+                      </AlertDescription>
+                    </Alert>
+
                     {/* Option 1: Analyze Recorded Video */}
                     {recordedBlob && !finalAssessment && (
                       <div>
-                        <h3 className="font-semibold text-lg mb-3">Analyze Recorded Video</h3>
+                        <h3 className="font-semibold text-lg mb-3">Analyze Your Script</h3>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Receive AI-powered feedback on your script content, structure, and recommended delivery approach.
+                        </p>
                         <Button
                           onClick={analyzeRecording}
                           disabled={isProcessing || isTranscribing || (currentCredits !== null && currentCredits < VIDEO_ASSESSMENT_COST)}
@@ -906,11 +928,11 @@ export default function SelfIntroScriptingWizard() {
                           {isProcessing ? (
                             <>
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Analyzing Video...
+                              Analyzing Script...
                             </>
                           ) : (
                             <>
-                              Analyze Recorded Video ({VIDEO_ASSESSMENT_COST} credits)
+                              Analyze Script & Get Delivery Tips ({VIDEO_ASSESSMENT_COST} credits)
                             </>
                           )}
                         </Button>
