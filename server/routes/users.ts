@@ -181,7 +181,7 @@ router.post("/profile/photo", requireAuth, upload.single('photo'), async (req, r
     const s3Service = new S3Service();
 
     // Delete old photo if exists
-    const currentUser = await storage.getUserById(req.user!.id);
+    const currentUser = await storage.getUser(req.user!.id);
     if (currentUser?.profileImageUrl && currentUser.profileImageUrl.includes('s3.amazonaws.com')) {
       await s3Service.deleteProfilePhoto(currentUser.profileImageUrl);
     }
