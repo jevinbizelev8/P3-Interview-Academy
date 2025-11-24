@@ -300,6 +300,56 @@ router.post('/modules/screening-interview/coaching', async (req, res) => {
 //
 
 /**
+ * POST /self-intro/coaching
+ * Get personalized AI coaching for self-introduction script
+ * Credit cost: 2 credits
+ */
+const selfIntroCoachingSchema = z.object({
+  stepData: z.object({
+    who: z.string().optional(),
+    what: z.string().optional(),
+    why: z.string().optional(),
+    closingHook: z.string().optional(),
+  }),
+  currentStep: z.number().min(1).max(4),
+});
+
+router.post('/self-intro/coaching', requireCredits('self-intro-coaching'), async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    const validatedData = selfIntroCoachingSchema.parse(req.body);
+
+    // Get coaching from SelfIntroService
+    const selfIntroService = new SelfIntroService();
+    const coaching = await selfIntroService.getStepCoaching(
+      req.user.id,
+      validatedData.stepData,
+      validatedData.currentStep
+    );
+
+    return res.json({ success: true, data: { coaching } });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation error',
+        details: error.errors,
+      });
+    }
+
+    console.error('❌ Error getting self-intro coaching:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to get AI coaching. Please try again.',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
  * POST /self-intro/draft
  * Save or update a draft for a specific wizard step (1-6)
  */

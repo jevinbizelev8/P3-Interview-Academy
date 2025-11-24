@@ -325,15 +325,37 @@ export default function SimulationInterface({ config, onComplete }) {
         default:
           // Check for network errors
           if (!error.response) {
-            errorMessage = 'Network error. Please check your internet connection and try again.';
+            errorMessage = '🌐 Network connection lost. Please check your internet connection and try again.';
+          } else if (error.response.status === 504) {
+            errorMessage = '⏱️ Request timed out. The server is taking too long to respond. Please try again in a moment.';
           } else if (error.response.status >= 500) {
-            errorMessage = 'Server error. Please try again in a moment or contact support.';
+            errorMessage = '🔧 Our servers encountered an error. Please try again in a moment. If this persists, contact support@bizelev8.ai';
+          } else if (error.response.status === 403) {
+            errorMessage = '🔒 Access denied. Please make sure you are logged in and have permission to start simulations.';
+          } else if (error.response.status === 429) {
+            errorMessage = '🚦 Too many requests. Please wait a moment before trying again.';
           } else {
-            errorMessage = errorData?.error || errorData?.message || error.message || 'Failed to start simulation';
+            // Use backend error message if available
+            errorMessage = errorData?.message || errorData?.error || 'Unable to start simulation. Please try again or contact support@bizelev8.ai if this persists.';
           }
       }
 
-      alert(`Failed to start simulation: ${errorMessage}`);
+      // Add comprehensive error logging
+      console.error('Simulation start error details:', {
+        code: errorCode,
+        message: errorMessage,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: errorData,
+        timestamp: new Date().toISOString()
+      });
+
+      // Improved error display
+      const displayMessage = `❌ Simulation Error\n\n${errorMessage}\n\n${
+        errorCode ? `Error code: ${errorCode}\n\n` : ''
+      }What you can do:\n• Check your internet connection\n• Refresh the page and try again\n• Contact support@bizelev8.ai if this persists\n\nYour credits have not been charged.`;
+
+      alert(displayMessage);
       onComplete();
     } finally {
       setIsAIThinking(false);

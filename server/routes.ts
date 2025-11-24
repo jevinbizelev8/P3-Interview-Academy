@@ -170,7 +170,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         healthCheck.checks.email = { ok: false, message: 'SMTP verify failed to run' };
       }
 
-      // 5. System load (if available)
+      // 5. S3 storage check
+      try {
+        const { S3Service } = await import('./services/s3-service');
+        const s3Service = new S3Service();
+        const s3Healthy = await Promise.race([
+          s3Service.healthCheck(),
+          new Promise((resolve) => setTimeout(() => resolve(false), 3000)),
+        ]) as boolean;
+        healthCheck.checks.s3 = {
+          status: s3Healthy ? 'healthy' : 'unhealthy',
+          bucket: process.env.S3_BUCKET_NAME || 'p3-user-uploads'
+        };
+        if (!s3Healthy) {
+          healthCheck.status = 'degraded';
+        }
+      } catch (error) {
+        healthCheck.checks.s3 = {
+          status: 'unhealthy',
+          error: error instanceof Error ? error.message : 'S3 check failed'
+        };
+        healthCheck.status = 'degraded';
+      }
+
+      // 6. System load (if available)
       try {
         const os = await import('os');
         healthCheck.checks.system = {
@@ -183,7 +206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         healthCheck.checks.system = { error: 'System info unavailable' };
       }
 
-      // 5. Total response time
+      // 7. Total response time
       healthCheck.responseTime = Date.now() - startTime;
 
       // Set appropriate HTTP status

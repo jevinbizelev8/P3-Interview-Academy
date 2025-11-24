@@ -5,10 +5,11 @@ import { z } from "zod";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { S3Service } from "../services/s3-service";
 
-// Configure multer for profile photo uploads
+// Configure multer for profile photo uploads - use memory storage for S3
 const upload = multer({
-  dest: 'uploads/profile-photos/',
+  storage: multer.memoryStorage(), // Store in memory for S3 upload
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
@@ -17,15 +18,10 @@ const upload = multer({
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed'));
+      cb(new Error('Only image files are allowed (JPEG, PNG, GIF, WebP)'));
     }
   }
 });
-
-// Ensure uploads directory exists
-if (!fs.existsSync('uploads/profile-photos')) {
-  fs.mkdirSync('uploads/profile-photos', { recursive: true });
-}
 
 const router = Router();
 
@@ -176,44 +172,72 @@ router.put("/profile", requireAuth, async (req, res) => {
 router.post("/profile/photo", requireAuth, upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No photo uploaded" });
+      return res.status(400).json({
+        success: false,
+        error: "No photo uploaded"
+      });
     }
 
-    // Create user-specific directory
-    const userDir = `uploads/profile-photos/${req.user!.id}`;
-    if (!fs.existsSync(userDir)) {
-      fs.mkdirSync(userDir, { recursive: true });
+    const s3Service = new S3Service();
+
+    // Delete old photo if exists
+    const currentUser = await storage.getUserById(req.user!.id);
+    if (currentUser?.profileImageUrl && currentUser.profileImageUrl.includes('s3.amazonaws.com')) {
+      await s3Service.deleteProfilePhoto(currentUser.profileImageUrl);
     }
 
-    // Generate unique filename
-    const ext = path.extname(req.file.originalname);
-    const filename = `profile-${Date.now()}${ext}`;
-    const filePath = path.join(userDir, filename);
-    const fileUrl = `/uploads/profile-photos/${req.user!.id}/${filename}`;
+    // Upload to S3
+    const fileUrl = await s3Service.uploadProfilePhoto(
+      req.user!.id,
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
 
-    // Move file to user directory
-    fs.renameSync(req.file.path, filePath);
-
-    // Update user profile with new photo URL
+    // Update user profile with S3 URL
     const updatedUser = await storage.upsertUser({
       id: req.user!.id,
       profileImageUrl: fileUrl,
     });
 
     if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        success: false,
+        error: "User not found"
+      });
     }
+
+    console.log(`✅ Profile photo uploaded for user ${req.user!.id}: ${fileUrl}`);
 
     res.json({
       success: true,
       data: {
         message: "Profile photo uploaded successfully",
-        profile_photo_url: fileUrl
+        profile_photo_url: fileUrl,
+        user: {
+          id: updatedUser.id,
+          profileImageUrl: updatedUser.profileImageUrl
+        }
       }
     });
   } catch (error) {
     console.error("Error uploading profile photo:", error);
-    res.status(500).json({ message: "Failed to upload profile photo" });
+
+    // Check if it's a Multer error
+    if (error instanceof multer.MulterError) {
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          success: false,
+          error: "File too large. Maximum size is 5MB."
+        });
+      }
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to upload profile photo. Please try again.",
+      details: process.env.NODE_ENV === 'development' ? (error as Error).message : undefined
+    });
   }
 });
 
