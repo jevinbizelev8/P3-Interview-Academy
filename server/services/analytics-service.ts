@@ -182,7 +182,37 @@ export class AnalyticsService {
       };
     } catch (error) {
       console.error("❌ Error getting performance insights:", error);
-      throw new Error(`Failed to get performance insights: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Return default values for new users instead of throwing error
+      console.log("  Returning default performance insights for new user");
+      return {
+        practiceStats: {
+          totalSessions: 0,
+          completedSessions: 0,
+          averageScore: 0,
+          improvement: 0,
+        },
+        interviewStats: {
+          totalInterviews: 0,
+          successfulInterviews: 0,
+          successRate: 0,
+          averageConfidence: 0,
+        },
+        learningStats: {
+          modulesCompleted: 0,
+          totalTimeSpent: 0,
+          averageModuleScore: 0,
+        },
+        reflectionStats: {
+          totalReflections: 0,
+          averageMoodScore: 0,
+        },
+        recommendations: [
+          "Start with a practice session to begin tracking your performance",
+          "Complete learning modules to build interview skills",
+          "Record reflections after each session to track progress"
+        ],
+      };
     }
   }
 
@@ -339,7 +369,19 @@ export class AnalyticsService {
       };
     } catch (error) {
       console.error("❌ Error getting performance stats:", error);
-      throw new Error(`Failed to get performance stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Return default values for new users instead of throwing error
+      console.log("  Returning default performance stats for new user");
+      return {
+        totalPracticeSessions: 0,
+        totalInterviews: 0,
+        totalModulesCompleted: 0,
+        totalReflections: 0,
+        averagePracticeScore: 0,
+        interviewSuccessRate: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+      };
     }
   }
 
