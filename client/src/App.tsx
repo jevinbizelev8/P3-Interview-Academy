@@ -8,7 +8,7 @@ import Landing from "@/pages/mvp/Landing";
 import NotFound from "@/pages/not-found";
 import Practice from "@/pages/mvp/Practice";
 import Prepare from "@/pages/mvp/Prepare";
-import Perform from "@/pages/perform/dashboard"; // Using old P3 dashboard until MVP endpoints are implemented
+import Perform from "@/pages/mvp/Perform"; // MVP endpoints exist - testing if they work
 import Billing from "@/pages/mvp/Billing";
 import Home from "@/pages/mvp/Home";
 import Profile from "@/pages/mvp/Profile";
