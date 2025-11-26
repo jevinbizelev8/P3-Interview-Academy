@@ -2,6 +2,43 @@
 
 All notable changes to this project are documented here. Dates are in YYYY‑MM‑DD and UTC unless stated otherwise.
 
+## [Unreleased]
+
+### Added
+- 📚 Credit management guide for admins (`docs/guides/ADD_CREDITS_GUIDE.md`)
+- 🏷️ Archive tags for preserving unmerged branch work (5 tags, 68 commits)
+- 🔧 Backend credits management feature branch (`feature/backend-credits-management`)
+- 📊 Phase 2 UAT bug tracking and resolution documentation
+
+### Changed
+- 🧹 Repository branch structure cleaned up (reduced to 3 active branches)
+- 🔐 Credit guide updated to use environment variables instead of hardcoded credentials
+- 📝 CLAUDE.md status updated to reflect Phase 2 completion and current branch state
+- 📝 Documentation structure improved for Phase 2 UAT work
+
+### Fixed
+- 🐛 Perform page blank screen issue (added error handling and missing props) - 2025-11-24
+- 🐛 Phase 2 UAT bugs (6 bugs resolved, deployed to staging) - 2025-11-19
+  - Resume PDF/DOCX parsing (migrated to pdfjs-dist)
+  - Profile photo uploads (static file serving middleware)
+  - Simulation error messages (improved UX with specific error codes)
+  - Navigation routes (nginx SPA fallback)
+  - Credit idempotency (verified existing)
+  - Self-intro coaching API (verified existing)
+
+### Operations
+- ✅ Added 10,000 credits to founder@bizelev8.ai for UAT testing on staging
+- ✅ Deleted 19 obsolete local and remote branches
+- ✅ Created 5 archive tags preserving 68 unmerged commits
+- ✅ Cleaned 2 obsolete git stashes
+- ✅ Pruned stale remote tracking references
+
+### Documentation
+- 📖 Comprehensive ops-log entry for 2025-11-26 (repository housekeeping)
+- 📖 Updated CLAUDE.md with current status, branch info, and Phase 2 completion
+- 📖 Secure credit management guide created (255 lines)
+- 📖 Phase 2 UAT bug documentation updated with final status
+
 ## [2.4.0] - 2025-11-01
 
 ### Added
