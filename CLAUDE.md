@@ -6,10 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This project uses multiple documentation files for better organization:
 
-- **CLAUDE.md** (this file) - Current status, architecture, development commands
+- **CLAUDE.md** (this file) - Current status, active projects, quick reference
 - **[SECURITY.md](SECURITY.md)** - Security best practices, AWS credentials, incident history
 - **[INTEGRATION.md](INTEGRATION.md)** - Bizelev8.ai, email verification, Google OAuth
 - **[DEPLOYMENT.md](DEPLOYMENT.md)** - Comprehensive deployment procedures and guides
+- **[development/](docs/development/)** - Development tools and commands
+  - [TOOLS.md](docs/development/TOOLS.md) - Chrome DevTools, Stripe CLI, Telegram, Statusline
+  - [COMMANDS.md](docs/development/COMMANDS.md) - All development, testing, and database commands
 - **[statusline/](docs/statusline/)** - AWS Bedrock cost tracking statusline
   - [README.md](docs/statusline/README.md) - Quick overview and links
   - [GUIDE.md](docs/statusline/GUIDE.md) - Complete user guide
@@ -141,133 +144,25 @@ This project uses multiple documentation files for better organization:
 
 ### Development Tools
 
-#### Chrome DevTools MCP Integration
-- **Chrome MCP**: Installed globally for browser automation and testing
-- **Location**: `C:\Users\User\.claude\chrome-mcp-tools\`
-- **Quick Start**: Double-click `launch-chrome-debug.bat` then restart Claude Code
-- **Capabilities**: Navigate URLs, take screenshots, inspect DOM, execute JavaScript, monitor network
-- **Documentation**: See `C:\Users\User\.claude\chrome-mcp-tools\README.md`
+The project uses several specialized development tools. For complete documentation, see **[docs/development/TOOLS.md](docs/development/TOOLS.md)**.
 
-#### Stripe CLI
-- **Stripe CLI**: Installed for local payment testing and webhook forwarding
-- **Capabilities**:
-  - Forward webhooks to local development server: `stripe listen --forward-to localhost:5000/api/webhooks/stripe`
-  - Trigger test webhook events: `stripe trigger payment_intent.succeeded`
-  - View webhook logs and debugging information
-  - Test payment flows without deploying to staging
-- **Documentation**: Run `stripe --help` for commands or see [Stripe CLI Docs](https://stripe.com/docs/stripe-cli)
-- **Common Commands**:
-  - `stripe login` - Authenticate with Stripe account
-  - `stripe listen` - Listen for webhook events
-  - `stripe trigger <event>` - Trigger test events
-  - `stripe logs tail` - View real-time API logs
+**Available Tools**:
+- **Chrome DevTools MCP** - Browser automation and testing
+- **Stripe CLI** - Payment testing and webhook forwarding
+- **Telegram Remote Control** - Remote approvals and notifications (@JevinCC_Bot)
+- **Claude Code Statusline** - Real-time AWS Bedrock cost tracking
 
-#### Telegram Remote Control
-- **Purpose**: Remote approval and notifications for Claude Code agents
-- **Status**: ✅ **PRODUCTION** - Fully operational since 2025-11-03
-- **Bot**: @JevinCC_Bot (Chat ID: 449555452)
-- **Webhook**: Running on port 8080
-- **Features**:
-  - Remote approval gates for AWS deployments and database migrations
-  - User-initiated slash commands (/status, /monitor, /test, /deploy, /help)
-  - Notifications for long-running operations
-  - Rate limiting and audit logging
-
-**Quick Commands**:
+**Quick Reference**:
 ```bash
-# Enable/disable notifications
-./scripts/telegram/core/notifyctl {on|off|status}
+# Restore statusline after Replit container restart
+~/workspace/.claude/restore-config.sh
 
-# Send notification
+# Forward Stripe webhooks to local server
+stripe listen --forward-to localhost:5000/api/webhooks/stripe
+
+# Send Telegram notification
 ./scripts/telegram/core/notify.sh "Deployment complete"
-
-# Request approval (blocking)
-if await_reply.sh "Deploy to production?" 600; then
-  npm run deploy:prod
-fi
-
-# System monitoring
-./scripts/telegram/tools/monitor.sh
-./scripts/telegram/tools/webhook_info.sh
 ```
-
-**User-Initiated Commands** (via Telegram):
-- `/status` - System health check
-- `/monitor` - Detailed metrics
-- `/test` - Run test suite (~5 min)
-- `/deploy <env>` - Deploy to AWS (staging, production)
-- `/help [command]` - Command documentation
-
-**Rate Limits**:
-- Readonly (`/status`, `/help`): 10 per minute
-- General: 5 per minute
-- Intensive (`/test`, `/deploy`): 1 per 5 minutes
-
-**Documentation**:
-- [README.md](docs/telegram/README.md) - Quick start
-- [SETUP_GUIDE.md](docs/telegram/SETUP_GUIDE.md) - Complete installation
-- [COMMAND_GUIDE.md](docs/telegram/COMMAND_GUIDE.md) - User commands
-- [ARCHITECTURE.md](docs/telegram/ARCHITECTURE.md) - System design
-- [TROUBLESHOOTING.md](docs/telegram/TROUBLESHOOTING.md) - Common issues
-
-**Deployment Log**: [ops-log/2025-11.md](docs/ops-log/2025-11.md) (Phase E section)
-
-#### Claude Code Statusline (AWS Bedrock Cost Tracking)
-- **Purpose**: Real-time AWS Bedrock API usage and cost tracking
-- **Status**: ✅ Production-ready with Replit persistence solution
-- **Display Format**: `Session: 7.3M↑/16.8K↓ $12.83 │ Today: $17.00 │ Week: $50.46 │ 21m │ 07:31 │ ~/workspace [branch]`
-- **Features**:
-  - Real token counts from transcript files (100% accurate)
-  - Cache-aware pricing (fresh, cache write, cache read, output)
-  - Daily and weekly cost aggregation
-  - Session duration tracking
-  - Git branch display
-- **Documentation**: See `docs/statusline/` for complete guides
-- **Replit-Specific**: Container restarts wipe `/home/runner/.claude/` but preserve `/home/runner/workspace/.claude/`
-
-**⚡ After Container Restart (Every 1-24 Hours in Replit):**
-```bash
-~/workspace/.claude/restore-config.sh
-```
-**Time required**: 30 seconds
-
-**Common Commands**:
-```bash
-# Restore configuration after container restart
-~/workspace/.claude/restore-config.sh
-
-# Check system health and verify configuration
-~/workspace/.claude/check-health.sh
-
-# Sync versions after editing script
-cp ~/.claude/statusline-command.sh ~/workspace/.claude/
-
-# View current costs
-cat ~/workspace/.claude/data/usage-stats.json | jq .
-
-# View cost breakdown
-tail -50 ~/workspace/.claude/data/statusline-debug.log | grep "COST BREAKDOWN"
-```
-
-**Key Files**:
-- **Active**: `~/.claude/statusline-command.sh` (ephemeral, lost on restart)
-- **Backup**: `~/workspace/.claude/statusline-command.sh` (persistent)
-- **Settings**: `~/.claude/settings.json` (ephemeral) + `~/workspace/.claude/settings.json` (persistent)
-- **Data**: `~/workspace/.claude/data/usage-stats.json` (persistent, symlinked)
-- **Scripts**: `~/workspace/.claude/restore-config.sh`, `check-health.sh`, `aliases.sh`
-
-**Pricing (AWS Bedrock Sonnet 4.5)**:
-- Fresh input: $0.003 per 1K tokens
-- Cache write: $0.00375 per 1K tokens (25% premium)
-- Cache read: $0.0003 per 1K tokens (90% discount!)
-- Output: $0.015 per 1K tokens (5x input cost)
-
-**Documentation**:
-- `docs/statusline/README.md` - Quick overview
-- `docs/statusline/GUIDE.md` - Complete user guide
-- `docs/statusline/REPLIT_PERSISTENCE_DEFINITIVE_ANSWER.md` - Deep technical analysis
-- `.claude/USAGE_INSTRUCTIONS.md` - Quick reference
-- `.claude/QUICK_FIX_INSTRUCTIONS.md` - Troubleshooting
 
 ---
 
@@ -370,124 +265,35 @@ Keep this section synchronized with deployment changes; update immediately when 
 
 ## 🛠️ Development Commands
 
-### Essential Development Commands
-- `npm run dev` - Start development server (React frontend + Express backend)
-- `npm run build` - Build for production (runs `npm run check` + `npm run test:run` first)
-- `npm run start` - Start production server
-- `npm run check` - Run TypeScript type checking
+For complete command reference, see **[docs/development/COMMANDS.md](docs/development/COMMANDS.md)**.
 
-### Testing Commands
-- `npm test` - Run all tests in watch mode (321 tests: client + server)
-- `npm run test:run` - Run all tests once (client + server)
-- `npm run test:coverage` - Run tests with coverage report
-- `npm run test:ui` - Launch Vitest UI for interactive testing
-- `npm run test:client` - Run client tests only (118 tests, jsdom environment)
-- `npm run test:server` - Run server tests only (203 tests, node environment)
-- `npm run test:api` - Run server API tests with verbose output
-- `npm run test:prepare` - Run specific component tests for validation
-- `npm run test:integration` - Run integration tests only
+### Quick Reference
+
+```bash
+# Development
+npm run dev                   # Start dev server
+npm run build                 # Build for production
+npm run check                 # TypeScript type checking
+
+# Testing (321 tests: 232 passing, 72%)
+npm test                      # Run all tests (watch mode)
+npm run test:run              # Run all tests (once)
+npm run test:client           # Client tests (118 tests)
+npm run test:server           # Server tests (203 tests)
+
+# Database
+npm run db:push               # Push schema changes
+```
 
 **Test Architecture**:
-- **Vitest Workspace**: Configured in `vitest.workspace.ts` with two projects
-- **Client Project**: React component tests (jsdom), 118 tests, 58 passing (49%)
-- **Server Project**: API route tests (node), 203 tests, 174 passing (86%)
-- **Total**: 321 tests, 232 passing (72%)
+- **Client**: React component tests (jsdom) - 118 tests, 58 passing (49%)
+- **Server**: API route tests (node) - 203 tests, 174 passing (86%)
+- **E2E**: Playwright (GitHub Actions only - not feasible in Replit)
 
-**Key Test Coverage**:
-- **Client Component Tests**: `LanguageSelector.test.tsx`, `JobDescriptionUpload.test.tsx`, `SignupForm.test.tsx`
-- **Client Integration Tests**: `prepare-session.integration.test.tsx`, `perform-dashboard.integration.test.tsx`
-- **Server API Tests** (10 files):
-  - `prepare-ai.routes.test.ts` (15 tests)
-  - `practice.routes.test.ts` (12 tests)
-  - `prepare.routes.test.ts` (17 tests)
-  - `perform.routes.test.ts` (22 tests)
-  - `gamification.routes.test.ts` (28 tests)
-  - `support.routes.test.ts` (24 tests)
-  - `referrals.routes.test.ts` (20 tests)
-  - `practice-enhancements.test.ts` (18 tests)
-  - `model-answer-service.test.ts` (8 tests)
-  - `migrations/redesign-schema.test.ts` (25 tests)
-
-### E2E Testing Commands
-
-**⚠️ Important**: Playwright E2E tests are **NOT feasible in Replit** due to environment constraints:
-- ❌ No X11 display server (Playwright requires GUI environment)
-- ❌ Browser binaries (300-500MB) lost on container restart
-- ❌ Resource constraints (500MB+ RAM per browser instance)
-- ❌ MCP Playwright server has same limitations
-
-**Research Documentation**: See [docs/testing/BROWSER_AUTOMATION_RESEARCH.md](docs/testing/BROWSER_AUTOMATION_RESEARCH.md) for comprehensive analysis.
-
-**Recommended Architecture**:
-- **Replit**: Component tests (jsdom) + Integration tests (fixtures) - ✅ Fast, reliable
-- **GitHub Actions**: E2E tests (Playwright) - ✅ Full browser automation
-- **Cost**: $0/month (GitHub Actions free for public repos)
-
-**GitHub Actions E2E Workflow**:
-```bash
-# E2E tests run automatically in GitHub Actions
-# .github/workflows/e2e-tests.yml
-
-# Manual trigger from GitHub UI:
-# Actions → E2E Tests → Run workflow
-```
-
-**Local E2E Testing** (requires Playwright installation outside Replit):
-```bash
-# One-time setup (on local machine, not Replit)
-npm install -D @playwright/test
-npx playwright install chromium
-
-# Run E2E tests
-npm run test:e2e              # Run all E2E tests
-npm run test:e2e:ui           # Interactive UI mode
-npm run test:e2e:debug        # Debug mode with DevTools
-
-# Run specific E2E test
-npx playwright test e2e/auth-flow.spec.ts
-
-# View test report
-npx playwright show-report
-```
-
-**E2E Test Examples**:
-```typescript
-// e2e/auth-flow.spec.ts
-test('user can sign up and login', async ({ page }) => {
-  await page.goto('/');
-  await page.click('text=Sign Up');
-  await page.fill('input[name="email"]', 'test@example.com');
-  await page.click('button[type="submit"]');
-  await expect(page).toHaveURL(/\/dashboard/);
-});
-
-// e2e/practice-module.spec.ts
-test('complete practice session', async ({ page }) => {
-  await page.goto('/practice');
-  await page.click('text=Start Practice');
-  await page.fill('textarea', 'My STAR response...');
-  await page.click('text=Submit');
-  await expect(page.getByText('Evaluation')).toBeVisible();
-});
-```
-
-**For Complete Testing Guide**: See [docs/testing/TESTING_GUIDE.md](docs/testing/TESTING_GUIDE.md)
-
-### Payment Testing Commands (Stripe CLI)
-- `stripe listen --forward-to localhost:5000/api/webhooks/stripe` - Forward webhooks to local server
-- `stripe trigger payment_intent.succeeded` - Simulate successful payment
-- `stripe trigger checkout.session.completed` - Simulate checkout completion
-- `stripe logs tail` - Monitor Stripe API activity in real-time
-
-### Database Commands
-- `npm run db:push` - Push database schema changes using Drizzle Kit
-- Database schema is defined in `shared/schema.ts`
-- Uses PostgreSQL with Drizzle ORM
-
-**Schema Management**:
-- Boot-time schema guard: `ensureCriticalSchema()` in `server/services/schema-auditor.ts`
-- Runs every server start to create AI Prepare tables and rename legacy columns
-- After 2025-10-04 deploy: Cast `user_id` / `created_by` columns from varchar to uuid
+**Important Notes**:
+- E2E tests require GitHub Actions (no X11 display in Replit)
+- See [COMMANDS.md](docs/development/COMMANDS.md) for Stripe CLI and database commands
+- See [docs/testing/TESTING_GUIDE.md](docs/testing/TESTING_GUIDE.md) for complete testing guide
 
 ---
 

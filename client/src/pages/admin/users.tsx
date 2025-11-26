@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -20,9 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { apiRequest } from "@/lib/queryClient";
 import {
-  Users,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { apiRequest } from "@/lib/queryClient";
+import { CreditManagement } from "@/components/admin/CreditManagement";
+import { BulkOperations } from "@/components/admin/BulkOperations";
+import {
+  Users as UsersIcon,
   Search,
   ArrowLeft,
   ChevronLeft,
@@ -31,6 +41,8 @@ import {
   Mail,
   Calendar,
   Filter,
+  UserCheck,
+  ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -64,10 +76,12 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [tierFilter, setTierFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const queryClient = useQueryClient();
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedUserForCredits, setSelectedUserForCredits] = useState<User | null>(null);
+  const [showBulkOperations, setShowBulkOperations] = useState(false);
 
   // Fetch users with filters
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["admin-users", page, search, tierFilter, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -111,6 +125,44 @@ export default function AdminUsersPage() {
     }
   };
 
+  const toggleUserSelection = (userId: string) => {
+    setSelectedUserIds(prev =>
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    if (!data) return;
+
+    if (selectedUserIds.length === data.users.length) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(data.users.map(u => u.id));
+    }
+  };
+
+  const getSelectedUsers = () => {
+    if (!data) return [];
+    return data.users.filter(u => selectedUserIds.includes(u.id));
+  };
+
+  const handleBulkOperationsClose = () => {
+    setShowBulkOperations(false);
+  };
+
+  const handleBulkOperationsSuccess = () => {
+    setShowBulkOperations(false);
+    setSelectedUserIds([]);
+    refetch();
+  };
+
+  const handleCreditManagementSuccess = () => {
+    setSelectedUserForCredits(null);
+    refetch();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -131,9 +183,46 @@ export default function AdminUsersPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Users className="w-8 h-8 text-purple-600" />
+            <UsersIcon className="w-8 h-8 text-purple-600" />
           </div>
         </div>
+
+        {/* Bulk Selection Banner */}
+        {selectedUserIds.length > 0 && (
+          <Card className="mb-6 border-2 border-purple-200 bg-purple-50">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-purple-600" />
+                  <span className="font-semibold text-purple-900">
+                    {selectedUserIds.length} user{selectedUserIds.length > 1 ? 's' : ''} selected
+                  </span>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="bg-purple-600 hover:bg-purple-700">
+                        Bulk Actions <ChevronDown className="w-4 h-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem onClick={() => setShowBulkOperations(true)}>
+                        <Zap className="w-4 h-4 mr-2 text-yellow-600" />
+                        Manage Credits & Actions
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button
+                    variant="outline"
+                    onClick={() => setSelectedUserIds([])}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Filters */}
         <Card className="mb-6">
@@ -228,7 +317,7 @@ export default function AdminUsersPage() {
               </div>
             ) : !data || data.users.length === 0 ? (
               <div className="text-center py-12">
-                <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <UsersIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-600">No users found</p>
               </div>
             ) : (
@@ -237,6 +326,12 @@ export default function AdminUsersPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12">
+                          <Checkbox
+                            checked={selectedUserIds.length === data.users.length && data.users.length > 0}
+                            onCheckedChange={toggleSelectAll}
+                          />
+                        </TableHead>
                         <TableHead>User</TableHead>
                         <TableHead>Plan</TableHead>
                         <TableHead>Status</TableHead>
@@ -248,6 +343,12 @@ export default function AdminUsersPage() {
                     <TableBody>
                       {data.users.map((user) => (
                         <TableRow key={user.id} className="hover:bg-gray-50">
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedUserIds.includes(user.id)}
+                              onCheckedChange={() => toggleUserSelection(user.id)}
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="flex flex-col">
                               <div className="flex items-center gap-2">
@@ -296,13 +397,23 @@ export default function AdminUsersPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setLocation(`/admin/users/${user.id}`)}
-                            >
-                              View Details
-                            </Button>
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedUserForCredits(user)}
+                              >
+                                <Zap className="w-4 h-4 mr-1" />
+                                Credits
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setLocation(`/admin/users/${user.id}`)}
+                              >
+                                View
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -337,6 +448,24 @@ export default function AdminUsersPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Credit Management Modal */}
+      {selectedUserForCredits && (
+        <CreditManagement
+          user={selectedUserForCredits}
+          onClose={() => setSelectedUserForCredits(null)}
+          onSuccess={handleCreditManagementSuccess}
+        />
+      )}
+
+      {/* Bulk Operations Modal */}
+      {showBulkOperations && (
+        <BulkOperations
+          selectedUsers={getSelectedUsers()}
+          onClose={handleBulkOperationsClose}
+          onSuccess={handleBulkOperationsSuccess}
+        />
+      )}
     </div>
   );
 }
