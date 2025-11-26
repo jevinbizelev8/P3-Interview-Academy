@@ -19,7 +19,7 @@ import { eq, and } from "drizzle-orm";
 
 const router = Router();
 
-// Configure multer for file uploads
+// Configure multer for file uploads (documents)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -35,6 +35,27 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error('Invalid file type. Only PDF and DOCX files are allowed.'));
+    }
+  },
+});
+
+// Configure multer for video uploads
+const uploadVideo = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB limit for videos
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedMimes = [
+      'video/mp4',
+      'video/webm',
+      'video/quicktime', // .mov files
+      'video/x-msvideo', // .avi files
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only MP4, WebM, MOV, and AVI video files are allowed.'));
     }
   },
 });
@@ -557,6 +578,61 @@ router.post('/self-intro/analyze-video', async (req, res) => {
     return res.status(500).json({
       success: false,
       error: 'Analysis failed. No credits were deducted. Please try again.',
+      details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * POST /self-intro/upload-video
+ * Upload self-introduction video file
+ */
+router.post('/self-intro/upload-video', uploadVideo.single('video'), async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({ success: false, error: 'User not authenticated' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        error: 'No video file uploaded',
+      });
+    }
+
+    // Create user-specific directory for videos
+    const fs = await import('fs');
+    const path = await import('path');
+    const userDir = `uploads/self-intro-videos/${req.user.id}`;
+
+    if (!fs.existsSync(userDir)) {
+      fs.mkdirSync(userDir, { recursive: true });
+    }
+
+    // Generate unique filename with timestamp
+    const ext = path.extname(req.file.originalname);
+    const filename = `video-${Date.now()}${ext}`;
+    const filePath = path.join(userDir, filename);
+    const fileUrl = `/uploads/self-intro-videos/${req.user.id}/${filename}`;
+
+    // Write video file to disk
+    fs.writeFileSync(filePath, req.file.buffer);
+
+    console.log(`✅ Video uploaded successfully for user ${req.user.id}: ${fileUrl}`);
+
+    return res.json({
+      success: true,
+      data: {
+        videoUrl: fileUrl,
+        filename: req.file.originalname,
+        size: req.file.size,
+      },
+    });
+  } catch (error) {
+    console.error('❌ Error uploading video:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to upload video',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
