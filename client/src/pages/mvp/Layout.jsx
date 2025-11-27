@@ -5,7 +5,7 @@ import { Link, useLocation, Navigate } from "wouter";
 import { createPageUrl } from "@/utils";
 import { useAuth } from "@/hooks/use-auth";
 import { useReadinessScore, useXPPoints, useCreditBalance } from "@/hooks/useApi";
-import { Home, BookOpen, Target, TrendingUp, Award, Zap, ArrowRight, LogOut, User as UserIcon, Users } from "lucide-react";
+import { Home, BookOpen, Target, TrendingUp, Award, Zap, ArrowRight, LogOut, User as UserIcon, Users, Shield } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -192,6 +192,15 @@ export default function Layout({ children, currentPageName }) {
                       <Zap className="w-4 h-4 mr-2" />
                       Billing & Credits
                     </DropdownMenuItem>
+                    {user?.role === 'admin' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => window.location.href = '/admin'}>
+                          <Shield className="w-4 h-4 mr-2" />
+                          Admin Dashboard
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="text-red-600">
                       <LogOut className="w-4 h-4 mr-2" />

@@ -81,14 +81,18 @@ This document tracks the integration of:
 
 | Category | Not Started | In Progress | Complete | Total |
 |----------|-------------|-------------|----------|-------|
-| Dependencies | 0 | 0 | 0 | 3 |
-| MVP UI Components | 0 | 0 | 0 | 15 |
-| Admin Components | 0 | 0 | 0 | 8 |
-| Backend Integration | 0 | 0 | 0 | 12 |
-| Testing | 0 | 0 | 0 | 7 |
-| **TOTAL** | **0** | **0** | **0** | **45** |
+| Dependencies | 0 | 0 | 3 | 3 |
+| MVP UI Components | 0 | 0 | 15 | 15 |
+| Admin Components | 0 | 0 | 8 | 8 |
+| Backend Integration | 0 | 0 | 12 | 12 |
+| Testing | 7 | 0 | 0 | 7 |
+| Admin Security | 18 | 0 | 0 | 18 |
+| **TOTAL** | **25** | **0** | **38** | **63** |
 
-**Note**: Testing category increased from 6 to 7 with addition of comprehensive Stripe payment integration testing (Phase 9.7)
+**Notes**:
+- Testing category (7 items) increased from 6 to 7 with addition of comprehensive Stripe payment integration testing (Phase 9.7)
+- Admin Security category (18 items) added in Phase 11 for admin access security hardening and management UI
+- Total project tasks increased from 45 to 63 with security enhancements
 
 ---
 
@@ -868,6 +872,364 @@ This document tracks the integration of:
 - [ ] No increase in error rate
 - [ ] Founder confirms features work
 - [ ] Documentation updated
+
+---
+
+## Phase 11: Admin Access Security & Management
+
+**Status**: 🔴 Not Started
+**Priority**: HIGH (Security & Access Control)
+**Estimated Duration**: 5-6 days
+**Dependencies**: Phase 6 (Admin Dashboard Integration) ✅ Complete
+
+### Overview
+
+Enhance admin console security and implement admin user management UI. Current implementation has complete admin backend and frontend, but lacks audit logging, admin user management UI, and security hardening.
+
+### 11.1 Security Hardening (Priority: HIGH)
+
+**Duration**: 2-3 days
+
+- [ ] **Audit Logging System**
+  - [ ] Create `admin_audit_logs` table
+    - Columns: id, admin_id, action, target_user_id, details (JSONB), ip_address, user_agent, created_at
+    - Indexes: admin_id, target_user_id, created_at DESC
+  - [ ] Create audit logging middleware
+    - Middleware: `logAdminAction(action, targetUserId?, details?)`
+    - Capture: IP address, user agent, timestamp
+  - [ ] Integrate logging into existing admin routes
+    - Credit operations (individual and bulk)
+    - User tier changes
+    - Bulk user actions (suspend, activate, delete)
+    - Admin promotion/revocation (Phase 11.2)
+  - [ ] Test audit log creation and retrieval
+  - Complexity: MEDIUM
+  - Files: `server/services/audit-service.ts`, `server/middleware/audit-middleware.ts`
+
+- [ ] **Admin Session Timeout Differentiation**
+  - [ ] Modify session middleware to check user role
+    - Admin sessions: 2 hours (configurable via env: `ADMIN_SESSION_TIMEOUT`)
+    - Regular users: 7 days (existing)
+  - [ ] Add "Stay signed in" option for non-admins only
+  - [ ] Test session expiration for admin vs regular users
+  - Complexity: LOW
+  - File: `server/auth-simple.ts` (session configuration)
+
+- [ ] **Password Re-confirmation for Sensitive Operations**
+  - [ ] Create password verification endpoint
+    - `POST /api/admin/verify-password`
+    - Returns: session token valid for 5 minutes
+  - [ ] Add verification middleware: `requirePasswordConfirmation`
+  - [ ] Apply to sensitive routes:
+    - Bulk user delete
+    - Promote to admin
+    - Reset all credits
+  - [ ] Create UI modal component
+    - `client/src/components/admin/PasswordConfirmModal.tsx`
+    - Shows before sensitive operations
+  - Complexity: MEDIUM
+  - Backend: `server/routes/admin.ts`, Middleware: `server/middleware/auth-middleware.ts`
+
+- [ ] **Rate Limiting on Admin Endpoints**
+  - [ ] Install express-rate-limit (if not already)
+  - [ ] Create admin-specific rate limiter
+    - Standard admin endpoints: 10 req/min
+    - Bulk operations: 2 req/min
+    - Promotion/revocation: 1 req/min
+  - [ ] Apply to all admin routes
+  - [ ] Log rate limit violations to audit trail
+  - Complexity: LOW
+  - File: `server/middleware/rate-limit.ts`
+
+**Database Migration**:
+```sql
+CREATE TABLE admin_audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID REFERENCES users(id) NOT NULL,
+  action VARCHAR(100) NOT NULL,
+  target_user_id UUID REFERENCES users(id),
+  details JSONB,
+  ip_address INET,
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_admin ON admin_audit_logs(admin_id);
+CREATE INDEX idx_audit_target ON admin_audit_logs(target_user_id);
+CREATE INDEX idx_audit_created ON admin_audit_logs(created_at DESC);
+```
+
+**Validation**:
+- [ ] All admin actions logged to `admin_audit_logs` table
+- [ ] Admin sessions expire after 2 hours of inactivity
+- [ ] Sensitive operations require password confirmation
+- [ ] Rate limiting prevents abuse (verified with load testing)
+- [ ] Audit logs include IP address and user agent
+
+---
+
+### 11.2 Admin User Management UI (Priority: HIGH)
+
+**Duration**: 2 days
+
+- [ ] **Create Admin Users Page**
+  - [ ] New page: `client/src/pages/admin/admin-users.tsx`
+  - [ ] List all admin users
+    - Display: email, role, last login, created date
+    - Filter: super-admin, admin, moderator (future)
+  - [ ] Show admin statistics
+    - Total admins
+    - Active admins (logged in last 7 days)
+    - Pending admin requests (future)
+  - Complexity: MEDIUM
+
+- [ ] **User Promotion Flow**
+  - [ ] Backend: Create `requireSuperAdmin` middleware
+    - Check: `req.user?.role === 'admin' && req.user?.is_super_admin === true`
+  - [ ] Backend: `POST /api/admin/users/:id/promote`
+    - Require: super-admin role, password confirmation
+    - Actions:
+      1. Verify super-admin's password
+      2. Update `users.role = 'admin'`
+      3. Log action to audit trail
+      4. Send email notification to user (optional)
+    - Response: Updated user object
+  - [ ] Frontend: "Promote to Admin" button
+    - Trigger password confirmation modal
+    - Show confirmation dialog
+    - Display success toast
+  - Complexity: HIGH
+  - Backend: `server/routes/admin.ts`, Middleware: `server/middleware/auth-middleware.ts`
+
+- [ ] **Revoke Admin Access Flow**
+  - [ ] Backend: `POST /api/admin/users/:id/revoke`
+    - Require: super-admin role, password confirmation
+    - Validation: Cannot revoke own admin access
+    - Actions:
+      1. Verify super-admin's password
+      2. Check not revoking self
+      3. Update `users.role = 'user'`
+      4. Invalidate admin's sessions (optional)
+      5. Log action to audit trail
+      6. Send email notification (optional)
+  - [ ] Frontend: "Revoke Admin Access" button
+    - Show warning dialog (cannot be undone)
+    - Require password confirmation
+    - Display success toast
+  - Complexity: HIGH
+  - Backend: `server/routes/admin.ts`
+
+- [ ] **Super-Admin Configuration**
+  - [ ] Add `is_super_admin` column to users table (migration)
+  - [ ] Promote founder account to super-admin
+    - SQL: `UPDATE users SET is_super_admin = true WHERE email = 'founder@bizelev8.ai';`
+  - [ ] Update `requireSuperAdmin` middleware
+  - Complexity: LOW
+  - Migration: `server/db/migrations/add_super_admin_column.sql`
+
+**Database Schema Changes**:
+```sql
+ALTER TABLE users ADD COLUMN is_super_admin BOOLEAN DEFAULT FALSE;
+UPDATE users SET is_super_admin = true WHERE email = 'founder@bizelev8.ai';
+```
+
+**Validation**:
+- [ ] Super-admin can promote users via UI
+- [ ] Password confirmation required for promotion
+- [ ] User receives email notification (if enabled)
+- [ ] Action logged to audit trail
+- [ ] Cannot revoke own admin access (validation works)
+- [ ] Regular admin cannot promote users (403 Forbidden)
+
+---
+
+### 11.3 Audit Log Viewing (Priority: MEDIUM)
+
+**Duration**: 1 day
+
+- [ ] **Create Audit Log Page**
+  - [ ] New page: `client/src/pages/admin/audit-logs.tsx`
+  - [ ] Table view with columns:
+    - Admin email
+    - Action (e.g., "ADD_CREDITS", "PROMOTE_ADMIN")
+    - Target user email
+    - Details (JSON viewer or formatted text)
+    - IP address
+    - Timestamp
+  - [ ] Filters:
+    - Admin user (dropdown)
+    - Action type (dropdown)
+    - Date range (date picker)
+    - Target user (search)
+  - [ ] Pagination: 50 logs per page
+  - [ ] Export to CSV (optional)
+  - Complexity: MEDIUM
+
+- [ ] **Audit Log API**
+  - [ ] Backend: `GET /api/admin/audit-logs`
+  - [ ] Query parameters:
+    - `admin_id`: UUID
+    - `action`: string
+    - `date_from`: ISO date
+    - `date_to`: ISO date
+    - `target_user_id`: UUID
+    - `page`, `limit`: pagination
+  - [ ] Response: Paginated list with total count
+  - [ ] Require: Admin role (any admin can view logs)
+  - Complexity: LOW
+  - File: `server/routes/admin.ts`
+
+- [ ] **Audit Log Export**
+  - [ ] Backend: `GET /api/admin/audit-logs/export`
+  - [ ] Format: CSV
+  - [ ] Include all filtered logs (no pagination)
+  - [ ] Stream response for large datasets
+  - Complexity: MEDIUM (optional)
+
+**Validation**:
+- [ ] Admin can view audit logs with filters
+- [ ] Logs display correct admin and target user emails
+- [ ] Pagination works for >50 logs
+- [ ] Date range filter works correctly
+- [ ] Export to CSV generates valid file (if implemented)
+
+---
+
+### 11.4 Security Testing (Priority: HIGH)
+
+**Duration**: 1 day
+
+- [ ] **Authentication Tests**
+  - [ ] Non-admin cannot access admin routes (403)
+  - [ ] Admin can access admin routes (200)
+  - [ ] Admin session expires after 2 hours (401)
+  - [ ] Regular user session persists for 7 days
+
+- [ ] **Authorization Tests**
+  - [ ] Admin can add credits to user
+  - [ ] Super-admin can promote user to admin
+  - [ ] Regular admin cannot promote users (403)
+  - [ ] Admin cannot revoke own access (400)
+
+- [ ] **Security Tests**
+  - [ ] Bulk delete requires password confirmation
+  - [ ] Admin actions logged to audit trail
+  - [ ] Rate limiting prevents abuse (429 after limit)
+  - [ ] Invalid password confirmation rejected (401)
+
+- [ ] **Edge Cases**
+  - [ ] Admin tries to revoke own access (should fail with error message)
+  - [ ] Admin tries to delete own account (should fail)
+  - [ ] Concurrent bulk operations (race conditions prevented)
+  - [ ] Invalid user IDs in bulk operations (error handling)
+  - [ ] Network timeout during bulk delete (transaction rollback)
+  - [ ] Session expired mid-operation (re-authentication required)
+
+**Validation**:
+- [ ] All authentication tests pass
+- [ ] All authorization tests pass
+- [ ] All security tests pass
+- [ ] All edge cases handled gracefully
+
+---
+
+### 11.5 Documentation & Deployment
+
+**Duration**: 0.5 day
+
+- [ ] **Update Documentation**
+  - [ ] Update `docs/integration/ADMIN_ACCESS_SETUP.md`
+    - Add audit logging section
+    - Add admin promotion flow
+    - Add security best practices
+  - [ ] Update `CLAUDE.md`
+    - Note: Admin access security enhanced
+    - Add audit log location
+    - Update admin role assignment process
+  - [ ] Create ops-log entry
+    - Date: 2025-XX-XX
+    - Summary: Admin access security hardening complete
+    - Changes: Audit logging, admin UI, session timeout
+
+- [ ] **Deploy to Staging**
+  - [ ] Run database migrations
+  - [ ] Deploy backend changes
+  - [ ] Deploy frontend changes
+  - [ ] Run smoke tests
+  - [ ] Verify audit logging works
+  - [ ] Test admin promotion flow
+
+- [ ] **Founder Approval**
+  - [ ] Demo admin user management UI
+  - [ ] Show audit log viewer
+  - [ ] Explain security improvements
+  - [ ] Get approval for production deployment
+
+**Validation**:
+- [ ] Documentation updated and accurate
+- [ ] Staging deployment successful
+- [ ] All smoke tests pass
+- [ ] Founder approves changes
+
+---
+
+## Phase 11 Summary
+
+**Total Duration**: 5-6 days
+**Priority**: HIGH (Security & Compliance)
+**Blockers**: None (Phase 6 complete)
+
+**Deliverables**:
+1. ✅ Audit logging system (database + middleware)
+2. ✅ Admin session timeout (2 hours for admins)
+3. ✅ Password re-confirmation for sensitive operations
+4. ✅ Rate limiting on admin endpoints
+5. ✅ Admin user management UI (promote/revoke)
+6. ✅ Audit log viewer (admin page)
+7. ✅ Super-admin role implementation
+8. ✅ Comprehensive security testing
+9. ✅ Updated documentation
+
+**Security Improvements**:
+- All admin actions logged to audit trail
+- Reduced admin session timeout (7 days → 2 hours)
+- Password confirmation for sensitive operations
+- Rate limiting prevents abuse
+- Admin promotion requires super-admin + password
+- Cannot revoke own admin access
+
+**Files Created/Modified**:
+- **New Tables**: `admin_audit_logs`
+- **New Columns**: `users.is_super_admin`
+- **New Backend**:
+  - `server/services/audit-service.ts`
+  - `server/middleware/audit-middleware.ts`
+  - `server/middleware/rate-limit.ts`
+  - New endpoints in `server/routes/admin.ts` (promote, revoke, audit-logs)
+- **New Frontend**:
+  - `client/src/pages/admin/admin-users.tsx`
+  - `client/src/pages/admin/audit-logs.tsx`
+  - `client/src/components/admin/PasswordConfirmModal.tsx`
+- **Updated Files**:
+  - `server/auth-simple.ts` (session timeout differentiation)
+  - `server/middleware/auth-middleware.ts` (requireSuperAdmin)
+  - `docs/integration/ADMIN_ACCESS_SETUP.md`
+  - `CLAUDE.md`
+
+**Testing Coverage**:
+- Unit tests for audit service
+- Integration tests for promotion flow
+- Security tests for password confirmation
+- End-to-end tests for admin UI
+
+**Validation Criteria**:
+- All admin actions logged
+- Admin sessions expire after 2 hours
+- Password confirmation works
+- Rate limiting active
+- Admin promotion UI functional
+- Audit logs viewable and filterable
+- Documentation complete and accurate
 
 ---
 

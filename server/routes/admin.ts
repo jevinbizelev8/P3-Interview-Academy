@@ -11,6 +11,8 @@ import {
 import { eq, desc, sql, like, and, or, gte, lt, count } from "drizzle-orm";
 import { requireAdmin } from "../middleware/auth-middleware";
 import { CreditService } from "../services/credit-service.js";
+import { auditLog } from "../middleware/audit-middleware";
+import { AuditService } from "../services/audit-service";
 
 const router = Router();
 
@@ -173,7 +175,7 @@ router.get("/users/:id", async (req: Request, res: Response) => {
  * POST /api/admin/users/:id/credits/add
  * Add top-up credits to a user (admin adjustment)
  */
-router.post("/users/:id/credits/add", async (req: Request, res: Response) => {
+router.post("/users/:id/credits/add", auditLog("ADD_CREDITS"), async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
     const { amount, reason } = req.body;
@@ -211,7 +213,7 @@ router.post("/users/:id/credits/add", async (req: Request, res: Response) => {
  * POST /api/admin/users/:id/credits/reset
  * Reset monthly credits to tier default
  */
-router.post("/users/:id/credits/reset", async (req: Request, res: Response) => {
+router.post("/users/:id/credits/reset", auditLog("RESET_CREDITS"), async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
 
@@ -235,7 +237,7 @@ router.post("/users/:id/credits/reset", async (req: Request, res: Response) => {
  * PUT /api/admin/users/:id/tier
  * Change user's tier manually
  */
-router.put("/users/:id/tier", async (req: Request, res: Response) => {
+router.put("/users/:id/tier", auditLog("UPDATE_USER_TIER"), async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
     const { planType, monthlyCredits } = req.body;
@@ -281,7 +283,7 @@ router.put("/users/:id/tier", async (req: Request, res: Response) => {
  * DELETE /api/admin/users/:id
  * Delete a user (cascade delete)
  */
-router.delete("/users/:id", async (req: Request, res: Response) => {
+router.delete("/users/:id", auditLog("DELETE_USER"), async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
     const adminId = req.user?.id;
@@ -337,7 +339,7 @@ router.get("/credit-costs", async (req: Request, res: Response) => {
  * PUT /api/admin/credit-costs/:id
  * Update credit cost for a feature
  */
-router.put("/credit-costs/:id", async (req: Request, res: Response) => {
+router.put("/credit-costs/:id", auditLog("UPDATE_CREDIT_COST"), async (req: Request, res: Response) => {
   try {
     const costId = req.params.id;
     const { creditCost, description, isActive } = req.body;
@@ -387,7 +389,7 @@ router.put("/credit-costs/:id", async (req: Request, res: Response) => {
  * POST /api/admin/credit-costs
  * Create new credit cost configuration
  */
-router.post("/credit-costs", async (req: Request, res: Response) => {
+router.post("/credit-costs", auditLog("CREATE_CREDIT_COST"), async (req: Request, res: Response) => {
   try {
     const { featureName, creditCost, description } = req.body;
     const adminId = req.user?.id;
@@ -834,7 +836,10 @@ router.get("/payments", async (req: Request, res: Response) => {
  * POST /api/admin/users/bulk/credits
  * Add credits to multiple users at once
  */
-router.post("/users/bulk/credits", async (req: Request, res: Response) => {
+router.post("/users/bulk/credits", auditLog("BULK_ADD_CREDITS", (req) => {
+  // For bulk operations, include userIds in details instead of single target
+  return undefined;
+}), async (req: Request, res: Response) => {
   try {
     const { userIds, amount, reason } = req.body;
     const adminId = req.user?.id;
@@ -907,7 +912,10 @@ router.post("/users/bulk/credits", async (req: Request, res: Response) => {
  * POST /api/admin/users/bulk/action
  * Perform bulk actions on users (suspend, activate, delete)
  */
-router.post("/users/bulk/action", async (req: Request, res: Response) => {
+router.post("/users/bulk/action", auditLog("BULK_USER_ACTION", (req) => {
+  // For bulk operations, include userIds in details instead of single target
+  return undefined;
+}), async (req: Request, res: Response) => {
   try {
     const { userIds, action } = req.body;
     const adminId = req.user?.id;
@@ -997,6 +1005,77 @@ router.post("/users/bulk/action", async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: "Failed to process bulk action",
+    });
+  }
+});
+
+/**
+ * GET /api/admin/audit-logs
+ * Get admin audit logs with pagination and filters
+ */
+router.get("/audit-logs", async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      adminId: req.query.adminId as string | undefined,
+      action: req.query.action as string | undefined,
+      targetUserId: req.query.targetUserId as string | undefined,
+      dateFrom: req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined,
+      dateTo: req.query.dateTo ? new Date(req.query.dateTo as string) : undefined,
+      page: req.query.page ? parseInt(req.query.page as string) : 1,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+    };
+
+    const result = await AuditService.getLogs(filters);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error fetching audit logs:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch audit logs",
+    });
+  }
+});
+
+/**
+ * GET /api/admin/audit-logs/actions
+ * Get list of unique actions for filtering
+ */
+router.get("/audit-logs/actions", async (req: Request, res: Response) => {
+  try {
+    const actions = await AuditService.getActions();
+    res.json({
+      success: true,
+      data: { actions },
+    });
+  } catch (error) {
+    console.error("Error fetching audit actions:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch audit actions",
+    });
+  }
+});
+
+/**
+ * GET /api/admin/audit-logs/admins
+ * Get list of admins who have performed actions
+ */
+router.get("/audit-logs/admins", async (req: Request, res: Response) => {
+  try {
+    const admins = await AuditService.getAdmins();
+    res.json({
+      success: true,
+      data: { admins },
+    });
+  } catch (error) {
+    console.error("Error fetching audit admins:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch audit admins",
     });
   }
 });
