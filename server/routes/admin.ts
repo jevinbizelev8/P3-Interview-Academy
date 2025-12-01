@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { db } from "../db";
 import {
   users,
@@ -16,8 +17,88 @@ import { AuditService } from "../services/audit-service";
 
 const router = Router();
 
+// Admin rate limiting (60 requests per minute per user/IP)
+const adminRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute
+  message: 'Too many admin requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use user ID as key (not just IP) to prevent distributed attacks
+  keyGenerator: (req) => req.user?.id || req.ip || 'unknown',
+});
+
+// Stricter rate limit for bulk operations (10 per minute)
+const bulkOperationLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // Only 10 bulk operations per minute
+  message: 'Bulk operations rate limit exceeded. Please wait before trying again.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || req.ip || 'unknown',
+});
+
 // All admin routes require admin authentication
 router.use(requireAdmin);
+
+// Apply global admin rate limiting to all routes
+router.use(adminRateLimit);
+
+// Apply CSRF protection via referrer validation
+router.use(validateReferrer);
+
+/**
+ * Sanitize search input to prevent SQL injection in LIKE queries
+ * Escapes special SQL LIKE characters: %, _, \
+ */
+function sanitizeSearchInput(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+
+  // Trim and limit length
+  let sanitized = input.trim().substring(0, 100);
+
+  // Escape special SQL LIKE characters
+  sanitized = sanitized.replace(/[%_\\]/g, '\\$&');
+
+  return sanitized;
+}
+
+/**
+ * Simple CSRF protection middleware using referrer validation
+ * Checks that state-changing requests come from our domain
+ * Note: This is a basic defense. Consider implementing full CSRF tokens in future.
+ */
+function validateReferrer(req: Request, res: Response, next: Function) {
+  // Only check POST, PUT, DELETE (state-changing) requests
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const referer = req.get('referer') || req.get('origin') || '';
+    const host = req.get('host') || '';
+
+    // Allow requests from same origin or known trusted origins
+    const trustedOrigins = [
+      host,
+      'localhost:5000',
+      'localhost:3000',
+      'p3app.bizelev8.ai',
+      'bizelev8.ai',
+      process.env.APP_URL_DEV,
+      process.env.APP_URL_PROD
+    ].filter(Boolean);
+
+    const isValidReferrer = trustedOrigins.some(origin =>
+      referer.includes(origin)
+    );
+
+    if (!isValidReferrer && process.env.NODE_ENV !== 'development') {
+      console.warn(`⚠️  CSRF Warning: Invalid referrer for ${req.method} ${req.path} from ${referer}`);
+      return res.status(403).json({
+        error: 'Invalid request origin. Please ensure you are accessing this from the official application.'
+      });
+    }
+  }
+
+  next();
+}
 
 /**
  * GET /api/admin/users
@@ -32,15 +113,24 @@ router.get("/users", async (req: Request, res: Response) => {
     const statusFilter = req.query.status as string || "";
     const offset = (page - 1) * limit;
 
+    // Validate search input length
+    if (search && search.length > 100) {
+      return res.status(400).json({
+        success: false,
+        error: "Search query too long (max 100 characters)"
+      });
+    }
+
     // Build filter conditions
     const conditions = [];
 
     if (search) {
+      const sanitizedSearch = sanitizeSearchInput(search);
       conditions.push(
         or(
-          like(users.email, `%${search}%`),
-          like(users.firstName, `%${search}%`),
-          like(users.lastName, `%${search}%`)
+          like(users.email, `%${sanitizedSearch}%`),
+          like(users.firstName, `%${sanitizedSearch}%`),
+          like(users.lastName, `%${sanitizedSearch}%`)
         )
       );
     }
@@ -836,7 +926,7 @@ router.get("/payments", async (req: Request, res: Response) => {
  * POST /api/admin/users/bulk/credits
  * Add credits to multiple users at once
  */
-router.post("/users/bulk/credits", auditLog("BULK_ADD_CREDITS", (req) => {
+router.post("/users/bulk/credits", bulkOperationLimit, auditLog("BULK_ADD_CREDITS", (req) => {
   // For bulk operations, include userIds in details instead of single target
   return undefined;
 }), async (req: Request, res: Response) => {
@@ -912,7 +1002,7 @@ router.post("/users/bulk/credits", auditLog("BULK_ADD_CREDITS", (req) => {
  * POST /api/admin/users/bulk/action
  * Perform bulk actions on users (suspend, activate, delete)
  */
-router.post("/users/bulk/action", auditLog("BULK_USER_ACTION", (req) => {
+router.post("/users/bulk/action", bulkOperationLimit, auditLog("BULK_USER_ACTION", (req) => {
   // For bulk operations, include userIds in details instead of single target
   return undefined;
 }), async (req: Request, res: Response) => {
