@@ -85,8 +85,8 @@ function validateReferrer(req: Request, res: Response, next: Function) {
       process.env.APP_URL_PROD
     ].filter(Boolean);
 
-    const isValidReferrer = trustedOrigins.some(origin =>
-      referer.includes(origin)
+    const isValidReferrer = trustedOrigins.some((origin): origin is string =>
+      typeof origin === 'string' && referer.includes(origin)
     );
 
     if (!isValidReferrer && process.env.NODE_ENV !== 'development') {

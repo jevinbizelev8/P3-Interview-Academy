@@ -53,7 +53,7 @@ apiClient.interceptors.request.use(
 // ============================================================================
 
 apiClient.interceptors.response.use(
-  (response) => {
+  (response: any) => {
     // Log responses in development
     if (IS_DEV) {
       console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
@@ -156,7 +156,7 @@ export function handleApiError(error: AxiosError<ApiErrorResponse>): never {
  * Check if error is an Axios error
  */
 export function isAxiosError(error: any): error is AxiosError {
-  return axios.isAxiosError(error);
+  return error && error.isAxiosError === true;
 }
 
 // ============================================================================

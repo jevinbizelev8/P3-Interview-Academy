@@ -241,7 +241,7 @@ export default function SelfIntroRecorder() {
               autoPlay={isRecording}
               muted={isRecording}
               playsInline
-              controls={recordedBlob && !isRecording}
+              controls={!!(recordedBlob && !isRecording)}
               className="w-full h-full object-cover"
             />
             {!isRecording && !recordedBlob && (
