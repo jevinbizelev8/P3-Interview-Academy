@@ -183,7 +183,7 @@ export class AuditService {
         .innerJoin(users, eq(adminAuditLogs.adminId, users.id))
         .orderBy(users.email);
 
-      return result;
+      return result as Array<{ id: string; email: string; name: string; }>;
     } catch (error) {
       console.error('[AUDIT] Error fetching admins:', error);
       return [];

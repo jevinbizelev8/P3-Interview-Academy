@@ -8,7 +8,8 @@
  * - Proper TypeScript types
  */
 
-import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios from 'axios';
+import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 
 // ============================================================================
 // Configuration

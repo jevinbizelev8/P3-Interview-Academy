@@ -181,25 +181,25 @@ export default function ReadinessScoreBadge({
                 <div>
                   <p className="text-gray-500">Learning</p>
                   <p className="font-semibold">
-                    {readinessData.breakdown.learning || 0}% (25% weight)
+                    {(readinessData.breakdown as any).learning || 0}% (25% weight)
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-500">Practice</p>
                   <p className="font-semibold">
-                    {readinessData.breakdown.practice || 0}% (40% weight)
+                    {(readinessData.breakdown as any).practice || 0}% (40% weight)
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-500">Profile</p>
                   <p className="font-semibold">
-                    {readinessData.breakdown.profile || 0}% (15% weight)
+                    {(readinessData.breakdown as any).profile || 0}% (15% weight)
                   </p>
                 </div>
                 <div>
                   <p className="text-gray-500">Consistency</p>
                   <p className="font-semibold">
-                    {readinessData.breakdown.consistency || 0}% (10% weight)
+                    {(readinessData.breakdown as any).consistency || 0}% (10% weight)
                   </p>
                 </div>
               </div>

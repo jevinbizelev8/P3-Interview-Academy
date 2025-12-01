@@ -94,11 +94,12 @@ export class CreditService {
           FOR UPDATE
         `);
 
-        if (!userRows || userRows.length === 0) {
+        const userRowsArray = Array.isArray(userRows) ? userRows : [];
+        if (!userRowsArray || userRowsArray.length === 0) {
           throw new Error('User not found');
         }
 
-        const user = userRows[0];
+        const user = userRowsArray[0];
         const monthlyAvailable = user.monthlyCreditAllocation || 0;
         const topUpAvailable = user.topUpCredits || 0;
         const currentBalance = monthlyAvailable + topUpAvailable;
