@@ -94,3 +94,18 @@ temp-deployment/
 # Claude Code markdown docs in .claude/ (keep in docs/ instead)
 .claude/*.md
 !.claude/README.md
+
+# Claude Code settings (personal dev workflow configuration)
+.claude/settings.json
+.claude/settings.json.backup
+
+# Replit configuration (environment-specific)
+.replit
+
+# Personal deployment automation scripts (dev workflow)
+deployment-scripts/deploy-with-approval.sh
+
+# Deployment documentation updates (personal workflow notes)
+# Note: Keep DEPLOYMENT.md changes that are project-specific, ignore personal workflow additions
+# For now, ignoring entire file to separate personal workflow docs
+DEPLOYMENT.md
