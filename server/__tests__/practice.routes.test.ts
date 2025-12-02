@@ -41,7 +41,7 @@ vi.mock("../services/credit-service", () => ({
   CreditService: creditServiceMock,
 }));
 
-describe.skip("practice routes", () => {
+describe("practice routes", () => {
   beforeEach(async () => {
     Object.values(storageMocks).forEach(mockFn => mockFn.mockReset?.());
     questionGeneratorMock.generateQuestion.mockReset();
@@ -135,8 +135,8 @@ describe.skip("practice routes", () => {
 
     expect(res.status).toBe(200);
     expect(questionGeneratorMock.generateQuestion).toHaveBeenCalledWith(expect.objectContaining({
-      sessionId: "practice-session-2",
       questionNumber: 1,
+      preferredLanguage: "en",
     }));
     expect(storageMocks.addPracticeMessage).toHaveBeenCalledWith(expect.objectContaining({
       sessionId: "practice-session-2",

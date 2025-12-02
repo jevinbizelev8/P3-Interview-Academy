@@ -23,7 +23,7 @@ function createTestApp(): Express {
 
   // Mock authentication middleware
   app.use((req, _res, next) => {
-    req.user = { id: "test-user-123" };
+    req.user = { id: "11111111-1111-4111-8111-111111111111" };
     next();
   });
 
@@ -31,7 +31,7 @@ function createTestApp(): Express {
   return app;
 }
 
-describe.skip("Referrals Module Routes", () => {
+describe("Referrals Module Routes", () => {
   let app: Express;
 
   beforeEach(() => {
@@ -55,7 +55,7 @@ describe.skip("Referrals Module Routes", () => {
       expect(response.body.data.code).toBe(mockCode);
       expect(response.body.data.referralUrl).toContain(mockCode);
       expect(referralServiceMocks.generateReferralCode).toHaveBeenCalledWith(
-        "test-user-123"
+        "11111111-1111-4111-8111-111111111111"
       );
     });
 
@@ -91,7 +91,7 @@ describe.skip("Referrals Module Routes", () => {
       expect(response.body.success).toBe(true);
       expect(response.body.data).toEqual(mockData);
       expect(referralServiceMocks.getUserReferralCode).toHaveBeenCalledWith(
-        "test-user-123"
+        "11111111-1111-4111-8111-111111111111"
       );
     });
 
@@ -133,7 +133,7 @@ describe.skip("Referrals Module Routes", () => {
         referrerId: "referrer-user-id",
         referralCode: "VALID123",
         referredEmail: "newuser@example.com",
-        referredUserId: "new-user-id",
+        referredUserId: "11111111-1111-4111-8111-333333333333",
         status: "completed",
         rewardValue: 10,
         rewardGiven: false,
@@ -146,7 +146,7 @@ describe.skip("Referrals Module Routes", () => {
         .send({
           referralCode: "VALID123",
           referredEmail: "newuser@example.com",
-          referredUserId: "new-user-id",
+          referredUserId: "11111111-1111-4111-8111-333333333333",
         });
 
       expect(response.status).toBe(201);
@@ -197,28 +197,26 @@ describe.skip("Referrals Module Routes", () => {
     });
 
     it("should return 400 for self-referral attempt", async () => {
-      referralServiceMocks.applyReferralCode.mockRejectedValue(
-        new Error("Cannot use your own referral code")
-      );
-
+      // This test checks that the route validates self-referral before calling the service
+      // The route checks if req.user.id === referredUserId
       const response = await request(app)
         .post("/api/referrals/apply")
         .send({
           referralCode: "MYCODE",
           referredEmail: "me@example.com",
-          referredUserId: "test-user-123",
+          referredUserId: "11111111-1111-4111-8111-111111111111", // Same as the authenticated user ID
         });
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);
-      expect(response.body.error).toBe("Self-referral not allowed");
+      expect(response.body.error).toBe("Cannot use your own referral code");
     });
 
     it("should prevent using own code in request validation", async () => {
       const selfReferralApp = express();
       selfReferralApp.use(express.json());
       selfReferralApp.use((req, _res, next) => {
-        req.user = { id: "same-user-id" };
+        req.user = { id: "22222222-2222-4222-8222-222222222222" };
         next();
       });
       selfReferralApp.use("/api/referrals", referralsRouter);
@@ -228,7 +226,7 @@ describe.skip("Referrals Module Routes", () => {
         .send({
           referralCode: "MYCODE",
           referredEmail: "me@example.com",
-          referredUserId: "same-user-id",
+          referredUserId: "22222222-2222-4222-8222-222222222222",
         });
 
       expect(response.status).toBe(400);
@@ -368,7 +366,7 @@ describe.skip("Referrals Module Routes", () => {
       expect(response.status).toBe(200);
       expect(response.body.data.limit).toBe(10);
       expect(referralServiceMocks.getUserReferrals).toHaveBeenCalledWith(
-        "test-user-123",
+        "11111111-1111-4111-8111-111111111111",
         10
       );
     });
@@ -383,7 +381,7 @@ describe.skip("Referrals Module Routes", () => {
       expect(response.status).toBe(200);
       expect(response.body.data.limit).toBe(100);
       expect(referralServiceMocks.getUserReferrals).toHaveBeenCalledWith(
-        "test-user-123",
+        "11111111-1111-4111-8111-111111111111",
         100
       );
     });
