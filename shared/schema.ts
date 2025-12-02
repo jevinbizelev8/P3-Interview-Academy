@@ -148,6 +148,9 @@ export const creditTransactions = pgTable("credit_transactions", {
   featureUsed: varchar("feature_used", { length: 100 }), // e.g., "practice-session", "prepare-session"
   relatedSessionId: uuid("related_session_id"), // Link to practice/prepare session
 
+  // Idempotency: Track external transaction IDs (e.g., Stripe session ID)
+  externalTransactionId: varchar("external_transaction_id", { length: 255 }).unique(), // For idempotency (Stripe session ID, etc.)
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 

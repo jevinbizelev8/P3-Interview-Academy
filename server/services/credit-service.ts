@@ -181,7 +181,8 @@ export class CreditService {
     amount: number,
     type: 'allocation' | 'top-up' | 'admin-adjustment',
     reason: string,
-    adminUserId?: string
+    adminUserId?: string,
+    externalTransactionId?: string
   ): Promise<{
     success: boolean;
     balanceAfter: number;
@@ -244,6 +245,7 @@ export class CreditService {
             : reason,
           featureUsed: null,
           relatedSessionId: null,
+          externalTransactionId: externalTransactionId || null,
         })
         .returning();
 
