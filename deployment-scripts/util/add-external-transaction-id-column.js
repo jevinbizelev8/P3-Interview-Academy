@@ -10,9 +10,11 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
-// Database connection URLs
-const stagingDbUrl = 'postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging';
-const productionDbUrl = 'postgresql://app_user_prod:REPLACE_WITH_PROD_PASSWORD@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres';
+// Database connection URLs - retrieve from environment variables
+// Set these before running: DATABASE_URL_STAGING, DATABASE_URL_PRODUCTION
+// Example: export DATABASE_URL_STAGING='postgresql://app_user:<PASSWORD>@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging'
+const stagingDbUrl = process.env.DATABASE_URL_STAGING || process.env.DATABASE_URL;
+const productionDbUrl = process.env.DATABASE_URL_PRODUCTION;
 
 async function addExternalTransactionIdColumn(dbUrl, envName) {
   const pool = new Pool({
@@ -87,13 +89,24 @@ async function main() {
   const environment = args[0] || 'staging';
 
   if (environment === 'staging') {
+    if (!stagingDbUrl) {
+      console.error('❌ DATABASE_URL_STAGING or DATABASE_URL environment variable not set');
+      console.error('Set it using: export DATABASE_URL_STAGING="postgresql://..."');
+      process.exit(1);
+    }
     await addExternalTransactionIdColumn(stagingDbUrl, 'STAGING');
   } else if (environment === 'production') {
+    if (!productionDbUrl) {
+      console.error('❌ DATABASE_URL_PRODUCTION environment variable not set');
+      console.error('Set it using: export DATABASE_URL_PRODUCTION="postgresql://..."');
+      process.exit(1);
+    }
+
     console.log('⚠️  WARNING: You are about to modify the PRODUCTION database!');
     console.log('Make sure you have:');
     console.log('1. Tested this migration on staging');
     console.log('2. Verified the application works with the new column');
-    console.log('3. Updated the production database password in this script');
+    console.log('3. Set the DATABASE_URL_PRODUCTION environment variable');
     console.log('\nPress Ctrl+C to cancel, or wait 5 seconds to continue...\n');
 
     await new Promise(resolve => setTimeout(resolve, 5000));

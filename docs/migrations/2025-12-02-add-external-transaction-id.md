@@ -1,7 +1,7 @@
 # Database Migration: Add external_transaction_id Column
 
 **Date**: 2025-12-02
-**Status**: ⚠️ REQUIRED BEFORE DEPLOYMENT
+**Status**: ✅ STAGING COMPLETE | ⏳ PRODUCTION PENDING
 **Priority**: CRITICAL (Security Fix)
 
 ---
@@ -42,7 +42,7 @@ ADD COLUMN IF NOT EXISTS external_transaction_id VARCHAR(255) UNIQUE;
 
 ```bash
 # Connect to staging database
-psql postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging
+psql postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging
 
 # Run migration
 ALTER TABLE credit_transactions
@@ -75,6 +75,34 @@ ADD COLUMN IF NOT EXISTS external_transaction_id VARCHAR(255) UNIQUE;
 SELECT COUNT(*) FROM credit_transactions WHERE external_transaction_id IS NOT NULL;
 -- Should return 0 for existing records
 ```
+
+---
+
+## Execution Record
+
+### Staging Environment (p3_staging)
+
+**Executed**: 2025-12-02 10:58 UTC
+**Method**: AWS Systems Manager (SSM) Send Command
+**Instance**: i-02c7ba81e20fd3677 (p3-interview-academy-staging)
+**Database**: `p3_staging` on RDS instance `p3interviewacademy`
+**Connection**: SSL required, user `app_user`
+
+**Steps Performed**:
+1. Retrieved staging EB instance ID via AWS CLI
+2. Verified SSM agent connectivity (PingStatus: Online)
+3. Confirmed PostgreSQL client installed (postgresql15)
+4. Executed migration SQL via SSM send-command
+5. Verified column properties and UNIQUE constraint
+6. Checked transaction counts (4 existing transactions, 0 with external_id)
+7. Verified application health (HTTP 200, database healthy)
+
+**Results**:
+- Column: `external_transaction_id VARCHAR(255) NULLABLE`
+- Constraint: `credit_transactions_external_transaction_id_key UNIQUE`
+- Existing transactions: 4 (all have NULL external_transaction_id)
+- Application status: Healthy (database response time 34ms)
+- No errors or downtime during migration
 
 ---
 
@@ -123,10 +151,10 @@ DROP COLUMN IF EXISTS external_transaction_id;
 
 After migration on staging:
 
-- [ ] Column added successfully
-- [ ] Unique constraint is active
-- [ ] Health endpoint returns 200
-- [ ] Database connectivity verified
+- [x] Column added successfully (2025-12-02 10:58 UTC)
+- [x] Unique constraint is active (`credit_transactions_external_transaction_id_key`)
+- [x] Health endpoint returns 200
+- [x] Database connectivity verified (34ms response time)
 - [ ] Test Stripe webhook (using Stripe CLI)
 - [ ] Verify idempotency (retry webhook, check no duplicate credit)
 - [ ] Check CloudWatch logs for errors

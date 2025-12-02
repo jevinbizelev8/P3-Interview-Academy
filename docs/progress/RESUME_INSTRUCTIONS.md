@@ -46,7 +46,7 @@ column aiPrepareSessions_questions.is_from_curated_bank does not exist
 **Option A: Using psql command line** (recommended)
 ```bash
 # Connect to staging database
-psql "postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
+psql "postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
 
 # Run migration file
 \i migration-add-csv-columns.sql
@@ -208,7 +208,7 @@ aws elasticbeanstalk update-environment \
 
 **Connection String**:
 ```
-postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres
+postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres
 ```
 
 **Individual Fields**:
@@ -216,7 +216,7 @@ postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.a
 - Port: `5432`
 - Database: `postgres`
 - Username: `app_user`
-- Password: `ZgVs0A8jEJurQezzkp37txtJ`
+- Password: `[REDACTED]`
 
 ---
 

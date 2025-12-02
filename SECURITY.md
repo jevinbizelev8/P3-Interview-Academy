@@ -2,7 +2,7 @@
 
 This document outlines security best practices, credential management, and incident response procedures for the P3 Interview Academy project.
 
-**Last Updated**: 2025-10-30
+**Last Updated**: 2025-12-02
 
 ---
 
@@ -58,6 +58,72 @@ export AWS_PROFILE=bizelev8
 ---
 
 ## 🚨 Security Incident History
+
+### Incident: Hardcoded Database Credentials (2025-12-02) ✅ RESOLVED
+
+**Detection**: Security scan during session review detected hardcoded database credentials in multiple files
+
+**Severity**: MEDIUM (Project not live, no actual compromise)
+
+**Affected Resources**:
+- **Password Exposed**: Database password for `app_user` and `app_user_staging` (staging environment)
+- **Database**: `p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com`
+- **Affected Files**: 19 files total
+  - Deployment scripts: 8 JavaScript files in `/deployment-scripts/util/`
+  - Documentation: 11 markdown files in `/docs/`
+  - Session reviews: 2 temporary review documents
+  - Claude settings: 1 configuration file
+
+**Response Timeline**:
+1. **Detection**: Automated security scan during session review (2025-12-02)
+2. **Assessment**: Confirmed project not live, no credential compromise occurred
+3. **Immediate Action**: All hardcoded credentials removed from codebase
+4. **Script Updates**: Deployment scripts updated to use environment variables
+5. **Documentation**: Credentials redacted, credential management guide created
+6. **Verification**: Full codebase scan confirmed no remaining exposed credentials
+
+**Actions Taken**:
+- ✅ Removed hardcoded credentials from 19 files (8 scripts, 11 docs)
+- ✅ Updated all deployment scripts to use environment variables
+- ✅ Redacted credentials in all documentation with `[REDACTED]` placeholder
+- ✅ Created comprehensive credential management guide (`/docs/guides/DATABASE_CREDENTIAL_MANAGEMENT.md`)
+- ✅ Added environment variable validation to all scripts
+- ✅ Updated SECURITY.md with incident record and best practices
+- ✅ Verified no other secrets exposed (AWS, Stripe, OpenAI keys checked)
+
+**Verification**:
+- Full codebase scan: No hardcoded database passwords found
+- Stripe test keys: Properly gitignored in `.config/` directory
+- AWS keys: Not exposed (historical references only in incident logs)
+- OpenAI keys: Not exposed (archived test files only)
+- All scripts: Now require environment variables before execution
+
+**Impact Assessment**:
+- **Risk**: LOW - Project not live, credentials not accessed by unauthorized parties
+- **Data Exposure**: NONE - No user data compromised
+- **Action Required**: NO - Password rotation not required (confirmed by user)
+- **Production Impact**: NONE - No production systems affected
+
+**Lessons Learned**:
+1. Never hardcode credentials, even in utility scripts or documentation
+2. Use environment variables for all database connections
+3. Redact credentials in documentation (use placeholders like `<PASSWORD>`)
+4. Add environment variable validation to scripts (fail early if not set)
+5. Create credential retrieval guides instead of embedding credentials
+6. Regular security scans catch issues before they reach production
+
+**Prevention Measures Implemented**:
+- Created `/docs/guides/DATABASE_CREDENTIAL_MANAGEMENT.md` with secure practices
+- Updated all deployment scripts with environment variable usage
+- Added clear error messages when environment variables are missing
+- Documented AWS EB configuration retrieval methods
+- Enhanced session review security scanning process
+
+**Related Documentation**:
+- [Database Credential Management Guide](docs/guides/DATABASE_CREDENTIAL_MANAGEMENT.md)
+- [Deployment Scripts](deployment-scripts/util/)
+
+---
 
 ### Incident: Exposed AWS Credentials (2025-09-30) ✅ RESOLVED
 

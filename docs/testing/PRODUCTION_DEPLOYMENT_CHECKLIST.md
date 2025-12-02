@@ -24,12 +24,12 @@
 ### Database Preparation
 - [ ] **1.1** Connect to production database
   ```bash
-  psql "postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
+  psql "postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
   ```
 
 - [ ] **1.2** Create database backup
   ```bash
-  pg_dump "postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres" > backup-before-9-criteria-$(date +%Y%m%d-%H%M).sql
+  pg_dump "postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres" > backup-before-9-criteria-$(date +%Y%m%d-%H%M).sql
   ```
   **Verify**: Backup file created and size > 0 bytes
 
@@ -98,7 +98,7 @@
 ### Migration Execution
 - [ ] **6.1** Run migration script
   ```bash
-  psql "postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres" < deployment-scripts/migrate-9-criteria-columns.sql
+  psql "postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres" < deployment-scripts/migrate-9-criteria-columns.sql
   ```
 
 - [ ] **6.2** Verify migration success

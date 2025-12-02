@@ -194,7 +194,7 @@ AND column_name IN ('csv_question_number', 'csv_question_stage', 'is_from_curate
 **Execution**:
 1. Connect to staging database:
    ```bash
-   psql postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres
+   psql postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres
    ```
 
 2. Run migration script above

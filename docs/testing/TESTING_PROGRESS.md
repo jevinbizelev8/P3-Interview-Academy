@@ -60,7 +60,7 @@ Indexes Created:
 
 ```bash
 # 1. Connect to staging database
-psql "postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
+psql "postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres"
 ```
 
 ```sql
