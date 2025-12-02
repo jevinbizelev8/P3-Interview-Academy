@@ -47,7 +47,9 @@ const dbMocks = vi.hoisted(() => ({
   select: vi.fn(),
   from: vi.fn(),
   where: vi.fn(),
+  values: vi.fn(),
   returning: vi.fn(),
+  delete: vi.fn(),
 }));
 
 vi.mock("../services/learning-module-service", () => ({
@@ -74,7 +76,7 @@ vi.mock("../db", () => ({
   db: dbMocks,
 }));
 
-describe.skip("Prepare API Routes", () => {
+describe("Prepare API Routes", () => {
   beforeEach(async () => {
     // Reset all mocks
     Object.values(learningModuleServiceMocks).forEach(mockFn => mockFn.mockReset?.());
@@ -615,6 +617,7 @@ describe.skip("Prepare API Routes", () => {
         };
 
         dbMocks.insert.mockReturnValue(dbMocks);
+        dbMocks.values.mockReturnValue(dbMocks);
         dbMocks.returning.mockResolvedValueOnce([mockStory]);
 
         const res = await request(app)

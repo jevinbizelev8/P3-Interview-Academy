@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '../../../utils/test-utils';
-import CreditCostBadge from '@/components/mvp/shared/CreditCostBadge';
+import CreditCostBadge from '@/components/shared/CreditCostBadge';
 
-describe.skip('CreditCostBadge', () => {
+describe('CreditCostBadge', () => {
   it('renders the credit cost badge', () => {
     render(<CreditCostBadge credits={10} />);
 
@@ -50,8 +50,10 @@ describe.skip('CreditCostBadge', () => {
   it('displays as a badge component', () => {
     const { container } = render(<CreditCostBadge credits={10} />);
 
-    // Should have badge-related classes
-    expect(container.firstChild?.firstChild).toHaveClass('inline-flex');
+    // Should render as a div with flex classes (Badge component)
+    const badge = container.querySelector('div');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('items-center');
   });
 
   it('uses gradient background colors', () => {

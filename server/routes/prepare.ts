@@ -97,36 +97,32 @@ router.get('/modules', async (req, res) => {
 });
 
 /**
- * GET /modules/:stage
- * Get modules filtered by stage (prepare, practice, perform)
+ * GET /modules/progress
+ * Get user's progress for all modules or specific module
+ * Query params: moduleId (optional)
  */
-const getModulesByStageSchema = z.object({
-  stage: z.enum(['prepare', 'practice', 'perform']),
-});
-
-router.get('/modules/:stage', async (req, res) => {
+router.get('/modules/progress', async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
-    const validatedParams = getModulesByStageSchema.parse(req.params);
+    const moduleId = req.query.moduleId as string | undefined;
 
-    const modules = await LearningModuleService.getModulesByStage(validatedParams.stage);
-    return res.json({ success: true, data: modules });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
+    if (moduleId && !z.string().uuid().safeParse(moduleId).success) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid stage parameter',
-        details: error.errors,
+        error: 'Invalid module ID format',
       });
     }
 
-    console.error('❌ Error getting modules by stage:', error);
+    const progress = await LearningModuleService.getUserProgress(req.user.id, moduleId);
+    return res.json({ success: true, data: progress });
+  } catch (error) {
+    console.error('❌ Error getting module progress:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to retrieve modules',
+      error: 'Failed to retrieve progress',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
@@ -183,32 +179,36 @@ router.post('/modules/progress', async (req, res) => {
 });
 
 /**
- * GET /modules/progress
- * Get user's progress for all modules or specific module
- * Query params: moduleId (optional)
+ * GET /modules/:stage
+ * Get modules filtered by stage (prepare, practice, perform)
  */
-router.get('/modules/progress', async (req, res) => {
+const getModulesByStageSchema = z.object({
+  stage: z.enum(['prepare', 'practice', 'perform']),
+});
+
+router.get('/modules/:stage', async (req, res) => {
   try {
     if (!req.user?.id) {
       return res.status(401).json({ success: false, error: 'User not authenticated' });
     }
 
-    const moduleId = req.query.moduleId as string | undefined;
+    const validatedParams = getModulesByStageSchema.parse(req.params);
 
-    if (moduleId && !z.string().uuid().safeParse(moduleId).success) {
+    const modules = await LearningModuleService.getModulesByStage(validatedParams.stage);
+    return res.json({ success: true, data: modules });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid module ID format',
+        error: 'Invalid stage parameter',
+        details: error.errors,
       });
     }
 
-    const progress = await LearningModuleService.getUserProgress(req.user.id, moduleId);
-    return res.json({ success: true, data: progress });
-  } catch (error) {
-    console.error('❌ Error getting module progress:', error);
+    console.error('❌ Error getting modules by stage:', error);
     return res.status(500).json({
       success: false,
-      error: 'Failed to retrieve progress',
+      error: 'Failed to retrieve modules',
       details: error instanceof Error ? error.message : 'Unknown error',
     });
   }
