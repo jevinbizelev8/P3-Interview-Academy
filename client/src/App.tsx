@@ -103,9 +103,11 @@ function Router() {
           </Layout>
         </ProtectedRoute>
       </Route>
-      {user?.role === 'admin' && (
-        <Route path="/admin/*" component={AdminDashboard} />
-      )}
+      <Route path="/admin/*">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
