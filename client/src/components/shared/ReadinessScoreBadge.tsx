@@ -78,8 +78,8 @@ export default function ReadinessScoreBadge({
   // Fetch readiness score from P3 API
   const { data: readinessData, isLoading } = useReadinessScore();
 
-  // Use API score or fallback to 0
-  const score = readinessData?.score ?? 0;
+  // Use API score (overallScore is the new field, score is legacy fallback)
+  const score = readinessData?.overallScore ?? readinessData?.score ?? 0;
   const colors = getScoreColor(score);
 
   // Calculate trend
