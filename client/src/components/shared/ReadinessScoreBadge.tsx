@@ -76,10 +76,12 @@ export default function ReadinessScoreBadge({
   className = '',
 }: ReadinessScoreBadgeProps) {
   // Fetch readiness score from P3 API
-  const { data: readinessData, isLoading } = useReadinessScore();
+  const { data: readinessData, isLoading, error } = useReadinessScore();
 
   // Use API score (overallScore is the new field, score is legacy fallback)
-  const score = readinessData?.overallScore ?? readinessData?.score ?? 0;
+  // Explicitly handle NaN by checking with Number.isFinite
+  const rawScore = readinessData?.overallScore ?? readinessData?.score ?? 0;
+  const score = Number.isFinite(rawScore) ? rawScore : 0;
   const colors = getScoreColor(score);
 
   // Calculate trend
@@ -115,6 +117,22 @@ export default function ReadinessScoreBadge({
             </CardContent>
           </Card>
         )}
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    console.error('Readiness score API error:', error);
+    return (
+      <div className={className}>
+        <Card className="border-2 border-red-200 bg-red-50">
+          <CardContent className="p-6">
+            <p className="text-sm text-red-600">
+              Unable to load readiness score. Please try refreshing the page.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
