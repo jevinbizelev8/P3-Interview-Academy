@@ -8,6 +8,19 @@ import { validateEmailConfig, verifyEmailTransport } from "./services/email-serv
 import { sendVerificationEmail } from "./services/email-service";
 import crypto from "crypto";
 
+// CRITICAL: Validate that BYPASS_AUTH is never enabled in production/staging
+if (process.env.NODE_ENV === 'production' && process.env.BYPASS_AUTH === 'true') {
+  const errorMsg = '🚨 FATAL SECURITY ERROR: BYPASS_AUTH must never be enabled in production!';
+  console.error(errorMsg);
+  throw new Error(errorMsg);
+}
+
+if (process.env.ENVIRONMENT === 'staging' && process.env.BYPASS_AUTH === 'true') {
+  const errorMsg = '🚨 FATAL SECURITY ERROR: BYPASS_AUTH must never be enabled in staging!';
+  console.error(errorMsg);
+  throw new Error(errorMsg);
+}
+
 // Validate email configuration at startup
 try {
   validateEmailConfig();
@@ -69,8 +82,20 @@ app.use((req, res, next) => {
   // Remove X-Frame-Options to allow iframe embedding from allowed domains
   res.removeHeader('X-Frame-Options');
 
-  // Set Content-Security-Policy to allow embedding from bizelev8.ai
-  res.setHeader('Content-Security-Policy', "frame-ancestors 'self' https://www.bizelev8.ai https://bizelev8.ai");
+  // Set comprehensive Content-Security-Policy headers
+  const csp = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://api.openai.com https://dashscope-intl.aliyuncs.com https://api.stripe.com",
+    "frame-ancestors 'self' https://www.bizelev8.ai https://bizelev8.ai",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; ');
+
+  res.setHeader('Content-Security-Policy', csp);
 
   // Standard CORS headers
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');

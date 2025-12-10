@@ -13,12 +13,20 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Allow only image files
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
+    // Check MIME type
+    if (!file.mimetype.startsWith('image/')) {
+      return cb(new Error('Only image files are allowed'));
     }
+
+    // Check file extension to prevent MIME type spoofing
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+
+    if (!allowedExtensions.includes(ext)) {
+      return cb(new Error('Invalid file extension. Allowed: jpg, jpeg, png, gif, webp'));
+    }
+
+    cb(null, true);
   }
 });
 

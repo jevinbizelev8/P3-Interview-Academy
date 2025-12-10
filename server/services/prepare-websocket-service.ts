@@ -48,17 +48,33 @@ export class PrepareWebSocketService {
     const allowedOriginsRaw = (process.env.WS_ALLOWED_ORIGINS || '').split(',')
       .map(o => o.trim())
       .filter(o => o.length > 0);
-    const allowAllOrigins = allowedOriginsRaw.includes('*');
+
+    // Production origins - actual deployment URLs
+    const productionOrigins = [
+      'https://p3-interview-academy-prod-v2.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com',
+      'https://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com',
+      'https://p3app.bizelev8.ai',
+      'https://www.bizelev8.ai',
+      'https://bizelev8.ai'
+    ];
+
+    // Development origins
+    const developmentOrigins = [
+      'http://localhost:5000',
+      'http://localhost:5173',
+      'http://localhost:3001',
+      'http://127.0.0.1:5000',
+      'http://127.0.0.1:5173'
+    ];
+
+    // Determine allowed origins based on environment
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? [...productionOrigins, ...allowedOriginsRaw]
+      : [...developmentOrigins, ...allowedOriginsRaw];
 
     this.io = new SocketIOServer(httpServer, {
       cors: {
-        origin: allowAllOrigins
-          ? true
-          : (allowedOriginsRaw.length > 0
-            ? allowedOriginsRaw
-            : (process.env.NODE_ENV === 'production'
-              ? ["https://yourdomain.com"]
-              : ["http://localhost:3001", "http://localhost:5173"])) ,
+        origin: allowedOrigins,
         methods: ["GET", "POST"],
         credentials: true
       },
