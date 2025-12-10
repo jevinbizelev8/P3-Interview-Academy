@@ -7,7 +7,15 @@ import crypto from 'crypto';
 
 const { Pool } = pg;
 
-const prodDbUrl = 'postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres';
+// Get database URL from environment variable
+// Example: export DATABASE_URL_PRODUCTION='postgresql://app_user:<PASSWORD>@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres'
+const prodDbUrl = process.env.DATABASE_URL_PRODUCTION || process.env.DATABASE_URL;
+
+if (!prodDbUrl) {
+  console.error('❌ DATABASE_URL_PRODUCTION or DATABASE_URL environment variable not set');
+  console.error('Set it using: export DATABASE_URL_PRODUCTION="postgresql://..."');
+  process.exit(1);
+}
 
 const pool = new Pool({
   connectionString: prodDbUrl,

@@ -27,6 +27,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/landing" component={Landing} />
       <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/reset-password" component={ResetPassword} />
       <Route path="/dashboard">
@@ -103,9 +104,11 @@ function Router() {
           </Layout>
         </ProtectedRoute>
       </Route>
-      {user?.role === 'admin' && (
-        <Route path="/admin/*" component={AdminDashboard} />
-      )}
+      <Route path="/admin/*">
+        <ProtectedRoute>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );

@@ -95,7 +95,17 @@ export default function LoginForm({ onSuccess, onSwitchToSignup, onSwitchToReset
 
       if (data.success) {
         onSuccess();
-        window.location.href = '/dashboard';
+
+        // Fetch user data to check role for admin redirect
+        const userResponse = await fetch('/api/auth/user', { credentials: 'include' });
+        const userData = await userResponse.json();
+
+        // Redirect based on role: admins to /admin, regular users to /dashboard
+        if (userData.role === 'admin') {
+          window.location.href = '/admin';
+        } else {
+          window.location.href = '/dashboard';
+        }
       } else if (data.requiresVerification) {
         setError("Please verify your email before logging in. Check your inbox for the verification link.");
       } else {

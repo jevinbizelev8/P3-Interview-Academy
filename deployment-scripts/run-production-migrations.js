@@ -13,7 +13,7 @@ import path from 'path';
 
 const { Pool } = pg;
 
-const prodDbUrl = 'postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres';
+const prodDbUrl = 'postgresql://app_user:<PASSWORD>@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres';
 
 const pool = new Pool({
   connectionString: prodDbUrl,

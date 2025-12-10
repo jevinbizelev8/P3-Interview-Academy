@@ -3,7 +3,7 @@ import pg from 'pg';
 const client = new pg.Client({
   host: 'p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com',
   user: 'app_user',
-  password: 'ZgVs0A8jEJurQezzkp37txtJ',
+  password: process.env.DB_PASSWORD || (() => { throw new Error('DB_PASSWORD not set'); })(),
   database: 'postgres',
   port: 5432,
   ssl: { rejectUnauthorized: false }

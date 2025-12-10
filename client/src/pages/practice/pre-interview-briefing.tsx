@@ -556,13 +556,15 @@ export default function PreInterviewBriefing() {
                 <p>{scenario.candidateBackground}</p>
                 
                 <h4 className="text-lg font-medium text-gray-900 mt-4 mb-2">{t.keyObjectives}</h4>
-                <div dangerouslySetInnerHTML={{
-                  __html: scenario.keyObjectives
+                <div>
+                  {scenario.keyObjectives
                     .split('\n')
                     .filter((line: string) => line.trim())
-                    .map((line: string) => `<p>• ${line.replace(/^[•-]\s*/, '')}</p>`)
-                    .join('')
-                }} />
+                    .map((line: string, idx: number) => (
+                      <p key={idx}>• {line.replace(/^[•-]\s*/, '')}</p>
+                    ))
+                  }
+                </div>
               </div>
             </CardContent>
           </Card>

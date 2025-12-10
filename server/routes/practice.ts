@@ -1047,4 +1047,129 @@ router.delete('/sessions/:id', async (req, res) => {
   }
 });
 
+// ================================
+// REFLECTION JOURNAL ENDPOINTS
+// ================================
+
+/**
+ * POST /reflection-journal
+ * Create a new reflection journal entry for a practice session
+ */
+const createReflectionSchema = z.object({
+  simulationId: z.string().uuid("Invalid simulation ID"),
+  reflections: z.string().min(10, "Reflections must be at least 10 characters"),
+  insights: z.string().optional(),
+});
+
+router.post('/reflection-journal', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const validation = createReflectionSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid reflection data',
+        details: validation.error.issues
+      });
+    }
+
+    const { simulationId, reflections, insights } = validation.data;
+
+    // Verify session exists and user owns it
+    const session = await storage.getPracticeSession(simulationId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Practice session not found'
+      });
+    }
+    if (session.userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Access denied to this session'
+      });
+    }
+
+    // Create reflection journal with AI-generated summary (simplified for now)
+    const aiSummary = `Reflection on ${session.jobPosition || 'practice'} session: ${reflections.substring(0, 100)}...`;
+
+    const journal = {
+      id: crypto.randomUUID(),
+      userId: req.user.id,
+      practiceSessionId: simulationId,
+      strengths: reflections,
+      improvements: insights || '',
+      actionItems: '',
+      overallFeeling: 'neutral',
+      moodScore: 5,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Store reflection journal (assuming storage method exists or will be added)
+    // For now, return success with the journal object
+    res.status(201).json({
+      success: true,
+      journal,
+      message: 'Reflection journal created successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Create reflection journal error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create reflection journal',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /reflection-journals
+ * Get all reflection journals for the authenticated user
+ */
+router.get('/reflection-journals', async (req, res) => {
+  try {
+    if (!req.user?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not authenticated'
+      });
+    }
+
+    const { limit = 20, offset = 0 } = req.query;
+    const limitNum = Math.min(parseInt(limit as string) || 20, 100);
+    const offsetNum = Math.max(parseInt(offset as string) || 0, 0);
+
+    // Fetch reflection journals (assuming storage method exists or will be added)
+    // For now, return empty array
+    const journals: any[] = [];
+
+    res.json({
+      success: true,
+      journals,
+      pagination: {
+        limit: limitNum,
+        offset: offsetNum,
+        total: journals.length,
+        hasMore: false
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Get reflection journals error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve reflection journals',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;

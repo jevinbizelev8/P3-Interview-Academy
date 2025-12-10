@@ -57,7 +57,7 @@ function createTestApp(): Express {
   return app;
 }
 
-describe.skip("Perform Module Routes", () => {
+describe("Perform Module Routes", () => {
   let app: Express;
 
   beforeEach(() => {
@@ -317,7 +317,7 @@ describe.skip("Perform Module Routes", () => {
       const response = await request(app)
         .post("/api/perform/reflections")
         .send({
-          practiceSessionId: "session-1",
+          practiceSessionId: "11111111-1111-4111-8111-111111111111",
           strengths: "Good communication",
           improvements: "More examples",
           actionItems: "Practice STAR method",

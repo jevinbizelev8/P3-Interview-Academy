@@ -47,7 +47,7 @@ aws elasticbeanstalk update-environment \
 **Problem 1**: Wrong password causing authentication failures
 ```
 OLD: postgresql://app_user:IaGHos5yxLKqVfAOi2p8WNPe@...  ❌ WRONG
-NEW: postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@...  ✅ CORRECT
+NEW: postgresql://app_user:[REDACTED]@...  ✅ CORRECT
 ```
 
 **Problem 2**: SSL certificate chain validation errors with `sslmode=require`
@@ -55,7 +55,7 @@ NEW: postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@...  ✅ CORRECT
 **Solution**:
 ```bash
 # Removed SSL mode requirement for staging environment
-DATABASE_URL=postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres
+DATABASE_URL=postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres
 ```
 
 **Result**: ✅ Database connection healthy (30-34ms response time)
@@ -333,7 +333,7 @@ Automated test script (requires auth bypass) for:
 
 ```bash
 # Staging Environment Variables (Confirmed Working)
-DATABASE_URL=postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres
+DATABASE_URL=postgresql://app_user:[REDACTED]@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres
 SESSION_SECRET=7fd1e1e6fda7c9f9fa65135f2fabcfcd605499d034f0f23794bec1cadb744e6a
 WS_ALLOWED_ORIGINS=https://www.bizelev8.ai,https://bizelev8.ai,https://p3app.bizelev8.ai
 # OPENAI_API_KEY=<not set in staging> - will use fallback to SeaLion

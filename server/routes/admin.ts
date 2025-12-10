@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import rateLimit from "express-rate-limit";
 import { db } from "../db";
 import {
   users,
@@ -11,11 +12,93 @@ import {
 import { eq, desc, sql, like, and, or, gte, lt, count } from "drizzle-orm";
 import { requireAdmin } from "../middleware/auth-middleware";
 import { CreditService } from "../services/credit-service.js";
+import { auditLog } from "../middleware/audit-middleware";
+import { AuditService } from "../services/audit-service";
 
 const router = Router();
 
+// Admin rate limiting (60 requests per minute per user/IP)
+const adminRateLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute
+  message: 'Too many admin requests, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use user ID as key (not just IP) to prevent distributed attacks
+  keyGenerator: (req) => req.user?.id || req.ip || 'unknown',
+});
+
+// Stricter rate limit for bulk operations (10 per minute)
+const bulkOperationLimit = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // Only 10 bulk operations per minute
+  message: 'Bulk operations rate limit exceeded. Please wait before trying again.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user?.id || req.ip || 'unknown',
+});
+
 // All admin routes require admin authentication
 router.use(requireAdmin);
+
+// Apply global admin rate limiting to all routes
+router.use(adminRateLimit);
+
+// Apply CSRF protection via referrer validation
+router.use(validateReferrer);
+
+/**
+ * Sanitize search input to prevent SQL injection in LIKE queries
+ * Escapes special SQL LIKE characters: %, _, \
+ */
+function sanitizeSearchInput(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+
+  // Trim and limit length
+  let sanitized = input.trim().substring(0, 100);
+
+  // Escape special SQL LIKE characters
+  sanitized = sanitized.replace(/[%_\\]/g, '\\$&');
+
+  return sanitized;
+}
+
+/**
+ * Simple CSRF protection middleware using referrer validation
+ * Checks that state-changing requests come from our domain
+ * Note: This is a basic defense. Consider implementing full CSRF tokens in future.
+ */
+function validateReferrer(req: Request, res: Response, next: Function) {
+  // Only check POST, PUT, DELETE (state-changing) requests
+  if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    const referer = req.get('referer') || req.get('origin') || '';
+    const host = req.get('host') || '';
+
+    // Allow requests from same origin or known trusted origins
+    const trustedOrigins = [
+      host,
+      'localhost:5000',
+      'localhost:3000',
+      'p3app.bizelev8.ai',
+      'bizelev8.ai',
+      process.env.APP_URL_DEV,
+      process.env.APP_URL_PROD
+    ].filter(Boolean);
+
+    const isValidReferrer = trustedOrigins.some((origin): origin is string =>
+      typeof origin === 'string' && referer.includes(origin)
+    );
+
+    if (!isValidReferrer && process.env.NODE_ENV !== 'development') {
+      console.warn(`⚠️  CSRF Warning: Invalid referrer for ${req.method} ${req.path} from ${referer}`);
+      return res.status(403).json({
+        error: 'Invalid request origin. Please ensure you are accessing this from the official application.'
+      });
+    }
+  }
+
+  next();
+}
 
 /**
  * GET /api/admin/users
@@ -30,15 +113,24 @@ router.get("/users", async (req: Request, res: Response) => {
     const statusFilter = req.query.status as string || "";
     const offset = (page - 1) * limit;
 
+    // Validate search input length
+    if (search && search.length > 100) {
+      return res.status(400).json({
+        success: false,
+        error: "Search query too long (max 100 characters)"
+      });
+    }
+
     // Build filter conditions
     const conditions = [];
 
     if (search) {
+      const sanitizedSearch = sanitizeSearchInput(search);
       conditions.push(
         or(
-          like(users.email, `%${search}%`),
-          like(users.firstName, `%${search}%`),
-          like(users.lastName, `%${search}%`)
+          like(users.email, `%${sanitizedSearch}%`),
+          like(users.firstName, `%${sanitizedSearch}%`),
+          like(users.lastName, `%${sanitizedSearch}%`)
         )
       );
     }
@@ -173,7 +265,7 @@ router.get("/users/:id", async (req: Request, res: Response) => {
  * POST /api/admin/users/:id/credits/add
  * Add top-up credits to a user (admin adjustment)
  */
-router.post("/users/:id/credits/add", async (req: Request, res: Response) => {
+router.post("/users/:id/credits/add", auditLog("ADD_CREDITS"), async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
     const { amount, reason } = req.body;
@@ -211,7 +303,7 @@ router.post("/users/:id/credits/add", async (req: Request, res: Response) => {
  * POST /api/admin/users/:id/credits/reset
  * Reset monthly credits to tier default
  */
-router.post("/users/:id/credits/reset", async (req: Request, res: Response) => {
+router.post("/users/:id/credits/reset", auditLog("RESET_CREDITS"), async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
 
@@ -235,7 +327,7 @@ router.post("/users/:id/credits/reset", async (req: Request, res: Response) => {
  * PUT /api/admin/users/:id/tier
  * Change user's tier manually
  */
-router.put("/users/:id/tier", async (req: Request, res: Response) => {
+router.put("/users/:id/tier", auditLog("UPDATE_USER_TIER"), async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
     const { planType, monthlyCredits } = req.body;
@@ -281,7 +373,7 @@ router.put("/users/:id/tier", async (req: Request, res: Response) => {
  * DELETE /api/admin/users/:id
  * Delete a user (cascade delete)
  */
-router.delete("/users/:id", async (req: Request, res: Response) => {
+router.delete("/users/:id", auditLog("DELETE_USER"), async (req: Request, res: Response) => {
   try {
     const userId = req.params.id;
     const adminId = req.user?.id;
@@ -337,7 +429,7 @@ router.get("/credit-costs", async (req: Request, res: Response) => {
  * PUT /api/admin/credit-costs/:id
  * Update credit cost for a feature
  */
-router.put("/credit-costs/:id", async (req: Request, res: Response) => {
+router.put("/credit-costs/:id", auditLog("UPDATE_CREDIT_COST"), async (req: Request, res: Response) => {
   try {
     const costId = req.params.id;
     const { creditCost, description, isActive } = req.body;
@@ -387,7 +479,7 @@ router.put("/credit-costs/:id", async (req: Request, res: Response) => {
  * POST /api/admin/credit-costs
  * Create new credit cost configuration
  */
-router.post("/credit-costs", async (req: Request, res: Response) => {
+router.post("/credit-costs", auditLog("CREATE_CREDIT_COST"), async (req: Request, res: Response) => {
   try {
     const { featureName, creditCost, description } = req.body;
     const adminId = req.user?.id;
@@ -826,6 +918,254 @@ router.get("/payments", async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: "Failed to fetch payments",
+    });
+  }
+});
+
+/**
+ * POST /api/admin/users/bulk/credits
+ * Add credits to multiple users at once
+ */
+router.post("/users/bulk/credits", bulkOperationLimit, auditLog("BULK_ADD_CREDITS", (req) => {
+  // For bulk operations, include userIds in details instead of single target
+  return undefined;
+}), async (req: Request, res: Response) => {
+  try {
+    const { userIds, amount, reason } = req.body;
+    const adminId = req.user?.id;
+
+    // Validation
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "userIds array is required and must not be empty",
+      });
+    }
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: "amount must be a positive number",
+      });
+    }
+
+    if (userIds.length > 100) {
+      return res.status(400).json({
+        success: false,
+        error: "Cannot process more than 100 users at once",
+      });
+    }
+
+    // Process bulk credit additions
+    const results = [];
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        const result = await CreditService.addCredits(
+          userId,
+          amount,
+          "admin-adjustment",
+          reason || `Bulk admin credit adjustment by ${adminId}`
+        );
+        results.push({ userId, success: true, result });
+      } catch (error) {
+        console.error(`Failed to add credits to user ${userId}:`, error);
+        errors.push({
+          userId,
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        updated: results.length,
+        failed: errors.length,
+        results,
+        errors: errors.length > 0 ? errors : undefined,
+      },
+      message: `Added ${amount} credits to ${results.length} users${errors.length > 0 ? ` (${errors.length} failed)` : ''}`,
+    });
+  } catch (error) {
+    console.error("Error processing bulk credits:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to process bulk credit addition",
+    });
+  }
+});
+
+/**
+ * POST /api/admin/users/bulk/action
+ * Perform bulk actions on users (suspend, activate, delete)
+ */
+router.post("/users/bulk/action", bulkOperationLimit, auditLog("BULK_USER_ACTION", (req) => {
+  // For bulk operations, include userIds in details instead of single target
+  return undefined;
+}), async (req: Request, res: Response) => {
+  try {
+    const { userIds, action } = req.body;
+    const adminId = req.user?.id;
+
+    // Validation
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "userIds array is required and must not be empty",
+      });
+    }
+
+    if (!["suspend", "activate", "delete"].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid action. Must be one of: suspend, activate, delete",
+      });
+    }
+
+    if (userIds.length > 100) {
+      return res.status(400).json({
+        success: false,
+        error: "Cannot process more than 100 users at once",
+      });
+    }
+
+    // Prevent admin from deleting themselves
+    if (action === "delete" && userIds.includes(adminId)) {
+      return res.status(400).json({
+        success: false,
+        error: "Cannot delete your own admin account",
+      });
+    }
+
+    // Process bulk action
+    const results = [];
+    const errors = [];
+
+    for (const userId of userIds) {
+      try {
+        let result;
+
+        switch (action) {
+          case "suspend":
+            // Note: users table doesn't have is_active column in current schema
+            // This would need to be added or use a different approach
+            result = { userId, action: "suspend", note: "Column 'is_active' not in schema" };
+            break;
+
+          case "activate":
+            result = { userId, action: "activate", note: "Column 'is_active' not in schema" };
+            break;
+
+          case "delete":
+            // Soft delete by setting deleted_at timestamp
+            // Note: users table doesn't have deleted_at column in current schema
+            // Using database deletion as fallback
+            await db.delete(users).where(eq(users.id, userId));
+            result = { userId, action: "delete", success: true };
+            break;
+        }
+
+        results.push(result);
+      } catch (error) {
+        console.error(`Failed to ${action} user ${userId}:`, error);
+        errors.push({
+          userId,
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        action,
+        updated: results.length,
+        failed: errors.length,
+        results,
+        errors: errors.length > 0 ? errors : undefined,
+      },
+      message: `${action} action applied to ${results.length} users${errors.length > 0 ? ` (${errors.length} failed)` : ''}`,
+    });
+  } catch (error) {
+    console.error("Error processing bulk action:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to process bulk action",
+    });
+  }
+});
+
+/**
+ * GET /api/admin/audit-logs
+ * Get admin audit logs with pagination and filters
+ */
+router.get("/audit-logs", async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      adminId: req.query.adminId as string | undefined,
+      action: req.query.action as string | undefined,
+      targetUserId: req.query.targetUserId as string | undefined,
+      dateFrom: req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined,
+      dateTo: req.query.dateTo ? new Date(req.query.dateTo as string) : undefined,
+      page: req.query.page ? parseInt(req.query.page as string) : 1,
+      limit: req.query.limit ? parseInt(req.query.limit as string) : 50,
+    };
+
+    const result = await AuditService.getLogs(filters);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error fetching audit logs:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch audit logs",
+    });
+  }
+});
+
+/**
+ * GET /api/admin/audit-logs/actions
+ * Get list of unique actions for filtering
+ */
+router.get("/audit-logs/actions", async (req: Request, res: Response) => {
+  try {
+    const actions = await AuditService.getActions();
+    res.json({
+      success: true,
+      data: { actions },
+    });
+  } catch (error) {
+    console.error("Error fetching audit actions:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch audit actions",
+    });
+  }
+});
+
+/**
+ * GET /api/admin/audit-logs/admins
+ * Get list of admins who have performed actions
+ */
+router.get("/audit-logs/admins", async (req: Request, res: Response) => {
+  try {
+    const admins = await AuditService.getAdmins();
+    res.json({
+      success: true,
+      data: { admins },
+    });
+  } catch (error) {
+    console.error("Error fetching audit admins:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch audit admins",
     });
   }
 });

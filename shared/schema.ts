@@ -11,6 +11,7 @@ import {
   uuid,
   numeric,
   uniqueIndex,
+  inet,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -94,7 +95,7 @@ export const users = pgTable("users", {
   linkedinUrl: varchar("linkedin_url"),
   timezone: varchar("timezone").default(sql`'(UTC+08:00) Singapore, Kuala Lumpur, Hong Kong, Beijing, Perth'::varchar`),
   country: varchar("country"),
-  currentRole: varchar("user_current_role"), // Renamed from 'current_role' to avoid SQL reserved keyword
+  currentRole: varchar("current_role"), // User's current job role
   targetRole: varchar("target_role"),
   targetIndustry: varchar("target_industry"),
   yearsExperience: varchar("years_experience"),
@@ -147,6 +148,9 @@ export const creditTransactions = pgTable("credit_transactions", {
   featureUsed: varchar("feature_used", { length: 100 }), // e.g., "practice-session", "prepare-session"
   relatedSessionId: uuid("related_session_id"), // Link to practice/prepare session
 
+  // Idempotency: Track external transaction IDs (e.g., Stripe session ID)
+  externalTransactionId: varchar("external_transaction_id", { length: 255 }).unique(), // For idempotency (Stripe session ID, etc.)
+
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -187,6 +191,23 @@ export const creditCosts = pgTable("credit_costs", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+// Admin audit logs table - tracks all admin actions for security and compliance
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: uuid("admin_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  action: varchar("action", { length: 100 }).notNull(),
+  targetUserId: uuid("target_user_id").references(() => users.id, { onDelete: "set null" }),
+  details: jsonb("details"),
+  ipAddress: inet("ip_address"), // PostgreSQL INET type for IPv4/IPv6
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_audit_admin").on(table.adminId),
+  index("idx_audit_target").on(table.targetUserId),
+  index("idx_audit_created").on(table.createdAt),
+  index("idx_audit_action").on(table.action),
+]);
 
 // ===========================================
 // REDESIGN GAMIFICATION & LEARNING TABLES

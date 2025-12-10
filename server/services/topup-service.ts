@@ -98,6 +98,24 @@ export class TopUpService {
         return;
       }
 
+      // 🔒 SECURITY: Check payment status before granting credits
+      if (session.payment_status !== 'paid') {
+        console.error('❌ Payment not completed. Status:', session.payment_status, 'Session:', session.id);
+        return;
+      }
+
+      // 🔒 IDEMPOTENCY: Check if we've already processed this session
+      const existingTransaction = await db
+        .select()
+        .from(creditTransactions)
+        .where(eq(creditTransactions.externalTransactionId, session.id))
+        .limit(1);
+
+      if (existingTransaction.length > 0) {
+        console.log(`⚠️ Duplicate webhook - session ${session.id} already processed. Skipping.`);
+        return;
+      }
+
       // Get user
       const [user] = await db
         .select()
@@ -110,12 +128,14 @@ export class TopUpService {
         return;
       }
 
-      // Add credits using credit service
+      // Add credits using credit service with external transaction ID
       await CreditService.addCredits(
         userId,
         creditsToAdd,
         'top-up',
-        `Top-up purchase: ${creditsToAdd} credits ($${(session.amount_total ?? 0) / 100})`
+        `Top-up purchase: ${creditsToAdd} credits ($${(session.amount_total ?? 0) / 100})`,
+        undefined,
+        session.id // Pass Stripe session ID for idempotency
       );
 
       // Get updated user balance

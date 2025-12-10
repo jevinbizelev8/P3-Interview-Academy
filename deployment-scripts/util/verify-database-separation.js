@@ -4,23 +4,30 @@ async function verifyDatabaseSeparation() {
   console.log('🔍 Verifying Database Separation\n');
   console.log('='.repeat(60));
 
+  // Get database URLs from environment variables
+  // Example: export DATABASE_URL_PRODUCTION='postgresql://app_user:<PASSWORD>@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/postgres'
+  const prodUrl = process.env.DATABASE_URL_PRODUCTION;
+  const stagingUrl = process.env.DATABASE_URL_STAGING || process.env.DATABASE_URL;
+
+  if (!prodUrl || !stagingUrl) {
+    console.error('❌ Missing environment variables:');
+    if (!prodUrl) console.error('  - DATABASE_URL_PRODUCTION');
+    if (!stagingUrl) console.error('  - DATABASE_URL_STAGING or DATABASE_URL');
+    console.error('\nSet them using:');
+    console.error('  export DATABASE_URL_PRODUCTION="postgresql://..."');
+    console.error('  export DATABASE_URL_STAGING="postgresql://..."');
+    process.exit(1);
+  }
+
   // Check production database
   const prodClient = new pg.Client({
-    host: 'p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com',
-    user: 'app_user',
-    password: 'ZgVs0A8jEJurQezzkp37txtJ',
-    database: 'postgres',
-    port: 5432,
+    connectionString: prodUrl,
     ssl: { rejectUnauthorized: false }
   });
 
   // Check staging database
   const stagingClient = new pg.Client({
-    host: 'p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com',
-    user: 'app_user',
-    password: 'ZgVs0A8jEJurQezzkp37txtJ',
-    database: 'p3_staging',
-    port: 5432,
+    connectionString: stagingUrl,
     ssl: { rejectUnauthorized: false }
   });
 

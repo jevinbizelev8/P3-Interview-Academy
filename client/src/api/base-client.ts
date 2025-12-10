@@ -8,7 +8,7 @@
  * - Proper TypeScript types
  */
 
-import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios from 'axios';
 
 // ============================================================================
 // Configuration
@@ -21,7 +21,7 @@ const IS_DEV = import.meta.env.DEV;
 // Base Axios Instance
 // ============================================================================
 
-export const apiClient: AxiosInstance = axios.create({
+export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // Required for Passport.js session cookies
   headers: {
@@ -35,14 +35,14 @@ export const apiClient: AxiosInstance = axios.create({
 // ============================================================================
 
 apiClient.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
+  (config: any) => {
     // Log requests in development
     if (IS_DEV) {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, config.data);
     }
     return config;
   },
-  (error: AxiosError) => {
+  (error: any) => {
     console.error('[API Request Error]', error);
     return Promise.reject(error);
   }
@@ -53,14 +53,14 @@ apiClient.interceptors.request.use(
 // ============================================================================
 
 apiClient.interceptors.response.use(
-  (response) => {
+  (response: any) => {
     // Log responses in development
     if (IS_DEV) {
       console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, response.data);
     }
     return response;
   },
-  (error: AxiosError<ApiErrorResponse>) => {
+  (error: any) => {
     // Handle common error scenarios
     if (error.response) {
       const { status, data } = error.response;
@@ -142,7 +142,7 @@ export function unwrapResponse<T>(response: ApiResponse<T>): T {
 /**
  * Handle API errors consistently
  */
-export function handleApiError(error: AxiosError<ApiErrorResponse>): never {
+export function handleApiError(error: any): never {
   if (error.response?.data?.error) {
     throw new Error(error.response.data.error);
   }
@@ -155,8 +155,8 @@ export function handleApiError(error: AxiosError<ApiErrorResponse>): never {
 /**
  * Check if error is an Axios error
  */
-export function isAxiosError(error: any): error is AxiosError {
-  return axios.isAxiosError(error);
+export function isAxiosError(error: any): boolean {
+  return error && error.isAxiosError === true;
 }
 
 // ============================================================================

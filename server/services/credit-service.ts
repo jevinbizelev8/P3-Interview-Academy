@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { users, creditTransactions, creditCosts } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 /**
  * Credit Management Service
@@ -58,6 +58,9 @@ export class CreditService {
   /**
    * Deduct credits from user account with transaction logging
    * Priority: Monthly credits first, then top-up credits
+   *
+   * SECURITY FIX: Wrapped in database transaction with row-level locking
+   * to prevent race conditions (double-spending) during concurrent requests
    */
   static async deductCredits(
     userId: string,
@@ -72,85 +75,98 @@ export class CreditService {
     transactionId: string;
   }> {
     try {
-      // Check if user has enough credits
-      const creditCheck = await this.checkCredits(userId, featureName);
+      // Get credit cost first (outside transaction for performance)
+      const creditCost = await this.getCreditCost(featureName);
 
-      if (!creditCheck.hasEnoughCredits) {
-        throw new Error(
-          `Insufficient credits. Required: ${creditCheck.creditsNeeded}, Available: ${creditCheck.currentBalance}`
+      // Execute entire operation in a transaction with row-level locking
+      return await db.transaction(async (tx) => {
+        // Lock user row to prevent concurrent modifications (SELECT FOR UPDATE)
+        // This ensures no other transaction can modify this user until we commit
+        const userRows = await tx.execute<{
+          id: string;
+          monthlyCreditAllocation: number;
+          topUpCredits: number;
+          creditBalance: number;
+        }>(sql`
+          SELECT id, monthly_credit_allocation, top_up_credits, credit_balance
+          FROM users
+          WHERE id = ${userId}
+          FOR UPDATE
+        `);
+
+        const userRowsArray = Array.isArray(userRows) ? userRows : [];
+        if (!userRowsArray || userRowsArray.length === 0) {
+          throw new Error('User not found');
+        }
+
+        const user = userRowsArray[0];
+        const monthlyAvailable = user.monthlyCreditAllocation || 0;
+        const topUpAvailable = user.topUpCredits || 0;
+        const currentBalance = monthlyAvailable + topUpAvailable;
+
+        // Check if user has enough credits
+        if (currentBalance < creditCost) {
+          throw new Error(
+            `Insufficient credits. Required: ${creditCost}, Available: ${currentBalance}`
+          );
+        }
+
+        // Calculate deduction priority: monthly credits first, then top-ups
+        let monthlyCreditsUsed = 0;
+        let topUpCreditsUsed = 0;
+
+        if (monthlyAvailable >= creditCost) {
+          // Use only monthly credits
+          monthlyCreditsUsed = creditCost;
+        } else {
+          // Use all monthly credits + some top-up credits
+          monthlyCreditsUsed = monthlyAvailable;
+          topUpCreditsUsed = creditCost - monthlyAvailable;
+        }
+
+        const newMonthlyCredits = monthlyAvailable - monthlyCreditsUsed;
+        const newTopUpCredits = topUpAvailable - topUpCreditsUsed;
+        const balanceAfter = newMonthlyCredits + newTopUpCredits;
+
+        // Update user credits within transaction
+        await tx
+          .update(users)
+          .set({
+            monthlyCreditAllocation: newMonthlyCredits,
+            topUpCredits: newTopUpCredits,
+            creditBalance: balanceAfter, // Keep legacy field in sync
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, userId));
+
+        // Log the transaction within the same transaction
+        const [transaction] = await tx
+          .insert(creditTransactions)
+          .values({
+            userId,
+            transactionType: 'consumption',
+            creditsAmount: -creditCost,
+            balanceAfter,
+            description: description || `Credit deducted for ${featureName}`,
+            featureUsed: featureName,
+            relatedSessionId: sessionId,
+          })
+          .returning();
+
+        console.log(
+          `✅ Deducted ${creditCost} credits from user ${userId} ` +
+          `(${monthlyCreditsUsed} monthly + ${topUpCreditsUsed} top-up). ` +
+          `Balance: ${balanceAfter}`
         );
-      }
 
-      // Get user for current balances
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1);
-
-      if (!user) {
-        throw new Error('User not found');
-      }
-
-      const creditsToDeduct = creditCheck.creditsNeeded;
-      let monthlyCreditsUsed = 0;
-      let topUpCreditsUsed = 0;
-
-      // Calculate deduction priority: monthly credits first, then top-ups
-      const monthlyAvailable = user.monthlyCreditAllocation || 0;
-      const topUpAvailable = user.topUpCredits || 0;
-
-      if (monthlyAvailable >= creditsToDeduct) {
-        // Use only monthly credits
-        monthlyCreditsUsed = creditsToDeduct;
-      } else {
-        // Use all monthly credits + some top-up credits
-        monthlyCreditsUsed = monthlyAvailable;
-        topUpCreditsUsed = creditsToDeduct - monthlyAvailable;
-      }
-
-      const newMonthlyCredits = monthlyAvailable - monthlyCreditsUsed;
-      const newTopUpCredits = topUpAvailable - topUpCreditsUsed;
-      const balanceAfter = newMonthlyCredits + newTopUpCredits;
-
-      // Update user credits
-      await db
-        .update(users)
-        .set({
-          monthlyCreditAllocation: newMonthlyCredits,
-          topUpCredits: newTopUpCredits,
-          creditBalance: balanceAfter, // Keep legacy field in sync
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, userId));
-
-      // Log the transaction
-      const [transaction] = await db
-        .insert(creditTransactions)
-        .values({
-          userId,
-          transactionType: 'consumption',
-          creditsAmount: -creditsToDeduct,
+        return {
+          success: true,
           balanceAfter,
-          description: description || `Credit deducted for ${featureName}`,
-          featureUsed: featureName,
-          relatedSessionId: sessionId,
-        })
-        .returning();
-
-      console.log(
-        `✅ Deducted ${creditsToDeduct} credits from user ${userId} ` +
-        `(${monthlyCreditsUsed} monthly + ${topUpCreditsUsed} top-up). ` +
-        `Balance: ${balanceAfter}`
-      );
-
-      return {
-        success: true,
-        balanceAfter,
-        monthlyCreditsUsed,
-        topUpCreditsUsed,
-        transactionId: transaction.id,
-      };
+          monthlyCreditsUsed,
+          topUpCreditsUsed,
+          transactionId: transaction.id,
+        };
+      });
     } catch (error) {
       console.error('Error deducting credits:', error);
       throw error;
@@ -165,7 +181,8 @@ export class CreditService {
     amount: number,
     type: 'allocation' | 'top-up' | 'admin-adjustment',
     reason: string,
-    adminUserId?: string
+    adminUserId?: string,
+    externalTransactionId?: string
   ): Promise<{
     success: boolean;
     balanceAfter: number;
@@ -228,6 +245,7 @@ export class CreditService {
             : reason,
           featureUsed: null,
           relatedSessionId: null,
+          externalTransactionId: externalTransactionId || null,
         })
         .returning();
 

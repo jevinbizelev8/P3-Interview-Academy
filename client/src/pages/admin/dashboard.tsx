@@ -12,6 +12,7 @@ import UserDetailPage from "./user-detail";
 import CreditCostsPage from "./credit-costs";
 import AdminAnalyticsPage from "./analytics";
 import AdminPaymentsPage from "./payments";
+import AdminAuditLogsPage from "./audit-logs";
 import {
   ClipboardList,
   Play,
@@ -23,7 +24,8 @@ import {
   Settings,
   Zap,
   BarChart3,
-  DollarSign
+  DollarSign,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -87,6 +89,7 @@ export default function AdminDashboard() {
         <Route path="/admin/credit-costs" component={CreditCostsPage} />
         <Route path="/admin/analytics" component={AdminAnalyticsPage} />
         <Route path="/admin/payments" component={AdminPaymentsPage} />
+        <Route path="/admin/audit-logs" component={AdminAuditLogsPage} />
         <Route>
           <AdminOverview
             searchTerm={searchTerm}
@@ -222,6 +225,20 @@ function AdminOverview({
           <CardContent>
             <p className="text-sm text-gray-600">
               Create and manage interview practice scenarios
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setLocation("/admin/audit-logs")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-red-600" />
+              Audit Logs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              Track all administrative actions and security events
             </p>
           </CardContent>
         </Card>

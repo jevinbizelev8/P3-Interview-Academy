@@ -8,7 +8,16 @@ import pg from 'pg';
 const { Pool } = pg;
 
 const STAGING_URL = 'http://p3-interview-academy-staging.eba-wdmrjtn2.ap-southeast-1.elasticbeanstalk.com';
-const stagingDbUrl = 'postgresql://app_user:ZgVs0A8jEJurQezzkp37txtJ@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging';
+
+// Get staging database URL from environment variable
+// Example: export DATABASE_URL_STAGING='postgresql://app_user:<PASSWORD>@p3interviewacademy.cnecks4s8kqj.ap-southeast-1.rds.amazonaws.com:5432/p3_staging'
+const stagingDbUrl = process.env.DATABASE_URL_STAGING || process.env.DATABASE_URL;
+
+if (!stagingDbUrl) {
+  console.error('❌ DATABASE_URL_STAGING or DATABASE_URL environment variable not set');
+  console.error('Set it using: export DATABASE_URL_STAGING="postgresql://..."');
+  process.exit(1);
+}
 
 const pool = new Pool({
   connectionString: stagingDbUrl,

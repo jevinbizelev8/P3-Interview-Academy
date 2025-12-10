@@ -95,13 +95,16 @@ export interface StarStory {
 }
 
 export interface ReadinessScore {
-  score: number;
+  score?: number; // Legacy field for backward compatibility
+  overallScore: number;
   breakdown: {
-    hr_screening: number;
-    functional_team: number;
-    manager: number;
-    executive: number;
+    simulationPerformance: { score: number; weight: number; weighted: number };
+    moduleCompletion: { score: number; weight: number; weighted: number };
+    selfIntroduction: { score: number; weight: number; weighted: number };
+    resumeOptimization: { score: number; weight: number; weighted: number };
+    practiceConsistency: { score: number; weight: number; weighted: number };
   };
+  recommendations: string[];
 }
 
 // ============================================================================
